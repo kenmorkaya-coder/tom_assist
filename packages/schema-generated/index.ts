@@ -98,6 +98,7 @@ export interface TomCapabilities {
   mechanics_parameters: {
     [k: string]: string;
   };
+  kappa_decay_source: "upstream_literal_0.03_growth_effective";
 }
 export interface StateObject {
   id: string;

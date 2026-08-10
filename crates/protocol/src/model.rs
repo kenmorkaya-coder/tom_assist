@@ -149,6 +149,7 @@ pub struct TomCapabilities {
     pub mechanics_profile: String,
     pub mechanics_profile_sha256: String,
     pub mechanics_parameters: BTreeMap<String, String>,
+    pub kappa_decay_source: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

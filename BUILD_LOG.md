@@ -286,3 +286,17 @@ Deviations: the pinned profile exports `TOM_KAPPA_DECAY`, but the pinned `KappaU
 ESCALATE: 4. Question: on a future reviewed runtime repin, should the owner add the missing upstream `TOM_KAPPA_DECAY` environment binding, or retain the gateway-side explicit binding? Options: (a) correct the upstream config field and adopt it only with renewed inspection and a reviewed repin; (b) retain the explicit gateway assignment for each supported pin. Recommendation: (a) for a single authoritative profile application path. Safest reversible default shipped now: (b), with all six declared kappa values explicitly applied and tested, so committed-turn physics matches the seed profile without modifying `tom_master`.
 
 No G-gate verdict was made or reported as passed.
+
+## WP-15 — effective kappa-decay physics binding [DONE]
+
+Commit: containing commit `fix(wp-15): bind kappa_decay to effective growth physics`
+
+Evidence: `.venv-gateway/bin/python -m pytest -q -s gateway/tests` → 9 passed, including explicit `kappa_decay == 0.03`, stale-profile-value inequality, creation-metadata provenance, capability provenance, seeded commit behavior, and 100-call preview purity; the local 20-call preview measurement was p50 `0.005 ms`, p95 `0.007 ms`, max `0.009 ms` (build verification only). `cargo test --workspace` → 34 passed, 0 failed, 1 explicitly ignored live-governance case, with the real live-gateway test passing and asserting the new capability field. `npm run schema:validate` → 9 fixtures and 33 core methods. `cargo fmt --all -- --check` and `git diff --check` → clean.
+
+Decisions: `gateway/tom_gateway.py:39-40,251-258` now explicitly binds effective `kappa_decay=0.03` and identifies its provenance as `upstream_literal_0.03_growth_effective`. The other five mechanics controls remain bound to the profile values actually read during growth and live operation: `TOM_TAU1=4.0`, `TOM_HEAL_RATE=0.03263671875`, `TOM_DAMAGE_RATE=0.1034375`, `TOM_KAPPA_DELTA_CAP=0.026884765625`, and `TOM_KAPPA_NOURISH_RECOVERY=0.002`. Source evidence at pinned `tom_master` commit `8799ccbdddf3d5b5939360b91993581af7dab470`: `agency/mechanics/sicd_kappa_update.py:193-205` reads heal/damage but defines decay as literal `0.03` and documents `0.05` as recovery-degrading; `:353` reads only the distinct `TOM_KAPPA_DECAY_SIGMA_REF`; `sandbox/scaling/grow_msr_8d_channel_separated_10k.py:501-507` sources the profile before constructing the grower. No Python consumer of `TOM_KAPPA_DECAY` exists in the pin. Fresh-project `creation_metadata.json`, `/capabilities`, the capability schema/types, and protocol fixtures carry the provenance string so the exception is machine-readable and a future repin must re-derive effective physics.
+
+Deviations: this section corrects and supersedes WP-14's gateway-side binding of the inert profile export `0.053193359375`. It does not rewrite the append-only WP-14 record and does not modify `tom_master`; the profile/export inconsistency remains an upstream owner item.
+
+ESCALATE: none. ESCALATE 4 is resolved by `ORCHESTRATOR_REVIEW_3.md`: this runtime pin binds `0.03`; any future repin requires renewed effective-physics inspection rather than trusting profile declarations.
+
+No G-gate verdict was made or reported as passed.

@@ -36,6 +36,8 @@ SEED_ARTIFACT_SHA256 = "d9aec9b424459d0948f569c7e424bb5632bd118ad01bda372f62df7c
 SEED_TICK = 4707
 SEED_BRANCH_COUNT = 10_000
 MECHANICS_PROFILE_RELATIVE = Path("config/profiles/msr_8d_native_10k.env")
+EFFECTIVE_KAPPA_DECAY = 0.03
+KAPPA_DECAY_SOURCE = "upstream_literal_0.03_growth_effective"
 REQUIRED_KAPPA_PARAMETERS = frozenset(
     {
         "TOM_TAU1",
@@ -246,7 +248,14 @@ class ProjectRuntime:
         config.tau1 = float(parameters["TOM_TAU1"])
         config.kappa_update.heal_rate = float(parameters["TOM_HEAL_RATE"])
         config.kappa_update.damage_rate = float(parameters["TOM_DAMAGE_RATE"])
-        config.kappa_update.kappa_decay = float(parameters["TOM_KAPPA_DECAY"])
+        # Pin 8799ccbdd's effective growth/operating physics is 0.03 because:
+        # (1) sicd_kappa_update.py:205 is a literal with no TOM_KAPPA_DECAY reader;
+        # (2) grow_msr_8d_channel_separated_10k.py:501-507 sources the profile,
+        #     so the inert export did not change the tree grower's config;
+        # (3) the live backend uses that same profile-env -> TreeGrowthConfig path;
+        # (4) sicd_kappa_update.py:197-205 warns that values near 0.05 degrade recovery.
+        # Keep this explicit so any future repin must re-derive the effective value.
+        config.kappa_update.kappa_decay = EFFECTIVE_KAPPA_DECAY
         config.kappa_update.kappa_delta_cap = float(parameters["TOM_KAPPA_DELTA_CAP"])
         config.kappa_update.kappa_nourish_recovery = float(
             parameters["TOM_KAPPA_NOURISH_RECOVERY"]
@@ -264,6 +273,7 @@ class ProjectRuntime:
             "mechanics_profile": self.seed.mechanics_profile_path.name,
             "mechanics_profile_sha256": self.seed.mechanics_profile_sha256,
             "mechanics_parameters": dict(sorted(self.seed.mechanics_parameters.items())),
+            "kappa_decay_source": KAPPA_DECAY_SOURCE,
             "initial_checkpoint_digest": initial_checkpoint_digest,
         }
 
@@ -594,6 +604,7 @@ class TomGateway:
             "mechanics_profile": self.seed.mechanics_profile_path.name,
             "mechanics_profile_sha256": self.seed.mechanics_profile_sha256,
             "mechanics_parameters": dict(sorted(self.seed.mechanics_parameters.items())),
+            "kappa_decay_source": KAPPA_DECAY_SOURCE,
         }
 
     def handle(self, method: str, path: str, payload: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:

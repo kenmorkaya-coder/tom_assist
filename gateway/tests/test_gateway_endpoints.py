@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from gateway.tom_gateway import (
+    KAPPA_DECAY_SOURCE,
     PINNED_SHA,
     SEED_ARTIFACT_SHA256,
     SEED_PROFILE,
@@ -34,6 +35,7 @@ def test_capabilities_and_verifiers_are_honest_and_deterministic(tmp_path: Path)
     assert capabilities["seed_branch_count"] == 10_000
     assert capabilities["mechanics_parameters"]["TOM_TAU1"] == "4.0"
     assert capabilities["mechanics_parameters"]["TOM_KAPPA_DECAY"] == "0.053193359375"
+    assert capabilities["kappa_decay_source"] == KAPPA_DECAY_SOURCE
 
     status, drift = gateway.handle(
         "POST",

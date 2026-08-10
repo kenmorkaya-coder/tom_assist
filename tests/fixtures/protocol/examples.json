@@ -43,7 +43,8 @@
     "mechanics_parameters": {
       "TOM_TAU1": "4.0",
       "TOM_KAPPA_DECAY": "0.053193359375"
-    }
+    },
+    "kappa_decay_source": "upstream_literal_0.03_growth_effective"
   },
   "state_object": {
     "id": "10000000-0000-4000-8000-000000000001",

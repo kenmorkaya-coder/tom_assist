@@ -8,6 +8,8 @@ from pathlib import Path
 import pytest
 
 from gateway.tom_gateway import (
+    EFFECTIVE_KAPPA_DECAY,
+    KAPPA_DECAY_SOURCE,
     SEED_ARTIFACT_RELATIVE,
     SEED_ARTIFACT_SHA256,
     SEED_BRANCH_COUNT,
@@ -35,11 +37,15 @@ def test_two_fresh_projects_have_identical_seed_artifacts_and_checkpoint_lineage
     assert not right.rgm.state.anchors
 
     parameters = gateway.seed.mechanics_parameters
+    assert parameters["TOM_KAPPA_DECAY"] == "0.053193359375"
     for runtime in (left, right):
         assert runtime.engine.cfg.tau1 == float(parameters["TOM_TAU1"])
         assert runtime.engine.cfg.kappa_update.heal_rate == float(parameters["TOM_HEAL_RATE"])
         assert runtime.engine.cfg.kappa_update.damage_rate == float(parameters["TOM_DAMAGE_RATE"])
-        assert runtime.engine.cfg.kappa_update.kappa_decay == float(parameters["TOM_KAPPA_DECAY"])
+        assert runtime.engine.cfg.kappa_update.kappa_decay == EFFECTIVE_KAPPA_DECAY == 0.03
+        assert runtime.engine.cfg.kappa_update.kappa_decay != float(
+            parameters["TOM_KAPPA_DECAY"]
+        )
         assert runtime.engine.cfg.kappa_update.kappa_delta_cap == float(
             parameters["TOM_KAPPA_DELTA_CAP"]
         )
@@ -53,6 +59,7 @@ def test_two_fresh_projects_have_identical_seed_artifacts_and_checkpoint_lineage
         assert metadata["seed_artifact_sha256"] == SEED_ARTIFACT_SHA256
         assert metadata["seed_tick"] == SEED_TICK
         assert metadata["seed_branch_count"] == SEED_BRANCH_COUNT
+        assert metadata["kappa_decay_source"] == KAPPA_DECAY_SOURCE
         assert metadata["initial_checkpoint_digest"] == runtime._current_checkpoint_digest()
         assert runtime._creation_metadata_path.is_file()
 
