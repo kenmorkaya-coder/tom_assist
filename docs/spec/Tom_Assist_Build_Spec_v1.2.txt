@@ -1,0 +1,1554 @@
+TOM ASSIST
+Desktop Subscription Companion for Structural Context Continuity
+COMPREHENSIVE PRODUCT AND ENGINEERING BUILD SPECIFICATION
+PRIMARY BUILD DECISIONBuild a separate Mac-first Tom Assist application: Chromium browser extension + local desktop control app + local ToM continuity service. Core consumer mode overlays the user’s existing LLM subscription with structural retrieval and an authoritative-state prelude, requiring no metered LLM API. The architecture also reserves a capability-gated governed/open-model path for the paper’s Layer 2 expert-bias mechanism.
+
+
+
+Version: 1.2Date: 7 August 2026Status: Build-ready internal prototype specification - subscription architecture and structural-object revisionPrepared for: Ken MorkayaProduct boundary: Separate from tom_owner; shared ToM runtime only
+CONFIDENTIAL — INTERNAL DEVELOPMENT SPECIFICATION
+
+# Document Control
+Field
+Specification
+Product
+Tom Assist
+Primary platform
+macOS on Apple Silicon; Chromium browser support
+First supported provider surface
+ChatGPT web through a provider adapter; no private endpoint use
+Core cost model
+Existing consumer LLM subscription plus Tom Assist; no mandatory LLM API billing
+App relationship
+Independent product. It is not a modification of tom_owner.
+Authority model
+Provider text is untrusted observation/candidate content; only user/ToM-verified commits become authoritative project state.
+Primary evidence base
+Eliminating Context Rot in Frozen LLMs: A Three-Mode Structural State-Coupling Architecture [R1]
+Precursor retrieval evidence
+Branch-Conditioned Resonance Retrieval for Context-Rot Mitigation in Long-Horizon Dialog [R2]
+Primary deployment mode
+Subscription Companion Mode: Layer-1-style structural retrieval + authoritative-state prelude + post-response governance.
+Optional governed-model mode
+Capability-gated model-coupling path for local/open models that expose MoE router biasing; not available in closed subscription providers.
+Initial distribution
+Private internal alpha, signed Mac application plus unpacked/sideloaded extension
+Specification owner
+Ken Morkaya / ToM programme
+
+Specification statusVersion 1.2 is build-ready at the application-architecture level. It makes Subscription Companion Mode a first-class production architecture rather than a degraded fallback, explicitly defines Layer 1 + authoritative-state framing as the core closed-provider path, extends retrieval from planted facts to typed structural objects (concepts, goals/objectives, decisions, constraints, rejected paths, completed work, unresolved dependencies, evidence and supersessions), and adds a dedicated structural-continuity validation battery. Exact bindings to the current ToM runtime still require repository inspection, but the app-facing interface, authority contracts and falsifier gates are defined here.
+
+## Change Log
+Version
+Date
+Change
+1.0
+5 August 2026
+Initial comprehensive build specification.
+1.1
+6 August 2026
+Re-anchored to the completed three-mode frozen-LLM context-rot paper; expanded system architecture, authority/transaction model, paper-to-product mapping, dual deployment modes, trust boundaries, state-block rendering, session/fork semantics and validation gates.
+1.2
+7 August 2026
+Primary subscription architecture clarified; typed concept/goal state, Layer-1-without-Layer-2 boundaries and structural-object validation added.
+
+
+# Contents
+1  Product Definition
+2  Evidence Foundation and Claim Boundaries
+3  Context-Rot Failure Model
+4  Scope, Non-Goals and Product Principles
+5  Users and Core Workflows
+6  System Architecture
+7  Component Specifications
+8  Browser Extension Requirements
+9  Desktop Application and Local Service
+10  ToM Integration and Structural State Model
+11  Context Retrieval and Admission
+12  Continuity Governance and Interventions
+13  Data Model and Persistence
+14  Application Protocols and Schemas
+15  User Experience and Interface
+16  Security, Privacy and Platform Boundaries
+17  Reliability, Telemetry and Supportability
+18  Validation Programme and Acceptance Gates
+19  Implementation Plan and Work Packages
+20  Packaging, Deployment and Operations
+21  Risks, Open Decisions and Falsifiers
+22  Future Roadmap
+Appendix A  Canonical JSON Examples
+Appendix B  Database Schema Outline
+Appendix C  Test Catalogue
+Appendix D  References and Glossary
+
+# Executive Summary
+Tom Assist is a separate desktop product that overlays ToM’s structural continuity capability onto the LLM web subscriptions people already use. The first build is Mac-first and uses ChatGPT in a Chromium browser. It does not replace the provider interface, collect provider credentials, require a metered LLM API, or modify the existing tom_owner application.
+The app inserts a local, user-controlled continuity layer between a long-running project and the provider conversation. It captures visible turns, associates them with an explicit project, maintains an authoritative structural state outside the LLM, retrieves only context that remains relevant to the current reasoning state, prepares a compact continuity packet before submission, evaluates the returned answer for drift, and commits only verified state transitions.
+User works in normal ChatGPT web subscription        |        vTom Assist browser extension captures the visible turn        |        vLocal ToM service activates project state and ranks context        |        vUser previews/approves continuity packet added to outgoing prompt        |        vProvider generates normally under the existing subscription        |        vTom evaluates the visible response for continuity conflicts        |        vUser/ToM commits verified state changes; rejected changes remain non-authoritative
+Figure 1. Subscription Companion Mode: no provider API is required.
+Core product propositionTom Assist does not sell “more memory.” It preserves decision topology: objectives, binding constraints, accepted conclusions, rejected paths, completed work, unresolved dependencies, evidence and supersession history. It checks whether each continuation remains structurally consistent with what the project has already learned.
+
+The primary empirical foundation is the completed paper “Eliminating Context Rot in Frozen LLMs: A Three-Mode Structural State-Coupling Architecture” [R1]. On frozen Gemma 4 26B at approximately 64K tokens, the paper separates three protection mechanisms: branch-conditioned resonance retrieval, an authoritative-state prelude with explicit precedence/anti-enumeration instructions, and per-expert MoE logit bias. The FULL condition reached 20/20 across two independently-authored 10-case pools; Layer 1 also rescued forced context removal from 1/40 baseline to 40/40. These results determine the app’s coupling surfaces, but not all three are available in a closed consumer subscription. Tom Assist Subscription Companion Mode can implement the first two surfaces and must separately validate their transfer to ChatGPT/other provider web sessions; direct expert bias is reserved for an optional governed-model mode where the model exposes router control.
+The app cannot inspect or block the provider’s hidden decoding pipeline. In subscription mode, it can govern what the user sends, observe what the provider displays, warn about structural conflicts, prepare corrections and refuse to commit contradictory output into authoritative state. Direct pre-release control of generated tokens belongs to a future provider/API integration and is explicitly outside the first build.
+
+# 1. Product Definition
+## 1.1 Product statement
+Tom Assist is a local-first continuity supervisor for long-running LLM work. It attaches a normal provider web conversation to a durable ToM project state, then conditions each new turn on the project’s held decisions and unresolved structure.
+## 1.2 What the product is
+• A separate application. It shares ToM runtime services and schemas where appropriate but does not inherit tom_owner’s interface, administrative purpose or repository architecture.
+• A subscription companion. The user continues to work in ChatGPT, Claude or another supported web subscription. The first adapter targets ChatGPT web.
+• A structural state authority. Project state is held outside the LLM and survives transcript truncation, new chats, application restarts and provider model changes.
+• A context admission system. Context is selected for structural relevance, not simply recency or text similarity.
+• A continuity verifier. The app identifies contradictions, revived rejected paths, dropped constraints, repeated completed work and objective drift.
+• A user-controlled system. Injected text is previewable; state commits are inspectable and reversible; no hidden prompt submission is permitted.
+## 1.3 What the product is not
+• Not a fork or modification of tom_owner.
+• Not a replacement chat model or consumer LLM service.
+• Not a requirement for users to purchase API tokens.
+• Not a generic transcript summariser.
+• Not a credential-harvesting wrapper around provider accounts.
+• Not an automation that calls undocumented provider endpoints.
+• Not a claim of universal context-rot elimination in unrestricted conversations.
+• Not direct MoE/attention routing inside a closed provider model.
+## 1.4 Product success definition
+The internal alpha succeeds when the same long-running ToM project can move across multiple ChatGPT browser sessions without losing held conclusions, constraints, rejected approaches, completed work or unresolved dependencies; when Tom Assist supplies the relevant state before each new turn; and when the live response is checked before it is allowed to alter authoritative project state.
+# 2. Evidence Foundation and Claim Boundaries
+## 2.1 Primary three-mode context-rot paper
+The primary technical reference is “Eliminating Context Rot in Frozen LLMs: A Three-Mode Structural State-Coupling Architecture” [R1]. It wires SICD to a frozen off-the-shelf Gemma 4 26B through three shallow coupling surfaces: (1) branch-conditioned resonance retrieval from prior conversation turns, (2) an authoritative-state prompt prelude with explicit precedence and anti-enumeration instruction, and (3) inference-time per-expert MoE logit bias. No LLM fine-tuning, training signal or weight updates are used.
+Evidence item
+Reported result
+Product implication
+Three-mode coupling
+Layer 1 retrieval + authoritative-state prelude + Layer 2 expert bias.
+Treat these as distinct coupling surfaces with separate capabilities and tests; do not collapse them into generic “memory”.
+Context-removal rot
+Forced truncation: BASE 1/40 (2.5%) -> Layer 1 40/40 (100%); paired delta +0.975, 95% CI [+0.925,+1.000].
+The app must maintain its own prior-turn/anchor store and be able to re-admit structurally relevant conversation state after provider history is no longer usable.
+Enumeration-loop / composition interference
+On pool 1, L1+L2-prose 7/10 -> FULL 10/10 when the same retrieved content was rendered as authoritative state; pooled FULL - L1+L2-prose delta +0.20.
+Formatting is architectural, not cosmetic. Production uses typed authoritative state, explicit precedence and an anti-enumeration instruction, not narrative “earlier you said” prose.
+Layer 2 attention/decoder rescue
+Across 20 pooled cases, BASE 17/20; Layer 2 alone 19/20 at alpha=1.0.
+Direct expert bias is useful where router access exists, but it cannot be assumed for ChatGPT/Claude subscription surfaces. Keep a capability-gated model-coupling interface.
+FULL condition
+20/20 across two independently-authored 10-case pools at approximately 64K tokens; Wilson 95% CI [0.84,1.00]; only tested condition to reach 20/20.
+The evidence supports the complete three-mode stack on the tested Gemma configuration. Subscription Companion Mode is not the FULL paper condition and must not inherit its elimination claim.
+No-rot control
+At approximately 4K tokens with full history visible, BASE 40/40 and Layer 1 40/40.
+Tom Assist must be non-inferior when no rescue is needed; context protection should be structurally inert on easy cases.
+Scope boundaries
+Single model family/quantisation, one densified benchmark class, 64K context, n=20 full-stack replication pool.
+Product claims stay bounded; naturalistic cross-session and closed-provider validation is mandatory before consumer claims.
+Semantic scope of the paper benchmark
+The frozen-LLM benchmark primarily scores planted value recall (for example material, rate, year, diagnosis) under truncation and long-context pressure. It does not directly test persistence of concepts, goals, decision rationale or multi-object project topology.
+Tom Assist shall not treat concept/goal continuity as already proven by [R1]. It shall implement these as typed structural objects and certify transfer separately on an action-consistency battery before claiming that broader capability.
+
+Evidence boundaryThe app may cite [R1] as evidence that the three-mode SICD coupling eliminated the three tested failure classes on frozen Gemma 4 26B under the paper’s benchmark. It may also cite [R2] for the earlier 4,800-turn structural-retrieval calibration. It may not claim that Tom Assist on a closed subscription provider is the paper’s FULL condition: subscription mode has no Layer 2 router access. Any ChatGPT/Claude consumer claim must be earned by the app validation programme.
+
+## 2.2 Paper-to-product translation
+Tom Assist is not a literal copy of the paper runner. The paper proves a coupling pattern. The app must preserve the causal roles of the three surfaces while adapting them to provider capabilities. In Subscription Companion Mode, Layer 1 becomes the local structural context-admission engine and the state-block prelude becomes a visible, user-approved TOM_ASSIST_STATE block placed immediately before the current request. Layer 2 cannot be implemented against a closed provider web subscription because the app cannot access the provider’s MoE router or hidden logits. The architecture therefore exposes a model-coupling capability interface but reports expert_bias=false for ChatGPT web. A future local/open-model deployment can enable the full three-mode path without changing the continuity control plane.
+## 2.3 Precursor and supporting ToM evidence
+Reference
+What it supports
+What it does not automatically prove for this app
+[R2] Branch-Conditioned Resonance Retrieval
+4,800-turn precursor calibration: structural retrieval improved relevance, reduced stale injection and established a mixed structural/semantic operating regime.
+Transfer of the archived scoring implementation to the current runtime or to provider subscriptions.
+[R3] Multi-Step General Reasoning Without an LLM
+A deterministic, auditable non-LLM structural reasoning substrate; verifier treats integrity as a structural gate.
+Reliable extraction of arbitrary project commitments from unrestricted natural language.
+[R4] Governed Embodied Action companion paper
+Proposal-versus-release separation and reuse of a supervisory substrate across domains.
+That browser capture and subscription overlay are already product-ready.
+[R5] ToM-LLM coupling specification
+LLM proposal fields must not directly mutate learned ToM/authoritative state; promotion must be gated and reversible.
+That every provider response can be trusted as a state parser.
+[R6] SICD-Guided Expert Routing experiment contract
+Historical preregistration lineage for the work later reported as completed results in [R1].
+A separate contemporary evidence claim beyond the completed paper.
+
+## 2.4 Claim taxonomy required in product copy
+Class
+Allowed description
+Paper-proven - full stack
+On the tested frozen Gemma 4 26B benchmark, FULL (Layer 1 + authoritative-state prelude + Layer 2) reached 20/20 across two independently-authored pools.
+Paper-proven - Layer 1
+Under forced conversation truncation, branch-conditioned retrieval re-admitted the dropped plant and moved accuracy from 1/40 to 40/40.
+Precursor evidence
+The earlier retrieval study reported +6.6% relative relevance, -33.5% stale injection and +2.7% decision accuracy across 4,800 synthetic long-horizon turns.
+Must be proven by Tom Assist
+Closed-provider browser capture, cross-chat continuity, authoritative-state usefulness, low false-positive intervention rate, safe state authority, non-inferiority on normal subscription use, and generalisation from planted-fact recall to concepts, goals/objectives, decisions, constraints, rejected paths, dependencies and supersession relationships.
+Capability-gated extension
+Direct expert/MoE biasing is an implemented paper mechanism for models whose router is accessible; it is not available through a closed ChatGPT/Claude consumer subscription.
+
+## 2.5 Architectural lessons imported from the paper
+The paper changes this specification in four material ways. First, the structural state itself - not the current user text - is the retrieval query. Second, retrieved material must be rendered as typed authoritative state rather than narrative recollection. Third, the layers cannot be assumed additive: [R1] directly observed negative composition interference under a prose prelude, so every layer combination requires paired validation. Fourth, model-internal biasing is a separate capability from memory/context admission and must be negotiated explicitly rather than implied by the browser overlay.
+# 3. Context-Rot Failure Model
+## 3.1 Failure classes
+ID
+Failure class
+Description
+App response
+CR-1
+Context-removal rot
+A prior conversation fact/decision falls outside the provider-visible history or becomes unavailable after a new chat/session.
+Layer-1-style structural anchor retrieval from the local conversation store; re-admit only the structurally relevant state.
+CR-2
+Enumeration-loop / prompt-surface rot
+Retrieved facts are present but narrative framing causes the model to enumerate history instead of using the relevant state.
+Typed TOM_ASSIST_STATE block, explicit precedence and anti-enumeration instruction; prose prelude retained only as an ablation.
+CR-3
+Attention/decoder degradation rot
+Long-context decoding ignores relevant state or enters pathological low-probability routes.
+Subscription mode can only reduce context pressure and restate authoritative state. Direct Layer 2 expert bias is available only in governed/local models with router access.
+CR-4
+Context-selection drift
+Text-similar, recent or salient material is inserted even though it is stale, superseded or structurally irrelevant.
+Branch/motif-conditioned candidate scoring, authority/supersession gates, stale penalties and bounded packet budget.
+CR-5
+Decision-topology decay
+The system recalls a conclusion but loses why it was accepted, what it superseded or which dependencies remain open.
+Typed state objects and explicit supports/depends_on/supersedes edges.
+CR-6
+Project-boundary contamination
+State from another project/workstream enters the current prompt.
+Hard project/workstream scoping and wrong-project rejection before ranking.
+CR-7
+Completion amnesia
+Completed work is proposed again as if unresolved.
+COMPLETED_WORK objects plus post-response COMPLETED_WORK_REPROPOSED intervention.
+CR-8
+Constraint erosion
+A binding constraint disappears or is silently softened.
+Constraint ledger, P0/P1 packet priority and CONSTRAINT_DROPPED intervention.
+CR-9
+Rejected-path revival
+A ruled-out architecture/method returns without explicit reconsideration.
+REJECTED_PATH guardrails and SUPERSEDED_PATH_REVIVED intervention.
+CR-10
+Illegitimate reversal
+A conclusion changes without new evidence, explicit authority or a supersession record.
+Mutation gate and explicit supersession transaction.
+
+## 3.2 Operational definition of continuity
+Continuity is not verbatim recall. A response preserves continuity when it remains compatible with the current objective, binding constraints, accepted conclusions, rejected paths, completed work, evidence status, unresolved dependencies and recorded supersession history.
+continuity(response, project_state) =    preserves_objective  + preserves_binding_constraints  + respects_accepted_conclusions  + does_not_revive_rejected_paths_without_authority  + does_not_repeat_completed_work_as_open  + carries_unresolved_dependencies_forward  + cites_or_preserves_evidence status  + records legitimate supersession when decisions change
+# 4. Scope, Non-Goals and Product Principles
+## 4.1 First release scope
+• macOS 14 or later on Apple Silicon.
+• Chromium-based browser extension using Manifest V3.
+• ChatGPT web provider adapter as the first supported surface.
+• One active Tom Assist project per browser tab; multiple projects supported overall.
+• Local-only storage and processing by default.
+• No mandatory provider API and no external LLM API.
+• Visible context-packet preview before submission.
+• Post-response continuity evaluation and candidate state-change review.
+• Project export, import, snapshot and cold-restart recovery.
+## 4.2 Explicit non-goals for the internal alpha
+• Native iOS overlay of third-party LLM apps.
+• Direct access to provider hidden system prompts, KV cache, logits, attention or model weights.
+• Automatic capture from native provider desktop applications.
+• Unattended autonomous message submission.
+• Cloud account sync, team collaboration or consumer billing.
+• Direct modification of tom_owner.
+• Universal cross-provider compatibility.
+• Automatic acceptance of LLM-generated state mutations.
+## 4.3 Product principles
+ID
+Principle
+Engineering consequence
+P1
+State authority is outside the LLM.
+Provider output is observation/candidate content, never the authoritative project ledger.
+P2
+Structural state is the retrieval query.
+Current ToM activation drives anchor selection; the user text may contribute semantic evidence but does not define retrieval alone.
+P3
+Authoritative state, not narrative memory.
+Render typed state blocks with explicit precedence and anti-enumeration instruction; prose “earlier you said” is diagnostic only.
+P4
+Layers are complementary, not assumed additive.
+Validate each composition. A layer that helps alone may interfere when stacked, as observed in [R1].
+P5
+Current user authority is highest.
+An explicit current user instruction may reopen/supersede held state; the system must flag and record the change rather than silently resisting it.
+P6
+No silent mutation.
+Every authoritative state transition is versioned, auditable and reversible.
+P7
+No silent submission.
+The extension may prepare/pause; the user always controls what is sent.
+P8
+Minimal context beats transcript replay.
+The packet contains only load-bearing state and selected anchors; it never blindly replays full history.
+P9
+Capability negotiation is explicit.
+Prompt injection, response capture and model-internal expert bias are separate capabilities; closed subscription providers report expert_bias=false.
+P10
+Local-first by default.
+Transcripts, state, anchors and ToM checkpoints remain on-device unless future sync is explicitly enabled.
+P11
+Provider adapters are replaceable.
+DOM-specific logic cannot contaminate the continuity/control plane.
+P12
+Authority promotion is earned.
+Automated extraction starts as shadow/candidate-only and advances only after measured precision.
+
+# 5. Users and Core Workflows
+## 5.1 Primary user
+The first user is Ken Morkaya conducting long-running ToM/SICD development work in ChatGPT. This is an unusually strong internal validation environment because the historical conversations contain known examples of dropped constraints, revived rejected approaches, repeated completed experiments, incorrect project state and objective drift.
+## 5.2 Core jobs to be done
+Job
+Expected outcome
+Continue a project in a new chat
+The new session receives the held objective, decisions, constraints, rejected paths, completed work and unresolved dependencies without replaying the entire transcript.
+Prevent regression
+When the provider revives an old S/L/T retrofit or other rejected path, Tom Assist identifies the conflict and provides the held reason.
+Record a legitimate change
+The user can supersede a prior decision, attach the new evidence/reason and retain the old decision as history.
+Import an existing long chat
+Visible loaded turns are captured and attached to a project; state extraction remains candidate-only until confirmed.
+Recover after restart
+Project state and audit history reload deterministically, independent of the provider transcript.
+See why context was inserted
+Every continuity packet item links to its state object, evidence and structural score.
+
+## 5.3 Primary workflow: governed prompt preparation
+1. User selects/attaches a Tom Assist project to the browser tab.2. User writes a normal prompt in the provider composer.3. On submit, the extension pauses the event for local preparation.4. The local service sends the prompt to the ToM adapter as a non-authoritative load.5. ToM activates relevant branches/motifs and ranks context candidates.6. The service builds a compact ContinuityPacket within the configured token budget.7. The extension shows a preview: included items, exclusions, warnings and token cost.8. User approves, edits, bypasses once or cancels.9. The extension inserts the packet into the visible provider composer and resumes the normal submit.10. The provider generates under the user’s existing subscription.
+## 5.4 Primary workflow: response evaluation and state commit
+1. The provider adapter observes streaming and waits for response completion.2. The visible response is ingested as evidence, not authoritative state.3. The continuity engine checks it against held project state.4. The UI displays PASS, REVIEW or CONFLICT with evidence links.5. Candidate state mutations are generated by approved extraction channels.6. ToM checks candidate mutations for contradiction, authority and supersession.7. User accepts, edits or rejects each mutation.8. Accepted mutations are committed to the event log and ToM state.9. A snapshot may be created according to policy.
+## 5.5 Quick authoritative capture actions
+• Hold as decision
+• Add binding constraint
+• Reject this path
+• Mark work complete
+• Create unresolved dependency
+• Attach evidence
+• Supersede prior decision
+• Exclude from project state
+# 6. System Architecture
+## 6.1 Architecture objective and invariants
++====================================================================================+|                         TOM ASSIST CONTROL PLANE                                   ||  Project scope | state version | authority gate | audit | policy | capability map  |+==============================+=====================================================+                               |                  PREPARE_TURN / EVALUATE_TURN transactions                               |        +----------------------+----------------------+        |                                             |        v                                             v+---------------------------+              +---------------------------+| STRUCTURAL STATE PLANE    |              | EVIDENCE / MEMORY PLANE   || Existing ToM runtime      |              | Immutable conversation    || preview activation        |              | turns, anchors, files,    || branch/motif resonance    |              | authoritative ledger      || checkpoint/digest         |              | snapshots + event log     |+-------------+-------------+              +-------------+-------------+              \                                         /               \                                       /                v                                     v                 +-----------------------------------+                 | CONTEXT ADMISSION + STATE RENDER |                 | rank -> gate -> budget -> render |                 +----------------+------------------+                                  |                           visible packet                                  |       +--------------------------+---------------------------+       |                                                      |       v                                                      v+-----------------------------+               +------------------------------+| SUBSCRIPTION COMPANION MODE |               | GOVERNED MODEL MODE          || Browser extension           |               | Local/open model gateway     || Layer 1 + state-block       |               | Layer 1 + state-block +      || expert_bias = false         |               | optional Layer 2 expert bias |+--------------+--------------+               +--------------+---------------+               |                                             |               v                                             v       provider response                              model response               \                                             /                +------------------+--------------------------+                                   v                         RESPONSE GOVERNANCE                 conflict checks -> candidates -> commit gate
+Figure 2. Tom Assist control-plane architecture. The same local continuity system supports two deployment modes; only governed/open models can expose the paper’s Layer 2 expert-bias surface.
+## 6.2 Deployment topology and process boundaries
+Unit
+Technology
+Responsibility
+Browser extension
+TypeScript, Manifest V3, Preact/React, Shadow DOM
+Provider adapter, capture, visible prompt gate, project chip, side panel and user-approved injection.
+Native messaging host
+Small signed Rust executable
+Origin/extension allowlist, envelope validation and forwarding only; no project logic.
+Continuity service (tom-assistd)
+Rust
+Owns PREPARE_TURN/EVALUATE_TURN transactions, project/version locks, policy, orchestration, health and recovery.
+Authoritative ledger
+Service module over SQLite/SQLCipher
+Typed objectives/decisions/constraints/rejections/completions/dependencies/evidence/supersessions; immutable event lineage.
+Anchor store
+Service module over SQLite/SQLCipher
+Prior conversation turns and evidence anchors with provenance, structural signature, source scope and content hash.
+Context-admission engine
+Rust module
+Candidate collection, hard gates, structural/semantic/dependency scoring, deduplication and budget selection.
+Authoritative-state renderer
+Rust module with provider renderers
+Builds TOM_ASSIST_STATE block, precedence rule and anti-enumeration instruction; preserves user draft verbatim.
+Governance engine
+Rust module
+Post-response conflict detection, intervention severity, candidate mutation generation and correction packet creation.
+ToM runtime adapter
+Versioned JSONL/stdin-stdout or Unix socket initially
+Preview activation, branch/motif ranking, state digest/checkpoint and approved structural commits without provider-specific logic.
+Desktop app
+Tauri 2, Rust core, TypeScript UI
+Project/workstream management, ledger inspection, supersession, intervention review, settings, export/import and diagnostics.
+Optional model-coupling gateway
+Local/open-model process adapter
+Capability-gated Layer 2 expert-bias hook for models exposing router logits; disabled for closed subscription providers.
+Persistence
+SQLite; SQLCipher production; macOS Keychain for key
+Event store, snapshots, anchors, packet manifests, evaluations, diagnostics metadata and integrity digests.
+
+## 6.3 Native Messaging and local IPC boundary
+Chrome Native Messaging remains the recommended extension-to-device boundary because it avoids a generally reachable localhost service. The native host is deliberately thin: it authenticates the extension ID, validates protocol/schema size, forwards one correlated envelope to a user-only Unix-domain socket and returns the response. tom-assistd owns every project decision. A development-only loopback transport may exist behind a build flag but is never the production default.
+## 6.4 Product boundary and state authority
+tom_owner
+Tom Assist
+Engineering/owner administration and ToM inspection.
+End-user project continuity and subscription companion workflow.
+May expose low-level runtime controls.
+Uses a narrow versioned ToM adapter with no unrestricted administrative surface.
+Existing repository and lifecycle remain unchanged.
+New repository, installer, security boundary, UX and release lifecycle.
+Can be used by developers to inspect the substrate.
+Can optionally export diagnostic bundles consumable by tom_owner, but never depends on its UI.
+tom_owner and Tom Assist remain separate products. More importantly, provider sessions are not the authority scope: a provider conversation is an I/O surface attached to a Tom Assist project/workstream. The authoritative project ledger, structural checkpoint lineage and event log live locally and may span many provider chats, browser restarts and provider-model changes. No provider message, DOM element or model-generated summary may overwrite this state directly.
+## 6.5 Paper mechanism mapping
+The three mechanisms in [R1] are represented as explicit interfaces so the app can distinguish “available on this provider” from “supported by the product in another deployment mode”. This avoids the architectural error of describing a closed-provider browser overlay as if it can influence hidden model routing.
+Paper mechanism
+Subscription Companion Mode
+Governed/Open Model Mode
+Tom Assist component
+Layer 1: branch-conditioned resonance retrieval
+YES - PRIMARY consumer continuity path. Local prior-turn/state-object retrieval driven by current structural state; not limited to fact anchors.
+YES - same control path.
+ContextAdmissionEngine + ToMAdapter + AnchorStore
+Authoritative-state prelude
+YES - REQUIRED production surface. Typed TOM_ASSIST_STATE renders the selected structural objects with precedence; prose is ablation-only.
+YES - same renderer, optionally as a dedicated prompt field if the model API supports it.
+AuthoritativeStateRenderer
+Layer 2: per-expert MoE logit bias
+NO - browser subscription exposes no router/logit hook.
+OPTIONAL - only when model capability advertises router bias support.
+ModelCouplingGateway
+Post-response structural governance
+YES - Tom Assist-specific supervisory layer after provider response.
+YES.
+GovernanceEngine
+Typed structural-state ledger (application extension)
+YES - REQUIRED. Concepts, goals/objectives, decisions, constraints, rejected paths, completed work, dependencies, evidence and supersessions remain outside the provider model.
+YES - same authoritative ledger.
+AuthoritativeLedger + StateGraph + ContextAdmissionEngine
+## 6.6 Provider capability negotiation
+Each provider adapter returns a capability document at attach time. The continuity service will not infer hidden capabilities from provider branding. ChatGPT web is expected to expose visible_prompt_injection=true, response_capture=true, hidden_context_visibility=false and expert_bias=false. A local Gemma adapter may additionally expose expert_bias=true with expert_count/top_k/router_hook metadata.
+ProviderCapabilities {  provider_surface: string,  visible_prompt_injection: bool,  response_capture: bool,  hidden_context_visibility: bool,  model_internal_bias: "none" | "moe_expert_logits",  max_context_tokens?: int,  exact_tokenizer?: string,  supports_system_field?: bool}
+## 6.7 PREPARE_TURN transaction
+Prompt preparation is a read/preview transaction until the user actually submits. This prevents a draft, cancelled message or provider DOM glitch from permanently deforming project state.
+1  Extension captures the current draft and active project/workstream binding.2  tom-assistd opens PREPARE_TURN at authoritative state_version = V and ToM checkpoint = D.3  ToMAdapter.preview_activate(draft, D) computes current structural activation without permanent commit.4  ContextAdmissionEngine collects project-scoped ledger objects, recent discourse and historical anchors.5  Hard gates remove cross-project, superseded-positive, low-integrity and privacy-disallowed candidates.6  Remaining candidates are scored by structural resonance + semantic/dependency relevance + authority, with stale/conflict/redundancy penalties.7  BudgetController selects the smallest load-bearing set.8  AuthoritativeStateRenderer creates TOM_ASSIST_STATE and a packet_digest bound to V/D.9  Extension shows preview; the original user draft remains independently editable.10 On explicit Send with Tom, the visible state block + unchanged user draft are submitted and USER_TURN_SENT is appended idempotently.11 If state_version changed before send, the packet is invalidated and must be rebuilt.
+Figure 3. PREPARE_TURN is snapshot-bound and non-mutating until explicit submission.
+## 6.8 Structural retrieval path
+Layer-1-style retrieval is not query-text search with a Tom score appended. The current structural state is the primary query. Candidate turns/anchors retain the structural snapshot/signature under which they were emitted. The app asks which prior anchors resonate with the branches/motifs activated by the current draft and project state, then fuses that structural score with bounded semantic/dependency signals. The earlier w_leaf=0.6 result remains a calibration prior from [R2]/[R1], not a hard-coded production constant.
+candidate_score =    structural_resonance(policy_version)  + semantic_relevance  + dependency_relevance  + authority_strength  + bounded_recency  - stale_penalty  - supersession_penalty  - contradiction_penalty  - redundancy_penaltyHard gates execute before scoring. A high score can never resurrect a cross-project item or a superseded positive state as current truth.
+## 6.9 Authoritative-state block architecture
+The paper’s state-block result is treated as an architecture requirement. Tom Assist therefore renders typed state, not a narrative summary. The current user request remains the highest authority: if it explicitly conflicts with held state, the provider is told to treat the conflict as a proposed change/reopening rather than silently following old state or silently overwriting it.
+[TOM_ASSIST_STATE v1 | project=<id> | workstream=<id> | state_version=<V>]STATUS: authoritative prior project/session state generated locally by Tom Assist.PRECEDENCE: current explicit user request > TOM_ASSIST_STATE > raw prior transcript > model inference.ACTIVE_OBJECTIVE- ...BINDING_CONSTRAINTS- ...HELD_DECISIONS- ...REJECTED_OR_SUPERSEDED_PATHS- ...COMPLETED_WORK- ...UNRESOLVED_DEPENDENCIES- ...RETRIEVED_ANCHORS- [source/turn] ...INSTRUCTION: Answer the current request directly using this state. Do not enumerate prior conversation unless asked. If the current user request conflicts with this state, identify the conflict as a proposed supersession/reopening; do not silently rewrite prior state.[/TOM_ASSIST_STATE][CURRENT_USER_REQUEST]<original user draft verbatim>
+### 6.9.1 Subscription Companion Mode is a primary architecture, not a degraded fallback
+Tom Assist must be useful on closed consumer subscriptions even when the provider exposes no expert-router hook. [R1] gives strong evidence for the accessible part of that architecture: under forced truncation, Layer 1 moved plant recall from 1/40 to 40/40; at approximately 64K tokens the pooled conditions were BASE 17/20, L1-prose 17/20, L1-state 19/20 and FULL 20/20. The engineering interpretation is not that Layer 1 equals FULL. It is that structural re-admission plus authoritative framing addresses a large and product-relevant class of state-access/state-selection failures, while Layer 2 closes a residual class where correct state is present but decoding still goes wrong.
+Primary subscription turn path:
+current user draft  -> ToM preview activation against durable project state  -> retrieve typed structural objects + minimum supporting anchors  -> apply hard scope/authority/supersession gates  -> render authoritative TOM_ASSIST_STATE  -> submit unchanged user request through the existing subscription  -> capture provider response  -> evaluate response against the same state/packet lineage  -> propose corrections/state mutations  -> commit only through explicit authority gate
+For the initial product, success therefore means preventing project-state regression: forgotten goals, dropped constraints, revived rejected paths, repeated completed work, lost dependencies, stale definitions and silent reversal of held decisions. These are the failures the subscription architecture is designed to attack directly. Layer 2 remains an optional ceiling-raising mechanism for governed/open models; it is not a prerequisite for the consumer product.
+Evidence boundary: [R1] directly proves planted-fact rescue and three-mode complementarity on its benchmark. The expected high utility for richer project state is an application hypothesis and is subject to Gate G16; this specification does not promote that hypothesis into a paper-proven claim.
+### 6.9.2 Retrieval targets are structural objects, not fact records
+The production retrieval unit is a typed state object or a provenance-bearing anchor, not a generic “fact”. Facts are only one possible evidence payload. A long-running project is primarily held together by relationships among concepts, goals, constraints, decisions, rejected alternatives, completed work and unresolved dependencies. Tom Assist shall preserve those relationships outside the LLM and select the smallest load-bearing subset for each turn.
+Object family
+What must persist
+Continuity role
+Default packet behaviour
+CONCEPT
+Canonical meaning, scope, mechanism, provenance and refinements.
+Prevents definition/mechanism drift and concept conflation.
+Include when the current request depends on the concept or approaches a conflicting/superseded definition.
+OBJECTIVE / GOAL
+Active goal, sub-goals, success condition and status.
+Keeps the model solving the intended problem.
+Primary active objective is normally non-evictable; include relevant sub-goal only.
+DECISION
+Accepted direction plus rationale/evidence and authority.
+Prevents silent reversal and re-litigation.
+Include if the turn depends on the decision or a competing path is activated.
+CONSTRAINT
+Hard/soft condition, scope and expiry.
+Defines validity of candidate answers/actions.
+Hard active constraints are non-evictable before descriptive context.
+REJECTED_PATH
+Rejected approach, reason and reconsideration condition.
+Stops previously ruled-out solutions from returning as new recommendations.
+Inject compactly as a negative guardrail when structurally nearby.
+COMPLETED_WORK
+What was done, result, artefacts and next boundary.
+Prevents repeated work and preserves earned progress.
+Include result + next boundary, not the entire old procedure.
+UNRESOLVED_DEPENDENCY
+Open blocker/question and what it gates.
+Prevents false closure and skipped prerequisites.
+Include when it gates the current objective or proposed action.
+EVIDENCE / ASSUMPTION
+Provenance, integrity, confidence and provisional status.
+Keeps claims separated from hypotheses.
+Include only the minimum evidence boundary required to justify held state.
+SUPERSESSION / REOPEN
+Old state, new state, actor, reason and effective version.
+Allows learning/change without historical amnesia.
+Render current state; include prior state only when needed to explain conflict or reconsideration.
+Raw transcript turns remain provenance and fallback evidence. They are not the primary continuity representation. Where a canonical object exists, the packet should carry the canonical object plus the strongest minimal evidence reference rather than replaying all source turns.
+### 6.9.3 Concept and goal continuity packet composition
+Packet assembly should preserve topology, not merely a list of remembered statements. The renderer therefore emits current objects in an order that mirrors decision authority and task dependence:
+ACTIVE_OBJECTIVE  goal currently being optimisedLOAD_BEARING_CONCEPTS  canonical definitions/mechanisms required by this turnBINDING_CONSTRAINTS  conditions no valid answer may violateHELD_DECISIONS  accepted directions that constrain the search spaceNEGATIVE_GUARDRAILS  rejected/superseded paths that are structurally near the current requestCOMPLETED_WORK  earned results + next boundaryUNRESOLVED_DEPENDENCIES  blockers/questions that gate valid continuationEVIDENCE_BOUNDARY  minimum provenance/integrity notes needed for the aboveSUPERSESSION_NOTES  only where the current turn touches a changed/reopened state
+The packet budget controller is relationship-aware. If a decision depends on a concept definition and a hard constraint, evicting either supporting object can make the decision meaningless even if the decision text itself remains. Candidate selection therefore operates on connected state subgraphs or dependency-closed object bundles when necessary, rather than independently ranking every sentence.
+### 6.9.4 Expected usefulness and limitations without Layer 2
+The following is an engineering expectation to be falsified in Tom Assist validation, not a direct claim from [R1]. It clarifies where the subscription architecture should provide value and where lack of model-internal control remains a boundary.
+Failure pattern
+Expected Layer 1 + state-block value
+Reason / remaining boundary
+Forgotten goal or decision
+High
+Required state can be re-admitted compactly and given explicit authority.
+Dropped hard constraint
+High
+Constraint can be made non-evictable in the packet and checked again after response.
+Rejected-path revival
+High
+Negative guardrail plus post-response conflict detector directly targets the failure.
+Completed-work reproposal
+High
+Completion state + next boundary can be surfaced without replaying the old procedure.
+Concept-definition drift
+Potentially high; must be proven
+Canonical CONCEPT objects and defines/refines lineage give a stable target, but [R1] did not test this semantic class.
+Dependency/sequence loss
+Medium-high; must be proven
+Relationship-aware bundles can restore the missing dependency structure, but correct reasoning after admission remains model-dependent.
+Correct authoritative state is visible but ignored
+Limited / model-dependent
+State-block framing helps, but the paper still found residual cases only FULL rescued.
+Decoder glitch / pathological generation trajectory
+Low
+This is the class Layer 2 is designed to influence when router access exists.
+General reasoning error unrelated to missing/stale state
+Variable
+Tom Assist can govern consistency but cannot assume it repairs every reasoning failure.
+Product decision: ship and validate the subscription architecture on its own merits. Do not block the consumer build on Layer 2, and do not market subscription mode as equivalent to the paper's FULL condition.
+## 6.10 EVALUATE_TURN transaction and response authority
+The provider response is captured as untrusted observation. It is evaluated against the same state lineage that produced the outgoing packet. Provider text may create mutation candidates, but it may not directly commit a decision, constraint, completed-work marker, evidence status or permanent ToM learning state.
+1  Extension buffers streaming fragments and emits ASSISTANT_TURN_COMPLETE only after stable completion.2  Raw response is appended to the immutable conversation store with content hash and packet_digest linkage.3  GovernanceEngine evaluates response against state_version V and the exact admitted candidate set.4  ToMAdapter may perform read-only/shadow activation for conflict and structural-fit analysis.5  Engine emits PASS / REVIEW / CONFLICT / INCOMPLETE plus evidence-linked interventions.6  Semantic extraction produces StateMutationCandidate objects only.7  User/verified ToM authority chooses accept, reject, edit, supersede or reopen.8  COMMIT_STATE uses compare-and-swap on state_version. Accepted transition creates V+1, event digest and (where supported) approved ToM structural commit/checkpoint.9  If another tab/session already advanced the project, the candidate must rebase against the new state before commit.
+## 6.11 Project, workstream, session and fork model
+A Tom Assist project can bind many provider conversations. Workstreams prevent unrelated objectives from contaminating one another. A provider conversation is represented as a session branch with parent lineage, not as the project itself. Starting a new ChatGPT chat while remaining on the same workstream intentionally tests/contextualises CR-1: the provider starts with little/no old history while Tom Assist re-admits the required state. If two chats diverge, each session records the state_version from which it forked; project-global commits can be merged only through an explicit reconciliation/supersession operation.
+Entity
+Authority scope
+Key fields
+Project
+Top-level durable continuity boundary
+project_id, title, policy_profile, current_state_version
+Workstream
+Objective-bounded state subgraph
+workstream_id, project_id, active_objective_id, status
+Provider session
+I/O branch, never authoritative by itself
+session_id, provider, conversation_id_hash, parent_session_id, fork_state_version
+Turn
+Immutable observation
+turn_id, session_id, role, ordinal, text_hash, packet_digest, capture_status
+Anchor
+Retrievable prior conversation/evidence unit
+anchor_id, source_turn/evidence, structural_signature, provenance, scope
+State object
+Authoritative typed project commitment
+object_id, type, status, scope, authority_source, evidence_refs, created_version
+## 6.12 Concurrency, idempotency and crash consistency
+All mutating calls carry project_id, base_state_version and idempotency_key. State commits use a single-writer logical transaction per project; reads may run concurrently on immutable snapshots. PREPARE_TURN returns packet_digest = hash(project_id, workstream_id, state_version, tom_checkpoint_digest, admitted_item_ids, renderer_version, user_draft_hash). A send/evaluation associated with a different digest is marked stale. SQLite WAL plus an append-only event journal must make a committed event recoverable after process/browser crashes.
+## 6.13 Trust boundaries and prompt-injection resistance
+Tom Assist has three trust classes: locally committed authoritative state, user-originated current intent, and untrusted provider/page content. A page can display text that looks like a TOM_ASSIST_STATE block, but only blocks carrying a local packet_digest in the extension/service transaction are trusted by Tom Assist. Provider responses cannot promote their own claims into the ledger. The extension never exports cookies, passwords or hidden session tokens; it reads only user-visible conversation content and writes only to the visible composer after user approval.
+Boundary
+Threat
+Required control
+Web page -> extension
+Forged DOM/message or page-script injection
+Isolated content-script world, provider origin allowlist, sanitised text extraction, no trust based on page-provided state tags.
+Extension -> native host
+Malicious extension/native message
+Exact extension-ID allowlist, protocol version, max payload, correlation ID and schema validation.
+Native host -> service
+Local process spoofing
+User-only Unix socket permissions and per-install secret/capability token where needed.
+Provider response -> ledger
+Model asserts “decision accepted” / prompt injection
+Response is candidate-only; explicit authority gate and source provenance.
+Session -> project
+Wrong chat/workstream contamination
+Explicit binding plus project/workstream scope gates before retrieval.
+Packet -> send
+State changes after preview
+state_version/digest compare before submission; stale packet must rebuild.
+## 6.14 Degraded operation and fail-safe behaviour
+The continuity service fails closed for state mutation and fail-visible for conversation use. If ToM or the database is unavailable, capture may continue into a bounded local queue but no new authoritative commit is allowed. The user may explicitly send without Tom after a warning. If the provider adapter is broken, Tom Assist detaches interception rather than guessing selectors. If only semantic extraction is unavailable, manual structured capture and deterministic authority remain operational.
+## 6.15 Layer 2 governed-model interface
+A future governed/local model adapter may implement the paper’s Layer 2 without changing the app’s state, retrieval or UI architecture. The adapter receives a structurally-derived bias request plus the current ToM snapshot. For a Gemma-compatible MoE implementation, [R1] computed stress-weighted L/S/T axis proportions, mapped them across expert chunks, zero-centred the bias and applied alpha=1.0 before top-k expert selection. These exact values/mapping are a reproducibility profile for the paper, not a universal Tom Assist default. Production adapters must declare their own expert topology and pass non-inferiority/ablation gates.
+# 7. Component Specifications
+## 7.1 Repository layout
+tom-assist/  apps/    desktop/                 # Tauri desktop control app    extension/               # Manifest V3 browser extension  crates/    native-host/             # Chrome Native Messaging bridge    assistd/                 # local continuity service    protocol/                # shared schemas and versioning    persistence/             # SQLite event store and snapshots    governance/              # conflicts, interventions, authority gates    context-admission/       # candidate ranking and packet assembly    tom-adapter/             # current ToM runtime boundary  packages/    provider-adapters/       # ChatGPT first; test fixtures    ui-components/    schema-generated/        # TypeScript types generated from JSON Schema  tests/    fixtures/provider-dom/    replay/    adversarial/    integration/  docs/    architecture/    validation/    claims/  scripts/    install-native-host/    package-macos/    collect-diagnostics/
+## 7.2 Component authority boundaries
+Component
+May read
+May write
+Provider adapter
+Visible page DOM, selected project/workstream binding, extension settings.
+Extension UI and provider composer only after user-visible preview/approval.
+Extension service worker
+Adapter events and native-host responses.
+Transient capture queue and UI state; no authoritative project state.
+Native host
+Versioned envelopes.
+No state; forwards bytes only.
+Continuity orchestrator
+Project/event snapshots, adapter capabilities, ToM read packets.
+Transaction journal, packet/evaluation records and verified commit requests.
+Authoritative ledger
+Verified events only.
+Typed state through COMMIT_STATE compare-and-swap only.
+Context-admission engine
+Ledger, anchors, ToM activation, semantic/dependency signals.
+Ephemeral candidate/ranking trace and ContinuityPacket manifest; no state authority.
+State renderer
+Selected canonical items + provider capability profile.
+Ephemeral visible TOM_ASSIST_STATE text only.
+Semantic extractor
+Turn text and bounded project context.
+StateMutationCandidate only; never authoritative state.
+Governance engine
+Provider response, outgoing packet manifest, authoritative state.
+Interventions, correction packets and candidate mutations; never silent commit.
+ToM adapter
+Approved loads/commit packets plus read-only preview inputs.
+ToM permanent state only through approved commit path; preview/shadow calls must be rollback-safe.
+Optional model-coupling gateway
+ToM structural bias packet and local/open model router metadata.
+Inference-time router bias only; cannot modify project ledger.
+Desktop UI
+All local project state allowed by current user.
+User-authorised state commits, edits, supersessions, reopens and deletions.
+
+## 7.3 Semantic ingestion modes
+Mode
+Use in alpha
+Authority
+Manual structured capture
+Required. User marks decisions, constraints, rejected paths, completions and unresolved dependencies.
+Direct user-authoritative commit after confirmation.
+Deterministic extraction
+Required for obvious headings, status phrases, explicit “we decided/rejected/completed” patterns.
+Candidate only unless exact user action generated it.
+Local embedding/small model
+Optional shadow mode. MiniLM and/or local MLX model may propose candidate objects.
+Candidate only; precision measured before promotion.
+Provider-generated state delta
+Optional experimental mode using the same visible subscription conversation.
+Candidate only and visibly labelled as provider-generated.
+ToM-native language ingestion
+Future earned mode after unrestricted-language validation.
+Authority determined by separate certification, not assumed by this spec.
+
+# 8. Browser Extension Requirements
+## 8.1 Provider adapter contract
+EXT-001 The extension shall isolate provider-specific DOM logic behind a ProviderAdapter interface.
+EXT-002 The first adapter shall support the visible ChatGPT web interface in Chromium without calling private provider endpoints or exporting session cookies.
+EXT-003 The adapter shall identify visible user and assistant messages, stable ordering, streaming state, composer content and submission events.
+EXT-004 The adapter shall tolerate selector changes through layered semantic selectors, attribute fallbacks and fixture-based regression tests.
+interface ProviderAdapter {  detect(): Promise<ProviderDetection>;  getConversationIdentity(): Promise<ConversationIdentity>;  enumerateVisibleTurns(): Promise<ProviderTurn[]>;  observeTurnEvents(cb: (event: ProviderTurnEvent) => void): Unsubscribe;  readDraft(): Promise<string>;  writeDraft(text: string): Promise<void>;  interceptSubmit(cb: SubmitInterceptor): Unsubscribe;  getStreamingState(): Promise<StreamingState>;  mountPanel(host: HTMLElement): PanelMount;}
+## 8.2 Capture requirements
+EXT-010 The extension shall capture only content visible to the user in the rendered page or explicitly selected for import.
+EXT-011 Each captured turn shall include provider, conversation identifier, role, ordinal, timestamps when available, content hash and normalized text.
+EXT-012 Streaming fragments shall be buffered and committed as one response after stable completion; partial captures shall be marked incomplete.
+EXT-013 Duplicate capture shall be prevented through conversation ID, turn ordinal and normalized content hash.
+EXT-014 The extension shall display capture status and an explicit project attachment indicator in the page.
+## 8.3 Prompt gate requirements
+EXT-020 When Tom governance is enabled, the extension shall pause user-initiated submission long enough to request a ContinuityPacket from the local service.
+EXT-021 The extension shall show a visible preview containing packet length, included state categories, active warnings and excluded stale items.
+EXT-022 Available actions shall be Send with Tom, Edit packet, Send once without Tom, Cancel and Detach project.
+EXT-023 The extension shall never submit a message while the user is absent or without a current user-initiated submission event.
+EXT-024 Injected context shall be placed in the visible composer and remain inspectable in the sent message. No hidden provider channel is assumed.
+EXT-025 If the local service is unavailable, the extension shall fail open only after displaying a clear warning and requiring user action.
+## 8.4 Page interface
+• Project chip. Shows the attached project and continuity status.
+• Pre-send drawer. Displays the continuity packet and exclusions.
+• Post-response badge. PASS, REVIEW or CONFLICT with count and severity.
+• Quick capture toolbar. Decision, Constraint, Reject, Complete, Unresolved, Evidence.
+• Side panel. Active objective, held decisions, rejected paths, unresolved dependencies and recent interventions.
+## 8.5 Extension permissions
+Use the minimum host permissions required for explicitly supported provider domains. No broad “all sites” permission in the production manifest. Clipboard access is user-initiated only. Network access is limited to Chrome Native Messaging; the extension must not upload transcript data directly.
+# 9. Desktop Application and Local Service
+## 9.1 Desktop application functions
+Area
+Functions
+Projects
+Create, rename, archive, duplicate, export, import, attach provider sessions and select active project.
+Continuity ledger
+View objectives, decisions, constraints, rejected paths, completed work, unresolved dependencies and evidence.
+State graph
+Inspect typed relationships: supports, contradicts, depends_on, supersedes, resolves and derived_from.
+Interventions
+Review open conflicts, accept suggested correction, mark false positive and tune per-category sensitivity.
+Audit
+Immutable state-transition history, packet history, capture gaps, adapter version and ToM trajectory references.
+Settings
+Storage policy, transcript retention, packet budget, semantic extractor mode, provider adapters and privacy controls.
+Diagnostics
+Service status, adapter health, database integrity, capture test, exportable redacted diagnostic bundle.
+
+## 9.2 Local service lifecycle
+SRV-001 tom-assistd shall run as a per-user service and expose only a Unix-domain socket with user-only permissions.
+SRV-002 The desktop app shall install and manage a macOS LaunchAgent for startup, restart and log rotation.
+SRV-003 The service shall use explicit protocol versions and reject incompatible extension/native-host clients with an actionable error.
+SRV-004 Every mutating request shall carry a request ID, project ID, actor, expected state version and idempotency key.
+SRV-005 The service shall be able to rebuild current project state by replaying the immutable event log from a known snapshot.
+## 9.3 ToM runtime adapter
+The current ToM implementation may evolve independently. Tom Assist therefore binds through a versioned process contract rather than importing internal modules directly. The initial adapter may launch or connect to the existing runtime and exchange JSONL packets over stdin/stdout or a Unix socket. The adapter is responsible for schema translation, timeout handling, deterministic request recording and capability discovery.
+TomCapabilities {  runtime_version  state_format_version  supports_load_ingest  supports_branch_activation  supports_candidate_ranking  supports_state_snapshot  supports_commit  supports_conflict_check  supports_trajectory_digest}
+## 9.4 Service degradation modes
+Condition
+Required behaviour
+ToM unavailable
+Capture may continue locally; prompt injection requires explicit bypass; no authoritative state commit.
+Database locked/corrupt
+Stop mutation, preserve raw event files, offer integrity check and restore from last verified snapshot.
+Provider adapter broken
+Disable interception for that provider version; leave project state intact; show diagnostic status.
+Semantic extractor unavailable
+Manual capture and deterministic rules remain available.
+Native host mismatch
+Reject with exact version remediation; never silently downgrade protocol semantics.
+
+# 10. ToM Integration and Structural State Model
+## 10.1 Authority model
+Non-negotiable authority ruleLLM/provider output may generate candidate hypotheses, interpretations and state mutations. It shall not directly write ToM learned state, project commitments, memory snapshots or selector authority. A verified commit operation is the only path into authoritative state.
+
+## 10.2 Canonical state object types
+Type
+Meaning
+Key rule
+OBJECTIVE
+The active or historical goal/purpose of the project or workstream, including sub-goals.
+One primary active objective per workstream; sub-objectives allowed; completion or supersession must be explicit.
+CONCEPT
+A canonical project definition, model, mechanism or principle whose meaning must remain stable across turns.
+Stores canonical meaning, scope, provenance and relationships; refinements create versioned/superseding state rather than silently rewriting the concept.
+DECISION
+An accepted conclusion or selected direction.
+Requires status, rationale/evidence and authority source.
+CONSTRAINT
+A binding condition that valid continuations must satisfy.
+Hard/soft class; scope; activation and expiry.
+REJECTED_PATH
+An approach explicitly ruled out.
+Stores rejection reason and conditions for reconsideration.
+COMPLETED_WORK
+An experiment, implementation or decision step already completed.
+Stores result, artefacts and follow-up boundary.
+UNRESOLVED_DEPENDENCY
+A question, blocker or dependency still open.
+Not automatically an error; carried forward until resolved/superseded.
+EVIDENCE
+Source, measurement, artefact or observation supporting state.
+Has provenance, confidence and integrity status.
+ASSUMPTION
+A provisional condition not yet supported as fact.
+Must never be silently promoted to decision/evidence.
+SUPERSESSION
+A controlled replacement of one state object by another.
+Requires actor, reason and effective time; old state remains auditable.
+WORKSTREAM
+A bounded subgraph within a project.
+Prevents unrelated objectives from contaminating each other.
+
+## 10.3 Required fields
+StateObject {  id: UUID  project_id: UUID  workstream_id?: UUID  type: enum  title: string  canonical_text: string  status: proposed | active | satisfied | rejected | superseded | archived  authority: user | tom_verified | imported | provider_candidate | local_model_candidate  confidence: 0..1  binding_strength?: hard | soft | advisory  source_turn_ids: UUID[]  evidence_ids: UUID[]  branch_refs: string[]  created_at / updated_at / effective_at  supersedes_id?: UUID  reconsideration_condition?: string  content_hash: string  state_version: integer}
+## 10.4 State edges
+Edge
+Meaning
+supports
+Evidence or decision supports another object.
+contradicts
+Objects cannot both be active without explicit resolution.
+depends_on
+Object validity or completion depends on another object.
+resolves
+New object closes an unresolved dependency.
+supersedes
+New object replaces prior authority while retaining history.
+derived_from
+Object was extracted or inferred from source turns/evidence.
+scoped_to
+Object applies only within a project/workstream/session scope.
+reopens
+A deliberate user-authorised reconsideration of a rejected path.
+defines/refines
+Links a concept definition or later refinement to the concept/state it constrains; refinement must preserve lineage.
+
+## 10.5 Commit contract
+STATE-001 Every authoritative commit shall be append-only in the event log and shall increment the project state version.
+STATE-002 A decision reversal shall create a new object and a supersedes edge; it shall not overwrite or delete the prior decision.
+STATE-003 Provider-generated and local-model-generated objects shall remain proposed until user-confirmed or separately ToM-verified under an earned authority policy.
+STATE-004 Wrong-project, stale-state and version-conflict commits shall be rejected deterministically.
+STATE-005 The service shall compute and store a canonical state digest after each committed transaction.
+# 11. Context Retrieval and Admission
+## 11.1 Candidate pools
+• Authoritative state objects. Active objective, decisions, constraints, rejected paths, completed work, unresolved dependencies and evidence.
+• Recent local turns. A short recency window for immediate discourse continuity.
+• Historical transcript turns. Older turns considered only through candidate retrieval, not indiscriminate replay.
+• Artefact/evidence snippets. Referenced reports, experiment results and files with provenance.
+• Guardrail objects. Rejected and superseded paths can be included as negative constraints even when excluded as positive context.
+## 11.2 Admission pipeline
+current user draft  -> resolve project/workstream + provider capability profile  -> open snapshot V / ToM checkpoint D  -> ToM preview activation (non-mutating)  -> candidate collection       authoritative ledger objects       recent discourse       historical conversation anchors       linked artefact/evidence anchors       negative guardrails (rejected/superseded)  -> hard validity gates       project/workstream scope       authority + supersession status       privacy/retention policy       evidence integrity  -> structural resonance (primary retrieval query)  -> semantic + dependency/sequence relevance  -> stale/conflict/redundancy penalties  -> diversity + minimum-context budget selection  -> TOM_ASSIST_STATE rendering  -> digest/version bind  -> user-visible preview  -> visible composer insertion before original draft
+## 11.3 Scoring contract
+The app shall not freeze the archived paper’s single-vector scoring implementation. It shall expose decomposed scores returned by the current ToM adapter and combine them under a versioned, testable policy.
+candidate_score =    w_semantic   * semantic_relevance  + w_structural * structural_resonance  + w_sequence   * dependency_sequence_relevance  + w_authority  * authority_strength  + w_recency    * bounded_recency  - p_stale      * stale_probability  - p_conflict   * conflict_penalty  - p_redundant  * redundancy_penalty
+The w_leaf=0.6 result is inherited by [R1] from the earlier branch-conditioned retrieval calibration [R2]. It is an empirical prior showing that moderate structural contribution can outperform both zero and structural dominance. Production scoring must be recalibrated against the current ToM runtime and logged by policy_version; no historical scalar is allowed to become an unexplained constant.
+## 11.4 Hard admission rules
+Rule
+Behaviour
+Superseded positive state
+Exclude as current truth; include only when needed to explain history or detect revival.
+Rejected path
+Do not present as a recommendation. Include compactly as a guardrail when the new prompt is structurally near the rejected path.
+Completed work
+Include result and next boundary; do not inject the full old procedure unless explicitly requested.
+Unresolved dependency
+Include when it gates the current objective; do not label it a contradiction by default.
+Low-integrity evidence
+Mark as provisional or exclude according to project policy.
+Cross-project item
+Hard reject unless explicitly linked through a user-created shared evidence object.
+Duplicate statements
+Collapse to canonical state object plus the strongest evidence reference.
+
+## 11.5 Authoritative state-block format
+[TOM_ASSIST_STATE v1 | project=<name> | workstream=<name> | state=<V> | digest=<short>]STATUS: authoritative prior project state generated locally by Tom Assist.PRECEDENCE: current explicit user request > TOM_ASSIST_STATE > raw prior transcript > model inference.ACTIVE OBJECTIVE- ...BINDING CONSTRAINTS- ...HELD DECISIONS- ...REJECTED / SUPERSEDED - DO NOT REVIVE WITHOUT EXPLICIT RECONSIDERATION- path - reason / reconsideration conditionCOMPLETED WORK - DO NOT REPROPOSE AS OPEN- result - next boundaryUNRESOLVED DEPENDENCIES- ...RETRIEVED ANCHORS- [source] ...INSTRUCTIONAnswer the current request directly using this state. Do not enumerate prior conversation unless asked. If the current explicit request conflicts with held state, identify the conflict as a proposed supersession/reopening rather than silently changing prior state.[/TOM_ASSIST_STATE][CURRENT_USER_REQUEST]<original draft preserved verbatim>
+## 11.6 Token-budget policy
+CTX-001 The default internal packet budget shall be configurable and initially capped at approximately 1,200 estimated tokens, excluding the user draft.
+CTX-002 The packet builder shall prioritise hard constraints and guardrails before descriptive background.
+CTX-003 The preview shall show estimated token overhead and allow the user to expand or compact sections.
+CTX-004 Context packet history shall be stored with candidate IDs, scores, exclusions and policy version.
+CTX-005 The packet budget controller shall treat binding constraints, current objective and active guardrails as non-evictable before optional background anchors.
+CTX-006 Production rendering shall use the authoritative-state format. A prose “Earlier in this conversation...” renderer exists only for controlled ablation/diagnostics.
+CTX-007 The state renderer shall preserve the user draft verbatim outside the generated state block; editing the state block shall never silently alter the user request.
+CTX-008 Context retrieval shall support typed CONCEPT and OBJECTIVE/GOAL objects as first-class candidates; fact/evidence anchors shall not be the only retrieval unit.
+CTX-009 When a selected state object depends on other objects required to interpret it correctly, the budget controller shall admit a dependency-closed minimal bundle or explicitly mark the missing dependency.
+CTX-010 Canonical state objects shall outrank duplicate raw-turn paraphrases for continuity rendering; raw turns remain provenance/evidence unless no canonical state exists.
+CTX-011 Concept refinements and objective changes shall be represented through explicit version/supersession/reopen lineage; retrieval shall never silently merge incompatible definitions or goals.
+CTX-012 Subscription Companion Mode shall be validated and releasable without Layer 2. Lack of provider router access shall not disable Layer 1, authoritative-state framing or post-response governance.
+# 12. Continuity Governance and Interventions
+## 12.1 Response evaluation states
+State
+Meaning
+UI behaviour
+PASS
+No material conflict detected; response may still contain candidate state changes.
+Green/neutral badge; candidate changes shown separately.
+REVIEW
+Potential drift, omission, unsupported assumption or unresolved dependency requires attention.
+Amber badge; evidence and suggested correction available.
+CONFLICT
+Response contradicts binding state, revives a rejected path, drops a hard constraint or changes state without authority.
+Red badge; do not auto-commit; present exact conflicting objects.
+INCOMPLETE
+Capture ended before response stabilised or service evaluation failed.
+Grey badge; no state commit permitted.
+
+## 12.2 Intervention taxonomy
+Code
+Trigger
+CONTRADICTION
+Response conflicts with an active decision or hard constraint.
+SUPERSEDED_PATH_REVIVED
+Response recommends an approach already rejected/superseded without explicit reconsideration.
+CONSTRAINT_DROPPED
+A binding condition is omitted, weakened or violated.
+OBJECTIVE_DRIFT
+Response optimises for a different objective or workstream.
+COMPLETED_WORK_REPROPOSED
+Accepted completed work is presented as the next step.
+UNSUPPORTED_STATE_CHANGE
+Response treats a proposal/assumption as an accepted change.
+STALE_EVIDENCE_USED
+Response relies on evidence marked stale, invalid or superseded.
+WRONG_PROJECT_CONTEXT
+Response imports state from another project/workstream.
+SUPERSESSION_WITHOUT_REASON
+A held decision is replaced without actor, reason or evidence.
+UNRESOLVED_DEPENDENCY_IGNORED
+A dependency that gates the requested action is skipped.
+CONCEPT_DRIFT
+Response materially changes a held concept definition/mechanism or conflates it with a superseded definition without an authorised refinement.
+
+## 12.3 Intervention object
+Intervention {  id: UUID  project_id: UUID  turn_id: UUID  code: enum  severity: info | warning | blocking_commit  confidence: 0..1  summary: string  response_excerpt: string  conflicting_state_ids: UUID[]  evidence_turn_ids: UUID[]  suggested_context_patch?: string  status: open | accepted | dismissed | false_positive | resolved  policy_version: string}
+## 12.4 Authority and blocking behaviour
+In Subscription Companion Mode, Tom Assist cannot prevent the provider from displaying its answer. “Blocking” means blocking the answer from altering authoritative Tom Assist state and blocking automatic continuation under an unacknowledged conflict. The user can still read, copy or use the provider response.
+## 12.5 User correction workflow
+• Accept Tom’s conflict and generate a corrective next prompt.
+• Mark the response as a legitimate decision change and complete the supersession form.
+• Dismiss as irrelevant for this turn without changing the underlying state.
+• Mark as false positive, recording the category and reason for calibration.
+• Edit the conflicting state object when the ledger itself is wrong.
+# 13. Data Model and Persistence
+## 13.1 Persistence strategy
+Use an event-sourced local store. Authoritative state is reconstructed from immutable events plus signed/checksummed snapshots. This provides deterministic audit, reversible user operations and clean cold-restart testing.
+Store
+Contents
+Mutation model
+Event log
+Project creation, session attachment, turn ingest, candidate creation, commit, reject, supersede, intervention resolution.
+Append-only; idempotent by event ID.
+Materialised state
+Current state objects and edges for fast reads.
+Transactionally updated from accepted events.
+Snapshots
+Canonical project state, ToM runtime snapshot reference, digest and schema versions.
+Periodic immutable records.
+Transcript store
+Normalized visible turns and content hashes, subject to retention policy.
+Append/soft-delete; raw content can be disabled per project.
+Packet log
+Every context packet, candidate ranking and exclusion reason.
+Append-only for validation.
+Diagnostics log
+Adapter errors, latency, service health and redacted stack traces.
+Rotating local log; no transcript text by default.
+
+## 13.2 Required integrity controls
+DB-001 SQLite transactions shall use foreign keys, WAL mode and explicit schema migrations.
+DB-002 Each event shall store previous and resulting canonical state digests.
+DB-003 Snapshot load shall verify project ID, state schema, ToM runtime version and digest before activation.
+DB-004 A failed commit shall not partially update materialised state or ToM runtime state.
+DB-005 The app shall support export to a documented portable archive containing JSONL events, state JSON, transcript policy metadata and checksums.
+## 13.3 Retention profiles
+Profile
+Behaviour
+Full local
+Store normalized transcript, state, evidence, packets and audit locally.
+State-focused
+Store state objects and source hashes; retain only selected turn excerpts.
+Ephemeral transcript
+Use turn text for current evaluation, then discard raw content after state review.
+Redacted export
+Remove or hash raw provider content while retaining state structure and metrics.
+
+# 14. Application Protocols and Schemas
+## 14.1 Message envelope
+{  "protocol": "tom-assist/1.0",  "request_id": "uuid",  "idempotency_key": "uuid",  "method": "turn.prepare",  "actor": {"type": "extension", "instance_id": "uuid"},  "project_id": "uuid",  "base_state_version": 42,  "payload": {},  "sent_at": "RFC3339"}
+## 14.2 Core methods
+Method
+Purpose
+Mutating
+capabilities.get
+Discover protocol, provider-surface and ToM/model-coupling capabilities.
+No
+project.create/list/get/update/archive
+Manage top-level project continuity boundaries.
+Mixed
+workstream.create/get/update/archive
+Manage objective-bounded state subgraphs.
+Yes
+session.attach/fork/detach/reconcile
+Bind provider conversations, record fork lineage and reconcile divergent sessions.
+Yes
+turn.ingest
+Store one visible user/assistant turn as immutable observation/evidence.
+Append only
+turn.prepare
+Open snapshot V/D, preview ToM activation, rank context and build TOM_ASSIST_STATE packet.
+No authoritative mutation
+turn.sent
+Record the exact packet_digest + user draft that was actually submitted.
+Append only
+response.evaluate
+Evaluate a completed provider/model response against packet/state lineage.
+Candidate/intervention records only
+packet.get/verify
+Retrieve packet manifest and verify digest/state lineage.
+No
+state.candidate.create
+Record a proposed state mutation.
+Candidate only
+state.commit
+Commit verified state event with compare-and-swap and approved ToM structural transition.
+Yes
+state.supersede/reopen
+Controlled decision replacement or rejected-path reconsideration.
+Yes
+intervention.resolve
+Accept/dismiss/mark false positive and optionally prepare correction.
+Yes
+model.bias.preview/apply
+Optional governed-model Layer 2 hook after capability negotiation.
+Inference-time only; no ledger mutation
+snapshot.create/verify/restore
+Manage deterministic ledger/ToM checkpoints.
+Yes
+project.export/import
+Portable project archive with manifests/checksums.
+Yes
+diagnostics.run
+Check extension/native host/service/ToM/provider-adapter health.
+No
+
+## 14.3 Idempotency and concurrency
+All mutations are optimistic-concurrency controlled using expected_state_version. If the project state changed after the extension prepared a request, the service returns STATE_VERSION_CONFLICT and the extension must refresh the packet. Duplicate events with the same idempotency key return the original result.
+## 14.4 Error model
+Error {  code: PROTOCOL_MISMATCH | SERVICE_UNAVAILABLE | PROJECT_NOT_FOUND |        STATE_VERSION_CONFLICT | TOM_RUNTIME_UNAVAILABLE |        CAPTURE_INCOMPLETE | VALIDATION_FAILED | PERMISSION_DENIED |        DATABASE_INTEGRITY_ERROR | ADAPTER_UNSUPPORTED  message: string  retryable: boolean  remediation?: string  correlation_id: UUID}
+# 15. User Experience and Interface
+## 15.1 Browser states
+State
+Visible indication
+Detached
+Tom chip shows “No project”; no interception.
+Attached / healthy
+Project name and green continuity indicator.
+Preparing
+Submission paused; packet being assembled locally.
+Preview
+Packet sections, token estimate, warnings and exclusions.
+Evaluating response
+Streaming response visible; Tom badge shows analysis pending.
+Conflict
+Red badge and expandable evidence panel.
+Service unavailable
+Grey warning; explicit Send without Tom action.
+Adapter unsupported
+Tom disabled for current provider page version; diagnostics link.
+
+## 15.2 Desktop navigation
+Projects  - Overview  - Active objective  - Decision ledger  - Constraints  - Rejected paths  - Completed work  - Unresolved dependencies  - Evidence  - State graph  - Sessions  - Interventions  - Audit trail  - Snapshots  - Settings / Export
+## 15.3 State card design
+Every state card must show type, status, binding strength, authority source, canonical wording, effective date, source turns/evidence, supersession status and why it was selected for the last context packet. Hidden confidence or authority is prohibited.
+## 15.4 First-run onboarding
+• Install/launch desktop app and local service.
+• Install the signed/unpacked browser extension.
+• Run native-host connection test.
+• Create the first project and choose transcript retention profile.
+• Open ChatGPT web and attach the project.
+• Optionally import visible conversation history.
+• Create or confirm initial objective, constraints and held decisions.
+• Run a sample prompt with packet preview enabled.
+## 15.5 Accessibility
+UX-001 All browser and desktop controls shall be keyboard operable and expose accessible names/roles.
+UX-002 Status shall not rely on colour alone; text labels PASS, REVIEW, CONFLICT and INCOMPLETE are mandatory.
+UX-003 Context packet and state objects shall support copy/export as plain text and structured JSON.
+# 16. Security, Privacy and Platform Boundaries
+## 16.1 Security goals
+• Keep provider credentials and session cookies inside the provider/browser security boundary.
+• Keep project transcripts and state local by default.
+• Prevent browser content from invoking arbitrary local service methods.
+• Prevent silent prompt submission or hidden state mutation.
+• Make all authoritative state changes auditable and reversible.
+• Support complete project deletion and portable export.
+## 16.2 Threat model
+Threat
+Mitigation
+Malicious page content sends native messages
+Extension validates origin, active provider adapter and message schema; native host accepts only extension ID allowlist.
+Prompt injection tries to mutate state
+Response text is untrusted evidence; mutation candidates require authority gate and user/ToM verification.
+Transcript leakage through logs
+No raw turn content in diagnostic logs; content stored only under selected retention profile.
+Local port exposure
+Use Native Messaging plus user-only Unix socket, not public localhost HTTP.
+Database theft
+Production profile uses SQLCipher with key stored in macOS Keychain; exports optionally encrypted.
+DOM adapter executes page scripts
+Use isolated content-script world and sanitize all page-derived HTML before display.
+Supply-chain/update compromise
+Signed/notarized app, pinned dependencies, reproducible build metadata and signed extension packages.
+Wrong project attached
+Prominent project chip, explicit attach action and WRONG_PROJECT_CONTEXT detector.
+
+## 16.3 Privacy controls
+SEC-001 No provider password, API key or session cookie shall be requested or stored by Tom Assist.
+SEC-002 No transcript or state shall leave the device in the internal alpha unless the user explicitly exports it.
+SEC-003 Extension host permissions shall be limited to named supported provider domains.
+SEC-004 Project deletion shall remove local materialised state, events, snapshots, transcript content and cached packets after confirmation.
+SEC-005 A diagnostics export shall be redacted by default and enumerate exactly what it contains.
+## 16.4 Provider/platform boundary
+The first release operates through the rendered web interface and user-initiated input. It must not scrape private endpoints, replay authentication tokens, simulate provider billing, bypass usage limits or claim provider endorsement. Provider adapter changes are a maintenance risk and must be tracked separately from the core ToM continuity engine.
+# 17. Reliability, Telemetry and Supportability
+## 17.1 Required telemetry
+Category
+Fields
+Capture
+provider adapter version, conversation ID hash, turn ordinal, role, content hash, completeness, duplicate status.
+Preparation
+project/state version, draft hash, ToM activation ID, candidate count, selected/excluded IDs, score components, packet tokens, latency.
+Evaluation
+response hash, intervention codes, confidence, conflicting state IDs, evaluator version, latency.
+Commit
+event IDs, actor, prior/resulting state digest, ToM trajectory/snapshot reference, idempotency key.
+Health
+extension/native host/service/ToM/database versions and status.
+
+## 17.2 Performance targets
+Metric
+Internal-alpha target
+Native bridge round trip
+p95 < 100 ms excluding ToM processing.
+Context preparation
+p95 < 2.5 s for a typical project state and 1,200-token packet budget.
+Response evaluation after stream completion
+p95 < 3.0 s.
+Project open from verified snapshot
+< 2.0 s for normal internal projects.
+Crash recovery
+No committed-event loss; at most the current uncommitted capture buffer is replayed.
+Capture completeness on certified provider fixture set
+>= 99% of visible completed turns.
+
+## 17.3 Diagnostics bundle
+• Component versions and capability handshake.
+• Provider DOM fixture fingerprint and adapter health.
+• Redacted recent error events and correlation IDs.
+• Database integrity-check output and latest verified snapshot metadata.
+• Optional user-selected packet/intervention samples.
+• No raw provider credentials, cookies or full transcript by default.
+# 18. Validation Programme and Acceptance Gates
+## 18.1 Experimental arms
+Arm
+Condition
+SUB-A
+Base provider subscription conversation without Tom Assist.
+SUB-B
+Conventional recent-history/summary or text-semantic retrieval baseline.
+SUB-C
+Tom Assist structural retrieval rendered as prose prelude - diagnostic ablation mirroring the failure-prone paper format.
+SUB-D
+Tom Assist production Subscription Companion Mode: current ToM structural state retrieves typed project objects and supporting anchors; an authoritative TOM_ASSIST_STATE block carries concepts, goals/objectives, decisions, constraints, rejected paths, completed work, dependencies, evidence boundaries and supersessions; post-response governance checks continuity. No Layer 2 router access is assumed.
+SUB-E
+Tom Assist with wrong/stale project structural state - causal ablation.
+GOV-FULL
+Optional local/open MoE regression arm: Layer 1 + authoritative-state block + Layer 2 expert bias, used only where router access exists; not part of the closed-provider consumer claim.
+
+## 18.2 Test corpus
+• Historical real-work replay. Selected ToM/SICD conversations with known regressions and decision boundaries.
+• Frozen deterministic battery. Synthetic but hand-audited project histories covering every intervention class.
+• Adversarial paraphrase battery. Revive rejected paths using different language; distract with lexically similar but structurally irrelevant content.
+• Cross-session battery. Continue after new chat, transcript truncation, browser restart and cold service restart.
+• Legitimate reversal battery. Supply new evidence and test whether the system permits explicit supersession rather than blocking all change.
+• Wrong/stale-state ablations. Feed state from another project or freeze state updates to establish causal dependence.
+### 18.2.1 Typed structural-continuity battery
+The app must prove the transfer from planted-fact recall to the actual objects required by project work. Build a frozen battery of 100-300-turn histories in which the load-bearing state is deliberately distributed across time and later subjected to drift, paraphrase, distraction, truncation, new-chat continuation and legitimate revision.
+• Plant at least one canonical CONCEPT definition/mechanism, one active OBJECTIVE/GOAL, one hard CONSTRAINT, one accepted DECISION, one REJECTED_PATH, one COMPLETED_WORK result, one UNRESOLVED_DEPENDENCY and one EVIDENCE/ASSUMPTION boundary per scenario family.
+• Include supersession cases: a held decision or concept is deliberately refined/replaced later. Success requires using the new state while preserving the prior state as auditable history.
+• Score action consistency, not mere repetition. Questions should require choosing a next step, rejecting an invalid proposal, combining a goal with constraints, respecting a dependency, or explaining why a superseded/rejected path is no longer current.
+• Run SUB-A through SUB-E on identical histories. SUB-B provides the conventional summary/text-semantic retrieval baseline; SUB-E provides the wrong/stale-structural-state causal ablation.
+• Report each object family separately and as a pre-registered aggregate. A single strong fact-recall score cannot compensate for collapse on concepts, goals, constraints or relationship fidelity.
+• Include no-rot controls where all required state is already short and visible. Tom Assist must remain non-inferior and avoid gratuitous packet injection.
+Primary hypothesis for Subscription Companion Mode: when long-horizon state is unavailable, stale or structurally diluted in the provider session, SUB-D preserves project-level action consistency materially better than both the unaided subscription and a conventional text/summary baseline. This hypothesis is earned only if G16 passes.
+## 18.3 Primary product metrics
+Metric
+Definition
+Stale-context injection rate
+Proportion of injected packet items that are outdated, irrelevant, contradicted or superseded for the current objective.
+Context relevance precision
+Proportion of injected items judged load-bearing for the current turn.
+Constraint retention
+Proportion of required constraints preserved in the answer/action.
+Rejected-path revival rate
+Frequency with which a rejected approach is recommended without authorised reconsideration.
+Completed-work reproposal rate
+Frequency with which completed work is presented as still open.
+Decision consistency
+Late-turn compatibility with active decisions, allowing explicit supersession.
+Objective drift rate
+Responses that optimise a different objective without user-authorised workstream change.
+False intervention rate
+Interventions dismissed as incorrect after review.
+Recovery continuity
+Correct state retention after truncation, new session and cold restart.
+Packet overhead
+Tokens and preparation latency added per turn.
+Concept-definition retention
+Proportion of responses/actions that preserve the active canonical meaning and relationships of load-bearing project concepts, allowing explicit refinement/supersession.
+Goal/sub-goal continuity
+Proportion of responses/actions aligned with the active objective hierarchy without silent objective substitution or premature completion.
+Relationship fidelity
+Accuracy of supports/depends_on/contradicts/supersedes/reopens/defines-refines relationships required by the current task.
+
+## 18.4 Acceptance gates
+Gate
+Pass condition
+G1 Capture integrity
+>=99% completed visible turns captured on frozen ChatGPT DOM fixtures; zero role/order inversions.
+G2 Persistence
+100% canonical ledger/event equality and digest verification across 25 repeated cold restarts.
+G3 Project/workstream isolation
+Zero cross-project/workstream state admission in deterministic wrong-scope tests.
+G4 Context-removal rescue
+On a frozen cross-chat/truncation battery where required prior state is absent from provider-visible history, SUB-D materially outperforms SUB-A/SUB-B; paired 95% CI excludes zero.
+G5 Structural retrieval causality
+Wrong/stale structural state SUB-E performs worse than live SUB-D or triggers explicit mismatch detection; live update contribution is measurable.
+G6 Authoritative-state format
+SUB-D is non-inferior to SUB-C on recall and materially reduces enumeration/history-replay failures on the long-context subset.
+G7 No-rot non-inferiority
+When the needed state remains easy/visible, SUB-D does not degrade task success by more than the pre-registered tolerance.
+G8 Structural continuity
+>=95% binding-constraint retention; <=5% rejected-path revival and completed-work reproposal on the frozen internal battery.
+G9 Legitimate change
+>=90% of explicit, evidence-backed supersessions/reopens accepted without false blocking.
+G10 Intervention precision
+False intervention rate <=10% overall and <=5% for blocking-commit severity.
+G11 User/state authority
+Zero silent submissions; zero provider/local-model candidate mutations entering authoritative state without the commit gate.
+G12 Transaction consistency
+Zero successful COMMIT_STATE operations on stale base_state_version; idempotent duplicate sends/captures produce one event.
+G13 Security
+Zero provider credentials/cookies persisted; origin, extension-ID and local-socket restrictions verified.
+G14 Performance
+Preparation/evaluation p95 targets met on the reference Mac without making normal subscription chat impractical.
+G15 Reproducibility
+Every validation run records code SHA, provider/adapter version, state policy, packet renderer version, exact arms, event/packet traces and result summary.
+G16 Structural-object generalisation
+On the frozen 100-300-turn structural-continuity battery, SUB-D materially outperforms SUB-A/SUB-B on concept-definition retention, goal/sub-goal continuity, decision/constraint consistency, rejected-path suppression, dependency handling and supersession fidelity; paired 95% CI excludes zero on the pre-registered aggregate and no object family shows a catastrophic regression.
+G17 Governed-model paper regression (optional)
+Where a compatible local Gemma profile is available, the app’s GOV-FULL path reproduces the paper mechanism interfaces before any Layer-2 production claim.
+
+## 18.5 Paper-replication relationship
+Tom Assist does not need to reproduce [R1] byte-for-byte, but it must preserve the paper’s causal decomposition. Subscription validation separately tests structural retrieval, prose-versus-authoritative-state framing, stale/wrong structural state, and no-rot non-inferiority. Because a closed subscription has no router access, SUB-D is explicitly a two-surface transfer test rather than the paper’s FULL condition. If Governed Model Mode is enabled on a compatible MoE model, GOV-FULL becomes a separate paper-mechanism regression and Layer 2 ablation. All arms, failures and composition effects are reported; no post-hoc rescue framing is permitted.
+## 18.6 Definition of done for internal deployment
+• Installable Mac app and working extension/native-host handshake.
+• A ToM project can be attached to ChatGPT web and survive browser/service restart.
+• Outgoing prompts can be augmented through a visible, editable continuity packet.
+• Incoming responses receive PASS/REVIEW/CONFLICT evaluations with evidence.
+• Decisions, constraints, rejected paths, completed work and unresolved dependencies can be captured and superseded.
+• No provider API, password or API key is required.
+• Core gates G1-G16 pass. G17 is additionally required only if Governed Model Mode / Layer 2 is shipped or claimed.
+# 19. Implementation Plan and Work Packages
+## 19.1 Phase 0 — Claim and interface freeze
+• Commit this specification and references to a new Tom Assist repository.
+• Freeze v1 protocol schemas, state types and intervention taxonomy.
+• Identify the current ToM runtime entry point and capability surface.
+• Create reference fixtures from the context-rot paper and selected historical conversations.
+## 19.2 Phase 1 — Local skeleton
+• Create Tauri desktop shell, Rust service, SQLite migrations and native-host bridge.
+• Implement project CRUD, event log, state objects, snapshots and diagnostics.
+• Implement protocol versioning, idempotency and state digests.
+• Create a mock ToM adapter so the full app can run before runtime integration.
+## 19.3 Phase 2 — ChatGPT browser adapter
+• Implement Manifest V3 extension and isolated provider adapter.
+• Capture visible turns and stable streaming completion.
+• Attach project, display side panel and quick capture actions.
+• Add frozen DOM fixtures and automated adapter regression tests.
+## 19.4 Phase 3 — ToM integration and context admission
+• Implement runtime capability handshake and process adapter.
+• Ingest draft loads in non-authoritative mode.
+• Retrieve/rank state and transcript candidates using current branch/motif mechanics.
+• Build packet preview, token budgeting, exclusions and packet audit log.
+## 19.5 Phase 4 — Governance and state review
+• Implement response evaluation and intervention taxonomy.
+• Implement candidate mutations from manual/deterministic channels.
+• Implement commit, reject, supersede, false-positive and undo workflows.
+• Ensure provider/local-model candidates cannot directly mutate state.
+## 19.6 Phase 5 — Validation harness
+• Build replay runner for arms A-D.
+• Implement paper-aligned metrics, wrong-state and stale-state ablations.
+• Run historical and deterministic batteries; report all failures.
+• Tune packet/scoring policy only on development split; freeze before held-out run.
+## 19.7 Phase 6 — Internal release hardening
+• SQLCipher/Keychain integration, signed app and native host.
+• Crash recovery, log rotation, migration backup and restore.
+• Notarized internal installer and extension packaging.
+• Privacy review and redacted diagnostics export.
+## 19.8 Work-package dependency table
+Work package
+Depends on
+Exit artefact
+WP-01 Protocol/schema
+Specification
+Versioned JSON Schemas and generated Rust/TypeScript types.
+WP-02 Event store
+WP-01
+SQLite migrations, replay and digest tests.
+WP-03 Native bridge
+WP-01
+Extension-to-service handshake and security tests.
+WP-04 Provider adapter
+WP-01/WP-03
+ChatGPT fixture suite and capture tests.
+WP-05 ToM adapter
+Current runtime inspection
+Capability handshake, mock and live adapters.
+WP-06 Context admission
+WP-02/WP-05
+Packet builder and candidate trace.
+WP-07 Governance
+WP-02/WP-05
+Intervention engine and state gate.
+WP-08 Desktop UX
+WP-02/WP-07
+Project ledger, review and settings UI.
+WP-09 Validation
+WP-04/WP-06/WP-07
+Frozen run manifests, reports and gate verdicts.
+WP-10 Packaging
+All
+Signed/notarized internal distribution.
+
+# 20. Packaging, Deployment and Operations
+## 20.1 Internal alpha packaging
+• Universal or arm64 signed macOS application bundle containing desktop UI, service and native host.
+• Installer registers the Chrome Native Messaging manifest for the signed extension ID.
+• Extension distributed as an unpacked developer build initially, then signed private package.
+• Local database created in the user application-support directory with restrictive permissions.
+• Automatic backup before every schema migration.
+## 20.2 Version compatibility
+Component
+Version rule
+Extension ↔ native host
+Exact major protocol match; minor backward compatibility where schema allows.
+Native host ↔ service
+Exact major match and capability negotiation.
+Service ↔ database
+Forward migrations only with automatic backup and migration journal.
+Service ↔ ToM runtime
+Capability handshake plus adapter-specific supported version range.
+Project export
+Self-describing manifest with schema versions and checksum list.
+
+## 20.3 Update policy
+The internal alpha should use deliberate manual updates. Provider adapter hotfixes may ship independently, but must be signed and versioned. Core state schema or ToM adapter changes require migration tests and a verified rollback path.
+## 20.4 Backup and recovery
+OPS-001 Create a verified local backup before application update or database migration.
+OPS-002 Allow one-click export of a selected project and one-click verification before import.
+OPS-003 Provide a read-only safe mode when migration or ToM runtime compatibility fails.
+# 21. Risks, Open Decisions and Falsifiers
+## 21.1 Principal risks
+ID
+Risk
+Control
+RISK-1
+Semantic extraction is unreliable
+Use manual authority and candidate-only automation; measure precision before promotion.
+RISK-2
+Provider DOM changes
+Adapter isolation, frozen fixtures, health detection and rapid independent release.
+RISK-3
+Continuity packet becomes too long
+Hard token budget, canonical objects, redundancy collapse and user preview.
+RISK-4
+Tom over-constrains legitimate creativity/change
+Separate hard constraints from advisory context; explicit supersession and false-positive telemetry.
+RISK-5
+State ledger becomes wrong
+Source/evidence links, user edit, audit history, undo and wrong-state ablations.
+RISK-6
+Subscription provider treats injected packet poorly
+Provider-specific packet renderer and non-inferiority testing.
+RISK-7
+Paper effect does not transfer to live tree state
+Pre-register live comparison and accept failure; do not substitute paper claims for app proof.
+RISK-8
+Local ToM latency harms workflow
+Snapshot/cache, async post-response analysis and bounded preparation budget.
+RISK-9
+Users misunderstand “blocking”
+UI explicitly says provider answer is visible; Tom blocks only state commit/continuation authority.
+
+## 21.2 Open implementation decisions
+Decision
+Default in this specification
+Evidence required to change
+Desktop stack
+Tauri 2/Rust + TypeScript.
+Prototype proves a native Swift shell materially reduces integration/security risk.
+Extension transport
+Native Messaging + Unix socket.
+Measured packaging or reliability issue justifies another local-only transport.
+State store
+SQLite; SQLCipher production.
+Scale test shows a different embedded store is required.
+Packet budget
+~1,200 estimated tokens initial cap.
+Provider-specific held-out tests identify a better quality/overhead frontier.
+Automated state extraction
+Shadow/candidate only.
+Precision, false mutation and supersession tests meet explicit promotion gates.
+Structural weighting
+Recalibrated current policy; paper’s 0.6 only a prior.
+Held-out sweep supports a fixed/default value for the current architecture.
+
+## 21.3 Decisive falsifiers
+• Tom Assist does not reduce stale-context injection relative to a strong summary/retrieval baseline on held-out live sessions.
+• Wrong or stale ToM state performs as well as live correct state, indicating the structural state is not causally contributing.
+• False blocking of legitimate decision change remains above the acceptance threshold after calibration.
+• The packet’s token/latency overhead erases the continuity benefit in normal work.
+• Provider adapter instability makes capture incomplete enough to corrupt project state.
+• User-confirmed state cannot be recovered exactly after cold restart and migration.
+# 22. Future Roadmap
+## 22.1 Near-term extensions after internal proof
+• Additional Chromium provider adapters for Claude and Gemini web.
+• Cross-device encrypted project sync as a separate opt-in service.
+• Mobile companion for state review, project selection and share-to-Tom workflows.
+• Team workspaces with explicit ownership and decision authority.
+• Tomarium visualisation as an optional view of structural project state, not the core product.
+Tomarium should remain an optional visualisation of the living project state. It is not a substitute for the continuity ledger, evidence links or governance workflow.
+## 22.2 Governed/open-model full three-mode mode
+This mode exposes an inference gateway for models whose router or decoding surface is controllable. It reuses the same project state, anchor store, context-admission engine and authoritative-state renderer, then optionally adds the [R1] Layer 2 expert-bias hook. This is the architectural route for reproducing the paper’s FULL condition; it is not represented as a capability of ordinary ChatGPT/Claude browser subscriptions.
+## 22.3 Research extensions
+• Replicate the Layer 2 expert-bias result across a second model family, additional context scales and naturalistic long-form conversations before treating it as a general model-coupling capability.
+• ToM-native unrestricted-language ingestion after held-out paraphrase, nuisance and contradiction certification.
+• Cross-project structural transfer with explicit shared evidence and no accidental contamination.
+• Automated authority promotion only after precision, false-intervention and causal-ablation thresholds are met.
+
+# Appendix A — Canonical JSON Examples
+## A.1 ContinuityPacket
+{  "packet_id": "9eb3...",  "packet_digest": "sha256:...",  "project_id": "1c12...",  "workstream_id": "ws_...",  "provider_session_id": "sess_...",  "project_state_version": 42,  "project_state_digest": "sha256:...",  "tom_checkpoint_digest": "sha256:...",  "draft_hash": "sha256:...",  "policy_version": "context-policy/1.1",  "renderer_version": "authoritative-state/1.0",  "provider_capabilities": {    "visible_prompt_injection": true,    "response_capture": true,    "model_internal_bias": "none"  },  "tom_activation_id": "act_...",  "sections": [    {      "type": "BINDING_CONSTRAINTS",      "items": [        {          "state_id": "...",          "text": "...",          "authority": "user_verified",          "structural_score": 0.91,          "semantic_score": 0.78,          "reason_selected": "binding + structurally active"        }      ]    }  ],  "retrieved_anchor_ids": ["anchor_..."],  "excluded": [{"id": "...", "reason": "superseded"}],  "estimated_tokens": 612,  "warnings": []}
+## A.2 StateMutationCandidate
+{  "candidate_id": "uuid",  "project_id": "uuid",  "source_turn_ids": ["uuid"],  "proposed_by": "local_model_candidate",  "operation": "CREATE",  "object": {    "type": "DECISION",    "title": "Adopt browser-extension-first architecture",    "canonical_text": "Tom Assist will use a Chromium extension plus a local Mac service.",    "status": "proposed",    "confidence": 0.82,    "evidence_ids": []  },  "tom_check": {    "result": "compatible",    "conflicts": [],    "requires_user_confirmation": true  }}
+## A.3 SupersessionCommit
+{  "event": "STATE_SUPERSEDED",  "actor": "user",  "old_state_id": "uuid-old",  "new_state_id": "uuid-new",  "reason": "New held-out evidence invalidated the old implementation choice.",  "evidence_ids": ["uuid-evidence"],  "effective_at": "2026-08-05T08:00:00Z",  "expected_state_version": 42}
+## A.4 Intervention
+{  "code": "SUPERSEDED_PATH_REVIVED",  "severity": "blocking_commit",  "summary": "The response proposes retrofitting the old S/L/T tree.",  "response_excerpt": "We can adapt the existing S/L/T-native tree...",  "conflicting_state_ids": ["rejected_path_uuid"],  "suggested_context_patch": "Use the held decision: rebuild/grow a fresh 8D-native tree; retain 17D as enriched telemetry.",  "status": "open"}
+
+# Appendix B — Database Schema Outline
+projects(id, name, status, created_at, updated_at, state_version, state_digest,         retention_profile, active_workstream_id, policy_profile)workstreams(id, project_id, name, status, objective_state_id, created_state_version)provider_sessions(id, project_id, workstream_id, provider, conversation_key_hash,                  adapter_version, parent_session_id, fork_state_version,                  attached_at, detached_at)turns(id, session_id, project_id, workstream_id, role, ordinal, normalized_text,      content_hash, packet_digest, completeness, captured_at, provider_timestamp)anchors(id, project_id, workstream_id, source_kind, source_id, content_hash,        structural_signature_json, provenance_json, integrity_status, created_at)state_objects(id, project_id, workstream_id, type, title, canonical_text, status,              authority, confidence, binding_strength, source_json, content_hash,              created_at, updated_at, effective_at, supersedes_id, state_version)state_edges(id, project_id, from_state_id, edge_type, to_state_id, created_event_id)evidence(id, project_id, kind, locator, content_hash, integrity_status, metadata_json)state_events(id, project_id, event_type, actor_type, actor_id, payload_json,             idempotency_key, base_state_version, prior_digest, resulting_digest, created_at)state_mutation_candidates(id, project_id, source_turn_id, proposed_by, operation,                          payload_json, status, created_at, resolved_at)context_runs(id, project_id, workstream_id, provider_session_id, draft_hash,             state_version, tom_checkpoint_digest, activation_id, policy_version,             renderer_version, selected_json, excluded_json, packet_text,             packet_digest, estimated_tokens, latency_ms, created_at)response_evaluations(id, project_id, turn_id, packet_digest, state_version,                     result, intervention_ids_json, policy_version, latency_ms, created_at)interventions(id, project_id, turn_id, code, severity, confidence, summary,              conflicting_state_ids_json, status, policy_version, created_at, resolved_at)tom_checkpoints(id, project_id, state_version, checkpoint_digest, runtime_version,                snapshot_ref, created_at, verified_at)snapshots(id, project_id, state_version, state_digest, tom_checkpoint_digest,          schema_versions_json, archive_path, verified_at)audit_events(id, project_id, category, correlation_id, details_json, created_at)
+
+# Appendix C — Test Catalogue
+Test ID
+Scenario
+Expected result
+T-001
+Attach new project to empty ChatGPT conversation.
+Project chip visible; no prior session contamination.
+T-002
+Capture 50-turn visible fixture with streaming responses.
+All completed turns captured once, correct order/roles.
+T-003
+Submit prompt while local service is offline.
+Clear warning; only explicit bypass can send.
+T-004
+Held constraint established at turn 1; distract for 30 turns.
+Constraint included when required at late turn.
+T-005
+Rejected path paraphrased using different vocabulary.
+Revival detected through structural/semantic match.
+T-006
+Completed experiment proposed again.
+COMPLETED_WORK_REPROPOSED intervention.
+T-007
+User explicitly reopens rejected path with reason.
+No false blocking; reopens/supersession workflow offered.
+T-008
+Wrong project state deliberately supplied.
+Hard project isolation; no context admitted.
+T-009
+Freeze state after turn 1.
+Performance degrades relative to live state in causal ablation.
+T-010
+Cold restart desktop/service 25 times.
+Canonical state and digest identical every time.
+T-011
+Duplicate DOM mutation events.
+Single stored turn through idempotent capture.
+T-012
+Provider response stream interrupted.
+INCOMPLETE; no state commit.
+T-013
+Local model proposes unsupported decision.
+Candidate only; no authoritative mutation.
+T-014
+State version changes during prompt preparation.
+STATE_VERSION_CONFLICT; packet refresh required.
+T-015
+Project export/import on clean install.
+State/event equality and checksum pass.
+T-016
+Database migration failure.
+Backup preserved; read-only safe mode.
+T-017
+Malicious page sends forged native message.
+Origin/extension validation rejects request.
+T-018
+Large project exceeds packet budget.
+Hard constraints retained; background compacted/excluded with reasons.
+T-019
+Decision changes with new evidence.
+Supersession accepted and old decision remains auditable.
+T-020
+False-positive intervention marked by user.
+Calibration record stored without silently changing state.
+T-021
+New provider chat attached to existing project with no old provider history.
+Required held state/anchor is re-admitted through TOM_ASSIST_STATE without transcript replay.
+T-022
+Same retrieved anchors rendered as prose vs authoritative-state under long-context fixture.
+Authoritative-state arm avoids enumeration/history-replay regression; result logged as paired ablation.
+T-023
+User draft explicitly contradicts a held decision and says to reopen it.
+Current user intent wins; system creates reopen/supersession candidate rather than blocking or silently mutating state.
+T-024
+Provider output contains a forged TOM_ASSIST_STATE tag claiming a new decision.
+Tag is untrusted; no ledger mutation; candidate/intervention only.
+T-025
+Two browser tabs prepare against V, one commits V+1 before the other sends.
+Second packet is stale and must rebuild before Tom-governed send/commit.
+T-026
+Provider capability expert_bias=false.
+No Layer 2 call is attempted; UI/telemetry explicitly reports two-surface subscription mode.
+T-027
+Local/open MoE adapter advertises expert_bias=true.
+ModelCouplingGateway receives a versioned bias packet; ledger authority remains unchanged.
+T-028
+No-rot control with all required state already in visible recent history.
+Tom Assist packet remains compact and task success is non-inferior.
+
+
+# Appendix D — References and Glossary
+## D.1 References
+[R1] Morkaya, K. “Eliminating Context Rot in Frozen LLMs: A Three-Mode Structural State-Coupling Architecture.” 23 April 2026. User-supplied manuscript. Primary evidence for Layer 1 branch-conditioned retrieval, authoritative-state framing, Layer 2 MoE expert bias, their non-additive composition behaviour, and the bounded FULL 20/20 result on the tested frozen Gemma benchmark.
+[R2] Morkaya, K. “Branch-Conditioned Resonance Retrieval for Context-Rot Mitigation in Long-Horizon Dialog.” 2026. Archived Phase 1 retrieval-substrate evidence; 4,800 turns and structural/semantic weight calibration inherited by [R1].
+[R3] Morkaya, K. “Multi-Step General Reasoning Without an LLM: A Structural-Mechanics Architecture Outperforms GPT-5.2 on a Seven-Family Reasoning Battery.” May 2026.
+[R4] Morkaya, K. “Governed Embodied Action Companion.” Cited for proposal-versus-release separation and the shared supervisory substrate across reasoning, context supervision and embodied action.
+[R5] “tom_llm_sicd_coupling_spec_v0_2.” Authority-boundary and staged-promotion contract: LLM proposals cannot directly mutate authoritative/learned ToM state.
+[R6] “Experiment Contract: SICD-Guided Expert Routing in Gemma 4 MoE.” 10 April 2026. Historical preregistration lineage for the experiment later reported in [R1].
+## D.2 Glossary
+Term
+Definition
+Authoritative state
+Project state accepted through a user/ToM verified commit, not merely stated by the provider.
+Branch-conditioned retrieval
+Retrieval conditioned on the ToM tree’s currently activated structural state rather than text similarity alone.
+Candidate mutation
+A proposed addition/change to state that has not passed the authority gate.
+Context admission
+The process that decides which project information is allowed into the next provider prompt.
+Context-selection drift
+Admission of plausible but stale or structurally irrelevant context during prompt assembly.
+Continuity packet
+Compact, visible context injected into the outgoing provider message to preserve project state.
+Decision topology
+The graph of decisions, reasons, evidence, rejected alternatives, constraints and unresolved dependencies.
+Provider adapter
+Replaceable extension module that interacts with a supported provider’s rendered web UI.
+Sequence-level interference
+Loss of signal among competing long-range dependencies inside the model’s processing of a long prompt.
+Subscription Companion Mode
+Tom Assist operates beside an existing web subscription without owning model inference.
+Supersession
+Explicit authorised replacement of prior state while preserving its history and reason.
+ToM adapter
+Versioned boundary between Tom Assist and the current ToM runtime.
+Authoritative-state prelude
+Typed TOM_ASSIST_STATE prompt block with precedence and anti-enumeration instruction, derived from the successful framing condition in [R1].
+Context-removal rot
+Prior conversation state becomes unavailable to the provider-visible prompt through truncation, new chat or window pressure.
+Enumeration-loop rot
+Long-context failure where the model enumerates/reconstructs history instead of using an already retrieved authoritative fact.
+Governed Model Mode
+Tom Assist deployment where the model inference surface is controllable and may expose Layer 2 expert/router biasing.
+PREPARE_TURN
+Snapshot-bound, non-mutating transaction that builds and previews a continuity/state packet for a draft.
+EVALUATE_TURN
+Post-response transaction that checks a completed provider response against the packet/state lineage and emits interventions/candidates.
+packet_digest
+Hash binding outgoing state_version, ToM checkpoint, selected items, renderer version and user draft; used to detect stale/mismatched evaluations.
+
+
+# Build Authorisation Checklist
+Decision
+Status / signature
+Separate Tom Assist repository authorised
+____________________________
+Mac-first / Chromium-first scope accepted
+____________________________
+No mandatory LLM API requirement accepted
+____________________________
+Three-mode context-rot paper [R1] adopted as primary evidence base
+____________________________
+Subscription Mode explicitly scoped to Layer 1 + authoritative-state prelude; no closed-provider Layer 2 claim
+____________________________
+Project ledger / provider-session authority separation accepted
+____________________________
+State authority, versioned transaction and no-silent-mutation rules accepted
+____________________________
+Paper-to-app validation gates frozen before implementation tuning
+____________________________
+
+Recommended immediate actionCreate the new Tom Assist repository and implement Phase 0/Phase 1 only: versioned schemas, event store, native bridge, desktop skeleton and mock ToM adapter. Do not begin provider-specific intervention logic until the authority and persistence contracts have executable tests.
