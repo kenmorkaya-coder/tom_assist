@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "workspaces": [
     "apps/extension",
+    "apps/desktop/ui",
     "packages/*"
   ],
   "scripts": {
@@ -11,7 +12,9 @@
     "schema:validate": "python3 scripts/validate_protocol_schemas.py",
     "extension:build": "npm run build -w @tom-assist/extension",
     "extension:test": "npm run test -w @tom-assist/extension",
-    "adapters:test": "npm run test -w @tom-assist/provider-adapters"
+    "adapters:test": "npm run test -w @tom-assist/provider-adapters",
+    "desktop:test": "npm run test -w @tom-assist/desktop-ui",
+    "desktop:build": "npm run build -w @tom-assist/desktop-ui"
   },
   "devDependencies": {
     "json-schema-to-typescript": "15.0.4"

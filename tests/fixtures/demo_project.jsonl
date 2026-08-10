@@ -1,0 +1,47 @@
+{"kind":"project","id":"10000000-0000-4000-8000-000000000001","name":"Local Release Console","retention_profile":"state-focused","policy_profile":"context-policy/1.1"}
+{"kind":"state","id":"20000000-0000-4000-8000-000000000001","type":"OBJECTIVE","title":"Release objective","text":"Deliver a local desktop and browser workflow that preserves explicit engineering state.","binding":"hard","evidence_ids":["20000000-0000-4000-8000-000000000014"]}
+{"kind":"state","id":"20000000-0000-4000-8000-000000000002","type":"CONCEPT","title":"Packet lineage","text":"Every response evaluation is bound to the exact outgoing packet and state version.","binding":"soft","evidence_ids":[]}
+{"kind":"state","id":"20000000-0000-4000-8000-000000000003","type":"CONCEPT","title":"Authority boundary","text":"Visible provider output is evidence and candidate material, never authoritative project state.","binding":"hard","evidence_ids":[]}
+{"kind":"state","id":"20000000-0000-4000-8000-000000000004","type":"DECISION","title":"Event store","text":"Use SQLite WAL with an append-only event journal.","binding":"hard","evidence_ids":["20000000-0000-4000-8000-000000000015"]}
+{"kind":"state","id":"20000000-0000-4000-8000-000000000005","type":"DECISION","title":"Old browser transport","text":"Use a public localhost HTTP port for browser transport.","status":"superseded","binding":"soft","evidence_ids":[]}
+{"kind":"state","id":"20000000-0000-4000-8000-000000000006","type":"DECISION","title":"Current browser transport","text":"Use Chrome Native Messaging and a user-only Unix socket.","binding":"hard","supersedes_id":"20000000-0000-4000-8000-000000000005","evidence_ids":["20000000-0000-4000-8000-000000000014"]}
+{"kind":"state","id":"20000000-0000-4000-8000-000000000007","type":"CONSTRAINT","title":"Local-only data","text":"Project transcript and state must remain on the device unless the user explicitly exports it.","binding":"hard","evidence_ids":[]}
+{"kind":"state","id":"20000000-0000-4000-8000-000000000008","type":"CONSTRAINT","title":"Visible submission","text":"Prompt context must remain visible and submission must require a current user action.","binding":"hard","evidence_ids":[]}
+{"kind":"state","id":"20000000-0000-4000-8000-000000000009","type":"REJECTED_PATH","title":"Cloud sync first","text":"Do not make cloud synchronization a release prerequisite.","status":"rejected","binding":"hard","reconsideration_condition":"A separately reviewed opt-in encrypted sync design is approved.","evidence_ids":[]}
+{"kind":"state","id":"20000000-0000-4000-8000-000000000010","type":"REJECTED_PATH","title":"Hidden prompt channel","text":"Do not inject project context through an invisible provider channel.","status":"rejected","binding":"hard","reconsideration_condition":"The provider exposes an inspectable user-approved field.","evidence_ids":[]}
+{"kind":"state","id":"20000000-0000-4000-8000-000000000011","type":"COMPLETED_WORK","title":"Protocol freeze","text":"Protocol schemas and cross-language digest fixtures are complete; next boundary is packaging.","binding":"soft","evidence_ids":[]}
+{"kind":"state","id":"20000000-0000-4000-8000-000000000012","type":"COMPLETED_WORK","title":"Gateway purity checks","text":"Gateway preview purity and restart determinism checks are complete; do not repeat implementation discovery.","binding":"soft","evidence_ids":["20000000-0000-4000-8000-000000000015"]}
+{"kind":"state","id":"20000000-0000-4000-8000-000000000013","type":"UNRESOLVED_DEPENDENCY","title":"Chromium unpacked check","text":"Load the production extension bundle in Chromium and verify the pinned identity.","binding":"hard","evidence_ids":[]}
+{"kind":"state","id":"20000000-0000-4000-8000-000000000016","type":"UNRESOLVED_DEPENDENCY","title":"Unsigned app walkthrough","text":"Run the unsigned macOS app and native-host installer from a clean checkout.","binding":"hard","evidence_ids":[]}
+{"kind":"state","id":"20000000-0000-4000-8000-000000000014","type":"EVIDENCE","title":"Transport inspection","text":"Local inspection records the native messaging and Unix-socket boundary.","binding":"advisory","evidence_ids":[]}
+{"kind":"state","id":"20000000-0000-4000-8000-000000000015","type":"EVIDENCE","title":"Build verification","text":"Deterministic fixture checks record protocol and gateway build behavior.","binding":"advisory","evidence_ids":[]}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000001","role":"user","ordinal":1,"text":"Define the local release boundary."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000002","role":"assistant","ordinal":2,"text":"The release boundary includes a desktop console, a browser companion, and a local service."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000003","role":"user","ordinal":3,"text":"Keep project data on device."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000004","role":"assistant","ordinal":4,"text":"The data path will use local storage and explicit export only."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000005","role":"user","ordinal":5,"text":"Record the event store decision."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000006","role":"assistant","ordinal":6,"text":"SQLite WAL is recorded as the event store choice."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000007","role":"user","ordinal":7,"text":"Compare browser transport options."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000008","role":"assistant","ordinal":8,"text":"A public local port has a broader exposure boundary than native messaging."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000009","role":"user","ordinal":9,"text":"Reject the public port."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000010","role":"assistant","ordinal":10,"text":"The transport decision now uses native messaging and a user-only socket."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000011","role":"user","ordinal":11,"text":"Make prompt context inspectable."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000012","role":"assistant","ordinal":12,"text":"The context block will be written into the visible composer before the draft."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000013","role":"user","ordinal":13,"text":"Do not submit while I am absent."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000014","role":"assistant","ordinal":14,"text":"Submission remains gated by a current user action and visible approval."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000015","role":"user","ordinal":15,"text":"Capture the protocol milestone."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000016","role":"assistant","ordinal":16,"text":"The protocol milestone is complete and recorded with shared digest fixtures."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000017","role":"user","ordinal":17,"text":"What remains for Chromium?"}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000018","role":"assistant","ordinal":18,"text":"The unpacked extension identity and native-host attachment still need a walkthrough."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000019","role":"user","ordinal":19,"text":"Keep cloud sync out of the first release."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000020","role":"assistant","ordinal":20,"text":"Cloud sync remains a rejected prerequisite with an explicit reconsideration condition."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000021","role":"user","ordinal":21,"text":"Show authority on every state card."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000022","role":"assistant","ordinal":22,"text":"State cards will show authority, status, binding, provenance, and supersession."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000023","role":"user","ordinal":23,"text":"Add intervention review."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000024","role":"assistant","ordinal":24,"text":"The desktop console will expose intervention evidence and resolution actions."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000025","role":"user","ordinal":25,"text":"Preserve superseded decisions in audit."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000026","role":"assistant","ordinal":26,"text":"Superseded objects remain visible and link to their replacement."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000027","role":"user","ordinal":27,"text":"Prepare an export path."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000028","role":"assistant","ordinal":28,"text":"Portable export will include events, canonical state, retention policy, and checksums."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000029","role":"user","ordinal":29,"text":"State the next boundary."}
+{"kind":"turn","id":"30000000-0000-4000-8000-000000000030","role":"assistant","ordinal":30,"text":"The next boundary is a clean unsigned app and browser walkthrough."}

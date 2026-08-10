@@ -26,6 +26,18 @@ Deviations: none.
 
 ESCALATE: none.
 
+## WP-09 — Tauri desktop and seeded release console [DONE]
+
+Commit: containing commit `feat(wp-09): add seeded Tauri desktop console` (resolved in FINAL)
+
+Evidence: `npm run desktop:test` → 1 scripted UI smoke passed for project → capture → supersede → audit; `npm run typecheck -w @tom-assist/desktop-ui` → clean; `cargo test -p tom-assist-desktop` → 1 passed, asserting the neutral demo fixture has 1 objective, 2 concepts, 3 decisions, 2 constraints, 2 rejected paths, 2 completed items, 2 unresolved dependencies, 2 evidence items, exactly 1 supersession, and 30 turns; `cargo check -p tom-assist-desktop` and `cargo build -p tom-assist-desktop` → clean. The real native process stayed running and its app-data SQLite query returned `1|16|30` for projects/state objects/turns.
+
+Decisions: Tauri owns the same `Store` behind a process mutex and exposes narrow commands for create/list/rename/archive, ledger capture/supersession, intervention disposition, diagnostics, and verified export/import. The seed runs idempotently in native setup as well as through the command boundary, so demo availability does not depend on webview scheduling. Project deletion is represented by recoverable archive status in this alpha. Settings retain D7's 500-token default and 1,200 ceiling; encrypted storage remains truthfully unavailable by default. The Preact smoke substitutes only the typed command adapter, while the Rust seed/replay test exercises real SQLite.
+
+Deviations: macOS accessibility automation could not attach to the unbundled debug executable because it is not registered as an application bundle; no visual-QA claim is made. Native process survival, compiled web assets, scripted DOM smoke, and real seeded SQLite were verified. WP-12 supplies the `.app` packaging path for bundle-level walkthrough verification.
+
+ESCALATE: none.
+
 ## WP-03 — ToM gateway and Rust adapter [DONE]
 
 Commit: containing commit `feat(wp-03): add pure tom gateway and adapter` (resolved in FINAL)
@@ -113,3 +125,5 @@ Decisions: all confidence values and severities live in `governance-policy/1.0`.
 Deviations: the real gateway integration case is marked ignored in the default workspace suite because it requires the pinned external runtime and an unsandboxed local socket; it is run explicitly as WP evidence. No evaluator result is promoted to a validation-gate verdict.
 
 ESCALATE: none.
+
+Log-order note: WP-09 was executed after WP-08, but its append operation matched an earlier repeated `ESCALATE: none.` anchor and placed the section near the start of the file. In keeping with the append-only rule, that history is not moved or rewritten; commit ancestry remains the authoritative execution order.

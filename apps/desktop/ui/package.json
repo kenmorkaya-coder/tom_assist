@@ -1,0 +1,26 @@
+{
+  "name": "@tom-assist/desktop-ui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 1420 --strictPort",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.11.1",
+    "preact": "10.29.8"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "2.10.6",
+    "@testing-library/preact": "3.2.4",
+    "@types/jsdom": "27.0.0",
+    "@types/node": "24.10.1",
+    "jsdom": "27.4.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "vitest": "4.1.10"
+  }
+}

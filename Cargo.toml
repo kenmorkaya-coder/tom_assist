@@ -8,6 +8,7 @@ members = [
   "crates/governance",
   "crates/assistd",
   "crates/native-host",
+  "apps/desktop/src-tauri",
 ]
 
 [workspace.package]
@@ -15,4 +16,3 @@ version = "0.1.0"
 edition = "2024"
 license = "Proprietary"
 rust-version = "1.94"
-

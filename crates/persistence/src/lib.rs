@@ -184,6 +184,22 @@ pub struct ResponseEvaluationRecord {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct InterventionRecord {
+    pub id: String,
+    pub project_id: String,
+    pub turn_id: String,
+    pub code: String,
+    pub severity: String,
+    pub confidence: f64,
+    pub summary: String,
+    pub conflicting_state_ids: Vec<String>,
+    pub status: String,
+    pub policy_version: String,
+    pub created_at: String,
+    pub resolved_at: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct ExportManifest {
     format: String,
     project_id: String,
@@ -275,6 +291,51 @@ impl Store {
             [project_id],
             |row| Ok(Project { id: row.get(0)?, name: row.get(1)?, status: row.get(2)?, created_at: row.get(3)?, updated_at: row.get(4)?, state_version: row.get(5)?, state_digest: row.get(6)?, retention_profile: row.get(7)?, policy_profile: row.get(8)? }),
         ).optional().map_err(Into::into)
+    }
+
+    pub fn list_projects(&self) -> Result<Vec<Project>> {
+        let mut statement = self.connection.prepare(
+            "SELECT id,name,status,created_at,updated_at,state_version,state_digest,retention_profile,policy_profile FROM projects ORDER BY updated_at DESC,id",
+        )?;
+        let rows = statement.query_map([], |row| {
+            Ok(Project {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                status: row.get(2)?,
+                created_at: row.get(3)?,
+                updated_at: row.get(4)?,
+                state_version: row.get(5)?,
+                state_digest: row.get(6)?,
+                retention_profile: row.get(7)?,
+                policy_profile: row.get(8)?,
+            })
+        })?;
+        rows.map(|row| row.map_err(Into::into)).collect()
+    }
+
+    pub fn update_project_metadata(
+        &self,
+        project_id: &str,
+        name: &str,
+        status: &str,
+        updated_at: &str,
+    ) -> Result<Project> {
+        let changed = self.connection.execute(
+            "UPDATE projects SET name=?2,status=?3,updated_at=?4 WHERE id=?1",
+            params![project_id, name, status, updated_at],
+        )?;
+        if changed != 1 {
+            return Err(StoreError::ProjectNotFound(project_id.into()));
+        }
+        self.audit(
+            project_id,
+            "PROJECT_METADATA_UPDATED",
+            project_id,
+            &serde_json::json!({"name":name,"status":status}),
+            updated_at,
+        )?;
+        self.project(project_id)?
+            .ok_or_else(|| StoreError::ProjectNotFound(project_id.into()))
     }
 
     pub fn commit_object(
@@ -743,6 +804,36 @@ impl Store {
                 serde_json::from_value(serde_json::Value::String(status)).map_err(Into::into)
             })
             .transpose()
+    }
+
+    pub fn interventions(&self, project_id: &str) -> Result<Vec<InterventionRecord>> {
+        let mut statement = self.connection.prepare(
+            "SELECT id,project_id,turn_id,code,severity,confidence,summary,conflicting_state_ids_json,status,policy_version,created_at,resolved_at FROM interventions WHERE project_id=?1 ORDER BY created_at DESC,id",
+        )?;
+        let rows = statement.query_map([project_id], |row| {
+            let state_ids: String = row.get(7)?;
+            Ok(InterventionRecord {
+                id: row.get(0)?,
+                project_id: row.get(1)?,
+                turn_id: row.get(2)?,
+                code: row.get(3)?,
+                severity: row.get(4)?,
+                confidence: row.get(5)?,
+                summary: row.get(6)?,
+                conflicting_state_ids: serde_json::from_str(&state_ids).map_err(|error| {
+                    rusqlite::Error::FromSqlConversionFailure(
+                        7,
+                        rusqlite::types::Type::Text,
+                        Box::new(error),
+                    )
+                })?,
+                status: row.get(8)?,
+                policy_version: row.get(9)?,
+                created_at: row.get(10)?,
+                resolved_at: row.get(11)?,
+            })
+        })?;
+        rows.map(|row| row.map_err(Into::into)).collect()
     }
 
     fn event_by_idempotency(&self, project_id: &str, key: &str) -> Result<Option<EventRecord>> {
