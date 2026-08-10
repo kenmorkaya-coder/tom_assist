@@ -1,0 +1,11 @@
+[package]
+name = "tom-assist-native-host"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "tom-assist-native-host"
+path = "src/main.rs"
+

@@ -1,0 +1,13 @@
+.DS_Store
+target/
+node_modules/
+dist/
+.venv-gateway/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.sqlite*
+*.sock
+apps/extension/.keys/
+apps/desktop/src-tauri/gen/
+
