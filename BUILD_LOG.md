@@ -139,3 +139,15 @@ Decisions: `PromptGateController` is the sole user-event-bound state machine. It
 Deviations: live chatgpt.com selector verification remains explicitly out of scope; unpacked loading and all DOM behavior are fixture/build-level. The native boundary's state-proposal payload remains candidate-only and requires user confirmation.
 
 ESCALATE: none.
+
+## WP-11 — validation harness scaffold [DONE]
+
+Commit: containing commit `feat(wp-11): scaffold reproducible validation harness` (resolved in FINAL)
+
+Evidence: `python3 -m unittest discover -s validation/tests -v` → 2 passed. `python3 -m validation.harness --input validation/fixtures/toy_cases.jsonl --output-dir .tmp/wp11-harness` → a complete Markdown report, run manifest, event trace, and packet trace for 3 toy cases × SUB-A…SUB-E = 15 observations. The report headline and manifest label are `NOT-A-GATE`, `gate_verdicts` is zero, and no acceptance threshold is evaluated.
+
+Decisions: arms are explicit typed plumbing for SUB-A recent-visible context, SUB-B conventional summary, SUB-C prose structural prelude, SUB-D authoritative state block, and SUB-E wrong/stale structural state. Each arm receives identical stored history/probe input. The oracle is a fresh deterministic stdin/stdout subprocess per observation and records its version plus term-level evidence. The G15-shaped manifest freezes code SHA, provider/adapter versions, state policy, renderer, exact arms, input digest, event/packet trace names, timestamps, and result summary. Output uses Appendix C's scenario/expected/observed/evidence shape without interpreting an observation as success against a gate.
+
+Deviations: `validation/fixtures/toy_cases.jsonl` is intentionally a three-case plumbing smoke fixture, not a frozen battery. Zero validation batteries are authored in this shot.
+
+ESCALATE: none.
