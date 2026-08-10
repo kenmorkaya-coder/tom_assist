@@ -15,9 +15,11 @@ These findings close the two WP-05 blockers in spec v1.2 (§9.3 preview semantic
 
 **Read-only surfaces (the sanctioned preview path):**
 
+> **Correction (10 Aug 2026, build audit):** `retrieve_ltm_with_stm_triggers()` is **not pure as a whole** — its RGM candidate stage at `interface/stm_ltm_retrieval.py:187-193` calls the forbidden mutating `rgm.read_memory()`. The original row below overstated it; only its lexical-scoring sub-path is pure. The sanctioned preview composition is therefore the one shipped in `gateway/tom_gateway.py`: direct `VectorStore.query` plus a local mirror of the conversation-continuity trigger, with the defaults (k=10, 2000 chars) preserved. Ratified by orchestrator review 1 (ESCALATE 2, option b).
+
 | Surface | Location | Notes |
 |---|---|---|
-| `retrieve_ltm_with_stm_triggers()` | `interface/stm_ltm_retrieval.py:99` | The Layer-1 retrieval surface. Defaults `max_items=10, max_chars=2000` — exactly the paper's tested operating point. |
+| `retrieve_ltm_with_stm_triggers()` | `interface/stm_ltm_retrieval.py:99` | Operating-point reference only (`max_items=10, max_chars=2000`). **Do not call in preview — see correction above.** |
 | `compute_retrieval_triggers()` | `interface/stm_ltm_retrieval.py:42` | Triggers from STM state, not engine stepping. |
 | `_retrieve_relevant_memories()` | `interface/chat_adapter.py:1595` | Scores via `rgm.vector_store.query()` — bypasses `read_memory()`. Telemetry choke point 1. |
 | `VectorStore.query()` | `memory/rgm.py:726` | **Pure function**: deterministic sha256-bucket encoding + cosine + sort. No state touched, no RNG. |
