@@ -4,3 +4,11 @@ body { margin: 0; }
 .eyebrow { color: #28736a; font-size: 11px; font-weight: 800; letter-spacing: .16em; }
 h1 { font-family: Georgia, serif; font-size: 28px; line-height: 1.08; margin: 14px 0 10px; }
 .status { display: inline-block; margin-top: 18px; border: 1px solid #a7c4bd; border-radius: 99px; padding: 6px 10px; font-size: 12px; }
+label { display: block; margin: 12px 0; font-size: 12px; font-weight: 700; }
+input { box-sizing: border-box; width: 100%; margin-top: 5px; border: 1px solid #a7c4bd; border-radius: 7px; padding: 8px; background: white; }
+button { margin: 2px 6px 2px 0; border: 1px solid #28736a; border-radius: 7px; padding: 7px 10px; color: #184b46; background: white; }
+button:disabled { opacity: .45; }
+.summary { margin-top: 22px; border-top: 1px solid #d2e0dc; }
+.summary h2 { margin: 13px 0 4px; font-size: 13px; }
+.summary p,.summary li { color: #526663; font-size: 12px; }
+.privacy { margin-top: 24px; color: #607672; font-size: 11px; }

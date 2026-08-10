@@ -127,3 +127,15 @@ Deviations: the real gateway integration case is marked ignored in the default w
 ESCALATE: none.
 
 Log-order note: WP-09 was executed after WP-08, but its append operation matched an earlier repeated `ESCALATE: none.` anchor and placed the section near the start of the file. In keeping with the append-only rule, that history is not moved or rewritten; commit ancestry remains the authoritative execution order.
+
+## WP-10 — extension prompt gate and page UX [DONE]
+
+Commit: containing commit `feat(wp-10): add explicit extension prompt gate` (resolved in FINAL)
+
+Evidence: `npm run extension:test` → 6 passed across boundary and fixture-e2e suites. The authored ChatGPT fixture exercises pause → preview (categories, warning, stale exclusion) → explicit approval → visible composer insertion → sent-lineage capture → complete-response evaluation badge. A separate offline case proves the held submission does not settle until the user explicitly chooses “Send once without Tom.” `npm run typecheck -w @tom-assist/extension` → clean. `npm run extension:build` → MV3 output with background, content script, and side panel (content 12.87 kB; no remote assets).
+
+Decisions: `PromptGateController` is the sole user-event-bound state machine. It holds the adapter's trusted submit promise through PREPARE_TURN and resolves it only for Send with Tom, explicit fail-open, or cancel. The packet plus original draft are written through `ProviderAdapter.writeDraft`, keeping inserted context visible. Native messaging remains the only service transport. The content surface contains the attachment chip, preview/edit drawer, warnings/exclusions, quick-capture toolbar, and post-response badge; the side panel owns explicit attach/detach and the requested ledger summary categories.
+
+Deviations: live chatgpt.com selector verification remains explicitly out of scope; unpacked loading and all DOM behavior are fixture/build-level. The native boundary's state-proposal payload remains candidate-only and requires user confirmation.
+
+ESCALATE: none.
