@@ -25,3 +25,15 @@ Decisions: §14.2 grouped method names were expanded into 33 concrete wire metho
 Deviations: none.
 
 ESCALATE: none.
+
+## WP-02 — Event-sourced persistence [DONE]
+
+Commit: containing commit `feat(wp-02): add deterministic event store` (resolved in FINAL)
+
+Evidence: `cargo test -p tom-assist-persistence --all-features` → 5 passed, including event replay equality, candidate-authority rejection, CAS conflict, supersession audit lineage, snapshot/export/import verification, and canonical digest equality across 25 cold reopens.
+
+Decisions: SQLite is bundled through `rusqlite 0.37.0` for reproducible local builds. Materialized object/edge rows retain their full canonical JSON alongside query columns so replay equality is tested without lossy relational reconstruction. Project creation is an immutable version-0 event; authoritative state mutations alone increment `state_version`. Portable alpha exports are documented files (`events.jsonl`, `state.json`, transcript policy, canonical manifest/checksums) rather than a custom binary archive.
+
+Deviations: SQLCipher is represented by the compile-tested `encrypted-store` feature and an explicit unavailable key-loading result, default off per D13; no encryption capability is claimed.
+
+ESCALATE: none.
