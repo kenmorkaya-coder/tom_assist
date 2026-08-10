@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Actor {
@@ -141,6 +142,13 @@ pub struct TomCapabilities {
     pub supports_nonmutating_load_preview: bool,
     pub engine_parity_profile: String,
     pub engine_parity_verified_at_commit: String,
+    pub seed_profile: String,
+    pub seed_artifact_sha256: String,
+    pub seed_tick: u64,
+    pub seed_branch_count: u64,
+    pub mechanics_profile: String,
+    pub mechanics_profile_sha256: String,
+    pub mechanics_parameters: BTreeMap<String, String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

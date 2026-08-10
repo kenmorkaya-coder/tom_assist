@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 from pathlib import Path
 
-from gateway.tom_gateway import PINNED_SHA, ProjectRuntime, TomGateway
+from gateway.tom_gateway import PINNED_SHA, SEED_BRANCH_COUNT, SEED_TICK, ProjectRuntime, TomGateway
 
 TOM_MASTER = Path("/Users/kenmorkaya/PycharmProjects/tom_master")
 
@@ -12,6 +12,8 @@ def seeded_gateway(tmp_path: Path) -> tuple[TomGateway, ProjectRuntime]:
     gateway = TomGateway(tmp_path / "data", TOM_MASTER)
     assert gateway.runtime_sha.startswith(PINNED_SHA)
     runtime = gateway.project("purity-project")
+    assert runtime.engine.state.tick == SEED_TICK
+    assert len(runtime.engine.state.branches) == SEED_BRANCH_COUNT
     turns = [
         "Keep all project processing local and deterministic.",
         "Use explicit state authority and preserve prior decisions.",
@@ -19,7 +21,7 @@ def seeded_gateway(tmp_path: Path) -> tuple[TomGateway, ProjectRuntime]:
     ]
     for index, text in enumerate(turns):
         result = runtime.commit_turn("user", text, f"seed-{index}")
-        assert result["engine_tick_after"] == index + 1
+        assert result["engine_tick_after"] == SEED_TICK + index + 1
         assert result["anchor_id"] != "deferred"
     return gateway, runtime
 
@@ -68,4 +70,3 @@ def test_identical_preview_is_deterministic_across_runtime_restart(tmp_path: Pat
         "Which local-only constraint applies?", 10, 2000
     )
     assert actual == expected
-

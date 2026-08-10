@@ -30,6 +30,22 @@ from typing import Any
 PINNED_SHA = "8799ccbdd"
 STATE_FORMAT_VERSION = "sicd-engine-save/1"
 GATEWAY_VERSION = "tom-gateway/1.0"
+SEED_PROFILE = "msr_8d_native_10k"
+SEED_ARTIFACT_RELATIVE = Path("sandbox/scaling/snapshots/msr_8d_native_10k_tiered.json")
+SEED_ARTIFACT_SHA256 = "d9aec9b424459d0948f569c7e424bb5632bd118ad01bda372f62df7ca17a82ac"
+SEED_TICK = 4707
+SEED_BRANCH_COUNT = 10_000
+MECHANICS_PROFILE_RELATIVE = Path("config/profiles/msr_8d_native_10k.env")
+REQUIRED_KAPPA_PARAMETERS = frozenset(
+    {
+        "TOM_TAU1",
+        "TOM_HEAL_RATE",
+        "TOM_DAMAGE_RATE",
+        "TOM_KAPPA_DECAY",
+        "TOM_KAPPA_DELTA_CAP",
+        "TOM_KAPPA_NOURISH_RECOVERY",
+    }
+)
 DEFAULT_TOM_MASTER = Path("/Users/kenmorkaya/PycharmProjects/tom_master")
 DEFAULT_DATA_DIR = Path.home() / "Library" / "Application Support" / "TomAssist"
 MAX_REQUEST_BYTES = 2 * 1024 * 1024
@@ -50,6 +66,38 @@ def canonical_json(value: Any) -> bytes:
 
 def canonical_digest(value: Any) -> str:
     return "sha256:" + hashlib.sha256(canonical_json(value)).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _load_profile_environment(path: Path) -> dict[str, str]:
+    """Parse the pinned shell profile without executing it, then apply it exactly."""
+    if not path.is_file():
+        raise ValueError(f"mechanics profile missing: {path}")
+    parameters: dict[str, str] = {}
+    for line_number, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        match = re.fullmatch(r"export\s+(TOM_[A-Z0-9_]+)=(.*)", line)
+        if match is None:
+            raise ValueError(f"unsupported mechanics profile syntax at {path}:{line_number}")
+        key, value = match.groups()
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        parameters[key] = value
+    missing = sorted(REQUIRED_KAPPA_PARAMETERS - parameters.keys())
+    if missing:
+        raise ValueError(f"mechanics profile missing required kappa parameters: {', '.join(missing)}")
+    os.environ.update(parameters)
+    return parameters
 
 
 def _atomic_write(path: Path, data: bytes) -> None:
@@ -94,6 +142,18 @@ class _RetrievalTrigger:
     trigger_reason: str = ""
 
 
+@dataclass(frozen=True)
+class SeedConfiguration:
+    profile: str
+    artifact_path: Path
+    artifact_sha256: str
+    tick: int
+    branch_count: int
+    mechanics_profile_path: Path
+    mechanics_profile_sha256: str
+    mechanics_parameters: dict[str, str]
+
+
 def _compute_preview_triggers(committed_turn_count: int) -> list[_RetrievalTrigger]:
     """Mirror the only trigger applicable to draft preview without importing interface.__init__."""
     if committed_turn_count < 3:
@@ -110,12 +170,19 @@ def _compute_preview_triggers(committed_turn_count: int) -> list[_RetrievalTrigg
 class ProjectRuntime:
     """One isolated direct engine+RGM composition with exact save artifacts."""
 
-    def __init__(self, project_id: str, state_dir: Path, runtime_sha: str) -> None:
+    def __init__(
+        self,
+        project_id: str,
+        state_dir: Path,
+        runtime_sha: str,
+        seed: SeedConfiguration,
+    ) -> None:
         self.project_id = _safe_project_id(project_id)
         self.state_dir = state_dir.resolve()
         self.state_dir.mkdir(parents=True, exist_ok=True)
         os.chmod(self.state_dir, 0o700)
         self.runtime_sha = runtime_sha
+        self.seed = seed
         self.lock = threading.RLock()
         self._idempotency_path = self.state_dir / "turn_idempotency.json"
         self._idempotency: dict[str, dict[str, Any]] = self._load_idempotency()
@@ -126,12 +193,37 @@ class ProjectRuntime:
         from agency.mechanics.sicd_engine import TreeGrowthEngine
         from memory.rgm import ReflectionGatedMemory
 
-        self.engine = TreeGrowthEngine.load(str(self._tree_path)) if self._tree_path.exists() else TreeGrowthEngine()
-        self.rgm = ReflectionGatedMemory()
-        if self._rgm_path.exists():
-            self.rgm.restore(self._rgm_path.read_text(encoding="utf-8"))
-        if not self._tree_path.exists() or not self._rgm_path.exists():
-            self._persist_current_artifacts()
+        fresh_project = not self._tree_path.exists()
+        config = self._new_engine_config()
+        if fresh_project:
+            actual_sha256 = _sha256_file(self.seed.artifact_path) if self.seed.artifact_path.is_file() else "missing"
+            if actual_sha256 != self.seed.artifact_sha256:
+                raise ValueError(
+                    "seed artifact sha256 mismatch: "
+                    f"expected {self.seed.artifact_sha256}, got {actual_sha256}"
+                )
+            self.engine = TreeGrowthEngine.load(str(self.seed.artifact_path), cfg=config)
+            actual_tick = int(getattr(self.engine.state, "tick", 0) or 0)
+            actual_branches = len(getattr(self.engine.state, "branches", {}) or {})
+            if actual_tick != self.seed.tick or actual_branches != self.seed.branch_count:
+                raise ValueError(
+                    "seed artifact lineage mismatch after load: "
+                    f"expected tick/branches {self.seed.tick}/{self.seed.branch_count}, "
+                    f"got {actual_tick}/{actual_branches}"
+                )
+            self.rgm = ReflectionGatedMemory()
+            initial_digest = self._persist_current_artifacts()
+            self.creation_metadata = self._seed_creation_metadata(initial_digest)
+            _atomic_write(self._creation_metadata_path, canonical_json(self.creation_metadata))
+        else:
+            self.engine = TreeGrowthEngine.load(str(self._tree_path), cfg=config)
+            self.rgm = ReflectionGatedMemory()
+            if self._rgm_path.exists():
+                self.rgm.restore(self._rgm_path.read_text(encoding="utf-8"))
+                self._checkpoint_digest = self._compute_checkpoint_digest()
+            else:
+                self._checkpoint_digest = self._persist_current_artifacts()
+            self.creation_metadata = self._load_creation_metadata()
 
     @property
     def _tree_path(self) -> Path:
@@ -140,6 +232,55 @@ class ProjectRuntime:
     @property
     def _rgm_path(self) -> Path:
         return self.state_dir / "rgm_state.json"
+
+    @property
+    def _creation_metadata_path(self) -> Path:
+        return self.state_dir / "creation_metadata.json"
+
+    def _new_engine_config(self) -> Any:
+        """Apply the pinned profile through upstream env reads plus explicit kappa binding."""
+        from agency.mechanics.sicd_engine import TreeGrowthConfig
+
+        config = TreeGrowthConfig()
+        parameters = self.seed.mechanics_parameters
+        config.tau1 = float(parameters["TOM_TAU1"])
+        config.kappa_update.heal_rate = float(parameters["TOM_HEAL_RATE"])
+        config.kappa_update.damage_rate = float(parameters["TOM_DAMAGE_RATE"])
+        config.kappa_update.kappa_decay = float(parameters["TOM_KAPPA_DECAY"])
+        config.kappa_update.kappa_delta_cap = float(parameters["TOM_KAPPA_DELTA_CAP"])
+        config.kappa_update.kappa_nourish_recovery = float(
+            parameters["TOM_KAPPA_NOURISH_RECOVERY"]
+        )
+        return config
+
+    def _seed_creation_metadata(self, initial_checkpoint_digest: str) -> dict[str, Any]:
+        return {
+            "project_id": self.project_id,
+            "runtime_version": self.runtime_sha,
+            "seed_profile": self.seed.profile,
+            "seed_artifact_sha256": self.seed.artifact_sha256,
+            "seed_tick": self.seed.tick,
+            "seed_branch_count": self.seed.branch_count,
+            "mechanics_profile": self.seed.mechanics_profile_path.name,
+            "mechanics_profile_sha256": self.seed.mechanics_profile_sha256,
+            "mechanics_parameters": dict(sorted(self.seed.mechanics_parameters.items())),
+            "initial_checkpoint_digest": initial_checkpoint_digest,
+        }
+
+    def _load_creation_metadata(self) -> dict[str, Any]:
+        if not self._creation_metadata_path.exists():
+            return {
+                "project_id": self.project_id,
+                "runtime_version": self.runtime_sha,
+                "seed_profile": "legacy_pre_wp14",
+                "seed_artifact_sha256": None,
+                "seed_tick": None,
+                "initial_checkpoint_digest": None,
+            }
+        loaded = json.loads(self._creation_metadata_path.read_text(encoding="utf-8"))
+        if not isinstance(loaded, dict):
+            raise ValueError("project creation metadata must be a JSON object")
+        return loaded
 
     def _load_idempotency(self) -> dict[str, dict[str, Any]]:
         if not self._idempotency_path.exists():
@@ -153,9 +294,10 @@ class ProjectRuntime:
         from agency.mechanics.sicd_engine import TreeGrowthEngine
         from memory.rgm import ReflectionGatedMemory
 
-        self.engine = TreeGrowthEngine.load(str(self._tree_path))
+        self.engine = TreeGrowthEngine.load(str(self._tree_path), cfg=self._new_engine_config())
         self.rgm = ReflectionGatedMemory()
         self.rgm.restore(self._rgm_path.read_text(encoding="utf-8"))
+        self._checkpoint_digest = self._compute_checkpoint_digest()
 
     def _artifact_payload(self, tree_bytes: bytes, rgm_bytes: bytes) -> dict[str, Any]:
         return {
@@ -163,8 +305,11 @@ class ProjectRuntime:
             "rgm": json.loads(rgm_bytes.decode("utf-8")),
         }
 
-    def _current_checkpoint_digest(self) -> str:
+    def _compute_checkpoint_digest(self) -> str:
         return canonical_digest(self._artifact_payload(self._tree_path.read_bytes(), self._rgm_path.read_bytes()))
+
+    def _current_checkpoint_digest(self) -> str:
+        return self._checkpoint_digest
 
     def _persist_current_artifacts(self) -> str:
         descriptor, temporary = tempfile.mkstemp(prefix=".tree.", suffix=".json", dir=str(self.state_dir))
@@ -178,7 +323,8 @@ class ProjectRuntime:
         rgm_bytes = self.rgm.serialize().encode("utf-8")
         _atomic_write(self._tree_path, tree_bytes)
         _atomic_write(self._rgm_path, rgm_bytes)
-        return canonical_digest(self._artifact_payload(tree_bytes, rgm_bytes))
+        self._checkpoint_digest = canonical_digest(self._artifact_payload(tree_bytes, rgm_bytes))
+        return self._checkpoint_digest
 
     def serialized_state_bytes(self) -> tuple[bytes, bytes]:
         """Test-only diagnostic snapshot; this does not participate in preview."""
@@ -254,6 +400,7 @@ class ProjectRuntime:
             existing = self._idempotency.get(idempotency_key)
             if existing is not None:
                 return existing
+            prior_checkpoint_digest = self._current_checkpoint_digest()
             before_tick = int(getattr(self.engine.state, "tick", 0) or 0)
             digest = hashlib.sha256(text.encode("utf-8")).digest()
             raw_axes = [1.0 + digest[index] for index in range(3)]
@@ -304,6 +451,9 @@ class ProjectRuntime:
                 "anchor_id": stored_id,
                 "K_total": float(getattr(metrics, "K_total", 0.0) or 0.0),
                 "runtime_error_code": None,
+                "seed_profile": self.creation_metadata.get("seed_profile"),
+                "seed_checkpoint_digest": self.creation_metadata.get("initial_checkpoint_digest"),
+                "prior_checkpoint_digest": prior_checkpoint_digest,
                 "checkpoint_digest": checkpoint_digest,
             }
             self._idempotency[idempotency_key] = result
@@ -319,7 +469,14 @@ class ProjectRuntime:
             os.chmod(destination, 0o700)
             shutil.copy2(self._tree_path, destination / "tree_state.json")
             shutil.copy2(self._rgm_path, destination / "rgm_state.json")
-            metadata = {"checkpoint_id": checkpoint_id, "digest": digest, "runtime_version": self.runtime_sha}
+            metadata = {
+                "checkpoint_id": checkpoint_id,
+                "digest": digest,
+                "runtime_version": self.runtime_sha,
+                "seed_profile": self.creation_metadata.get("seed_profile"),
+                "seed_artifact_sha256": self.creation_metadata.get("seed_artifact_sha256"),
+                "initial_checkpoint_digest": self.creation_metadata.get("initial_checkpoint_digest"),
+            }
             _atomic_write(destination / "metadata.json", canonical_json(metadata))
             return metadata
 
@@ -339,7 +496,14 @@ class ProjectRuntime:
 
 
 class TomGateway:
-    def __init__(self, data_dir: Path = DEFAULT_DATA_DIR, tom_master: Path = DEFAULT_TOM_MASTER) -> None:
+    def __init__(
+        self,
+        data_dir: Path = DEFAULT_DATA_DIR,
+        tom_master: Path = DEFAULT_TOM_MASTER,
+        *,
+        seed_artifact: Path | None = None,
+        mechanics_profile: Path | None = None,
+    ) -> None:
         self.data_dir = data_dir.expanduser().resolve()
         self.tom_master = tom_master.expanduser().resolve()
         self.data_dir.mkdir(parents=True, exist_ok=True)
@@ -353,6 +517,27 @@ class TomGateway:
         os.environ["TOM_LLM_PROVIDER"] = "stub"
         os.environ["TOM_AGENT_LLM_PROVIDER"] = "stub"
         os.environ["TOM_FEELING_WHEEL_ENABLED"] = "0"
+        mechanics_profile_path = (
+            mechanics_profile.expanduser().resolve()
+            if mechanics_profile is not None
+            else self.tom_master / MECHANICS_PROFILE_RELATIVE
+        )
+        mechanics_parameters = _load_profile_environment(mechanics_profile_path)
+        seed_artifact_path = (
+            seed_artifact.expanduser().resolve()
+            if seed_artifact is not None
+            else self.tom_master / SEED_ARTIFACT_RELATIVE
+        )
+        self.seed = SeedConfiguration(
+            profile=SEED_PROFILE,
+            artifact_path=seed_artifact_path,
+            artifact_sha256=SEED_ARTIFACT_SHA256,
+            tick=SEED_TICK,
+            branch_count=SEED_BRANCH_COUNT,
+            mechanics_profile_path=mechanics_profile_path,
+            mechanics_profile_sha256=_sha256_file(mechanics_profile_path),
+            mechanics_parameters=mechanics_parameters,
+        )
         if str(self.tom_master) not in sys.path:
             sys.path.insert(0, str(self.tom_master))
         self.runtime_sha = _actual_sha(self.tom_master)
@@ -377,7 +562,12 @@ class TomGateway:
         with self._projects_lock:
             runtime = self._projects.get(project_id)
             if runtime is None:
-                runtime = ProjectRuntime(project_id, self.data_dir / "projects" / project_id / "tom", self.runtime_sha)
+                runtime = ProjectRuntime(
+                    project_id,
+                    self.data_dir / "projects" / project_id / "tom",
+                    self.runtime_sha,
+                    self.seed,
+                )
                 self._projects[project_id] = runtime
             return runtime
 
@@ -397,6 +587,13 @@ class TomGateway:
             "supports_nonmutating_load_preview": False,
             "engine_parity_profile": "tom-master/direct",
             "engine_parity_verified_at_commit": PINNED_SHA,
+            "seed_profile": self.seed.profile,
+            "seed_artifact_sha256": self.seed.artifact_sha256,
+            "seed_tick": self.seed.tick,
+            "seed_branch_count": self.seed.branch_count,
+            "mechanics_profile": self.seed.mechanics_profile_path.name,
+            "mechanics_profile_sha256": self.seed.mechanics_profile_sha256,
+            "mechanics_parameters": dict(sorted(self.seed.mechanics_parameters.items())),
         }
 
     def handle(self, method: str, path: str, payload: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:

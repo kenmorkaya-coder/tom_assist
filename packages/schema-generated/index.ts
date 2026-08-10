@@ -89,6 +89,15 @@ export interface TomCapabilities {
   supports_nonmutating_load_preview: false;
   engine_parity_profile: string;
   engine_parity_verified_at_commit: string;
+  seed_profile: "msr_8d_native_10k";
+  seed_artifact_sha256: string;
+  seed_tick: 4707;
+  seed_branch_count: 10000;
+  mechanics_profile: "msr_8d_native_10k.env";
+  mechanics_profile_sha256: string;
+  mechanics_parameters: {
+    [k: string]: string;
+  };
 }
 export interface StateObject {
   id: string;

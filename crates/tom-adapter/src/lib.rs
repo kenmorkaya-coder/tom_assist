@@ -78,6 +78,9 @@ pub struct CommitSummary {
     #[serde(rename = "K_total")]
     pub k_total: f64,
     pub runtime_error_code: Option<String>,
+    pub seed_profile: String,
+    pub seed_checkpoint_digest: String,
+    pub prior_checkpoint_digest: String,
     pub checkpoint_digest: String,
 }
 

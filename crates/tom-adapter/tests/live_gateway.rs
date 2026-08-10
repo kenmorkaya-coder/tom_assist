@@ -65,10 +65,23 @@ fn live_gateway_handshake_commit_preview_and_checkpoint() {
     let capabilities = client.capabilities().unwrap();
     assert!(capabilities.supports_readonly_ranking);
     assert!(!capabilities.supports_nonmutating_load_preview);
+    assert_eq!(capabilities.seed_profile, "msr_8d_native_10k");
+    assert_eq!(capabilities.seed_tick, 4707);
+    assert_eq!(capabilities.seed_branch_count, 10_000);
     let committed = client
         .commit_turn("rust-live", "user", "Keep preview pure.", "turn-1")
         .unwrap();
-    assert_eq!(committed.engine_tick_after, 1);
+    assert_eq!(committed.engine_tick_before, capabilities.seed_tick);
+    assert_eq!(committed.engine_tick_after, capabilities.seed_tick + 1);
+    assert_eq!(committed.seed_profile, capabilities.seed_profile);
+    assert_eq!(
+        committed.prior_checkpoint_digest,
+        committed.seed_checkpoint_digest
+    );
+    assert_ne!(
+        committed.checkpoint_digest,
+        committed.prior_checkpoint_digest
+    );
     assert_ne!(committed.anchor_id, "deferred");
     let preview = client
         .preview_rank("rust-live", "What must stay pure?", 10, 2000)

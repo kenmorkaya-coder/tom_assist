@@ -3,7 +3,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from gateway.tom_gateway import PINNED_SHA, TomGateway, canonical_digest, canonical_json
+from gateway.tom_gateway import (
+    PINNED_SHA,
+    SEED_ARTIFACT_SHA256,
+    SEED_PROFILE,
+    SEED_TICK,
+    TomGateway,
+    canonical_digest,
+    canonical_json,
+)
 
 TOM_MASTER = Path("/Users/kenmorkaya/PycharmProjects/tom_master")
 
@@ -20,6 +28,12 @@ def test_capabilities_and_verifiers_are_honest_and_deterministic(tmp_path: Path)
     assert capabilities["supports_readonly_ranking"] is True
     assert capabilities["supports_checkpoint_restore"] is True
     assert capabilities["supports_nonmutating_load_preview"] is False
+    assert capabilities["seed_profile"] == SEED_PROFILE
+    assert capabilities["seed_artifact_sha256"] == SEED_ARTIFACT_SHA256
+    assert capabilities["seed_tick"] == SEED_TICK
+    assert capabilities["seed_branch_count"] == 10_000
+    assert capabilities["mechanics_parameters"]["TOM_TAU1"] == "4.0"
+    assert capabilities["mechanics_parameters"]["TOM_KAPPA_DECAY"] == "0.053193359375"
 
     status, drift = gateway.handle(
         "POST",
@@ -67,17 +81,24 @@ def test_capabilities_and_verifiers_are_honest_and_deterministic(tmp_path: Path)
 def test_commit_idempotency_checkpoint_and_restore(tmp_path: Path) -> None:
     gateway = TomGateway(tmp_path / "data", TOM_MASTER)
     runtime = gateway.project("checkpoint-project")
+    initial_digest = runtime._current_checkpoint_digest()
+    assert runtime.engine.state.tick == SEED_TICK
     first = runtime.commit_turn("user", "First committed turn", "turn-1")
     duplicate = runtime.commit_turn("user", "ignored duplicate text", "turn-1")
     assert duplicate == first
-    assert runtime.engine.state.tick == 1
+    assert first["engine_tick_before"] == SEED_TICK
+    assert first["engine_tick_after"] == SEED_TICK + 1
+    assert first["prior_checkpoint_digest"] == initial_digest
+    assert first["seed_checkpoint_digest"] == initial_digest
+    assert first["checkpoint_digest"] != initial_digest
+    assert runtime.engine.state.tick == SEED_TICK + 1
 
     checkpoint = runtime.save_checkpoint()
     runtime.commit_turn("assistant", "Second committed turn", "turn-2")
-    assert runtime.engine.state.tick == 2
+    assert runtime.engine.state.tick == SEED_TICK + 2
     restored = runtime.restore_checkpoint(checkpoint["checkpoint_id"])
     assert restored["digest"] == checkpoint["digest"]
-    assert runtime.engine.state.tick == 1
+    assert runtime.engine.state.tick == SEED_TICK + 1
     assert runtime._current_checkpoint_digest() == checkpoint["digest"]
 
 
@@ -86,4 +107,3 @@ def test_python_canonical_digest_matches_shared_fixture() -> None:
     fixture = json.loads(fixture_path.read_text())
     assert canonical_json(fixture["value"]).decode() == fixture["canonical_json"]
     assert canonical_digest(fixture["value"]) == fixture["digest"]
-
