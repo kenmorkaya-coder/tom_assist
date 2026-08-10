@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tom-assist.local/schemas/continuity-packet.schema.json",
+  "title": "ContinuityPacket",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["packet_id", "packet_digest", "project_id", "workstream_id", "provider_session_id", "project_state_version", "project_state_digest", "tom_checkpoint_digest", "draft_hash", "policy_version", "renderer_version", "provider_capabilities", "tom_activation_id", "sections", "retrieved_anchor_ids", "excluded", "estimated_tokens", "warnings"],
+  "properties": {
+    "packet_id": {"type": "string"},
+    "packet_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "project_id": {"type": "string", "format": "uuid"},
+    "workstream_id": {"type": "string", "format": "uuid"},
+    "provider_session_id": {"type": "string"},
+    "project_state_version": {"type": "integer", "minimum": 0},
+    "project_state_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "tom_checkpoint_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "draft_hash": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "policy_version": {"type": "string"},
+    "renderer_version": {"const": "authoritative-state/1.0"},
+    "provider_capabilities": {"$ref": "provider-capabilities.schema.json"},
+    "tom_activation_id": {"type": "string"},
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "items"],
+        "properties": {
+          "type": {"type": "string"},
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["state_id", "text", "authority", "structural_score", "semantic_score", "reason_selected"],
+              "properties": {
+                "state_id": {"type": "string"},
+                "text": {"type": "string"},
+                "authority": {"type": "string"},
+                "structural_score": {"type": "number"},
+                "semantic_score": {"type": "number"},
+                "reason_selected": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "retrieved_anchor_ids": {"type": "array", "items": {"type": "string"}},
+    "excluded": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "reason"],
+        "properties": {"id": {"type": "string"}, "reason": {"type": "string"}}
+      }
+    },
+    "estimated_tokens": {"type": "integer", "minimum": 0, "maximum": 1200},
+    "warnings": {"type": "array", "items": {"type": "string"}}
+  }
+}
+

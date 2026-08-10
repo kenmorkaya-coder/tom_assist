@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tom-assist.local/schemas/envelope.schema.json",
+  "title": "Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol", "request_id", "idempotency_key", "method", "actor", "payload", "sent_at"],
+  "properties": {
+    "protocol": {"const": "tom-assist/1.0"},
+    "request_id": {"type": "string", "format": "uuid"},
+    "idempotency_key": {"type": "string", "format": "uuid"},
+    "method": {"$ref": "core-methods.schema.json"},
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "instance_id"],
+      "properties": {
+        "type": {"enum": ["extension", "desktop", "native_host", "service", "user"]},
+        "instance_id": {"type": "string", "format": "uuid"}
+      }
+    },
+    "project_id": {"type": "string", "format": "uuid"},
+    "base_state_version": {"type": "integer", "minimum": 0},
+    "payload": {"type": "object"},
+    "sent_at": {"type": "string", "format": "date-time"}
+  }
+}
+

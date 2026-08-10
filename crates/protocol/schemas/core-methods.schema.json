@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tom-assist.local/schemas/core-methods.schema.json",
+  "title": "Method",
+  "type": "string",
+  "enum": [
+    "capabilities.get",
+    "project.create", "project.list", "project.get", "project.update", "project.archive",
+    "workstream.create", "workstream.get", "workstream.update", "workstream.archive",
+    "session.attach", "session.fork", "session.detach", "session.reconcile",
+    "turn.ingest", "turn.prepare", "turn.sent", "response.evaluate",
+    "packet.get", "packet.verify", "state.candidate.create", "state.commit",
+    "state.supersede", "state.reopen", "intervention.resolve",
+    "model.bias.preview", "model.bias.apply", "snapshot.create", "snapshot.verify",
+    "snapshot.restore", "project.export", "project.import", "diagnostics.run"
+  ]
+}
+

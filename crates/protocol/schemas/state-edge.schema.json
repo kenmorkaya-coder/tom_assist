@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tom-assist.local/schemas/state-edge.schema.json",
+  "title": "StateEdge",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "project_id", "from_state_id", "edge_type", "to_state_id", "created_event_id"],
+  "properties": {
+    "id": {"type": "string", "format": "uuid"},
+    "project_id": {"type": "string", "format": "uuid"},
+    "from_state_id": {"type": "string", "format": "uuid"},
+    "edge_type": {"enum": ["supports", "contradicts", "depends_on", "resolves", "supersedes", "derived_from", "scoped_to", "reopens", "defines", "refines"]},
+    "to_state_id": {"type": "string", "format": "uuid"},
+    "created_event_id": {"type": "string", "format": "uuid"}
+  }
+}
+

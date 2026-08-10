@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tom-assist.local/schemas/state-mutation-candidate.schema.json",
+  "title": "StateMutationCandidate",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["candidate_id", "project_id", "source_turn_ids", "proposed_by", "operation", "object", "tom_check"],
+  "properties": {
+    "candidate_id": {"type": "string", "format": "uuid"},
+    "project_id": {"type": "string", "format": "uuid"},
+    "source_turn_ids": {"type": "array", "items": {"type": "string", "format": "uuid"}},
+    "proposed_by": {"enum": ["user", "tom_verified", "imported", "provider_candidate", "local_model_candidate"]},
+    "operation": {"enum": ["CREATE", "UPDATE", "SUPERSEDE", "REOPEN"]},
+    "object": {"type": "object"},
+    "tom_check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["result", "conflicts", "requires_user_confirmation"],
+      "properties": {
+        "result": {"enum": ["compatible", "review", "conflict"]},
+        "conflicts": {"type": "array", "items": {"type": "string"}},
+        "requires_user_confirmation": {"const": true}
+      }
+    }
+  }
+}
+

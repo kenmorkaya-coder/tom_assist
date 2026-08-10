@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tom-assist.local/schemas/tom-capabilities.schema.json",
+  "title": "TomCapabilities",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["runtime_version", "state_format_version", "supports_load_ingest", "supports_branch_activation", "supports_candidate_ranking", "supports_state_snapshot", "supports_commit", "supports_conflict_check", "supports_trajectory_digest", "supports_readonly_ranking", "supports_checkpoint_restore", "supports_nonmutating_load_preview", "engine_parity_profile", "engine_parity_verified_at_commit"],
+  "properties": {
+    "runtime_version": {"type": "string"},
+    "state_format_version": {"const": "sicd-engine-save/1"},
+    "supports_load_ingest": {"type": "boolean"},
+    "supports_branch_activation": {"type": "boolean"},
+    "supports_candidate_ranking": {"type": "boolean"},
+    "supports_state_snapshot": {"type": "boolean"},
+    "supports_commit": {"type": "boolean"},
+    "supports_conflict_check": {"type": "boolean"},
+    "supports_trajectory_digest": {"type": "boolean"},
+    "supports_readonly_ranking": {"const": true},
+    "supports_checkpoint_restore": {"const": true},
+    "supports_nonmutating_load_preview": {"const": false},
+    "engine_parity_profile": {"type": "string"},
+    "engine_parity_verified_at_commit": {"type": "string"}
+  }
+}
+

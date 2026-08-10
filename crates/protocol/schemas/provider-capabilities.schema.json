@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tom-assist.local/schemas/provider-capabilities.schema.json",
+  "title": "ProviderCapabilities",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["provider_surface", "visible_prompt_injection", "response_capture", "hidden_context_visibility", "model_internal_bias"],
+  "properties": {
+    "provider_surface": {"type": "string", "minLength": 1},
+    "visible_prompt_injection": {"type": "boolean"},
+    "response_capture": {"type": "boolean"},
+    "hidden_context_visibility": {"type": "boolean"},
+    "model_internal_bias": {"enum": ["none", "moe_expert_logits"]},
+    "max_context_tokens": {"type": "integer", "minimum": 1},
+    "exact_tokenizer": {"type": "string"},
+    "supports_system_field": {"type": "boolean"}
+  }
+}
+

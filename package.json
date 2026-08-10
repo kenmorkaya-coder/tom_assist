@@ -1,0 +1,12 @@
+{
+  "name": "tom-assist",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "schema:generate": "json2ts --cwd crates/protocol/schemas -i crates/protocol/schemas/index.schema.json -o packages/schema-generated/index.ts --bannerComment '/* Generated from crates/protocol/schemas. Do not edit directly. */'",
+    "schema:validate": "python3 scripts/validate_protocol_schemas.py"
+  },
+  "devDependencies": {
+    "json-schema-to-typescript": "15.0.4"
+  }
+}

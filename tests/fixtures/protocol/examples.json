@@ -1,0 +1,134 @@
+{
+  "envelope": {
+    "protocol": "tom-assist/1.0",
+    "request_id": "00000000-0000-4000-8000-000000000001",
+    "idempotency_key": "00000000-0000-4000-8000-000000000002",
+    "method": "turn.prepare",
+    "actor": {"type": "extension", "instance_id": "00000000-0000-4000-8000-000000000003"},
+    "project_id": "00000000-0000-4000-8000-000000000004",
+    "base_state_version": 42,
+    "payload": {"draft": "Continue the implementation."},
+    "sent_at": "2026-08-09T12:00:00Z"
+  },
+  "provider_capabilities": {
+    "provider_surface": "chatgpt-web",
+    "visible_prompt_injection": true,
+    "response_capture": true,
+    "hidden_context_visibility": false,
+    "model_internal_bias": "none",
+    "max_context_tokens": 128000,
+    "supports_system_field": false
+  },
+  "tom_capabilities": {
+    "runtime_version": "8799ccbdd",
+    "state_format_version": "sicd-engine-save/1",
+    "supports_load_ingest": true,
+    "supports_branch_activation": true,
+    "supports_candidate_ranking": true,
+    "supports_state_snapshot": true,
+    "supports_commit": true,
+    "supports_conflict_check": true,
+    "supports_trajectory_digest": true,
+    "supports_readonly_ranking": true,
+    "supports_checkpoint_restore": true,
+    "supports_nonmutating_load_preview": false,
+    "engine_parity_profile": "tom-master/direct",
+    "engine_parity_verified_at_commit": "8799ccbdd"
+  },
+  "state_object": {
+    "id": "10000000-0000-4000-8000-000000000001",
+    "project_id": "00000000-0000-4000-8000-000000000004",
+    "workstream_id": "20000000-0000-4000-8000-000000000001",
+    "type": "CONSTRAINT",
+    "title": "Local-only processing",
+    "canonical_text": "Project state remains on device unless explicitly exported.",
+    "status": "active",
+    "authority": "user",
+    "confidence": 1.0,
+    "binding_strength": "hard",
+    "source_turn_ids": [],
+    "evidence_ids": [],
+    "branch_refs": ["branch:local-first"],
+    "created_at": "2026-08-09T12:00:00Z",
+    "updated_at": "2026-08-09T12:00:00Z",
+    "effective_at": "2026-08-09T12:00:00Z",
+    "content_hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "state_version": 42
+  },
+  "state_edge": {
+    "id": "30000000-0000-4000-8000-000000000001",
+    "project_id": "00000000-0000-4000-8000-000000000004",
+    "from_state_id": "10000000-0000-4000-8000-000000000001",
+    "edge_type": "depends_on",
+    "to_state_id": "10000000-0000-4000-8000-000000000002",
+    "created_event_id": "40000000-0000-4000-8000-000000000001"
+  },
+  "continuity_packet": {
+    "packet_id": "packet-example",
+    "packet_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "project_id": "00000000-0000-4000-8000-000000000004",
+    "workstream_id": "20000000-0000-4000-8000-000000000001",
+    "provider_session_id": "session-example",
+    "project_state_version": 42,
+    "project_state_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "tom_checkpoint_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "draft_hash": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    "policy_version": "context-policy/1.0",
+    "renderer_version": "authoritative-state/1.0",
+    "provider_capabilities": {
+      "provider_surface": "chatgpt-web",
+      "visible_prompt_injection": true,
+      "response_capture": true,
+      "hidden_context_visibility": false,
+      "model_internal_bias": "none"
+    },
+    "tom_activation_id": "activation-example",
+    "sections": [{
+      "type": "BINDING_CONSTRAINTS",
+      "items": [{
+        "state_id": "10000000-0000-4000-8000-000000000001",
+        "text": "Project state remains on device unless explicitly exported.",
+        "authority": "user",
+        "structural_score": 0.9,
+        "semantic_score": 0.5,
+        "reason_selected": "hard constraint"
+      }]
+    }],
+    "retrieved_anchor_ids": [],
+    "excluded": [{"id": "old-item", "reason": "superseded"}],
+    "estimated_tokens": 123,
+    "warnings": []
+  },
+  "state_mutation_candidate": {
+    "candidate_id": "50000000-0000-4000-8000-000000000001",
+    "project_id": "00000000-0000-4000-8000-000000000004",
+    "source_turn_ids": ["60000000-0000-4000-8000-000000000001"],
+    "proposed_by": "provider_candidate",
+    "operation": "CREATE",
+    "object": {"type": "DECISION", "title": "Candidate only", "status": "proposed"},
+    "tom_check": {"result": "compatible", "conflicts": [], "requires_user_confirmation": true}
+  },
+  "intervention": {
+    "id": "70000000-0000-4000-8000-000000000001",
+    "project_id": "00000000-0000-4000-8000-000000000004",
+    "turn_id": "60000000-0000-4000-8000-000000000001",
+    "code": "CONSTRAINT_DROPPED",
+    "severity": "blocking_commit",
+    "confidence": 1.0,
+    "summary": "The response violates a directly evidenced hard constraint.",
+    "response_excerpt": "Upload the whole ledger.",
+    "conflicting_state_ids": ["10000000-0000-4000-8000-000000000001"],
+    "evidence_turn_ids": [],
+    "suggested_context_patch": "Keep all project state local.",
+    "status": "open",
+    "policy_version": "governance-policy/1.0"
+  },
+  "error": {
+    "code": "STATE_VERSION_CONFLICT",
+    "message": "Expected state version 42 but current version is 43.",
+    "retryable": true,
+    "remediation": "Rebuild the packet against the current snapshot.",
+    "correlation_id": "80000000-0000-4000-8000-000000000001"
+  }
+}
+
