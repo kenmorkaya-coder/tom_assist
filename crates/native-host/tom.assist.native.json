@@ -1,0 +1,9 @@
+{
+  "name": "tom.assist.native",
+  "description": "Tom Assist local native messaging bridge",
+  "path": "__TOM_ASSIST_NATIVE_HOST_PATH__",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://mollhhfpcdpgbnlinhhghkndeniglfba/"
+  ]
+}

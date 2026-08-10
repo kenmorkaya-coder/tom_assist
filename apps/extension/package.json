@@ -1,0 +1,23 @@
+{
+  "name": "@tom-assist/extension",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "vite build && cp manifest.json dist/manifest.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "ajv": "8.20.0",
+    "preact": "10.29.8"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "2.10.2",
+    "@types/chrome": "0.1.32",
+    "@types/node": "24.10.1",
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "vitest": "4.1.10"
+  }
+}

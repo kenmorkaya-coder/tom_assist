@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Tom Assist",
+  "version": "0.1.0",
+  "description": "Local-first project continuity companion",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtAMBDqKObkEkN6aNtEo+9wF6o/z3bxRNqwFDjl7EbhahqwlmlXD1Ern3BzSuRwYJGXoS/CZVGAqihEOebSStpM1bx7l3gTizqCafXVGPposkddACt2uJCfY4O0pP+HN5O5r5ZtAIh4AOQsdaIY2/KkSxDXJ73ERCYCPT60rKZw4LdM1T5fYZWcQVCmGY6MeuqOMbU49IjQL0UTXDc6ZIlHHMRUsdhFYCRY3IoBpy65rOVrrhGXhpsiL6fVPYbZmoqAMX6wUUswH5jBbyLW3ClvVO51u49cxyEPzogJc/4j8I0sS6JFlnFNvXHoCe+foVkiL3hgIFCkrmzshrKtXamQIDAQAB",
+  "permissions": ["nativeMessaging", "storage", "sidePanel"],
+  "host_permissions": ["https://chatgpt.com/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Open Tom Assist"
+  }
+}

@@ -65,3 +65,15 @@ Decisions: assistd uses a process-local per-project mutex for logical single-wri
 Deviations: the UDS permission/framing test requires execution outside the managed filesystem sandbox because sandboxed `socket.bind` returns `EPERM`. No product transport behavior differs.
 
 ESCALATE: none.
+
+## WP-05 — native host and MV3 extension boundary [DONE]
+
+Commit: containing commit `feat(wp-05): secure native messaging boundary` (resolved in FINAL)
+
+Evidence: `cargo test -p tom-assist-native-host` → 4 passed for 4-byte native framing, JSON/envelope validation, exact-origin rejection, >900 KB chunk/reassembly equality, and derivation of the allowlisted extension ID from the committed public key. `npm run extension:test` → 4 passed for schema/version handshake, forged-sender rejection, out-of-order chunk reassembly, and held transaction restore. `npm run typecheck -w @tom-assist/extension` → clean. `npm run extension:build` → production MV3 output (background 133.97 kB, side panel 11.76 kB) with manifest copied into `dist/`. `npm audit --omit=dev --json` → zero production dependency advisories after updating Ajv and Preact.
+
+Decisions: Chrome Native Messaging uses its normative little-endian 32-bit frame and a 16 MB defensive input ceiling. D9 splitting begins only when the serialized response exceeds 900 KiB; 600 KiB raw pieces keep base64-wrapped chunk frames below the same ceiling. The generated RSA public key pins extension ID `mollhhfpcdpgbnlinhhghkndeniglfba`; the ignored private key is retained at `apps/extension/.keys/extension-private.pem`, and coordinated regeneration steps are documented. Both Rust and the native-host manifest allowlist exactly `chrome-extension://mollhhfpcdpgbnlinhhghkndeniglfba/`. The MV3 worker accepts only its own runtime sender ID and stores pending PREPARE_TURN/PENDING_SEND envelopes in `chrome.storage.session` before forwarding.
+
+Deviations: the full development-dependency audit retains one low-severity esbuild advisory limited to a Windows development-server file-read scenario; Tom Assist's target is macOS, the production dependency audit is empty, and production builds do not start a dev server. No vulnerable runtime dependency is shipped.
+
+ESCALATE: none.
