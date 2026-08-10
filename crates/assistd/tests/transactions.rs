@@ -206,6 +206,60 @@ fn concurrent_tabs_are_serialized_and_sqlite_cas_rejects_one() {
 }
 
 #[test]
+fn quick_capture_records_a_user_candidate_without_advancing_authoritative_state() {
+    let directory = tempfile::tempdir().unwrap();
+    let database = directory.path().join("candidates.sqlite3");
+    let mut store = Store::open(&database).unwrap();
+    let before = store
+        .create_project(
+            "project-a",
+            "Project A",
+            "local-default",
+            "context-policy/1.1",
+            "owner",
+            "create-project-a",
+            "2026-08-10T00:00:00Z",
+        )
+        .unwrap();
+    let service = AssistService::new(store);
+    let response = service.handle_envelope(Envelope {
+        protocol: "tom-assist/1.0".into(),
+        request_id: "request-candidate".into(),
+        idempotency_key: "00000000-0000-4000-8000-000000000123".into(),
+        method: Method::StateCandidateCreate,
+        actor: Actor {
+            actor_type: ActorType::Extension,
+            instance_id: "00000000-0000-4000-8000-000000000456".into(),
+        },
+        project_id: Some("project-a".into()),
+        base_state_version: None,
+        payload: json!({
+            "kind": "Decision",
+            "text": "Keep the local release path",
+            "authority": "user",
+            "requires_user_confirmation": true
+        }),
+        sent_at: "2026-08-10T00:00:01Z".into(),
+    });
+    assert!(response.ok, "{:?}", response.error);
+    let candidate: tom_assist_protocol::StateMutationCandidate =
+        serde_json::from_value(response.payload.unwrap()).unwrap();
+    assert_eq!(candidate.proposed_by, Authority::User);
+    assert_eq!(candidate.object["status"], "proposed");
+    assert!(candidate.tom_check.requires_user_confirmation);
+    drop(service);
+
+    let reopened = Store::open(&database).unwrap();
+    assert_eq!(
+        reopened.candidate(&candidate.candidate_id).unwrap(),
+        Some(candidate)
+    );
+    let after = reopened.project("project-a").unwrap().unwrap();
+    assert_eq!(after.state_version, before.state_version);
+    assert_eq!(after.state_digest, before.state_digest);
+}
+
+#[test]
 fn unix_socket_is_user_only_and_protocol_versioned() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../..")

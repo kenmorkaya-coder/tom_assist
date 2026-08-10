@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::sync::Mutex;
 use tauri::Manager;
 use tom_assist_persistence::{
-    CanonicalState, EventRecord, InterventionRecord, Project, Store, TurnRecord,
+    CanonicalState, EventRecord, InterventionRecord, Project, Store, StoreMode, TurnRecord,
 };
 use tom_assist_protocol::{
     Authority, BindingStrength, StateObject, StateStatus, StateType, canonical_sha256,
@@ -11,6 +11,9 @@ use tom_assist_protocol::{
 
 struct DesktopState {
     store: Mutex<Store>,
+    store_mode: StoreMode,
+    migration_backup: Option<String>,
+    migration_error: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -46,7 +49,9 @@ struct SupersedeRequest {
 struct Diagnostics {
     database_path: String,
     database_replay_ok: bool,
-    storage_mode: &'static str,
+    storage_mode: String,
+    migration_backup: Option<String>,
+    migration_error: Option<String>,
     network_services: bool,
 }
 
@@ -227,7 +232,13 @@ fn diagnostics(state: tauri::State<'_, DesktopState>) -> Result<Diagnostics, Str
     Ok(Diagnostics {
         database_path: store.path().display().to_string(),
         database_replay_ok: replay_ok,
-        storage_mode: "sqlite-wal-plaintext-alpha",
+        storage_mode: match state.store_mode {
+            StoreMode::ReadWrite => "sqlite-wal-plaintext-alpha",
+            StoreMode::ReadOnlySafe => "sqlite-read-only-safe-mode",
+        }
+        .into(),
+        migration_backup: state.migration_backup.clone(),
+        migration_error: state.migration_error.clone(),
         network_services: false,
     })
 }
@@ -364,12 +375,17 @@ fn main() {
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data_dir)?;
-            let mut store = Store::open(data_dir.join("tom-assist.sqlite3"))?;
+            let mut recovered = Store::open_with_recovery(data_dir.join("tom-assist.sqlite3"))?;
             // Keep the alpha deterministic even if the webview has not invoked a
-            // command yet. The fixture seeder is idempotent across relaunches.
-            seed_demo_store(&mut store)?;
+            // command yet. Never seed or mutate a failed-migration database.
+            if recovered.mode == StoreMode::ReadWrite {
+                seed_demo_store(&mut recovered.store)?;
+            }
             app.manage(DesktopState {
-                store: Mutex::new(store),
+                store: Mutex::new(recovered.store),
+                store_mode: recovered.mode,
+                migration_backup: recovered.backup_path.map(|path| path.display().to_string()),
+                migration_error: recovered.migration_error,
             });
             Ok(())
         })

@@ -10,12 +10,13 @@ use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use tom_assist_governance::{CandidateChannel, extract_candidates};
 use tom_assist_persistence::{
     ContextRunRecord, ResponseEvaluationRecord, Store, StoreError, TurnRecord,
 };
 use tom_assist_protocol::{
     ContinuityPacket, Envelope, ExcludedItem, Method, PacketDigestInput, PacketSection,
-    ProviderCapabilities, StateObject, canonical_sha256, packet_digest,
+    ProviderCapabilities, StateMutationCandidate, StateObject, canonical_sha256, packet_digest,
 };
 
 pub const SERVICE_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -139,6 +140,16 @@ pub struct EvaluateTurnRequest {
     pub created_at: String,
     #[serde(default)]
     pub latency_ms: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CreateCandidateRequest {
+    pub kind: String,
+    pub text: String,
+    #[serde(default)]
+    pub authority: Option<String>,
+    #[serde(default)]
+    pub requires_user_confirmation: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -423,6 +434,59 @@ impl AssistService {
         Ok(())
     }
 
+    pub fn create_manual_candidate(
+        &self,
+        project_id: &str,
+        source_id: &str,
+        request: CreateCandidateRequest,
+        created_at: &str,
+    ) -> Result<StateMutationCandidate> {
+        if request.text.trim().is_empty() {
+            return Err(ServiceError::Invalid("candidate text is required".into()));
+        }
+        if request
+            .authority
+            .as_deref()
+            .is_some_and(|value| value != "user")
+        {
+            return Err(ServiceError::Invalid(
+                "quick capture only accepts explicit user authority".into(),
+            ));
+        }
+        if request.requires_user_confirmation == Some(false) {
+            return Err(ServiceError::Invalid(
+                "candidate must require explicit user confirmation".into(),
+            ));
+        }
+        let prefix = match request.kind.to_ascii_lowercase().as_str() {
+            "decision" => "Decision",
+            "constraint" => "Constraint",
+            "reject" | "rejected" | "rejected_path" => "Rejected",
+            "complete" | "completed" | "completed_work" => "Completed",
+            "unresolved" | "unresolved_dependency" => "Unresolved",
+            "evidence" => "Evidence",
+            _ => {
+                return Err(ServiceError::Invalid(format!(
+                    "unsupported candidate kind: {}",
+                    request.kind
+                )));
+            }
+        };
+        let tagged = format!("{prefix}: {}", request.text.trim());
+        let candidate =
+            extract_candidates(project_id, source_id, &tagged, CandidateChannel::ManualUser)
+                .into_iter()
+                .next()
+                .ok_or_else(|| {
+                    ServiceError::Invalid("candidate extraction produced no result".into())
+                })?;
+        self.store
+            .lock()
+            .expect("store poisoned")
+            .record_candidate(&candidate, created_at)?;
+        Ok(candidate)
+    }
+
     pub fn handle_envelope(&self, envelope: Envelope) -> WireResponse {
         let request_id = envelope.request_id.clone();
         let result = self.dispatch(envelope);
@@ -471,6 +535,15 @@ impl AssistService {
             Method::ResponseEvaluate => Ok(serde_json::to_value(
                 self.evaluate_turn(serde_json::from_value(envelope.payload)?)?,
             )?),
+            Method::StateCandidateCreate => {
+                let project_id = envelope.project_id.ok_or(ServiceError::MissingProject)?;
+                Ok(serde_json::to_value(self.create_manual_candidate(
+                    &project_id,
+                    &envelope.idempotency_key,
+                    serde_json::from_value(envelope.payload)?,
+                    &envelope.sent_at,
+                )?)?)
+            }
             method => Err(ServiceError::UnsupportedMethod(format!("{method:?}"))),
         }
     }

@@ -6,11 +6,12 @@ import { PROTOCOL_VERSION } from "./protocol";
 
 function requestId(): string { return crypto.randomUUID(); }
 function now(): string { return new Date().toISOString(); }
+const actorInstanceId = requestId();
 
 class NativeExtensionService implements ExtensionService {
   private async call(method: string, projectId: string, payload: unknown): Promise<any> {
     const request_id = requestId();
-    const envelope = { protocol: PROTOCOL_VERSION, request_id, idempotency_key: requestId(), method, actor: { type: "extension", instance_id: chrome.runtime.id }, project_id: projectId, payload, sent_at: now() };
+    const envelope = { protocol: PROTOCOL_VERSION, request_id, idempotency_key: requestId(), method, actor: { type: "extension", instance_id: actorInstanceId }, project_id: projectId, payload, sent_at: now() };
     return new Promise((resolve, reject) => {
       const timeout = window.setTimeout(() => { chrome.runtime.onMessage.removeListener(listener); reject(new Error("native response timeout")); }, 4000);
       const listener = (message: any) => {
@@ -24,13 +25,13 @@ class NativeExtensionService implements ExtensionService {
     });
   }
   async prepare(projectId: string, draft: string): Promise<PacketPreview> {
-    const value = await this.call("turn.prepare", projectId, { project_id: projectId, workstream_id: "provider-main", provider_session_id: location.pathname, user_draft: draft, tom_checkpoint_digest: "sha256:unavailable", tom_activation_id: "extension", provider_capabilities: { provider: "chatgpt", adapter_version: "chatgpt-visible-dom/1.0", can_read_visible_turns: true, can_read_streaming_state: true, can_read_composer: true, can_write_composer: true, can_intercept_submit: true, can_mount_panel: true }, sections: [], retrieved_anchor_ids: [], excluded: [], created_at: now() });
+    const value = await this.call("turn.prepare", projectId, { project_id: projectId, workstream_id: "provider-main", provider_session_id: location.pathname, user_draft: draft, tom_checkpoint_digest: "sha256:unavailable", tom_activation_id: "extension", provider_capabilities: { provider_surface: "chatgpt.com/visible-dom", visible_prompt_injection: true, response_capture: true, hidden_context_visibility: false, model_internal_bias: "none", max_context_tokens: null, exact_tokenizer: null, supports_system_field: false }, sections: [], retrieved_anchor_ids: [], excluded: [], created_at: now() });
     const packet = value.packet ?? {};
     return { packetText: value.packet_text ?? "", packetDigest: packet.packet_digest ?? "", includedCategories: (packet.sections ?? []).map((section: any) => section.section_type), warnings: packet.warnings ?? [], excludedItems: (packet.excluded ?? []).map((item: any) => item.reason) };
   }
   async markSent(projectId: string, draft: string, packetDigest: string): Promise<void> { await this.call("turn.sent", projectId, { project_id: projectId, packet_digest: packetDigest, user_draft: draft, turn_id: requestId(), ordinal: Date.now(), idempotency_key: requestId(), captured_at: now() }); }
   async evaluate(projectId: string, turn: ProviderTurn, packetDigest: string): Promise<EvaluationBadge> { const result = await this.call("response.evaluate", projectId, { project_id: projectId, packet_digest: packetDigest, response_turn_id: turn.contentHash, response_text: turn.normalizedText, ordinal: turn.ordinal, complete: turn.complete, created_at: now() }); return { result: result.result, count: result.intervention_ids?.length ?? 0, severity: result.result === "CONFLICT" ? "blocking" : result.result === "REVIEW" ? "warning" : "info" }; }
-  async capture(projectId: string, kind: string, text: string): Promise<void> { await this.call("state.propose", projectId, { kind, text, authority: "user", requires_user_confirmation: true }); }
+  async capture(projectId: string, kind: string, text: string): Promise<void> { await this.call("state.candidate.create", projectId, { kind, text, authority: "user", requires_user_confirmation: true }); }
 }
 
 function GateView({ controller }: { controller: PromptGateController }) {

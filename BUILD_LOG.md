@@ -151,3 +151,21 @@ Decisions: arms are explicit typed plumbing for SUB-A recent-visible context, SU
 Deviations: `validation/fixtures/toy_cases.jsonl` is intentionally a three-case plumbing smoke fixture, not a frozen battery. Zero validation batteries are authored in this shot.
 
 ESCALATE: none.
+
+## WP-12 — developer launch, install, packaging, and runbook [DONE]
+
+Commit: containing commit `chore(wp-12): add local install and release runbook` (resolved in FINAL)
+
+Evidence: `scripts/dev-run.sh --check` → pinned tom_master `8799ccbdddf3d5b5939360b91993581af7dab470` and local prerequisites ready. `scripts/install-native-host/install.sh --target-root "$PWD/.tmp/wp12-home" --binary "$PWD/target/debug/tom-assist-native-host"` → executable launcher plus valid Chrome manifest under the correct redirected macOS directory, with exact extension ID `mollhhfpcdpgbnlinhhghkndeniglfba`. `scripts/package-macos/package-unsigned-app.sh --output-dir "$PWD/.tmp/wp12-final"` → optimized unsigned `.app`, bundle ID `local.tom.assist`. A real clean launch exposed `tauri://localhost`, `Release console`, seeded `Local Release Console`, STATE V16, 16 objects, 17 audit events, and all six navigation views to macOS accessibility inspection. `cargo test -p tom-assistd --test full_fixture` → 1 passed for draft → prepared visible packet → sent turn → evaluated response → evidence-linked intervention → rejected unconfirmed commit → accepted intervention → confirmed authoritative commit → replay/digest/intervention equality after SQLite restart. `sh -n` checks and the full runbook command suite are included in final verification.
+
+Decisions: the dev runner owns and cleans up only its gateway, assistd, Vite, and desktop child processes; persistent user data is never removed. The native-host installer uses Chrome's per-user `NativeMessagingHosts` directory and a launcher that fixes the user-local assistd socket. `--target-root` makes installation testable without changing the user's Chrome profile. The unsigned packager builds only an optimized Tauri `custom-protocol` binary so assets are embedded; debug binaries are rejected because they require the Vite server. Existing package output is preserved once as a `.previous.app` rather than silently overwritten. The runbook calls out every out-of-scope claim and labels harness output NOT-A-GATE.
+
+Deviations: signing/notarization and an actual write into the user's live Chrome profile remain out of scope; the installer was exercised against a redirected home. Live chatgpt.com selectors were not tested. The fresh-checkout sequence was command-verified in the working checkout rather than by making a second network clone.
+
+ESCALATE: none.
+
+WP-12 verification supplement: Chrome 151 no longer honors command-line `--load-extension`, so the build followed Chrome's documented replacement and used temporary Puppeteer + Chrome for Testing from ignored `.tmp`. The unpacked build registered the exact MV3 service worker `chrome-extension://mollhhfpcdpgbnlinhhghkndeniglfba/background.js`; Puppeteer/Chrome for Testing are verification-only and were not added to product dependencies. The final T-catalog audit also added `Store::open_with_recovery`: a failed migration is copied byte-for-byte to a non-overwriting backup and reopened read-only, surfaced by desktop diagnostics. `cargo test -p tom-assist-persistence` → 6 passed including that T-016 recovery case.
+
+WP-12 boundary supplement: final wire audit corrected the content script's actor instance to a UUID and made its `ProviderCapabilities` payload match the frozen Rust/schema contract exactly; quick capture uses the normative `state.candidate.create` method name. Extension tests/typecheck/build remained green, and the rebuilt service worker reloaded under the pinned Chromium ID.
+
+WP-12 candidate-path supplement: the normative quick-capture method is now dispatched by assistd and persisted in `state_mutation_candidates`. `cargo test -p tom-assistd --test transactions` → 6 passed, including an envelope-level regression proving the user candidate remains `status=proposed`, requires confirmation, is recoverable after SQLite reopen, and does not advance authoritative `state_version` or `state_digest`. Evidence capture is supported as the sixth manual candidate kind. No quick-capture path calls an authoritative commit.

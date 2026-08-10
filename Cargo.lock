@@ -3570,6 +3570,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "tom-assist-governance",
  "tom-assist-persistence",
  "tom-assist-protocol",
 ]

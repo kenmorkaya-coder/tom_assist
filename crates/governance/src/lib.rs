@@ -531,6 +531,7 @@ pub fn extract_candidates(
         ("Rejected:", StateType::RejectedPath),
         ("Completed:", StateType::CompletedWork),
         ("Unresolved:", StateType::UnresolvedDependency),
+        ("Evidence:", StateType::Evidence),
     ];
     text.lines()
         .filter_map(|line| {

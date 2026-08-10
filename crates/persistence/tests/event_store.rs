@@ -1,5 +1,5 @@
 use tempfile::tempdir;
-use tom_assist_persistence::{Store, StoreError};
+use tom_assist_persistence::{Store, StoreError, StoreMode};
 use tom_assist_protocol::{
     Authority, BindingStrength, StateObject, StateStatus, StateType, canonical_sha256,
 };
@@ -231,4 +231,23 @@ fn supersession_keeps_prior_state_auditable() {
     assert_eq!(old.status, StateStatus::Superseded);
     assert_eq!(new.supersedes_id.as_deref(), Some("1"));
     assert_eq!(store.current_state("project-1").unwrap().edges.len(), 1);
+}
+
+#[test]
+fn migration_failure_preserves_backup_and_enters_read_only_safe_mode() {
+    let directory = tempdir().unwrap();
+    let path = directory.path().join("damaged.sqlite3");
+    let damaged = b"not-a-sqlite-database\0preserve-me";
+    std::fs::write(&path, damaged).unwrap();
+    let recovered = Store::open_with_recovery(&path).unwrap();
+    assert_eq!(recovered.mode, StoreMode::ReadOnlySafe);
+    assert!(
+        recovered
+            .migration_error
+            .as_deref()
+            .is_some_and(|message| !message.is_empty())
+    );
+    let backup = recovered.backup_path.unwrap();
+    assert_eq!(std::fs::read(backup).unwrap(), damaged);
+    assert!(recovered.store.project("anything").is_err());
 }

@@ -1,6 +1,8 @@
 //! Event-sourced SQLite persistence with deterministic canonical digests.
 
-use rusqlite::{Connection, OptionalExtension, Transaction, TransactionBehavior, params};
+use rusqlite::{
+    Connection, OpenFlags, OptionalExtension, Transaction, TransactionBehavior, params,
+};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
@@ -8,12 +10,25 @@ use std::fmt::{Display, Formatter};
 use std::fs;
 use std::path::{Path, PathBuf};
 use tom_assist_protocol::{
-    Authority, Intervention, InterventionStatus, StateEdge, StateObject, StateStatus,
-    canonical_sha256,
+    Authority, Intervention, InterventionStatus, StateEdge, StateMutationCandidate, StateObject,
+    StateStatus, canonical_sha256,
 };
 
 pub const STATE_SCHEMA_VERSION: &str = "state-schema/1";
 pub const EVENT_SCHEMA_VERSION: &str = "event-schema/1";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StoreMode {
+    ReadWrite,
+    ReadOnlySafe,
+}
+
+pub struct RecoveredStore {
+    pub store: Store,
+    pub mode: StoreMode,
+    pub backup_path: Option<PathBuf>,
+    pub migration_error: Option<String>,
+}
 
 #[derive(Debug)]
 pub enum StoreError {
@@ -234,6 +249,41 @@ impl Store {
         })
     }
 
+    /// Preserve a failing database byte-for-byte and reopen it read-only so the
+    /// UI can offer diagnostics/export rather than attempting further writes.
+    pub fn open_with_recovery(path: impl AsRef<Path>) -> Result<RecoveredStore> {
+        let path = path.as_ref().to_path_buf();
+        match Self::open(&path) {
+            Ok(store) => Ok(RecoveredStore {
+                store,
+                mode: StoreMode::ReadWrite,
+                backup_path: None,
+                migration_error: None,
+            }),
+            Err(error) if path.exists() => {
+                let backup = path.with_extension("migration-failed.bak");
+                if backup.exists() {
+                    return Err(StoreError::Integrity(format!(
+                        "refusing to overwrite migration backup: {}",
+                        backup.display()
+                    )));
+                }
+                fs::copy(&path, &backup)?;
+                let connection = Connection::open_with_flags(
+                    &path,
+                    OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+                )?;
+                Ok(RecoveredStore {
+                    store: Self { connection, path },
+                    mode: StoreMode::ReadOnlySafe,
+                    backup_path: Some(backup),
+                    migration_error: Some(error.to_string()),
+                })
+            }
+            Err(error) => Err(error),
+        }
+    }
+
     #[cfg(feature = "encrypted-store")]
     pub fn open_encrypted(_path: impl AsRef<Path>) -> Result<Self> {
         Err(StoreError::EncryptionUnavailable)
@@ -311,6 +361,55 @@ impl Store {
             })
         })?;
         rows.map(|row| row.map_err(Into::into)).collect()
+    }
+
+    pub fn record_candidate(
+        &self,
+        candidate: &StateMutationCandidate,
+        created_at: &str,
+    ) -> Result<()> {
+        if self.project(&candidate.project_id)?.is_none() {
+            return Err(StoreError::ProjectNotFound(candidate.project_id.clone()));
+        }
+        let proposed_by = serde_json::to_value(candidate.proposed_by)?
+            .as_str()
+            .ok_or_else(|| {
+                StoreError::Integrity("candidate authority did not serialize as text".into())
+            })?
+            .to_owned();
+        let operation = serde_json::to_value(candidate.operation)?
+            .as_str()
+            .ok_or_else(|| {
+                StoreError::Integrity("candidate operation did not serialize as text".into())
+            })?
+            .to_owned();
+        self.connection.execute(
+            "INSERT OR IGNORE INTO state_mutation_candidates(id,project_id,source_turn_id,proposed_by,operation,payload_json,status,created_at,resolved_at) VALUES(?1,?2,?3,?4,?5,?6,'proposed',?7,NULL)",
+            params![
+                candidate.candidate_id,
+                candidate.project_id,
+                candidate.source_turn_ids.first(),
+                proposed_by,
+                operation,
+                serde_json::to_string(candidate)?,
+                created_at,
+            ],
+        )?;
+        Ok(())
+    }
+
+    pub fn candidate(&self, candidate_id: &str) -> Result<Option<StateMutationCandidate>> {
+        let payload: Option<String> = self
+            .connection
+            .query_row(
+                "SELECT payload_json FROM state_mutation_candidates WHERE id=?1",
+                [candidate_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        payload
+            .map(|value| serde_json::from_str(&value).map_err(Into::into))
+            .transpose()
     }
 
     pub fn update_project_metadata(
