@@ -89,3 +89,15 @@ Decisions: the §8.1 `ProviderAdapter` method shape is preserved verbatim behind
 Deviations: live chatgpt.com selector verification remains deliberately out of scope; these checks are fixture-level only and the adapter fails closed into a clean detached state when selectors do not match.
 
 ESCALATE: none.
+
+## WP-07 — context admission and authoritative renderer [DONE]
+
+Commit: containing commit `feat(wp-07): add deterministic context admission` (resolved in FINAL)
+
+Evidence: `cargo test -p tom-assist-context-admission` → 4 passed. The golden fixture asserts byte-identical renderer output, manifest equality, two cross-input rebuilds, and fixed packet digest `sha256:a7292077bb2dfb40f92d7d051a0fa7ba900f57050d1b4edc1e0cddb5b6f83910`. Additional checks cover cross-project/superseded exclusion, hard-constraint survival under a tiny budget, optional-background eviction, explicit depth-2 missing-dependency markers, the 500-token default, and the 1,200-token maximum.
+
+Decisions: the versioned starting policy keeps all nine §11.3 components decomposed in the trace; weights are transparent initial product settings rather than importing the archived paper's scalar as an unexplained constant. Hard gates run before scoring for project/workstream scope, privacy, evidence integrity, supersession, and archive state. Canonical text duplicates collapse deterministically. Active objectives, hard constraints, and guardrails are non-evictable; optional context ranks by section priority, total decomposed score, then byte-order ID. Dependency closure traverses only graph roots, caps at depth 2, detects cycles, and renders explicit `[MISSING_DEPENDENCY]` markers when closure is impossible. Token estimates use D7's documented `ceil(chars/4)` heuristic. The only production renderer is `authoritative-state/1.0`, and the original draft is appended verbatim outside its state block.
+
+Deviations: none.
+
+ESCALATE: none.

@@ -344,6 +344,11 @@ dependencies = [
 [[package]]
 name = "tom-assist-context-admission"
 version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tom-assist-protocol",
+]
 
 [[package]]
 name = "tom-assist-governance"
