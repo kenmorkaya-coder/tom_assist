@@ -130,6 +130,57 @@ pub struct Snapshot {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ContextRunRecord {
+    pub id: String,
+    pub project_id: String,
+    pub workstream_id: String,
+    pub provider_session_id: String,
+    pub draft_hash: String,
+    pub state_version: u64,
+    pub tom_checkpoint_digest: String,
+    pub activation_id: String,
+    pub policy_version: String,
+    pub renderer_version: String,
+    pub selected_json: String,
+    pub excluded_json: String,
+    pub packet_text: String,
+    pub packet_digest: String,
+    pub estimated_tokens: u64,
+    pub latency_ms: u64,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TurnRecord {
+    pub id: String,
+    pub session_id: String,
+    pub project_id: String,
+    pub workstream_id: String,
+    pub role: String,
+    pub ordinal: u64,
+    pub normalized_text: String,
+    pub content_hash: String,
+    pub packet_digest: String,
+    pub completeness: String,
+    pub captured_at: String,
+    pub provider_timestamp: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ResponseEvaluationRecord {
+    pub id: String,
+    pub project_id: String,
+    pub turn_id: String,
+    pub packet_digest: String,
+    pub state_version: u64,
+    pub result: String,
+    pub intervention_ids: Vec<String>,
+    pub policy_version: String,
+    pub latency_ms: u64,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct ExportManifest {
     format: String,
     project_id: String,
@@ -584,6 +635,65 @@ impl Store {
         let mut statement = self.connection.prepare("SELECT id,project_id,event_type,actor_type,actor_id,payload_json,idempotency_key,base_state_version,prior_digest,resulting_digest,created_at FROM state_events WHERE project_id=?1 ORDER BY rowid")?;
         let rows = statement.query_map([project_id], row_to_event)?;
         rows.map(|row| row.map_err(Into::into)).collect()
+    }
+
+    pub fn record_context_run(&self, record: &ContextRunRecord) -> Result<()> {
+        self.connection.execute(
+            "INSERT OR IGNORE INTO context_runs(id,project_id,workstream_id,provider_session_id,draft_hash,state_version,tom_checkpoint_digest,activation_id,policy_version,renderer_version,selected_json,excluded_json,packet_text,packet_digest,estimated_tokens,latency_ms,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17)",
+            params![record.id, record.project_id, record.workstream_id, record.provider_session_id, record.draft_hash, record.state_version, record.tom_checkpoint_digest, record.activation_id, record.policy_version, record.renderer_version, record.selected_json, record.excluded_json, record.packet_text, record.packet_digest, record.estimated_tokens, record.latency_ms, record.created_at],
+        )?;
+        Ok(())
+    }
+
+    pub fn context_run_by_digest(
+        &self,
+        project_id: &str,
+        digest: &str,
+    ) -> Result<Option<ContextRunRecord>> {
+        self.connection.query_row(
+            "SELECT id,project_id,COALESCE(workstream_id,''),COALESCE(provider_session_id,''),draft_hash,state_version,tom_checkpoint_digest,activation_id,policy_version,renderer_version,selected_json,excluded_json,packet_text,packet_digest,estimated_tokens,latency_ms,created_at FROM context_runs WHERE project_id=?1 AND packet_digest=?2 ORDER BY rowid DESC LIMIT 1",
+            params![project_id, digest],
+            |row| Ok(ContextRunRecord { id: row.get(0)?, project_id: row.get(1)?, workstream_id: row.get(2)?, provider_session_id: row.get(3)?, draft_hash: row.get(4)?, state_version: row.get(5)?, tom_checkpoint_digest: row.get(6)?, activation_id: row.get(7)?, policy_version: row.get(8)?, renderer_version: row.get(9)?, selected_json: row.get(10)?, excluded_json: row.get(11)?, packet_text: row.get(12)?, packet_digest: row.get(13)?, estimated_tokens: row.get(14)?, latency_ms: row.get(15)?, created_at: row.get(16)? }),
+        ).optional().map_err(Into::into)
+    }
+
+    pub fn record_turn(&self, record: &TurnRecord) -> Result<()> {
+        self.connection.execute(
+            "INSERT OR IGNORE INTO turns(id,session_id,project_id,workstream_id,role,ordinal,normalized_text,content_hash,packet_digest,completeness,captured_at,provider_timestamp) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)",
+            params![record.id, record.session_id, record.project_id, record.workstream_id, record.role, record.ordinal, record.normalized_text, record.content_hash, record.packet_digest, record.completeness, record.captured_at, record.provider_timestamp],
+        )?;
+        Ok(())
+    }
+
+    pub fn turn(&self, turn_id: &str) -> Result<Option<TurnRecord>> {
+        self.connection.query_row(
+            "SELECT id,COALESCE(session_id,''),project_id,COALESCE(workstream_id,''),role,ordinal,COALESCE(normalized_text,''),content_hash,COALESCE(packet_digest,''),completeness,captured_at,provider_timestamp FROM turns WHERE id=?1",
+            [turn_id],
+            |row| Ok(TurnRecord { id: row.get(0)?, session_id: row.get(1)?, project_id: row.get(2)?, workstream_id: row.get(3)?, role: row.get(4)?, ordinal: row.get(5)?, normalized_text: row.get(6)?, content_hash: row.get(7)?, packet_digest: row.get(8)?, completeness: row.get(9)?, captured_at: row.get(10)?, provider_timestamp: row.get(11)? }),
+        ).optional().map_err(Into::into)
+    }
+
+    pub fn record_response_evaluation(&self, record: &ResponseEvaluationRecord) -> Result<()> {
+        self.connection.execute(
+            "INSERT OR IGNORE INTO response_evaluations(id,project_id,turn_id,packet_digest,state_version,result,intervention_ids_json,policy_version,latency_ms,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10)",
+            params![record.id, record.project_id, record.turn_id, record.packet_digest, record.state_version, record.result, serde_json::to_string(&record.intervention_ids)?, record.policy_version, record.latency_ms, record.created_at],
+        )?;
+        Ok(())
+    }
+
+    pub fn audit(
+        &self,
+        project_id: &str,
+        category: &str,
+        correlation_id: &str,
+        details: &serde_json::Value,
+        created_at: &str,
+    ) -> Result<()> {
+        self.connection.execute(
+            "INSERT INTO audit_events(project_id,category,correlation_id,details_json,created_at) VALUES(?1,?2,?3,?4,?5)",
+            params![project_id, category, correlation_id, serde_json::to_string(details)?, created_at],
+        )?;
+        Ok(())
     }
 
     fn event_by_idempotency(&self, project_id: &str, key: &str) -> Result<Option<EventRecord>> {

@@ -383,6 +383,13 @@ dependencies = [
 [[package]]
 name = "tom-assistd"
 version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tom-assist-persistence",
+ "tom-assist-protocol",
+]
 
 [[package]]
 name = "typenum"

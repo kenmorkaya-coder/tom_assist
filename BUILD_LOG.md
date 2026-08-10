@@ -53,3 +53,15 @@ Deviations: SQLCipher is represented by the compile-tested `encrypted-store` fea
 ESCALATE: none.
 
 Log-order note: WP-03 was executed after the WP-02 commit, but its append operation matched the earlier identical `ESCALATE: none.` anchor and placed the section above WP-02. In keeping with the append-only rule, that history is not moved or rewritten; commit ancestry remains the authoritative execution order.
+
+## WP-04 — assistd transaction service [DONE]
+
+Commit: containing commit `feat(wp-04): add snapshot-bound assistd transactions` (resolved in FINAL)
+
+Evidence: `cargo test -p tom-assistd -- --skip unix_socket_is_user_only_and_protocol_versioned` → 4 passed; `cargo test -p tom-assistd unix_socket_is_user_only_and_protocol_versioned` → 1 passed outside the socket-binding sandbox. Checks cover snapshot-bound PREPARE_TURN, D10 packet binding, immutable/idempotent USER_TURN_SENT capture, incomplete EVALUATE_TURN capture, stale packet rejection after V→V+1, two-tab concurrent commit serialization with one deterministic SQLite CAS conflict, versioned JSON framing, and mode-0600 UDS permissions. `cargo test -p tom-assist-persistence` remained 5 passed after adding context-run, turn, response-evaluation, and audit persistence APIs.
+
+Decisions: assistd uses a process-local per-project mutex for logical single-writer ordering while SQLite `BEGIN IMMEDIATE` plus `state_version` CAS remains the durable/cross-process authority. PREPARE_TURN is persisted as a non-authoritative `context_runs` record and never advances state. `turn.sent` requires a locally stored packet digest, identical draft hash, and unchanged state version before persisting the user turn. EVALUATE_TURN persists exact packet lineage and represents incomplete capture explicitly; WP-08 supplies the intervention engine while WP-04's clean lineage baseline is `PASS`, stale lineage is `REVIEW`, and incomplete capture is `INCOMPLETE`. Newline-delimited protocol envelopes travel over the user-only UDS.
+
+Deviations: the UDS permission/framing test requires execution outside the managed filesystem sandbox because sandboxed `socket.bind` returns `EPERM`. No product transport behavior differs.
+
+ESCALATE: none.
