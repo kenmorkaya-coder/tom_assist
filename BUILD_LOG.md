@@ -101,3 +101,15 @@ Decisions: the versioned starting policy keeps all nine §11.3 components decomp
 Deviations: none.
 
 ESCALATE: none.
+
+## WP-08 — governance and authority gates [DONE]
+
+Commit: containing commit `feat(wp-08): add evidence-linked governance` (resolved in FINAL)
+
+Evidence: `cargo test -p tom-assist-governance -- --skip live_gateway_drift_verifier_drives_contradiction_mapping` → 4 passed: every one of the 11 intervention codes fires once on its crafted direct-evidence fixture, the same rule set remains silent on a clean response, claim/structure inputs route through the gateway contract, deterministic/manual extraction remains candidate-only, commit authority/version/blocking gates reject unsafe transitions, correction packets are generated, and false-positive resolution persists without advancing state. `cargo test -p tom-assist-governance live_gateway_drift_verifier_drives_contradiction_mapping -- --ignored` → 1 passed against pinned tom_master's real DriftVerifier over UDS. `cargo test -p tom-assist-persistence` remained 5 passed after adding intervention persistence.
+
+Decisions: all confidence values and severities live in `governance-policy/1.0`. Direct ledger evidence may block state commit; objective/concept drift remain warning-only at 0.65 confidence. CONTRADICTION and CONSTRAINT_DROPPED require a block/revise result from `/verify/drift` over conservatively escaped project phrases. Cited-claim support routes through `/verify/claims`; reasoning authority/constraint shape routes through `/adjudicate/structure`. Remaining scope, supersession, dependency, completed/rejected path, evidence-integrity, and authority rules are Rust-native deterministic checks. Deterministic visible-turn extraction maps to `provider_candidate` because the protocol has no separate deterministic-candidate authority; manual user capture maps to `user`, but both produce `status=proposed` and `requires_user_confirmation=true`. Candidate IDs and intervention IDs are deterministic UUID-shaped hashes. Provider/model candidates never auto-commit.
+
+Deviations: the real gateway integration case is marked ignored in the default workspace suite because it requires the pinned external runtime and an unsandboxed local socket; it is run explicitly as WP evidence. No evaluator result is promoted to a validation-gate verdict.
+
+ESCALATE: none.

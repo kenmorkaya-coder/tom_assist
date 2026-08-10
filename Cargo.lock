@@ -353,6 +353,14 @@ dependencies = [
 [[package]]
 name = "tom-assist-governance"
 version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tom-assist-persistence",
+ "tom-assist-protocol",
+ "tom-assist-tom-adapter",
+]
 
 [[package]]
 name = "tom-assist-native-host"

@@ -7,7 +7,10 @@ use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::fs;
 use std::path::{Path, PathBuf};
-use tom_assist_protocol::{Authority, StateEdge, StateObject, StateStatus, canonical_sha256};
+use tom_assist_protocol::{
+    Authority, Intervention, InterventionStatus, StateEdge, StateObject, StateStatus,
+    canonical_sha256,
+};
 
 pub const STATE_SCHEMA_VERSION: &str = "state-schema/1";
 pub const EVENT_SCHEMA_VERSION: &str = "event-schema/1";
@@ -694,6 +697,52 @@ impl Store {
             params![project_id, category, correlation_id, serde_json::to_string(details)?, created_at],
         )?;
         Ok(())
+    }
+
+    pub fn record_intervention(&self, intervention: &Intervention, created_at: &str) -> Result<()> {
+        self.connection.execute(
+            "INSERT OR IGNORE INTO interventions(id,project_id,turn_id,code,severity,confidence,summary,conflicting_state_ids_json,status,policy_version,created_at,resolved_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,NULL)",
+            params![intervention.id, intervention.project_id, intervention.turn_id, serde_json::to_value(intervention.code)?.as_str(), serde_json::to_value(intervention.severity)?.as_str(), intervention.confidence, intervention.summary, serde_json::to_string(&intervention.conflicting_state_ids)?, serde_json::to_value(intervention.status)?.as_str(), intervention.policy_version, created_at],
+        )?;
+        Ok(())
+    }
+
+    pub fn resolve_intervention(
+        &self,
+        intervention_id: &str,
+        status: InterventionStatus,
+        resolved_at: &str,
+    ) -> Result<()> {
+        let changed = self.connection.execute(
+            "UPDATE interventions SET status=?2,resolved_at=?3 WHERE id=?1",
+            params![
+                intervention_id,
+                serde_json::to_value(status)?.as_str(),
+                resolved_at
+            ],
+        )?;
+        if changed != 1 {
+            return Err(StoreError::Integrity(format!(
+                "intervention not found: {intervention_id}"
+            )));
+        }
+        Ok(())
+    }
+
+    pub fn intervention_status(&self, intervention_id: &str) -> Result<Option<InterventionStatus>> {
+        let value: Option<String> = self
+            .connection
+            .query_row(
+                "SELECT status FROM interventions WHERE id=?1",
+                [intervention_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        value
+            .map(|status| {
+                serde_json::from_value(serde_json::Value::String(status)).map_err(Into::into)
+            })
+            .transpose()
     }
 
     fn event_by_idempotency(&self, project_id: &str, key: &str) -> Result<Option<EventRecord>> {

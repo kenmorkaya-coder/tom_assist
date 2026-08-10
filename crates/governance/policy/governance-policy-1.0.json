@@ -1,0 +1,19 @@
+{
+  "policy_version": "governance-policy/1.0",
+  "direct_confidence": 0.95,
+  "gateway_confidence": 0.9,
+  "heuristic_confidence": 0.65,
+  "severity": {
+    "CONTRADICTION": "blocking_commit",
+    "SUPERSEDED_PATH_REVIVED": "blocking_commit",
+    "CONSTRAINT_DROPPED": "blocking_commit",
+    "OBJECTIVE_DRIFT": "warning",
+    "COMPLETED_WORK_REPROPOSED": "blocking_commit",
+    "UNSUPPORTED_STATE_CHANGE": "blocking_commit",
+    "STALE_EVIDENCE_USED": "warning",
+    "WRONG_PROJECT_CONTEXT": "blocking_commit",
+    "SUPERSESSION_WITHOUT_REASON": "blocking_commit",
+    "UNRESOLVED_DEPENDENCY_IGNORED": "blocking_commit",
+    "CONCEPT_DRIFT": "warning"
+  }
+}
