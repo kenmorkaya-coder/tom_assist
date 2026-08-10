@@ -26,6 +26,20 @@ Deviations: none.
 
 ESCALATE: none.
 
+## WP-03 — ToM gateway and Rust adapter [DONE]
+
+Commit: containing commit `feat(wp-03): add pure tom gateway and adapter` (resolved in FINAL)
+
+Evidence: `PYTHONPATH=/Users/kenmorkaya/PycharmProjects/tom_master:$PWD .venv-gateway/bin/python -m pytest -q gateway/tests` → 6 passed, including 100 mixed preview calls with byte-identical engine/RGM serializations, unchanged engine/RGM ticks, deterministic output across runtime restart, commit idempotency, checkpoint restore, and all three verifier mappings. `cargo test -p tom-assist-tom-adapter --test live_gateway` → 1 passed against the real pinned runtime over a mode-0600 Unix socket. `cargo test -p tom-assist-protocol` → 5 passed including the shared Python/Rust canonical-digest fixture. The runtime SHA observed at startup was `8799ccbdddf3d5b5939360b91993581af7dab470`.
+
+Decisions: selected the contract-authorized direct `TreeGrowthEngine` + `ReflectionGatedMemory` composition. Explicit turn commit performs exactly one mechanical pass at pinned `agency/mechanics/sicd_engine.py:2709-2734`, then one RGM write; checkpoints use pinned engine save/load (`:1392`, `:1580`) and RGM serialize/restore (`memory/rgm.py:1608`, `:1622`). Preview uses only pinned `VectorStore.query` (`memory/rgm.py:681-733`) and an exact local mirror of the applicable conversation-continuity trigger. The local mirror avoids importing `interface.__init__`, whose unrelated provider initialization expands the dependency and side-effect boundary. Equal retrieval scores are tie-broken by record ID because restored and live vector stores retain different insertion orders. The isolated `.venv-gateway` contains runtime dependencies `numpy==2.3.5` and `PyYAML==6.0.3`; its test-only dependency is `pytest==9.0.2` (plus pytest's transitive packages).
+
+Deviations: The live Unix-socket integration check must run outside the managed filesystem sandbox because macOS `socket.bind` is denied there with `EPERM`; this is a test-runner constraint, not a transport fallback. No runtime pin or capability claim was relaxed.
+
+ESCALATE: 2. The binding inspection document identifies `retrieve_ltm_with_stm_triggers` as sanctioned for pure retrieval, but the pinned implementation at `interface/stm_ltm_retrieval.py:187-193` invokes forbidden mutating `rgm.read_memory`. Options: (a) split a pure upstream wrapper in a future pinned runtime, or (b) keep Tom Assist on direct `VectorStore.query`. Recommendation and safe reversible default: (b), implemented and purity-tested here.
+
+ESCALATE: 3. A commit-path probe through pinned `ToMClient.process` with the documented stub provider still entered an internal dependency-extraction HTTP path, so it could not establish the no-network build boundary. Options: (a) add an upstream fully-offline process mode and repin after review, or (b) retain the direct engine+RGM composition explicitly allowed by this instruction. Recommendation and safe reversible default: (b), implemented here; no preview path ever called `ToMClient.process`, `engine.step`, or `rgm.read_memory`.
+
 ## WP-02 — Event-sourced persistence [DONE]
 
 Commit: containing commit `feat(wp-02): add deterministic event store` (resolved in FINAL)
@@ -37,3 +51,5 @@ Decisions: SQLite is bundled through `rusqlite 0.37.0` for reproducible local bu
 Deviations: SQLCipher is represented by the compile-tested `encrypted-store` feature and an explicit unavailable key-loading result, default off per D13; no encryption capability is claimed.
 
 ESCALATE: none.
+
+Log-order note: WP-03 was executed after the WP-02 commit, but its append operation matched the earlier identical `ESCALATE: none.` anchor and placed the section above WP-02. In keeping with the append-only rule, that history is not moved or rewritten; commit ancestry remains the authoritative execution order.

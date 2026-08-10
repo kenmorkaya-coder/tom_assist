@@ -1,0 +1,6 @@
+{
+  "value": {"b": 2, "a": "x", "arr": [3, 1]},
+  "canonical_json": "{\"a\":\"x\",\"arr\":[3,1],\"b\":2}",
+  "digest": "sha256:f4616e7bcfec3a890cc9a5eed36cae75b66eb96c7213e4874a5920ca0502ddfd"
+}
+

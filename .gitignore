@@ -4,10 +4,10 @@ node_modules/
 dist/
 .venv-gateway/
 .pytest_cache/
+.tmp/
 __pycache__/
 *.pyc
 *.sqlite*
 *.sock
 apps/extension/.keys/
 apps/desktop/src-tauri/gen/
-

@@ -373,6 +373,12 @@ dependencies = [
 [[package]]
 name = "tom-assist-tom-adapter"
 version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tom-assist-protocol",
+]
 
 [[package]]
 name = "tom-assistd"

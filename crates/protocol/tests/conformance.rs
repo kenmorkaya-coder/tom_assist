@@ -42,3 +42,17 @@ fn provider_candidates_remain_candidates_after_round_trip() {
     assert!(candidate.tom_check.requires_user_confirmation);
     assert_eq!(candidate.object["status"], "proposed");
 }
+
+#[test]
+fn canonical_digest_matches_the_python_gateway_fixture() {
+    let fixture: Value = serde_json::from_str(include_str!(
+        "../../../tests/fixtures/protocol/canonical_digest.json"
+    ))
+    .unwrap();
+    let bytes = tom_assist_protocol::canonical_json(&fixture["value"]).unwrap();
+    assert_eq!(String::from_utf8(bytes).unwrap(), fixture["canonical_json"]);
+    assert_eq!(
+        tom_assist_protocol::canonical_sha256(&fixture["value"]).unwrap(),
+        fixture["digest"]
+    );
+}
