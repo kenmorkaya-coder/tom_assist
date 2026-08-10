@@ -1,14 +1,15 @@
-use serde_json::json;
+use serde_json::{Value, json};
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::UnixStream;
 use std::sync::Arc;
 use std::thread;
 use tempfile::Builder;
+use tom_assist_governance::GatewayVerifier;
 use tom_assist_persistence::{Store, StoreError};
 use tom_assist_protocol::{
-    Actor, ActorType, Authority, BindingStrength, Envelope, Method, ModelInternalBias,
-    ProviderCapabilities, StateObject, StateStatus, StateType,
+    Actor, ActorType, Authority, BindingStrength, Envelope, Method, ModelInternalBias, PacketItem,
+    PacketSection, ProviderCapabilities, StateObject, StateStatus, StateType,
 };
 use tom_assistd::{
     AssistService, EvaluateTurnRequest, EvaluationState, PrepareTurnRequest, SendTurnRequest,
@@ -45,6 +46,14 @@ fn service() -> Arc<AssistService> {
 }
 
 fn prepare(service: &AssistService, draft: &str) -> tom_assistd::PreparedTurn {
+    prepare_with_sections(service, draft, vec![])
+}
+
+fn prepare_with_sections(
+    service: &AssistService,
+    draft: &str,
+    sections: Vec<PacketSection>,
+) -> tom_assistd::PreparedTurn {
     service
         .prepare_turn(PrepareTurnRequest {
             project_id: "project-a".into(),
@@ -54,7 +63,7 @@ fn prepare(service: &AssistService, draft: &str) -> tom_assistd::PreparedTurn {
             tom_checkpoint_digest: "sha256:checkpoint-v0".into(),
             tom_activation_id: "sha256:activation-v0".into(),
             provider_capabilities: provider_capabilities(),
-            sections: vec![],
+            sections,
             retrieved_anchor_ids: vec![],
             excluded: vec![],
             packet_text: "[TOM_ASSIST_STATE v1]\n[/TOM_ASSIST_STATE]".into(),
@@ -63,6 +72,75 @@ fn prepare(service: &AssistService, draft: &str) -> tom_assistd::PreparedTurn {
             created_at: "2026-08-10T00:00:01Z".into(),
         })
         .unwrap()
+}
+
+fn evaluation_envelope(
+    packet_digest: &str,
+    turn_id: &str,
+    response_text: &str,
+    ordinal: u64,
+) -> Envelope {
+    Envelope {
+        protocol: "tom-assist/1.0".into(),
+        request_id: format!("request-{turn_id}"),
+        idempotency_key: format!("evaluation-{turn_id}"),
+        method: Method::ResponseEvaluate,
+        actor: Actor {
+            actor_type: ActorType::Extension,
+            instance_id: "00000000-0000-4000-8000-000000000456".into(),
+        },
+        project_id: Some("project-a".into()),
+        base_state_version: None,
+        payload: json!({
+            "project_id": "project-a",
+            "packet_digest": packet_digest,
+            "response_turn_id": turn_id,
+            "response_text": response_text,
+            "ordinal": ordinal,
+            "complete": true,
+            "created_at": "2026-08-10T00:00:06Z",
+            "latency_ms": 2
+        }),
+        sent_at: "2026-08-10T00:00:06Z".into(),
+    }
+}
+
+#[derive(Clone, Copy)]
+struct BlockingVerifier;
+
+impl GatewayVerifier for BlockingVerifier {
+    fn verify_drift(&self, _payload: Value) -> Result<Value, String> {
+        Ok(json!({"decision":"block"}))
+    }
+
+    fn verify_claims(&self, _payload: Value) -> Result<Value, String> {
+        Ok(json!({"supported_count":0,"unsupported_count":0}))
+    }
+
+    fn adjudicate_structure(&self, _payload: Value) -> Result<Value, String> {
+        Ok(json!({"accepted":true}))
+    }
+}
+
+#[derive(Clone, Copy)]
+struct DownVerifier;
+
+impl GatewayVerifier for DownVerifier {
+    fn health(&self) -> Result<(), String> {
+        Err("fixture gateway is down".into())
+    }
+
+    fn verify_drift(&self, _payload: Value) -> Result<Value, String> {
+        Err("fixture gateway is down".into())
+    }
+
+    fn verify_claims(&self, _payload: Value) -> Result<Value, String> {
+        Err("fixture gateway is down".into())
+    }
+
+    fn adjudicate_structure(&self, _payload: Value) -> Result<Value, String> {
+        Err("fixture gateway is down".into())
+    }
 }
 
 fn object(id: &str) -> StateObject {
@@ -163,6 +241,142 @@ fn evaluate_binds_response_to_packet_and_marks_incomplete_capture() {
         .unwrap();
     assert_eq!(result.result, EvaluationState::Incomplete);
     assert!(!result.stale);
+}
+
+#[test]
+fn production_dispatch_persists_conflicts_and_leaves_clean_responses_as_pass() {
+    let directory = tempfile::tempdir().unwrap();
+    let database = directory.path().join("production-governance.sqlite3");
+    let mut store = Store::open(&database).unwrap();
+    store
+        .create_project(
+            "project-a",
+            "Project A",
+            "local-default",
+            "context-policy/1.1",
+            "owner",
+            "create-project-a",
+            "2026-08-10T00:00:00Z",
+        )
+        .unwrap();
+    let service = AssistService::with_governance_verifier(store, BlockingVerifier);
+    let prepared = prepare_with_sections(
+        &service,
+        "Evaluate the held decision.",
+        vec![PacketSection {
+            section_type: "HELD_DECISIONS".into(),
+            items: vec![PacketItem {
+                state_id: "decision-held".into(),
+                text: "violate held decision".into(),
+                authority: "user".into(),
+                structural_score: 1.0,
+                semantic_score: 1.0,
+                reason_selected: "fixture".into(),
+            }],
+        }],
+    );
+
+    let conflict_wire = service.handle_envelope(evaluation_envelope(
+        &prepared.packet.packet_digest,
+        "turn-assistant-conflict",
+        "The answer says violate held decision now.",
+        2,
+    ));
+    assert!(conflict_wire.ok, "{:?}", conflict_wire.error);
+    let conflict: tom_assistd::EvaluationResult =
+        serde_json::from_value(conflict_wire.payload.unwrap()).unwrap();
+    assert_eq!(conflict.result, EvaluationState::Conflict);
+    assert_eq!(conflict.intervention_ids.len(), 1);
+    assert!(conflict.diagnostics.is_empty());
+
+    let clean_wire = service.handle_envelope(evaluation_envelope(
+        &prepared.packet.packet_digest,
+        "turn-assistant-clean",
+        "Continue the approved local plan.",
+        3,
+    ));
+    assert!(clean_wire.ok, "{:?}", clean_wire.error);
+    let clean: tom_assistd::EvaluationResult =
+        serde_json::from_value(clean_wire.payload.unwrap()).unwrap();
+    assert_eq!(clean.result, EvaluationState::Pass);
+    assert!(clean.intervention_ids.is_empty());
+    drop(service);
+
+    let reopened = Store::open(&database).unwrap();
+    let persisted_conflict = reopened
+        .response_evaluation(&conflict.evaluation_id)
+        .unwrap()
+        .unwrap();
+    assert_eq!(persisted_conflict.result, "CONFLICT");
+    assert_eq!(
+        persisted_conflict.intervention_ids,
+        conflict.intervention_ids
+    );
+    assert_eq!(persisted_conflict.policy_version, "governance-policy/1.0");
+    let persisted_clean = reopened
+        .response_evaluation(&clean.evaluation_id)
+        .unwrap()
+        .unwrap();
+    assert_eq!(persisted_clean.result, "PASS");
+    assert!(persisted_clean.intervention_ids.is_empty());
+    let interventions = reopened.interventions("project-a").unwrap();
+    assert_eq!(interventions.len(), 1);
+    assert_eq!(interventions[0].id, conflict.intervention_ids[0]);
+    assert_eq!(interventions[0].severity, "blocking_commit");
+}
+
+#[test]
+fn gateway_down_preserves_capture_records_diagnostic_and_caps_at_review() {
+    let directory = tempfile::tempdir().unwrap();
+    let database = directory.path().join("gateway-down.sqlite3");
+    let mut store = Store::open(&database).unwrap();
+    store
+        .create_project(
+            "project-a",
+            "Project A",
+            "local-default",
+            "context-policy/1.1",
+            "owner",
+            "create-project-a",
+            "2026-08-10T00:00:00Z",
+        )
+        .unwrap();
+    let service = AssistService::with_governance_verifier(store, DownVerifier);
+    let prepared = prepare(&service, "Evaluate while degraded.");
+    let wire = service.handle_envelope(evaluation_envelope(
+        &prepared.packet.packet_digest,
+        "turn-assistant-degraded",
+        "A clean response still needs verifier review.",
+        2,
+    ));
+    assert!(
+        wire.ok,
+        "gateway loss must not fail capture: {:?}",
+        wire.error
+    );
+    let evaluation: tom_assistd::EvaluationResult =
+        serde_json::from_value(wire.payload.unwrap()).unwrap();
+    assert_eq!(evaluation.result, EvaluationState::Review);
+    assert_eq!(evaluation.diagnostics, vec!["gateway_unavailable"]);
+    assert!(evaluation.intervention_ids.is_empty());
+    drop(service);
+
+    let reopened = Store::open(&database).unwrap();
+    assert!(reopened.turn("turn-assistant-degraded").unwrap().is_some());
+    let persisted = reopened
+        .response_evaluation(&evaluation.evaluation_id)
+        .unwrap()
+        .unwrap();
+    assert_eq!(persisted.result, "REVIEW");
+    assert_eq!(persisted.policy_version, "governance-policy/1.0");
+    let diagnostics = reopened.audit_records("project-a").unwrap();
+    let diagnostic = diagnostics
+        .iter()
+        .find(|record| record.category == "gateway_unavailable")
+        .expect("gateway_unavailable diagnostic persisted");
+    assert_eq!(diagnostic.correlation_id, evaluation.evaluation_id);
+    assert_eq!(diagnostic.details["native_rules_ran"], true);
+    assert_eq!(diagnostic.details["result_capped_at"], "REVIEW");
 }
 
 #[test]

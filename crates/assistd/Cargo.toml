@@ -18,6 +18,7 @@ serde_json = "1"
 tom-assist-persistence = { path = "../persistence" }
 tom-assist-protocol = { path = "../protocol" }
 tom-assist-governance = { path = "../governance" }
+tom-assist-tom-adapter = { path = "../tom-adapter" }
 
 [dev-dependencies]
 tempfile = "3"

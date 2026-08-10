@@ -215,6 +215,15 @@ pub struct InterventionRecord {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AuditRecord {
+    pub project_id: String,
+    pub category: String,
+    pub correlation_id: String,
+    pub details: serde_json::Value,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 struct ExportManifest {
     format: String,
     project_id: String,
@@ -844,6 +853,42 @@ impl Store {
         Ok(())
     }
 
+    pub fn response_evaluation(
+        &self,
+        evaluation_id: &str,
+    ) -> Result<Option<ResponseEvaluationRecord>> {
+        self.connection
+            .query_row(
+                "SELECT id,project_id,turn_id,packet_digest,state_version,result,intervention_ids_json,policy_version,latency_ms,created_at FROM response_evaluations WHERE id=?1",
+                [evaluation_id],
+                |row| {
+                    let intervention_ids: String = row.get(6)?;
+                    Ok(ResponseEvaluationRecord {
+                        id: row.get(0)?,
+                        project_id: row.get(1)?,
+                        turn_id: row.get(2)?,
+                        packet_digest: row.get(3)?,
+                        state_version: row.get(4)?,
+                        result: row.get(5)?,
+                        intervention_ids: serde_json::from_str(&intervention_ids).map_err(
+                            |error| {
+                                rusqlite::Error::FromSqlConversionFailure(
+                                    6,
+                                    rusqlite::types::Type::Text,
+                                    Box::new(error),
+                                )
+                            },
+                        )?,
+                        policy_version: row.get(7)?,
+                        latency_ms: row.get(8)?,
+                        created_at: row.get(9)?,
+                    })
+                },
+            )
+            .optional()
+            .map_err(Into::into)
+    }
+
     pub fn audit(
         &self,
         project_id: &str,
@@ -857,6 +902,29 @@ impl Store {
             params![project_id, category, correlation_id, serde_json::to_string(details)?, created_at],
         )?;
         Ok(())
+    }
+
+    pub fn audit_records(&self, project_id: &str) -> Result<Vec<AuditRecord>> {
+        let mut statement = self.connection.prepare(
+            "SELECT project_id,category,correlation_id,details_json,created_at FROM audit_events WHERE project_id=?1 ORDER BY id",
+        )?;
+        let rows = statement.query_map([project_id], |row| {
+            let details: String = row.get(3)?;
+            Ok(AuditRecord {
+                project_id: row.get(0)?,
+                category: row.get(1)?,
+                correlation_id: row.get(2)?,
+                details: serde_json::from_str(&details).map_err(|error| {
+                    rusqlite::Error::FromSqlConversionFailure(
+                        3,
+                        rusqlite::types::Type::Text,
+                        Box::new(error),
+                    )
+                })?,
+                created_at: row.get(4)?,
+            })
+        })?;
+        rows.map(|row| row.map_err(Into::into)).collect()
     }
 
     pub fn record_intervention(&self, intervention: &Intervention, created_at: &str) -> Result<()> {

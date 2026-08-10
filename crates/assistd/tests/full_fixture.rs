@@ -1,15 +1,14 @@
 use serde_json::{Value, json};
 use tempfile::tempdir;
-use tom_assist_governance::{
-    CommitGateDecision, EvaluationRequest, GatewayVerifier, GovernanceEngine, LedgerRule,
-    commit_gate,
-};
+use tom_assist_governance::{CommitGateDecision, GatewayVerifier, commit_gate};
 use tom_assist_persistence::Store;
 use tom_assist_protocol::{
-    Authority, BindingStrength, InterventionCode, InterventionStatus, ModelInternalBias,
-    ProviderCapabilities, StateObject, StateStatus, StateType, canonical_sha256,
+    Authority, BindingStrength, Intervention, InterventionStatus, ModelInternalBias, PacketItem,
+    PacketSection, ProviderCapabilities, StateObject, StateStatus, StateType, canonical_sha256,
 };
-use tom_assistd::{AssistService, EvaluateTurnRequest, PrepareTurnRequest, SendTurnRequest};
+use tom_assistd::{
+    AssistService, EvaluateTurnRequest, EvaluationState, PrepareTurnRequest, SendTurnRequest,
+};
 
 #[derive(Clone, Copy)]
 struct FixtureVerifier;
@@ -67,13 +66,24 @@ fn fixture_lineage_survives_response_intervention_user_gate_and_restart() {
         )
         .unwrap();
     drop(initial);
-    let service = AssistService::new(Store::open(&database).unwrap());
+    let service =
+        AssistService::with_governance_verifier(Store::open(&database).unwrap(), FixtureVerifier);
     let draft = "Should we revive the obsolete pipeline?";
     let prepared = service.prepare_turn(PrepareTurnRequest {
         project_id: "fixture-project".into(), workstream_id: "main".into(), provider_session_id: "fixture-session".into(), user_draft: draft.into(),
         tom_checkpoint_digest: "sha256:checkpoint-v0".into(), tom_activation_id: "fixture-activation".into(),
         provider_capabilities: ProviderCapabilities { provider_surface: "fixture".into(), visible_prompt_injection: true, response_capture: true, hidden_context_visibility: false, model_internal_bias: ModelInternalBias::None, max_context_tokens: None, exact_tokenizer: None, supports_system_field: Some(false) },
-        sections: vec![], retrieved_anchor_ids: vec![], excluded: vec![], packet_text: "[TOM_ASSIST_STATE v1]\nREJECTED_OR_SUPERSEDED\n- obsolete pipeline\n[/TOM_ASSIST_STATE]".into(), warnings: vec![], latency_ms: 1, created_at: "2026-08-10T00:00:01Z".into(),
+        sections: vec![PacketSection {
+            section_type: "REJECTED_OR_SUPERSEDED - DO NOT REVIVE WITHOUT EXPLICIT RECONSIDERATION".into(),
+            items: vec![PacketItem {
+                state_id: "rejected-obsolete".into(),
+                text: "use obsolete pipeline".into(),
+                authority: "user".into(),
+                structural_score: 1.0,
+                semantic_score: 1.0,
+                reason_selected: "fixture".into(),
+            }],
+        }], retrieved_anchor_ids: vec![], excluded: vec![], packet_text: "[TOM_ASSIST_STATE v1]\nREJECTED_OR_SUPERSEDED\n- obsolete pipeline\n[/TOM_ASSIST_STATE]".into(), warnings: vec![], latency_ms: 1, created_at: "2026-08-10T00:00:01Z".into(),
     }).unwrap();
     assert!(prepared.packet_text.contains("obsolete pipeline"));
     service
@@ -88,7 +98,7 @@ fn fixture_lineage_survives_response_intervention_user_gate_and_restart() {
         })
         .unwrap();
     let response_text = "Use obsolete pipeline for the release.";
-    service
+    let evaluation = service
         .evaluate_turn(EvaluateTurnRequest {
             project_id: "fixture-project".into(),
             packet_digest: prepared.packet.packet_digest.clone(),
@@ -100,46 +110,36 @@ fn fixture_lineage_survives_response_intervention_user_gate_and_restart() {
             latency_ms: 1,
         })
         .unwrap();
-
-    let governance = GovernanceEngine::new(FixtureVerifier)
-        .evaluate(EvaluationRequest {
-            project_id: "fixture-project".into(),
-            workstream_id: "main".into(),
-            packet_project_id: "fixture-project".into(),
-            packet_workstream_id: "main".into(),
-            turn_id: "assistant-1".into(),
-            response_text: response_text.into(),
-            complete: true,
-            rules: vec![LedgerRule {
-                code: InterventionCode::SupersededPathRevived,
-                state_id: "rejected-obsolete".into(),
-                summary: "obsolete pipeline was rejected".into(),
-                match_phrases: vec!["use obsolete pipeline".into()],
-                evidence_turn_ids: vec!["user-0".into()],
-                suggested_context_patch: Some("retain current pipeline".into()),
-            }],
-            asserted_candidates: vec![],
-            evidence_used: vec![],
-            supersession_attempts: vec![],
-            addressed_state_ids: vec![],
-            action_proposed: false,
-            claim_checks: vec![],
-            structure_check: None,
-        })
-        .unwrap();
-    assert_eq!(governance.interventions.len(), 1);
-    assert!(matches!(
-        commit_gate(&object(), 0, 0, false, &governance.interventions),
-        CommitGateDecision::Reject(_)
-    ));
+    assert_eq!(evaluation.result, EvaluationState::Conflict);
+    assert_eq!(evaluation.intervention_ids.len(), 1);
+    assert!(evaluation.diagnostics.is_empty());
 
     let ledger = Store::open(&database).unwrap();
-    ledger
-        .record_intervention(&governance.interventions[0], "2026-08-10T00:00:04Z")
-        .unwrap();
+    let persisted = ledger.interventions("fixture-project").unwrap();
+    assert_eq!(persisted.len(), 1);
+    assert_eq!(persisted[0].id, evaluation.intervention_ids[0]);
+    let blocking = Intervention {
+        id: persisted[0].id.clone(),
+        project_id: persisted[0].project_id.clone(),
+        turn_id: persisted[0].turn_id.clone(),
+        code: serde_json::from_value(Value::String(persisted[0].code.clone())).unwrap(),
+        severity: serde_json::from_value(Value::String(persisted[0].severity.clone())).unwrap(),
+        confidence: persisted[0].confidence,
+        summary: persisted[0].summary.clone(),
+        response_excerpt: response_text.into(),
+        conflicting_state_ids: persisted[0].conflicting_state_ids.clone(),
+        evidence_turn_ids: vec![],
+        suggested_context_patch: None,
+        status: InterventionStatus::Open,
+        policy_version: persisted[0].policy_version.clone(),
+    };
+    assert!(matches!(
+        commit_gate(&object(), 0, 0, false, &[blocking]),
+        CommitGateDecision::Reject(_)
+    ));
     ledger
         .resolve_intervention(
-            &governance.interventions[0].id,
+            &evaluation.intervention_ids[0],
             InterventionStatus::Accepted,
             "2026-08-10T00:00:05Z",
         )
@@ -169,7 +169,7 @@ fn fixture_lineage_survives_response_intervention_user_gate_and_restart() {
     assert_eq!(canonical_sha256(&state).unwrap(), project.state_digest);
     assert_eq!(
         restarted
-            .intervention_status(&governance.interventions[0].id)
+            .intervention_status(&evaluation.intervention_ids[0])
             .unwrap(),
         Some(InterventionStatus::Accepted)
     );

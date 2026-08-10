@@ -10,13 +10,17 @@ use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use tom_assist_governance::{CandidateChannel, extract_candidates};
+use tom_assist_governance::{
+    CandidateChannel, EvaluationRequest, EvaluationState as GovernanceEvaluationState,
+    GatewayVerifier, GovernanceEngine, GovernanceError, LedgerRule, extract_candidates,
+};
 use tom_assist_persistence::{
     ContextRunRecord, ResponseEvaluationRecord, Store, StoreError, TurnRecord,
 };
 use tom_assist_protocol::{
-    ContinuityPacket, Envelope, ExcludedItem, Method, PacketDigestInput, PacketSection,
-    ProviderCapabilities, StateMutationCandidate, StateObject, canonical_sha256, packet_digest,
+    ContinuityPacket, Envelope, ExcludedItem, InterventionCode, Method, PacketDigestInput,
+    PacketSection, ProviderCapabilities, StateMutationCandidate, StateObject, canonical_sha256,
+    packet_digest,
 };
 
 pub const SERVICE_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -170,6 +174,8 @@ pub struct EvaluationResult {
     pub result: EvaluationState,
     pub intervention_ids: Vec<String>,
     pub stale: bool,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub diagnostics: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -195,13 +201,22 @@ pub struct WireError {
 pub struct AssistService {
     store: Mutex<Store>,
     project_writers: Mutex<HashMap<String, Arc<Mutex<()>>>>,
+    governance_verifier: Arc<dyn GatewayVerifier>,
 }
 
 impl AssistService {
     pub fn new(store: Store) -> Self {
+        Self::with_governance_verifier(store, NativeOnlyVerifier)
+    }
+
+    pub fn with_governance_verifier<V>(store: Store, verifier: V) -> Self
+    where
+        V: GatewayVerifier + 'static,
+    {
         Self {
             store: Mutex::new(store),
             project_writers: Mutex::new(HashMap::new()),
+            governance_verifier: Arc::new(verifier),
         }
     }
 
@@ -357,18 +372,11 @@ impl AssistService {
             .project(&request.project_id)?
             .ok_or_else(|| StoreError::ProjectNotFound(request.project_id.clone()))?;
         let stale = context.state_version != project.state_version;
-        let result = if !request.complete {
-            EvaluationState::Incomplete
-        } else if stale {
-            EvaluationState::Review
-        } else {
-            EvaluationState::Pass
-        };
         store.record_turn(&TurnRecord {
             id: request.response_turn_id.clone(),
             session_id: context.provider_session_id,
             project_id: request.project_id.clone(),
-            workstream_id: context.workstream_id,
+            workstream_id: context.workstream_id.clone(),
             role: "assistant".into(),
             ordinal: request.ordinal,
             normalized_text: request.response_text.clone(),
@@ -386,14 +394,94 @@ impl AssistService {
         let evaluation_id = canonical_sha256(
             &json!({"kind":"evaluation","turn_id":request.response_turn_id,"packet_digest":request.packet_digest}),
         )?;
+        let mut intervention_ids = Vec::new();
+        let mut diagnostics = Vec::new();
+        let mut evaluation_policy_version = context.policy_version.clone();
+        let result = if !request.complete {
+            EvaluationState::Incomplete
+        } else if stale {
+            EvaluationState::Review
+        } else {
+            let sections: Vec<PacketSection> = serde_json::from_str(&context.selected_json)?;
+            let candidates = extract_candidates(
+                &request.project_id,
+                &request.response_turn_id,
+                &request.response_text,
+                CandidateChannel::DeterministicVisibleTurn,
+            );
+            for candidate in &candidates {
+                store.record_candidate(candidate, &request.created_at)?;
+            }
+            let governance_request = EvaluationRequest {
+                project_id: request.project_id.clone(),
+                workstream_id: context.workstream_id.clone(),
+                packet_project_id: context.project_id.clone(),
+                packet_workstream_id: context.workstream_id.clone(),
+                turn_id: request.response_turn_id.clone(),
+                response_text: request.response_text.clone(),
+                complete: true,
+                rules: governance_rules(&sections),
+                asserted_candidates: candidates.clone(),
+                evidence_used: vec![],
+                supersession_attempts: vec![],
+                addressed_state_ids: vec![],
+                action_proposed: !candidates.is_empty(),
+                claim_checks: vec![],
+                structure_check: None,
+            };
+            let (governance, gateway_error) = match self.governance_verifier.health() {
+                Ok(()) => match GovernanceEngine::new(Arc::clone(&self.governance_verifier))
+                    .evaluate(governance_request.clone())
+                {
+                    Ok(result) => (result, None),
+                    Err(GovernanceError::Gateway(error)) => {
+                        (native_governance(governance_request)?, Some(error))
+                    }
+                    Err(error) => {
+                        return Err(ServiceError::Invalid(format!(
+                            "governance evaluation failed: {error}"
+                        )));
+                    }
+                },
+                Err(error) => (native_governance(governance_request)?, Some(error)),
+            };
+            evaluation_policy_version = governance.policy_version.clone();
+            for intervention in &governance.interventions {
+                store.record_intervention(intervention, &request.created_at)?;
+            }
+            intervention_ids = governance
+                .interventions
+                .iter()
+                .map(|intervention| intervention.id.clone())
+                .collect();
+            if let Some(error) = gateway_error {
+                diagnostics.push("gateway_unavailable".into());
+                store.audit(
+                    &request.project_id,
+                    "gateway_unavailable",
+                    &evaluation_id,
+                    &json!({
+                        "evaluation_id": evaluation_id,
+                        "error": error,
+                        "native_rules_ran": true,
+                        "result_capped_at": "REVIEW"
+                    }),
+                    &request.created_at,
+                )?;
+                EvaluationState::Review
+            } else {
+                map_governance_state(governance.state)
+            }
+        };
         let response = EvaluationResult {
             evaluation_id: evaluation_id.clone(),
             response_turn_id: request.response_turn_id.clone(),
             packet_digest: request.packet_digest.clone(),
             state_version: context.state_version,
             result,
-            intervention_ids: vec![],
+            intervention_ids: intervention_ids.clone(),
             stale,
+            diagnostics,
         };
         store.record_response_evaluation(&ResponseEvaluationRecord {
             id: evaluation_id,
@@ -405,8 +493,8 @@ impl AssistService {
                 .as_str()
                 .unwrap_or("PASS")
                 .to_owned(),
-            intervention_ids: vec![],
-            policy_version: POLICY_VERSION.into(),
+            intervention_ids,
+            policy_version: evaluation_policy_version,
             latency_ms: request.latency_ms,
             created_at: request.created_at,
         })?;
@@ -547,6 +635,73 @@ impl AssistService {
             method => Err(ServiceError::UnsupportedMethod(format!("{method:?}"))),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+struct NativeOnlyVerifier;
+
+impl GatewayVerifier for NativeOnlyVerifier {
+    fn verify_drift(&self, _payload: Value) -> std::result::Result<Value, String> {
+        Ok(json!({"decision":"permit"}))
+    }
+
+    fn verify_claims(&self, _payload: Value) -> std::result::Result<Value, String> {
+        Ok(json!({"supported_count":0,"unsupported_count":0}))
+    }
+
+    fn adjudicate_structure(&self, _payload: Value) -> std::result::Result<Value, String> {
+        Ok(json!({"accepted":true}))
+    }
+}
+
+fn native_governance(
+    request: EvaluationRequest,
+) -> Result<tom_assist_governance::GovernanceResult> {
+    GovernanceEngine::new(NativeOnlyVerifier)
+        .evaluate(request)
+        .map_err(|error| ServiceError::Invalid(format!("native governance failed: {error}")))
+}
+
+fn map_governance_state(state: GovernanceEvaluationState) -> EvaluationState {
+    match state {
+        GovernanceEvaluationState::Pass => EvaluationState::Pass,
+        GovernanceEvaluationState::Review => EvaluationState::Review,
+        GovernanceEvaluationState::Conflict => EvaluationState::Conflict,
+        GovernanceEvaluationState::Incomplete => EvaluationState::Incomplete,
+    }
+}
+
+fn governance_rules(sections: &[PacketSection]) -> Vec<LedgerRule> {
+    let mut rules = Vec::new();
+    for section in sections {
+        let code = if section.section_type == "HELD_DECISIONS" {
+            Some(InterventionCode::Contradiction)
+        } else if section.section_type == "BINDING_CONSTRAINTS" {
+            Some(InterventionCode::ConstraintDropped)
+        } else if section.section_type.starts_with("REJECTED_OR_SUPERSEDED") {
+            Some(InterventionCode::SupersededPathRevived)
+        } else if section.section_type.starts_with("COMPLETED_WORK") {
+            Some(InterventionCode::CompletedWorkReproposed)
+        } else if section.section_type == "ACTIVE_OBJECTIVE" {
+            Some(InterventionCode::ObjectiveDrift)
+        } else if section.section_type == "LOAD_BEARING_CONCEPTS" {
+            Some(InterventionCode::ConceptDrift)
+        } else if section.section_type == "UNRESOLVED_DEPENDENCIES" {
+            Some(InterventionCode::UnresolvedDependencyIgnored)
+        } else {
+            None
+        };
+        let Some(code) = code else { continue };
+        rules.extend(section.items.iter().map(|item| LedgerRule {
+            code,
+            state_id: item.state_id.clone(),
+            summary: item.text.clone(),
+            match_phrases: vec![item.text.clone()],
+            evidence_turn_ids: vec![],
+            suggested_context_patch: Some(item.text.clone()),
+        }));
+    }
+    rules
 }
 
 fn error_code(error: &ServiceError) -> &'static str {

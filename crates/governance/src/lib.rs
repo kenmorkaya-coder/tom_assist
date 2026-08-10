@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
+use std::sync::Arc;
 use tom_assist_protocol::{
     Authority, ErrorCode, Intervention, InterventionCode, InterventionSeverity, InterventionStatus,
     MutationOperation, ProtocolError, StateMutationCandidate, StateObject, StateStatus, StateType,
@@ -133,12 +134,21 @@ pub struct GovernanceResult {
 }
 
 pub trait GatewayVerifier: Send + Sync {
+    fn health(&self) -> std::result::Result<(), String> {
+        Ok(())
+    }
     fn verify_drift(&self, payload: Value) -> std::result::Result<Value, String>;
     fn verify_claims(&self, payload: Value) -> std::result::Result<Value, String>;
     fn adjudicate_structure(&self, payload: Value) -> std::result::Result<Value, String>;
 }
 
 impl GatewayVerifier for GatewayClient {
+    fn health(&self) -> std::result::Result<(), String> {
+        GatewayClient::health(self)
+            .map(|_| ())
+            .map_err(|error| error.to_string())
+    }
+
     fn verify_drift(&self, payload: Value) -> std::result::Result<Value, String> {
         GatewayClient::verify_drift(self, payload).map_err(|error| error.to_string())
     }
@@ -149,6 +159,24 @@ impl GatewayVerifier for GatewayClient {
 
     fn adjudicate_structure(&self, payload: Value) -> std::result::Result<Value, String> {
         GatewayClient::adjudicate_structure(self, payload).map_err(|error| error.to_string())
+    }
+}
+
+impl<T: GatewayVerifier + ?Sized> GatewayVerifier for Arc<T> {
+    fn health(&self) -> std::result::Result<(), String> {
+        (**self).health()
+    }
+
+    fn verify_drift(&self, payload: Value) -> std::result::Result<Value, String> {
+        (**self).verify_drift(payload)
+    }
+
+    fn verify_claims(&self, payload: Value) -> std::result::Result<Value, String> {
+        (**self).verify_claims(payload)
+    }
+
+    fn adjudicate_structure(&self, payload: Value) -> std::result::Result<Value, String> {
+        (**self).adjudicate_structure(payload)
     }
 }
 

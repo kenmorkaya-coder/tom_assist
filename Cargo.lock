@@ -3573,6 +3573,7 @@ dependencies = [
  "tom-assist-governance",
  "tom-assist-persistence",
  "tom-assist-protocol",
+ "tom-assist-tom-adapter",
 ]
 
 [[package]]

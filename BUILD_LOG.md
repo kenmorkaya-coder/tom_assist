@@ -254,3 +254,19 @@ These results are build verification only. `PASS` below does not mean or imply a
 7. The validation harness contains only three toy plumbing cases and zero frozen batteries. Its outputs are instrumentation artifacts labeled `NOT-A-GATE`, not product efficacy evidence.
 
 No G-gate verdicts were made or reported as passed.
+
+## WP-13 — production response governance wiring [DONE]
+
+Commit: containing commit `feat(wp-13): wire governance into production evaluation`
+
+Evidence: `cargo test -p tom-assistd` → 9 passed: the envelope-dispatched production path returns `CONFLICT` with a persisted blocking intervention ID for the seeded conflicting response, returns `PASS` with no intervention IDs for the clean response, records both results under `governance-policy/1.0`, and degrades a gateway-down evaluation to `REVIEW` while preserving the captured turn and persisting a correlated `gateway_unavailable` diagnostic. The rewritten full fixture passes using the `GovernanceEngine` injected into `AssistService`; it no longer constructs a second engine outside production evaluation. `cargo test --workspace` → 34 passed, 0 failed, 1 explicitly ignored live-governance case. `cargo test -p tom-assist-governance live_gateway_drift_verifier_drives_contradiction_mapping -- --ignored` → 1 passed against the real pinned gateway. `npm run extension:test` → 6 passed; extension typecheck and optimized build completed cleanly. `cargo fmt --all -- --check` → clean.
+
+Decisions: production `tom-assistd` now constructs `AssistService` with a real `GatewayClient` and the default `governance-policy/1.0`; its optional third CLI argument is the gateway socket, defaulting to `tom_gateway.sock` beside the assistd socket used by the existing dev runner. Complete, non-stale evaluation reconstructs governance rules from the exact packet sections persisted in `context_runs.selected_json`, runs deterministic visible-turn candidate extraction as candidate-only, invokes the injected engine, persists every returned intervention, and stores/returns the same intervention IDs. `INCOMPLETE` and stale-`REVIEW` take precedence and skip governance. Gateway health or verifier-call failure reruns the request through the same policy with verifier-backed checks disabled and Rust-native rules active, records `gateway_unavailable` in both the wire diagnostic list and `audit_events`, and forces `REVIEW`; capture is not failed and degraded evaluation can never silently return `PASS`. No intervention rule, severity, policy, or endpoint changed.
+
+Decisions resolving prior entries: per `ORCHESTRATOR_REVIEW_1.md`, ESCALATE 2 and ESCALATE 3 option (b) defaults are owner-ratified as permanent for the current runtime pin. Direct `VectorStore.query` preview and direct engine+RGM commit composition remain; adopting a future upstream alternative requires renewed inspection and a reviewed repin. ESCALATE 1 remains closed under the accepted commit-subject mapping convention.
+
+Deviations: none. This entry supersedes FINAL's first “weakest point”: production `response.evaluate` now owns and invokes governance rather than relying on fixture-only composition. Deferred live-selector, packaged-GUI, signing/install, encryption, and validation-battery work remains unchanged.
+
+ESCALATE: none.
+
+No G-gate verdict was made or reported as passed.
