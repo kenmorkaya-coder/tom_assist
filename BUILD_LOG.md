@@ -169,3 +169,88 @@ WP-12 verification supplement: Chrome 151 no longer honors command-line `--load-
 WP-12 boundary supplement: final wire audit corrected the content script's actor instance to a UUID and made its `ProviderCapabilities` payload match the frozen Rust/schema contract exactly; quick capture uses the normative `state.candidate.create` method name. Extension tests/typecheck/build remained green, and the rebuilt service worker reloaded under the pinned Chromium ID.
 
 WP-12 candidate-path supplement: the normative quick-capture method is now dispatched by assistd and persisted in `state_mutation_candidates`. `cargo test -p tom-assistd --test transactions` → 6 passed, including an envelope-level regression proving the user candidate remains `status=proposed`, requires confirmation, is recoverable after SQLite reopen, and does not advance authoritative `state_version` or `state_digest`. Evidence capture is supported as the sixth manual candidate kind. No quick-capture path calls an authoritative commit.
+
+## FINAL
+
+### Definition of done
+
+- [x] Rust workspace: `cargo build --workspace` completed cleanly; final `cargo test --workspace` completed with every selected test passing (32 build-verification tests, 0 failures, 1 explicitly ignored live-governance case). The ignored case was then run explicitly against the real gateway and passed 1/1. Evidence: [workspace manifests](Cargo.toml), [assistd transaction tests](crates/assistd/tests/transactions.rs), [live adapter test](crates/tom-adapter/tests/live_gateway.rs), and [live governance test](crates/governance/tests/interventions.rs).
+- [x] Real pinned ToM gateway: `.venv-gateway/bin/python -m pytest -q gateway/tests` → 6 passed, including the 100-call byte/tick preview-purity check and restart determinism. The Rust live-gateway integration is also green. Evidence: [gateway endpoint tests](gateway/tests/test_gateway_endpoints.py), [preview-purity test](gateway/tests/test_preview_purity.py), and [Rust gateway integration](crates/tom-adapter/tests/live_gateway.rs).
+- [x] Extension: schemas validated 9 fixtures and all 33 method names; provider fixtures passed 4/4; extension fixtures passed 6/6; typecheck and optimized build completed; the unpacked final build registered the pinned-ID MV3 service worker in Chrome for Testing. Evidence: [schema validator](scripts/validate_protocol_schemas.py), [provider tests](packages/provider-adapters/tests/chatgpt.test.ts), [prompt-gate e2e](apps/extension/tests/prompt-gate.e2e.test.ts), and [native-boundary tests](apps/extension/tests/boundary.test.ts).
+- [x] Desktop: UI smoke passed 1/1 and the optimized frontend built; the unsigned `custom-protocol` `.app` launched from a clean process and exposed the seeded project, state/audit counts, and all six requested areas. Project CRUD, state capture/supersession, ledger/audit, intervention review, settings/diagnostics, and export/import are backed by Tauri commands. Evidence: [desktop UI smoke](apps/desktop/ui/tests/smoke.test.tsx), [Tauri command surface](apps/desktop/src-tauri/src/main.rs), and [runbook](docs/DEV_RUNBOOK.md).
+- [x] Fixture lifecycle: `cargo test -p tom-assistd --test full_fixture` → 1 passed for draft → PREPARE_TURN → visible packet → simulated send → response record → governance intervention → rejected unconfirmed commit → accepted intervention → user-confirmed commit → event replay/digest/intervention equality after restart. This is a cross-crate fixture composition; the production orchestration seam is called out below. Evidence: [full fixture](crates/assistd/tests/full_fixture.rs).
+- [x] Validation scaffold: unit tests passed 2/2; the dry-run emitted report, manifest, event trace, and packet trace for 3 toy cases × 5 subscription arms = 15 observations. It authored zero validation batteries and emitted zero gate verdicts. Evidence: [harness tests](validation/tests/test_harness.py), [arms](validation/arms.py), and [harness](validation/harness.py).
+- [x] Reporting: WP-00 through WP-12 each have a commit and evidence entry. The two append-anchor ordering mistakes remain documented in place; commit ancestry below records the actual execution order.
+- [x] Forbidden-action audit: no build command wrote to either permitted read-only upstream repository, and the entirely off-limits repository was not inspected or imported. Preview purity is enforced by tests; no preview path calls a mutating runtime entry point. No LLM/API, telemetry, analytics, auto-update, hidden submit, credential storage, or provider/model auto-commit path was added.
+
+### Commit map
+
+| Scope | Commit | Subject |
+|---|---:|---|
+| Contract baseline on `main` | `e0c971c` | `docs: freeze Tom Assist build contract` |
+| WP-00 | `d2ee7a0` | `chore(wp-00): scaffold Tom Assist workspace` |
+| WP-01 | `c3b1b42` | `feat(wp-01): freeze protocol schemas and types` |
+| WP-02 | `517dba2` | `feat(wp-02): add deterministic event store` |
+| WP-03 | `2715cdf` | `feat(wp-03): add pure tom gateway and adapter` |
+| WP-04 | `258bf0b` | `feat(wp-04): add snapshot-bound assistd transactions` |
+| WP-05 | `fb9b36a` | `feat(wp-05): secure native messaging boundary` |
+| WP-06 | `3e461a9` | `feat(wp-06): add visible DOM provider adapter` |
+| WP-07 | `d011b74` | `feat(wp-07): add deterministic context admission` |
+| WP-08 | `96ba4e2` | `feat(wp-08): add evidence-linked governance` |
+| WP-09 | `8b63af5` | `feat(wp-09): add seeded Tauri desktop console` |
+| WP-10 | `f18057f` | `feat(wp-10): add explicit extension prompt gate` |
+| WP-11 | `17a47a5` | `feat(wp-11): scaffold reproducible validation harness` |
+| WP-12 | `b04a1fb` | `chore(wp-12): add local install and release runbook` |
+
+### T-catalogue coverage
+
+These results are build verification only. `PASS` below does not mean or imply a specification G-gate verdict.
+
+| Test | Shot status | Evidence |
+|---|---|---|
+| T-001 | PASS (fixture build verification) | [prompt-gate e2e](apps/extension/tests/prompt-gate.e2e.test.ts) |
+| T-002 | PASS (fixture build verification) | [ChatGPT DOM adapter fixtures](packages/provider-adapters/tests/chatgpt.test.ts) |
+| T-003 | PASS (fixture build verification) | [prompt interception and explicit approval tests](apps/extension/tests/prompt-gate.e2e.test.ts) |
+| T-004 | PASS (fixture build verification) | [byte-stable packet fixture](crates/context-admission/tests/golden_packet.rs) |
+| T-005 | DEFERRED (live validation) | Requires the frozen live semantic/paraphrase battery, outside this shot. |
+| T-006 | PASS (fixture build verification) | [crafted intervention fixtures](crates/governance/tests/interventions.rs) |
+| T-007 | PASS (fixture build verification) | [authority and intervention fixtures](crates/governance/tests/interventions.rs) |
+| T-008 | PASS (fixture build verification) | [hard-gate and dependency fixtures](crates/context-admission/tests/golden_packet.rs) |
+| T-009 | DEFERRED (live validation) | Requires the frozen live causal battery, outside this shot. |
+| T-010 | PASS (fixture build verification) | [event replay/idempotency tests](crates/persistence/tests/event_store.rs) |
+| T-011 | PASS (fixture build verification) | [real pinned gateway integration](crates/tom-adapter/tests/live_gateway.rs) |
+| T-012 | PASS (fixture build verification) | [100-call preview-purity and restart tests](gateway/tests/test_preview_purity.py) |
+| T-013 | PASS (fixture build verification) | [candidate extraction and explicit commit gate](crates/governance/tests/interventions.rs) |
+| T-014 | PASS (fixture build verification) | [stale packet invalidation](crates/assistd/tests/transactions.rs) |
+| T-015 | PASS (fixture build verification) | [25-reopen digest equality](crates/persistence/tests/event_store.rs) |
+| T-016 | PASS (fixture build verification) | [migration backup and read-only safe mode](crates/persistence/tests/event_store.rs) |
+| T-017 | PASS (fixture build verification) | [framing, allowlist, chunk, and forged-origin tests](crates/native-host/tests/framing.rs) |
+| T-018 | PASS (fixture build verification) | [typed admission and closure tests](crates/context-admission/tests/golden_packet.rs) |
+| T-019 | PASS (fixture build verification) | [auditable supersession test](crates/persistence/tests/event_store.rs) |
+| T-020 | PASS (fixture build verification) | [false-positive resolution test](crates/governance/tests/interventions.rs) |
+| T-021 | DEFERRED (live validation) | Requires a live new-provider-chat run; live selectors are outside this shot. |
+| T-022 | PASS (renderer A/B plumbing only) | [SUB-A…SUB-E arm plumbing](validation/arms.py) and [harness tests](validation/tests/test_harness.py); no model or gate verdict. |
+| T-023 | PASS (fixture build verification) | [candidate-only quick capture](crates/assistd/tests/transactions.rs) and [commit gate](crates/governance/tests/interventions.rs) |
+| T-024 | PASS (fixture build verification) | [candidate authority isolation](crates/persistence/tests/event_store.rs) and [forged extension rejection](crates/native-host/tests/framing.rs) |
+| T-025 | PASS (fixture build verification) | [concurrent-tab serialization/CAS](crates/assistd/tests/transactions.rs) |
+| T-026 | PASS (fixture build verification) | [capability conformance](crates/protocol/tests/conformance.rs) and [Layer-1 renderer fixture](crates/context-admission/tests/golden_packet.rs) |
+| T-027 | DEFERRED (live validation) | Requires the frozen adversarial/live validation programme, outside this shot. |
+| T-028 | PASS (fixture build verification) | [budget defaults, cap, eviction, and compactness](crates/context-admission/tests/golden_packet.rs) |
+
+### Open escalations
+
+1. ESCALATE 2 remains open for the owner: the sanctioned upstream retrieval wrapper calls a forbidden mutating memory entry point in the pinned runtime. The shipped reversible default uses direct `VectorStore.query`; an upstream pure wrapper plus a reviewed repin remains the cleaner long-term option.
+2. ESCALATE 3 remains open for the owner: `ToMClient.process` enters an internal dependency-extraction HTTP path even with the inspected stub provider. The shipped reversible default uses the instruction-authorized direct engine+RGM composition; a fully offline upstream process mode could replace it after review.
+3. ESCALATE 1 is closed as an accounting issue: a commit cannot contain its own SHA, so WP sections identify unique commit subjects and the resolved SHA map is recorded above.
+
+### Weakest points to probe first
+
+1. `AssistService::evaluate_turn` owns packet lineage, immutable response recording, and PASS/REVIEW/INCOMPLETE state, while `GovernanceEngine` owns the 11 evidence-linked rules. The full fixture composes both real crates explicitly, but production `response.evaluate` does not yet inject a live `GovernanceEngine` into the assistd dispatch. Review this orchestration seam first before treating the badge as production governance coverage.
+2. The ChatGPT adapter is intentionally fixture-verified only. Selector health, completion timing, and clean detach should be rerun against the then-current live site before release.
+3. The unpacked MV3 proof used Chrome for Testing with Puppeteer's extension-enablement API because current stable Chrome removed the old command-line loading flag. It proves manifest/key/service-worker loading, not a signed-store install or a live ChatGPT journey.
+4. The native-host installer was exercised against a redirected target root, not the user's active Chrome profile. Signing/notarization, first-run permissions, browser restart behavior, and user-facing uninstall remain release work.
+5. The desktop UI smoke uses its deterministic backend, while the packaged app launch separately proves the real Tauri command surface and seeded store. A single automated GUI test that drives every CRUD/review/import action through the packaged binary would strengthen this boundary.
+6. The gateway deliberately bypasses the impure sanctioned wrapper and the network-entering `ToMClient.process` route. The direct engine+RGM path is pinned and integration-tested, but runtime upgrades need a renewed inspection rather than a blind SHA bump.
+7. The validation harness contains only three toy plumbing cases and zero frozen batteries. Its outputs are instrumentation artifacts labeled `NOT-A-GATE`, not product efficacy evidence.
+
+No G-gate verdicts were made or reported as passed.
