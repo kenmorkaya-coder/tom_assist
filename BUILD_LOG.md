@@ -77,3 +77,15 @@ Decisions: Chrome Native Messaging uses its normative little-endian 32-bit frame
 Deviations: the full development-dependency audit retains one low-severity esbuild advisory limited to a Windows development-server file-read scenario; Tom Assist's target is macOS, the production dependency audit is empty, and production builds do not start a dev server. No vulnerable runtime dependency is shipped.
 
 ESCALATE: none.
+
+## WP-06 — ChatGPT provider adapter fixtures [DONE]
+
+Commit: containing commit `feat(wp-06): add visible DOM provider adapter` (resolved in FINAL)
+
+Evidence: `npm run adapters:test` → 4 passed over four authored static fixtures, covering standard and fallback composer selectors, stable role/order/hash capture, streaming-incomplete state, exact EXT-013 deduplication key, visible composer read/write, and unknown-DOM clean detach. `npm run typecheck -w @tom-assist/provider-adapters` and `npm run build -w @tom-assist/provider-adapters` → clean.
+
+Decisions: the §8.1 `ProviderAdapter` method shape is preserved verbatim behind typed support records. Layered selectors prioritize semantic `data-testid`/`data-message-author-role` attributes, then constrained ID/ARIA/content-class fallbacks. Capture hashes normalized visible text with SHA-256 and deduplicates on conversation identity + ordinal + hash. Streaming is incomplete whenever a visible stop/streaming control remains. Submit interception ignores synthetic events, pauses the original trusted submit, and replays only after the interceptor returns explicit `continue`; missing submission surfaces detach instead of guessing. Fixture HTML is neutral and authored locally rather than scraped from a live provider.
+
+Deviations: live chatgpt.com selector verification remains deliberately out of scope; these checks are fixture-level only and the adapter fails closed into a clean detached state when selectors do not match.
+
+ESCALATE: none.

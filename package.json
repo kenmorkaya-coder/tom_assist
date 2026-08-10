@@ -10,7 +10,8 @@
     "schema:generate": "json2ts --cwd crates/protocol/schemas -i crates/protocol/schemas/index.schema.json -o packages/schema-generated/index.ts --bannerComment '/* Generated from crates/protocol/schemas. Do not edit directly. */'",
     "schema:validate": "python3 scripts/validate_protocol_schemas.py",
     "extension:build": "npm run build -w @tom-assist/extension",
-    "extension:test": "npm run test -w @tom-assist/extension"
+    "extension:test": "npm run test -w @tom-assist/extension",
+    "adapters:test": "npm run test -w @tom-assist/provider-adapters"
   },
   "devDependencies": {
     "json-schema-to-typescript": "15.0.4"
