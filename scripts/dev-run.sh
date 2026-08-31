@@ -17,8 +17,8 @@ done
 
 actual_sha=$(git -C "$tom_master_dir" rev-parse HEAD)
 case "$actual_sha" in
-  8799ccbdd*) ;;
-  *) echo "warning: tom_master is $actual_sha, expected 8799ccbdd" >&2 ;;
+  e9fdef81c*) ;;
+  *) echo "warning: tom_master is $actual_sha, expected e9fdef81c" >&2 ;;
 esac
 
 if $check_only; then
@@ -61,4 +61,4 @@ done
 echo "gateway socket: $gateway_socket"
 echo "assistd socket: $assistd_socket"
 echo "desktop logs: $app_support/logs"
-TOM_ASSISTD_SOCKET="$assistd_socket" cargo run -p tom-assist-desktop
+TOM_ASSIST_APP_SUPPORT="$app_support" TOM_ASSIST_GATEWAY_SOCKET="$gateway_socket" TOM_ASSISTD_SOCKET="$assistd_socket" cargo run -p tom-assist-desktop

@@ -1,4 +1,5 @@
 //! Snapshot-bound PREPARE_TURN / EVALUATE_TURN orchestration.
+pub mod experience;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -427,8 +428,25 @@ impl AssistService {
         let project_lock = self.project_lock(&request.project_id);
         let _writer = project_lock.lock().expect("project lock poisoned");
         let store = self.store.lock().expect("store poisoned");
+        if store
+            .sent_turn_for_packet(&request.project_id, &request.packet_digest)?
+            .is_some_and(|sent| sent.id != request.turn_id)
+        {
+            return Err(ServiceError::Invalid(
+                "packet already bound to another sent turn; prepare a new exchange".into(),
+            ));
+        }
         if let Some(existing) = store.turn(&request.turn_id)? {
-            if existing.packet_digest == request.packet_digest {
+            if existing.packet_digest == request.packet_digest
+                && existing.project_id == request.project_id
+                && existing.role == "user"
+                && existing.content_hash == canonical_sha256(&request.user_draft)?
+            {
+                store.mark_context_sent(
+                    &request.project_id,
+                    &request.packet_digest,
+                    &existing.id,
+                )?;
                 return Ok(SentTurn {
                     turn_id: existing.id,
                     packet_digest: existing.packet_digest,
@@ -466,7 +484,7 @@ impl AssistService {
         store.record_turn(&TurnRecord {
             id: request.turn_id.clone(),
             session_id: context.provider_session_id,
-            project_id: request.project_id,
+            project_id: request.project_id.clone(),
             workstream_id: context.workstream_id,
             role: "user".into(),
             ordinal: request.ordinal,
@@ -477,6 +495,11 @@ impl AssistService {
             captured_at: request.captured_at,
             provider_timestamp: None,
         })?;
+        store.mark_context_sent(
+            &request.project_id,
+            &request.packet_digest,
+            &request.turn_id,
+        )?;
         Ok(SentTurn {
             turn_id: request.turn_id,
             packet_digest: request.packet_digest,
@@ -496,6 +519,21 @@ impl AssistService {
             .project(&request.project_id)?
             .ok_or_else(|| StoreError::ProjectNotFound(request.project_id.clone()))?;
         let stale = context.state_version != project.state_version;
+        if self.gateway.is_some()
+            && store
+                .sent_turn_for_packet(&request.project_id, &request.packet_digest)?
+                .is_none()
+        {
+            return Err(ServiceError::PacketMismatch);
+        }
+        if let Some(existing) = store.turn(&request.response_turn_id)? {
+            if existing.project_id != request.project_id
+                || existing.packet_digest != request.packet_digest
+                || existing.content_hash != canonical_sha256(&request.response_text)?
+            {
+                return Err(ServiceError::PacketMismatch);
+            }
+        }
         store.record_turn(&TurnRecord {
             id: request.response_turn_id.clone(),
             session_id: context.provider_session_id,
@@ -597,7 +635,7 @@ impl AssistService {
                 map_governance_state(governance.state)
             }
         };
-        let response = EvaluationResult {
+        let mut response = EvaluationResult {
             evaluation_id: evaluation_id.clone(),
             response_turn_id: request.response_turn_id.clone(),
             packet_digest: request.packet_digest.clone(),
@@ -622,6 +660,24 @@ impl AssistService {
             latency_ms: request.latency_ms,
             created_at: request.created_at,
         })?;
+        if let Some(gateway) = &self.gateway {
+            let evaluation = store
+                .response_evaluation(&response.evaluation_id)?
+                .expect("evaluation just stored");
+            match experience::commit_captured_exchange(&store, gateway, &evaluation) {
+                Ok(Some(_)) => {}
+                Ok(None) if request.complete => response
+                    .diagnostics
+                    .push("runtime_commit_awaiting_resolution".into()),
+                Ok(None) => {}
+                Err(error) => {
+                    response
+                        .diagnostics
+                        .push(format!("runtime_commit_pending: {error}"));
+                    response.result = EvaluationState::Review;
+                }
+            }
+        }
         Ok(response)
     }
 
@@ -747,6 +803,25 @@ impl AssistService {
             Method::ResponseEvaluate => Ok(serde_json::to_value(
                 self.evaluate_turn(serde_json::from_value(envelope.payload)?)?,
             )?),
+            Method::InterventionResolve => {
+                let project = envelope.project_id.ok_or(ServiceError::MissingProject)?;
+                let lock = self.project_lock(&project);
+                let _writer = lock.lock().expect("project lock poisoned");
+                let store = self.store.lock().expect("store poisoned");
+                let id = envelope.payload["intervention_id"]
+                    .as_str()
+                    .ok_or_else(|| ServiceError::Invalid("intervention_id required".into()))?;
+                let status = serde_json::from_value(envelope.payload["status"].clone())?;
+                experience::resolve_intervention_with_runtime(
+                    &store,
+                    self.gateway.as_ref(),
+                    &project,
+                    id,
+                    status,
+                    &envelope.sent_at,
+                )?;
+                Ok(json!({"resolved":true}))
+            }
             Method::StateCandidateCreate => {
                 let project_id = envelope.project_id.ok_or(ServiceError::MissingProject)?;
                 Ok(serde_json::to_value(self.create_manual_candidate(

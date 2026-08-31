@@ -10,6 +10,7 @@ that advances the engine and writes an RGM anchor.
 from __future__ import annotations
 
 import argparse
+import copy
 import hashlib
 import json
 import logging
@@ -55,6 +56,10 @@ MAX_REQUEST_BYTES = 2 * 1024 * 1024
 LOGGER = logging.getLogger("tom_assist.gateway")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from gateway.structural_preview import POLICY_VERSION, project_text, select_cohort, fuse_anchors
+from gateway.permanent_library import PermanentLibrary, content_hash
+
+COMMIT_DYNAMICS = ["step", "rgm_write", "leaf_vec_teach", "usage_rotation", "front_row_reseat"]
+DEFAULT_SETTINGS = {"front_row_capacity": 4096, "teach_on_conflict": True}
 
 
 def canonical_json(value: Any) -> bytes:
@@ -189,6 +194,11 @@ class ProjectRuntime:
         self.seed = seed
         self.lock = threading.RLock()
         self._idempotency_path = self.state_dir / "turn_idempotency.json"
+        self.library = PermanentLibrary(self.state_dir / "library.sqlite3")
+        head = self.library.head()
+        self.settings = json.loads(head[3]) if head else dict(DEFAULT_SETTINGS)
+        if head:
+            self._write_head_artifacts(head)
         self._idempotency: dict[str, dict[str, Any]] = self._load_idempotency()
 
         # Direct composition is the contract-authorized alternative to
@@ -215,19 +225,27 @@ class ProjectRuntime:
                     f"expected tick/branches {self.seed.tick}/{self.seed.branch_count}, "
                     f"got {actual_tick}/{actual_branches}"
                 )
-            self.rgm = ReflectionGatedMemory()
+            self.rgm = ReflectionGatedMemory(self.library, self.settings["front_row_capacity"])
             initial_digest = self._persist_current_artifacts()
             self.creation_metadata = self._seed_creation_metadata(initial_digest)
             _atomic_write(self._creation_metadata_path, canonical_json(self.creation_metadata))
         else:
             self.engine = TreeGrowthEngine.load(str(self._tree_path), cfg=config)
-            self.rgm = ReflectionGatedMemory()
+            self.rgm = ReflectionGatedMemory(self.library, self.settings["front_row_capacity"])
             if self._rgm_path.exists():
                 self.rgm.restore(self._rgm_path.read_text(encoding="utf-8"))
                 self._checkpoint_digest = self._compute_checkpoint_digest()
             else:
                 self._checkpoint_digest = self._persist_current_artifacts()
             self.creation_metadata = self._load_creation_metadata()
+            self._restore_serialized_fields()
+        # Legacy short anchors can be migrated losslessly. Never pretend a
+        # truncated summary is the durable twin of unavailable original content.
+        for record in self.rgm.state.anchors.values():
+            self.library.retain(record, self.rgm._record_to_dict(record))
+        if head is None:
+            self.library.set_head(self._tree_path.read_bytes(), self._rgm_path.read_bytes(),
+                                  self._idempotency, self.settings)
 
     @property
     def _tree_path(self) -> Path:
@@ -305,9 +323,50 @@ class ProjectRuntime:
         from gateway.front_row import FrontRowMemory as ReflectionGatedMemory
 
         self.engine = TreeGrowthEngine.load(str(self._tree_path), cfg=self._new_engine_config())
-        self.rgm = ReflectionGatedMemory()
+        self._restore_serialized_fields()
+        self.rgm = ReflectionGatedMemory(self.library, self.settings["front_row_capacity"])
         self.rgm.restore(self._rgm_path.read_text(encoding="utf-8"))
         self._checkpoint_digest = self._compute_checkpoint_digest()
+
+    def _restore_serialized_fields(self):
+        # Product checkpoints are exact snapshots, not unsupervised growth seeds.
+        # Upstream load :1641,1855-1865 normalizes axes/resets ages; undo only those
+        # load-time adaptations for our already-serialized checkpoint fields.
+        data = json.loads(self._tree_path.read_bytes())
+        for saved in data["branches"]:
+            branch = self.engine.state.branches[str(saved["id"])]
+            branch.axis_w = list(saved["axis_w"])
+            branch.sem_vec_age = saved.get("sem_vec_age", 0)
+        self.engine.state.last_leaf_vec_update_tick = data.get("last_leaf_vec_update_tick")
+
+    def _write_head_artifacts(self, head):
+        _atomic_write(self._tree_path, head[0])
+        _atomic_write(self._rgm_path, head[1])
+        _atomic_write(self._idempotency_path, head[2].encode("utf-8"))
+
+    def update_settings(self, values):
+        with self.lock:
+            settings = {**self.settings, **values}
+            if set(settings) != set(DEFAULT_SETTINGS):
+                raise ValueError("unknown project memory setting")
+            capacity = settings["front_row_capacity"]
+            if type(capacity) is not int or not 1 <= capacity <= 1_000_000:
+                raise ValueError("front_row_capacity must be an integer in 1..1000000")
+            if type(settings["teach_on_conflict"]) is not bool:
+                raise ValueError("teach_on_conflict must be boolean")
+            tree, rgm = self.serialized_state_bytes()
+            self.library.set_head(tree, rgm, self._idempotency, settings)
+            self.settings = settings
+            self.rgm.capacity = capacity  # Demotions wait for the next commit.
+            return dict(settings)
+
+    def memory_diagnostics(self, after=0):
+        with self.lock:
+            events = self.library.events(after)
+            return {**self.settings, "front_row_count": len(self.rgm.state.anchors),
+                    "library_count": self.library.db.execute("SELECT COUNT(*) FROM library_records").fetchone()[0],
+                    "demotion_count": self.library.db.execute("SELECT COUNT(*) FROM demotions").fetchone()[0],
+                    "demotions": events, "next_event_id": events[-1]["event_id"] if events else after}
 
     def _artifact_payload(self, tree_bytes: bytes, rgm_bytes: bytes) -> dict[str, Any]:
         return {
@@ -412,71 +471,138 @@ class ProjectRuntime:
                 "checkpoint_digest": checkpoint_digest,
             }
 
-    def commit_turn(self, role: str, text: str, idempotency_key: str) -> dict[str, Any]:
+    def commit_turn(self, role: str, text: str, idempotency_key: str, *,
+                    response_text=None, activated_branch_ids=(), admitted_anchor_ids=(),
+                    conflict_dismissed=False, packet_digest=None) -> dict[str, Any]:
+        """Atomic quintuple. SQLite head is authoritative; JSON files are projections."""
+        from gateway.front_row import FrontRowMemory
+        from memory.rgm import MemoryRecord, PolicyOutcome
+
         with self.lock:
-            existing = self._idempotency.get(idempotency_key)
-            if existing is not None:
-                return existing
-            prior_checkpoint_digest = self._current_checkpoint_digest()
-            before_tick = int(getattr(self.engine.state, "tick", 0) or 0)
-            digest = hashlib.sha256(text.encode("utf-8")).digest()
-            raw_axes = [1.0 + digest[index] for index in range(3)]
-            axis_total = sum(raw_axes)
-            semantic_target = tuple(value / axis_total for value in raw_axes)
-            self.engine.state.tick = before_tick + 1
-            # Explicit commit is the only path that performs the full mechanical
-            # pass (sicd_engine.py:2709-2734). The draft-derived semantic load is
-            # applied exactly once here, never during preview.
-            metrics = self.engine.step(
-                wind_vec=(semantic_target[0] - semantic_target[2], semantic_target[1] - semantic_target[2]),
-                nourishment=min(1.0, max(0.05, len(text) / 2000.0)),
-                semantic_target=semantic_target,
-            )
+            if idempotency_key in self._idempotency:
+                return self._idempotency[idempotency_key]
+            if not text or type(conflict_dismissed) is not bool:
+                raise ValueError("nonempty committed text and boolean conflict_dismissed required")
+            branch_ids = sorted(set(str(bid) for bid in activated_branch_ids))
+            anchor_ids = sorted(set(str(rid) for rid in admitted_anchor_ids))
+            for bid in branch_ids:
+                if bid not in self.engine.state.branches:
+                    raise ValueError(f"sent packet branch no longer exists: {bid}")
+            for rid in anchor_ids:
+                if self.library.get(rid) is None:
+                    raise ValueError(f"sent packet anchor has no durable twin: {rid}")
+            if response_text is None and role == "assistant":
+                response_text = text
+            stored_text = text if response_text is None or role == "assistant" else (
+                "USER\n" + text + "\nASSISTANT\n" + response_text)
+            before_tick = int(self.engine.state.tick)
             anchor_id = "turn-" + hashlib.sha256(
-                f"{self.project_id}\0{idempotency_key}".encode("utf-8")
-            ).hexdigest()[:32]
-            stored_id = self.rgm.write(
-                text,
-                {
-                    "id": anchor_id,
-                    "content_summary": text,
-                    "content_hash": hashlib.sha256(text.encode("utf-8")).hexdigest(),
-                    "anchor_type": "conversation_turn",
-                    "anchor_strength": 1.0,
-                    "novelty_score": 1.0,
-                    "S": 1.0,
-                    "C": 1.0,
-                    "H": 0.0,
-                    "sensitivity": "low",
-                    "policy_outcome": "permit",
-                    "policy_version": "tom-assist-commit/1.0",
-                    "model": "direct-engine",
-                    "source": "tom_assist_user_commit",
-                    "semantic_tags": [role, f"project:{self.project_id}"],
-                    "created_tick": self.engine.state.tick,
-                },
-            )
-            if stored_id != "deferred":
-                self.rgm.state.anchors[stored_id].leaf_vec = list(project_text(text)[1].vector_8d)
-            checkpoint_digest = self._persist_current_artifacts()
-            result = {
-                "idempotency_key": idempotency_key,
-                "role": role,
-                "text_hash": canonical_digest(text),
-                "engine_tick_before": before_tick,
-                "engine_tick_after": int(getattr(self.engine.state, "tick", 0) or 0),
-                "rgm_current_tick": int(getattr(self.rgm.state, "current_tick", 0) or 0),
-                "branch_count": len(getattr(self.engine.state, "branches", {}) or {}),
-                "anchor_id": stored_id,
-                "K_total": float(getattr(metrics, "K_total", 0.0) or 0.0),
-                "runtime_error_code": None,
-                "seed_profile": self.creation_metadata.get("seed_profile"),
-                "seed_checkpoint_digest": self.creation_metadata.get("initial_checkpoint_digest"),
-                "prior_checkpoint_digest": prior_checkpoint_digest,
-                "checkpoint_digest": checkpoint_digest,
-            }
-            self._idempotency[idempotency_key] = result
-            _atomic_write(self._idempotency_path, canonical_json(self._idempotency))
+                f"{self.project_id}\0{idempotency_key}".encode("utf-8")).hexdigest()[:32]
+            anchor_id = self.library.first_id_for_hash(content_hash(stored_text)) or anchor_id
+            record = MemoryRecord(
+                id=anchor_id, content=stored_text, content_summary=stored_text,
+                content_hash=content_hash(stored_text), anchor_type="conversation_turn",
+                anchor_strength=1.0, decay_rate=0.002, novelty_score=1.0,
+                S=1.0, C=1.0, H=0.0, sensitivity="low", policy_outcome=PolicyOutcome.PERMIT,
+                policy_version="tom-assist-commit/1.1", model="direct-engine",
+                source="tom_assist_committed_exchange", semantic_tags=[role, f"project:{self.project_id}"],
+                created_tick=before_tick + 1)
+            record.leaf_vec = list(project_text(stored_text)[1].vector_8d)
+            # This autocommit precedes the dynamics transaction: a crash may leave
+            # an unused library item, but can never leave an unbacked front-row item.
+            self.library.retain(record, self.rgm._record_to_dict(record))
+            prior_engine, prior_rgm = self.engine, self.rgm
+            prior_idempotency = dict(self._idempotency)
+            prior_digest = self._current_checkpoint_digest()
+            self.library.db.execute("BEGIN IMMEDIATE")
+            try:
+                head = self.library.head()
+                durable_idempotency = json.loads(head[2])
+                if idempotency_key in durable_idempotency:
+                    self.library.db.execute("ROLLBACK")
+                    self._idempotency = durable_idempotency
+                    self._write_head_artifacts(head)
+                    self.settings = json.loads(head[3])
+                    self._restore_current_artifacts_if_present()
+                    return durable_idempotency[idempotency_key]
+                if canonical_digest(self._artifact_payload(head[0], head[1])) != prior_digest:
+                    raise ValueError("runtime advanced in another process; reopen before committing")
+                # Work on isolated copies. Any phase failure rolls back all five.
+                self.engine = copy.deepcopy(prior_engine)
+                self.rgm = FrontRowMemory(self.library, self.settings["front_row_capacity"])
+                self.rgm.restore(prior_rgm.serialize())
+                self.rgm.state = copy.deepcopy(prior_rgm.state)
+                raw = hashlib.sha256(text.encode("utf-8")).digest()
+                axes = [1.0 + raw[index] for index in range(3)]
+                semantic_target = tuple(value / sum(axes) for value in axes)
+                self.engine.state.tick = before_tick + 1
+                # Existing commit load preserved; no new Box-2 translator.
+                metrics = self.engine.step(
+                    wind_vec=(semantic_target[0] - semantic_target[2], semantic_target[1] - semantic_target[2]),
+                    nourishment=min(1.0, max(0.05, len(text) / 2000.0)),
+                    semantic_target=semantic_target)
+                stored_id = self.rgm.write(record)
+                if stored_id == "deferred":
+                    raise ValueError("committed exchange RGM admission refused")
+
+                taught = False
+                teach_reason = "no_provider_response"
+                if response_text is not None:
+                    teach_reason = "conflict_dismissed_policy" if (
+                        conflict_dismissed and not self.settings["teach_on_conflict"]) else "confidence_gate"
+                    if teach_reason != "conflict_dismissed_policy":
+                        # sicd_engine.py:4869-4935 / controller.py:6381 at e9fdef81c.
+                        # Reuse only the existing pure projection, not a new translator.
+                        projection = project_text(response_text)[1]
+                        raw_response = projection.raw_8d
+                        llm_output = {"semantic_axis": list(raw_response[:3]),
+                                      "loads": dict(zip(("delta_x", "delta_F", "phi", "intensity"), raw_response[3:7])),
+                                      "confidence": raw_response[7]}
+                        if not self.engine.cfg.kappa_update.enable_leaf_vec:
+                            raise ValueError("commit teaching requires enabled leaf vectors")
+                        self.engine.apply_leaf_vec_update(llm_output)
+                        taught = self.engine.state.last_leaf_vec_update_tick == self.engine.state.tick
+                        if raw_response[7] >= self.engine.cfg.kappa_update.leaf_vec_confidence_gate and not taught:
+                            raise ValueError("confident leaf-vector teaching did not complete")
+                        if taught:
+                            teach_reason = "committed_response"
+
+                for bid in branch_ids:
+                    if bid not in self.engine.state.branches:
+                        raise ValueError(f"physics removed a serving branch; prepare again: {bid}")
+                    self.engine.state.branches[bid].usage_count += 1
+                readmitted_ids = self.rgm.reseat(anchor_ids, idempotency_key)
+                tree_bytes, rgm_bytes = self.serialized_state_bytes()
+                checkpoint_digest = canonical_digest(self._artifact_payload(tree_bytes, rgm_bytes))
+                result = {
+                    "idempotency_key": idempotency_key, "role": role, "text_hash": canonical_digest(text),
+                    "engine_tick_before": before_tick, "engine_tick_after": int(self.engine.state.tick),
+                    "rgm_current_tick": int(self.rgm.state.current_tick),
+                    "branch_count": len(self.engine.state.branches), "anchor_id": stored_id,
+                    "K_total": float(getattr(metrics, "K_total", 0.0) or 0.0), "runtime_error_code": None,
+                    "seed_profile": self.creation_metadata.get("seed_profile"),
+                    "seed_checkpoint_digest": self.creation_metadata.get("initial_checkpoint_digest"),
+                    "prior_checkpoint_digest": prior_digest, "checkpoint_digest": checkpoint_digest,
+                    "commit_dynamics": list(COMMIT_DYNAMICS), "taught": taught, "teach_reason": teach_reason,
+                    "activated_branch_ids": branch_ids, "admitted_anchor_ids": anchor_ids,
+                    "readmitted_anchor_ids": readmitted_ids, "packet_digest": packet_digest,
+                }
+                self._idempotency[idempotency_key] = result
+                self.library.set_head(tree_bytes, rgm_bytes, self._idempotency, self.settings)
+                self.library.db.execute("COMMIT")
+            except BaseException:
+                if self.library.db.in_transaction:
+                    self.library.db.execute("ROLLBACK")
+                self.engine, self.rgm = prior_engine, prior_rgm
+                self._idempotency = prior_idempotency
+                self._checkpoint_digest = prior_digest
+                raise
+            self._checkpoint_digest = checkpoint_digest
+            try:
+                self._write_head_artifacts(self.library.head())
+            except OSError:
+                # Commit is durable. Startup/retry recovers from the SQLite head.
+                LOGGER.exception("committed runtime head is durable; JSON projection needs recovery")
             return result
 
     def save_checkpoint(self) -> dict[str, Any]:
@@ -488,7 +614,12 @@ class ProjectRuntime:
             os.chmod(destination, 0o700)
             shutil.copy2(self._tree_path, destination / "tree_state.json")
             shutil.copy2(self._rgm_path, destination / "rgm_state.json")
+            commit_state = {"idempotency": self._idempotency, "settings": self.settings}
+            _atomic_write(destination / "commit_state.json", canonical_json(commit_state))
+            self.library.set_head(self._tree_path.read_bytes(), self._rgm_path.read_bytes(),
+                                  self._idempotency, self.settings)
             metadata = {
+                "commit_state_digest": canonical_digest(commit_state),
                 "checkpoint_id": checkpoint_id,
                 "digest": digest,
                 "runtime_version": self.runtime_sha,
@@ -508,8 +639,16 @@ class ProjectRuntime:
             payload = self._artifact_payload((source / "tree_state.json").read_bytes(), (source / "rgm_state.json").read_bytes())
             if canonical_digest(payload) != metadata.get("digest"):
                 raise ValueError("checkpoint digest mismatch")
-            _atomic_write(self._tree_path, (source / "tree_state.json").read_bytes())
-            _atomic_write(self._rgm_path, (source / "rgm_state.json").read_bytes())
+            commit_state = json.loads((source / "commit_state.json").read_bytes())
+            if canonical_digest(commit_state) != metadata.get("commit_state_digest"):
+                raise ValueError("checkpoint commit-state digest mismatch")
+            for encoded in payload["rgm"]["anchors"].values():
+                self.library.assert_twin(self.rgm._dict_to_record(encoded))
+            self.library.set_head((source / "tree_state.json").read_bytes(), (source / "rgm_state.json").read_bytes(),
+                                  commit_state["idempotency"], commit_state["settings"])
+            self.settings = commit_state["settings"]
+            self._idempotency = commit_state["idempotency"]
+            self._write_head_artifacts(self.library.head())
             self._restore_current_artifacts_if_present()
             return {"checkpoint_id": checkpoint_id, "digest": metadata["digest"], "restored": True}
 
@@ -525,6 +664,7 @@ class TomGateway:
     ) -> None:
         self.data_dir = data_dir.expanduser().resolve()
         self.tom_master = tom_master.expanduser().resolve()
+        sys.dont_write_bytecode = True  # Imports must not write caches in frozen upstream.
         self.data_dir.mkdir(parents=True, exist_ok=True)
         os.chmod(self.data_dir, 0o700)
         bootstrap = self.data_dir / "runtime-bootstrap"
@@ -615,6 +755,8 @@ class TomGateway:
             "mechanics_parameters": dict(sorted(self.seed.mechanics_parameters.items())),
             "kappa_decay_source": KAPPA_DECAY_SOURCE,
             "preview_channels": ["lexical", "structural_geometry"],
+            "commit_dynamics": list(COMMIT_DYNAMICS),
+            **DEFAULT_SETTINGS,
         }
 
     def handle(self, method: str, path: str, payload: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
@@ -631,7 +773,18 @@ class TomGateway:
             if method == "POST" and path == "/turn/commit":
                 key = str(payload.get("idempotency_key") or "")
                 if not key: raise ValueError("idempotency_key is required")
-                return 200, self.project(payload.get("project_id")).commit_turn(str(payload.get("role") or "user"), str(payload.get("text") or ""), key)
+                return 200, self.project(payload.get("project_id")).commit_turn(
+                    str(payload.get("role") or "user"), str(payload.get("text") or ""), key,
+                    response_text=payload.get("response_text"),
+                    activated_branch_ids=payload.get("activated_branch_ids") or [],
+                    admitted_anchor_ids=payload.get("admitted_anchor_ids") or [],
+                    conflict_dismissed=payload.get("conflict_dismissed", False),
+                    packet_digest=payload.get("packet_digest"))
+            if method == "POST" and path == "/project/settings":
+                runtime = self.project(payload.get("project_id"))
+                return 200, runtime.update_settings(payload.get("settings") or {})
+            if method == "POST" and path == "/memory/diagnostics":
+                return 200, self.project(payload.get("project_id")).memory_diagnostics(int(payload.get("after_event_id", 0)))
             if method == "POST" and path == "/checkpoint/save":
                 return 200, self.project(payload.get("project_id")).save_checkpoint()
             if method == "POST" and path == "/checkpoint/restore":

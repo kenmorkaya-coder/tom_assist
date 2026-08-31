@@ -138,6 +138,26 @@ impl GatewayClient {
             Some(json!({"project_id":project_id})),
         )
     }
+
+    pub fn commit_exchange(&self, payload: Value) -> Result<Value> {
+        self.request("POST", "/turn/commit", Some(payload))
+    }
+
+    pub fn memory_settings(&self, project_id: &str, settings: Value) -> Result<Value> {
+        self.request(
+            "POST",
+            "/project/settings",
+            Some(json!({"project_id":project_id,"settings":settings})),
+        )
+    }
+
+    pub fn memory_diagnostics(&self, project_id: &str, after_event_id: u64) -> Result<Value> {
+        self.request(
+            "POST",
+            "/memory/diagnostics",
+            Some(json!({"project_id":project_id,"after_event_id":after_event_id})),
+        )
+    }
     pub fn restore_checkpoint(&self, project_id: &str, checkpoint_id: &str) -> Result<Value> {
         self.request(
             "POST",

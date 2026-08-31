@@ -150,6 +150,9 @@ pub struct TomCapabilities {
     pub mechanics_profile_sha256: String,
     pub mechanics_parameters: BTreeMap<String, String>,
     pub kappa_decay_source: String,
+    pub commit_dynamics: Vec<String>,
+    pub front_row_capacity: u64,
+    pub teach_on_conflict: bool,
     pub preview_channels: Vec<String>,
 }
 

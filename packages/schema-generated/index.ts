@@ -75,6 +75,9 @@ export interface ProviderCapabilities {
   supports_system_field?: boolean;
 }
 export interface TomCapabilities {
+  commit_dynamics: ["step", "rgm_write", "leaf_vec_teach", "usage_rotation", "front_row_reseat"];
+  front_row_capacity: number;
+  teach_on_conflict: boolean;
   /**
    * @minItems 2
    * @maxItems 2

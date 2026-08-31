@@ -21,6 +21,9 @@
   },
   "tom_capabilities": {
     "preview_channels": ["lexical", "structural_geometry"],
+    "commit_dynamics": ["step", "rgm_write", "leaf_vec_teach", "usage_rotation", "front_row_reseat"],
+    "front_row_capacity": 4096,
+    "teach_on_conflict": true,
     "runtime_version": "e9fdef81c",
     "state_format_version": "sicd-engine-save/1",
     "supports_load_ingest": true,

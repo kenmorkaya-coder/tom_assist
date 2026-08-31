@@ -3504,6 +3504,8 @@ dependencies = [
  "tauri-build",
  "tom-assist-persistence",
  "tom-assist-protocol",
+ "tom-assist-tom-adapter",
+ "tom-assistd",
 ]
 
 [[package]]

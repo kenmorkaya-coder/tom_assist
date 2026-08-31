@@ -53,6 +53,14 @@ struct Diagnostics {
     migration_backup: Option<String>,
     migration_error: Option<String>,
     network_services: bool,
+    memory: Value,
+}
+
+fn gateway(store: &Store) -> tom_assist_tom_adapter::GatewayClient {
+    let socket = std::env::var_os("TOM_ASSIST_GATEWAY_SOCKET")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| store.path().with_file_name("tom_gateway.sock"));
+    tom_assist_tom_adapter::GatewayClient::new(socket)
 }
 
 fn locked<'a>(state: &'a tauri::State<'_, DesktopState>) -> std::sync::MutexGuard<'a, Store> {
@@ -189,13 +197,40 @@ fn list_interventions(
 
 #[tauri::command]
 fn resolve_intervention(
+    project_id: String,
     intervention_id: String,
     status: tom_assist_protocol::InterventionStatus,
     resolved_at: String,
     state: tauri::State<'_, DesktopState>,
 ) -> Result<(), String> {
-    locked(&state)
-        .resolve_intervention(&intervention_id, status, &resolved_at)
+    let store = locked(&state);
+    tom_assistd::experience::resolve_intervention_with_runtime(
+        &store,
+        Some(&gateway(&store)),
+        &project_id,
+        &intervention_id,
+        status,
+        &resolved_at,
+    )
+    .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn memory_settings(
+    project_id: String,
+    settings: Value,
+    state: tauri::State<'_, DesktopState>,
+) -> Result<Value, String> {
+    if state.store_mode != StoreMode::ReadWrite {
+        return Err("settings unavailable in safe mode".into());
+    }
+    let store = locked(&state);
+    store
+        .project(&project_id)
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| "project not found".to_owned())?;
+    gateway(&store)
+        .memory_settings(&project_id, settings)
         .map_err(|error| error.to_string())
 }
 
@@ -222,7 +257,11 @@ fn import_project(
 }
 
 #[tauri::command]
-fn diagnostics(state: tauri::State<'_, DesktopState>) -> Result<Diagnostics, String> {
+fn diagnostics(
+    project_id: String,
+    after_event_id: Option<u64>,
+    state: tauri::State<'_, DesktopState>,
+) -> Result<Diagnostics, String> {
     let store = locked(&state);
     let replay_ok = store
         .list_projects()
@@ -240,6 +279,9 @@ fn diagnostics(state: tauri::State<'_, DesktopState>) -> Result<Diagnostics, Str
         migration_backup: state.migration_backup.clone(),
         migration_error: state.migration_error.clone(),
         network_services: false,
+        memory: gateway(&store)
+            .memory_diagnostics(&project_id, after_event_id.unwrap_or(0))
+            .unwrap_or_else(|error| serde_json::json!({"unavailable":error.to_string()})),
     })
 }
 
@@ -373,7 +415,11 @@ fn demo_object(
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
-            let data_dir = app.path().app_data_dir()?;
+            // The dev runner supplies the daemon's directory. Preserve the old
+            // standalone location unless the owner explicitly selects a store.
+            let data_dir = std::env::var_os("TOM_ASSIST_APP_SUPPORT")
+                .map(std::path::PathBuf::from)
+                .unwrap_or(app.path().app_data_dir()?);
             std::fs::create_dir_all(&data_dir)?;
             let mut recovered = Store::open_with_recovery(data_dir.join("tom-assist.sqlite3"))?;
             // Keep the alpha deterministic even if the webview has not invoked a
@@ -403,6 +449,7 @@ fn main() {
             export_project,
             import_project,
             diagnostics,
+            memory_settings,
             seed_demo
         ])
         .run(tauri::generate_context!())

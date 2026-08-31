@@ -36,6 +36,9 @@ def test_capabilities_and_verifiers_are_honest_and_deterministic(tmp_path: Path)
     assert capabilities["mechanics_parameters"]["TOM_TAU1"] == "4.0"
     assert capabilities["mechanics_parameters"]["TOM_KAPPA_DECAY"] == "0.03"
     assert capabilities["kappa_decay_source"] == KAPPA_DECAY_SOURCE
+    assert capabilities["commit_dynamics"] == ["step", "rgm_write", "leaf_vec_teach", "usage_rotation", "front_row_reseat"]
+    assert capabilities["front_row_capacity"] == 4096
+    assert capabilities["teach_on_conflict"] is True
 
     status, drift = gateway.handle(
         "POST",

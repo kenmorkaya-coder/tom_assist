@@ -29,6 +29,230 @@ fn provider_capabilities() -> ProviderCapabilities {
     }
 }
 
+// Real pinned runtime, production envelope dispatch, isolated Unix socket only.
+#[test]
+fn production_exchange_commits_manifest_once_and_defers_conflict_teaching() {
+    use std::path::Path;
+    use std::process::{Child, Command, Stdio};
+    use std::time::Duration;
+    use tom_assist_tom_adapter::GatewayClient;
+    struct OwnGateway(Child);
+    impl Drop for OwnGateway {
+        fn drop(&mut self) {
+            let _ = self.0.kill();
+            let _ = self.0.wait();
+        }
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .canonicalize()
+        .unwrap();
+    let temp = tempfile::tempdir_in("/tmp").unwrap();
+    let socket = temp.path().join("gw.sock");
+    let launch = || {
+        let child = Command::new(root.join(".venv-gateway/bin/python"))
+            .arg(root.join("gateway/tom_gateway.py"))
+            .arg("--socket")
+            .arg(&socket)
+            .arg("--data-dir")
+            .arg(temp.path().join("runtime"))
+            .env("PYTHONDONTWRITEBYTECODE", "1")
+            .stdout(Stdio::null())
+            .stderr(Stdio::inherit())
+            .spawn()
+            .unwrap();
+        let mut guard = OwnGateway(child);
+        let client = GatewayClient::new(&socket);
+        for _ in 0..500 {
+            if client.health().is_ok() {
+                return guard;
+            }
+            assert!(guard.0.try_wait().unwrap().is_none(), "test gateway exited");
+            thread::sleep(Duration::from_millis(20));
+        }
+        panic!("test gateway did not become ready");
+    };
+    let child = launch();
+    let gateway = GatewayClient::new(&socket);
+    assert_eq!(gateway.health().unwrap()["pinned_sha_match"], true);
+    let database = temp.path().join("assist.sqlite3");
+    let mut store = Store::open(&database).unwrap();
+    store
+        .create_project(
+            "project-a",
+            "Experience",
+            "local-default",
+            "context-policy/1.1",
+            "owner",
+            "create",
+            "2026-08-31T00:00:00Z",
+        )
+        .unwrap();
+    let seed = gateway
+        .commit_turn("project-a", "user", "A beam connects two columns", "seed")
+        .unwrap();
+    let service = AssistService::with_gateway(store, gateway.clone());
+    let draft = "Describe the connected beam load path.";
+    let mut prep = evaluation_envelope("", "prepare", "", 0);
+    prep.method = Method::TurnPrepare;
+    prep.payload = json!({"project_id":"project-a","workstream_id":"main","provider_session_id":"session-a",
+        "user_draft":draft,"tom_checkpoint_digest":"untrusted","tom_activation_id":"untrusted",
+        "activated_branch_ids":["forged-branch"],"retrieved_anchor_ids":["forged-anchor"],
+        "provider_capabilities":provider_capabilities(),"created_at":"2026-08-31T00:00:01Z"});
+    let prepared = service.handle_envelope(prep.clone());
+    assert!(prepared.ok, "{prepared:?}");
+    let packet = prepared.payload.unwrap()["packet"].clone();
+    let digest = packet["packet_digest"].as_str().unwrap();
+    assert!(
+        !packet["activated_branch_ids"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        !packet["activated_branch_ids"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("forged-branch"))
+    );
+    assert_eq!(packet["retrieved_anchor_ids"], json!([seed.anchor_id]));
+    let response = "The connected beam transfers force to both columns.";
+    let mut evaluation = evaluation_envelope(digest, "assistant-committed", response, 2);
+    evaluation.payload["activated_branch_ids"] = json!(["response-forgery"]);
+    evaluation.payload["admitted_anchor_ids"] = json!(["response-forgery"]);
+    assert!(
+        !service.handle_envelope(evaluation.clone()).ok,
+        "unsent preview must never commit"
+    );
+    assert_eq!(
+        gateway
+            .preview_rank("project-a", draft, 10, 2000)
+            .unwrap()
+            .checkpoint_digest,
+        seed.checkpoint_digest
+    );
+    let mut send = evaluation_envelope(digest, "send", "", 1);
+    send.method = Method::TurnSent;
+    send.payload = json!({"project_id":"project-a","packet_digest":digest,"user_draft":draft,
+        "turn_id":"sent-user","ordinal":1,"idempotency_key":"sent-user","captured_at":"2026-08-31T00:00:02Z"});
+    assert!(service.handle_envelope(send.clone()).ok);
+    assert!(service.handle_envelope(send.clone()).ok);
+    let mut second_send = send.clone();
+    second_send.payload["turn_id"] = json!("another-sent-user");
+    assert!(
+        !service.handle_envelope(second_send).ok,
+        "ambiguous packet reuse is rejected"
+    );
+    let evaluated = service.handle_envelope(evaluation.clone());
+    assert!(evaluated.ok, "{evaluated:?}");
+    assert_eq!(evaluated.payload.unwrap()["result"], "PASS");
+    let observer = Store::open(&database).unwrap();
+    let receipt = observer
+        .runtime_commit_for_sent("sent-user")
+        .unwrap()
+        .unwrap();
+    assert_eq!(receipt["engine_tick_after"], seed.engine_tick_after + 1);
+    assert_eq!(receipt["taught"], true);
+    let mut serving: Vec<String> =
+        serde_json::from_value(packet["activated_branch_ids"].clone()).unwrap();
+    serving.sort();
+    assert_eq!(receipt["activated_branch_ids"], json!(serving));
+    assert_eq!(
+        receipt["admitted_anchor_ids"],
+        packet["retrieved_anchor_ids"]
+    );
+    assert_eq!(receipt["commit_dynamics"].as_array().unwrap().len(), 5);
+    let checkpoint = gateway
+        .preview_rank("project-a", draft, 10, 2000)
+        .unwrap()
+        .checkpoint_digest;
+    drop(service);
+    drop(child);
+    let _restarted_child = launch();
+    let restarted = AssistService::with_gateway(Store::open(&database).unwrap(), gateway.clone());
+    assert!(restarted.handle_envelope(evaluation).ok);
+    assert_eq!(
+        gateway
+            .preview_rank("project-a", draft, 10, 2000)
+            .unwrap()
+            .checkpoint_digest,
+        checkpoint
+    );
+    assert_eq!(
+        observer
+            .runtime_commit_for_sent("sent-user")
+            .unwrap()
+            .unwrap(),
+        receipt
+    );
+
+    // The same production resolution function is used by desktop and daemon.
+    let mut rejected = object("rejected-obsolete");
+    rejected.workstream_id = Some("main".into());
+    rejected.object_type = StateType::RejectedPath;
+    rejected.status = StateStatus::Rejected;
+    rejected.canonical_text = "use obsolete pipeline".into();
+    restarted
+        .commit_object(
+            rejected,
+            0,
+            "owner",
+            "reject-obsolete",
+            "2026-08-31T00:01:00Z",
+        )
+        .unwrap();
+    gateway
+        .memory_settings("project-a", json!({"teach_on_conflict":false}))
+        .unwrap();
+    let conflict_draft = "Should we use obsolete pipeline?";
+    prep.payload["user_draft"] = json!(conflict_draft);
+    let prepared = restarted.handle_envelope(prep);
+    assert!(prepared.ok, "{prepared:?}");
+    let conflict_packet = prepared.payload.unwrap()["packet"].clone();
+    let conflict_digest = conflict_packet["packet_digest"].as_str().unwrap();
+    send.payload["packet_digest"] = json!(conflict_digest);
+    send.payload["user_draft"] = json!(conflict_draft);
+    send.payload["turn_id"] = json!("sent-conflict");
+    assert!(restarted.handle_envelope(send).ok);
+    let conflict = restarted.handle_envelope(evaluation_envelope(
+        conflict_digest,
+        "assistant-conflict",
+        "Use obsolete pipeline for the release.",
+        4,
+    ));
+    assert!(conflict.ok, "{conflict:?}");
+    let result = conflict.payload.unwrap();
+    assert_eq!(result["result"], "CONFLICT");
+    assert!(
+        observer
+            .runtime_commit_for_sent("sent-conflict")
+            .unwrap()
+            .is_none()
+    );
+    assert_eq!(
+        gateway
+            .preview_rank("project-a", draft, 10, 2000)
+            .unwrap()
+            .checkpoint_digest,
+        checkpoint
+    );
+    for id in result["intervention_ids"].as_array().unwrap() {
+        let mut resolution = evaluation_envelope(conflict_digest, "resolution", "", 0);
+        resolution.method = Method::InterventionResolve;
+        resolution.payload = json!({"intervention_id":id,"status":"dismissed"});
+        let resolved = restarted.handle_envelope(resolution.clone());
+        assert!(resolved.ok, "{resolved:?}");
+        assert!(restarted.handle_envelope(resolution).ok);
+    }
+    let receipt = observer
+        .runtime_commit_for_sent("sent-conflict")
+        .unwrap()
+        .unwrap();
+    assert_eq!(receipt["taught"], false);
+    assert_eq!(receipt["teach_reason"], "conflict_dismissed_policy");
+    assert_eq!(receipt["engine_tick_after"], seed.engine_tick_after + 2);
+}
+
 fn service() -> Arc<AssistService> {
     let mut store = Store::open_memory().unwrap();
     store

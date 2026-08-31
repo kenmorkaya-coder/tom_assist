@@ -1,10 +1,11 @@
-import type { DesktopBackend } from "./backend";
+import type { DesktopBackend, MemorySettings } from "./backend";
 import type { AuditEvent, CanonicalState, InterventionRecord, Project, StateObject } from "./types";
 
 export class FakeDesktopBackend implements DesktopBackend {
   private projects: Project[] = [];
   private states = new Map<string, CanonicalState>();
   private events = new Map<string, AuditEvent[]>();
+  private settings = new Map<string, MemorySettings>();
 
   async seedDemo(): Promise<Project> {
     if (this.projects.length) return this.projects[0]!;
@@ -31,9 +32,13 @@ export class FakeDesktopBackend implements DesktopBackend {
   }
   async audit(projectId: string): Promise<AuditEvent[]> { return structuredClone(this.events.get(projectId) ?? []); }
   async interventions(_projectId: string): Promise<InterventionRecord[]> { return []; }
-  async resolveIntervention(_interventionId: string, _status: "accepted" | "false_positive"): Promise<void> {}
+  async resolveIntervention(_projectId: string, _interventionId: string, _status: "accepted" | "false_positive" | "dismissed"): Promise<void> {}
   async archive(project: Project): Promise<Project> { project.status = "archived"; return structuredClone(project); }
   async diagnostics(): Promise<Record<string, unknown>> { return { database_replay_ok: true, network_services: false }; }
+  async memorySettings(projectId: string, settings: Partial<MemorySettings> = {}): Promise<MemorySettings> {
+    const result = { ...(this.settings.get(projectId) ?? { front_row_capacity: 4096, teach_on_conflict: true }), ...settings };
+    this.settings.set(projectId, result); return structuredClone(result);
+  }
   async exportProject(_projectId: string, directory: string): Promise<string> { return directory; }
   async importProject(_directory: string): Promise<Project> { return this.createProject("Imported project"); }
   private update(id: string, version: number) { const project = this.projects.find((row) => row.id === id)!; project.state_version = version; project.state_digest = `sha256:v${version}`; }

@@ -48,7 +48,7 @@ The gateway live UDS and Rust UDS tests require a normal macOS shell capable of 
 scripts/dev-run.sh
 ```
 
-The script starts user-only sockets and SQLite under `~/Library/Application Support/TomAssist`, writes local logs there, and keeps the Tauri window in the foreground. Stop it with Control-C. The desktop also maintains its Tauri app-data database and idempotently seeds the neutral 30-turn demo.
+The script starts user-only sockets and SQLite under `~/Library/Application Support/TomAssist`, writes local logs there, and keeps the Tauri window in the foreground. Stop it with Control-C. It passes `TOM_ASSIST_APP_SUPPORT` and `TOM_ASSIST_GATEWAY_SOCKET` to the desktop so projects, interventions, commit-memory settings and diagnostics use the same store/runtime as the daemon. The neutral 30-turn demo is seeded idempotently. Standalone desktop launches retain their existing Tauri app-data database unless `TOM_ASSIST_APP_SUPPORT` is explicitly set; no legacy store is moved or overwritten.
 
 In the desktop window:
 

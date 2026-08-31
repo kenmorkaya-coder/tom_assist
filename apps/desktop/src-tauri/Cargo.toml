@@ -17,3 +17,5 @@ serde_json = "1"
 tauri = { version = "2.11.5", features = [] }
 tom-assist-persistence = { path = "../../../crates/persistence" }
 tom-assist-protocol = { path = "../../../crates/protocol" }
+tom-assist-tom-adapter = { path = "../../../crates/tom-adapter" }
+tom-assistd = { path = "../../../crates/assistd" }

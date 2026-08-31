@@ -1,6 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { AuditEvent, CanonicalState, InterventionRecord, Project, StateObject } from "./types";
 
+export interface MemorySettings { front_row_capacity: number; teach_on_conflict: boolean; }
+
 export interface DesktopBackend {
   seedDemo(): Promise<Project>;
   listProjects(): Promise<Project[]>;
@@ -11,9 +13,10 @@ export interface DesktopBackend {
   supersede(project: Project, object: StateObject): Promise<void>;
   audit(projectId: string): Promise<AuditEvent[]>;
   interventions(projectId: string): Promise<InterventionRecord[]>;
-  resolveIntervention(interventionId: string, status: "accepted" | "false_positive"): Promise<void>;
+  resolveIntervention(projectId: string, interventionId: string, status: "accepted" | "false_positive" | "dismissed"): Promise<void>;
   archive(project: Project): Promise<Project>;
-  diagnostics(): Promise<Record<string, unknown>>;
+  diagnostics(projectId: string, afterEventId?: number): Promise<Record<string, unknown>>;
+  memorySettings(projectId: string, settings?: Partial<MemorySettings>): Promise<MemorySettings>;
   exportProject(projectId: string, directory: string): Promise<string>;
   importProject(directory: string): Promise<Project>;
 }
@@ -45,9 +48,10 @@ export const tauriBackend: DesktopBackend = {
   },
   audit: (projectId) => invoke("audit_events", { projectId }),
   interventions: (projectId) => invoke("list_interventions", { projectId }),
-  resolveIntervention: (interventionId, status) => invoke("resolve_intervention", { interventionId, status, resolvedAt: now() }),
+  resolveIntervention: (projectId, interventionId, status) => invoke("resolve_intervention", { projectId, interventionId, status, resolvedAt: now() }),
   archive: (project) => invoke("archive_project", { projectId: project.id, updatedAt: now() }),
-  diagnostics: () => invoke("diagnostics"),
+  diagnostics: (projectId, afterEventId = 0) => invoke("diagnostics", { projectId, afterEventId }),
+  memorySettings: (projectId, settings = {}) => invoke("memory_settings", { projectId, settings }),
   exportProject: (projectId, directory) => invoke("export_project", { projectId, directory }),
   importProject: (directory) => invoke("import_project", { directory }),
 };

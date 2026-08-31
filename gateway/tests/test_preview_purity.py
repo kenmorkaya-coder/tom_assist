@@ -38,6 +38,7 @@ def test_one_hundred_mixed_previews_are_byte_pure(tmp_path: Path, monkeypatch) -
     before_tree, before_rgm = runtime.serialized_state_bytes()
     before_tick = runtime.rgm.state.current_tick
     before_engine_tick = runtime.engine.state.tick
+    before_library = list(runtime.library.db.iterdump())
 
     def forbidden(*_args, **_kwargs):
         raise AssertionError("a forbidden mutating surface was reached by preview")
@@ -64,6 +65,7 @@ def test_one_hundred_mixed_previews_are_byte_pure(tmp_path: Path, monkeypatch) -
     assert after_rgm == before_rgm
     assert runtime.rgm.state.current_tick == before_tick
     assert runtime.engine.state.tick == before_engine_tick
+    assert list(runtime.library.db.iterdump()) == before_library
 
 
 def test_identical_preview_is_deterministic_across_runtime_restart(tmp_path: Path) -> None:

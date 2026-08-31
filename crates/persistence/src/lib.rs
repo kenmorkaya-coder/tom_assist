@@ -249,6 +249,7 @@ impl Store {
         )?;
         connection.execute_batch(include_str!("../migrations/001_init.sql"))?;
         connection.execute_batch(include_str!("../migrations/002_context_manifests.sql"))?;
+        connection.execute_batch(include_str!("../migrations/003_runtime_commits.sql"))?;
         Ok(Self { connection, path })
     }
 
@@ -257,6 +258,7 @@ impl Store {
         connection.execute_batch("PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL;")?;
         connection.execute_batch(include_str!("../migrations/001_init.sql"))?;
         connection.execute_batch(include_str!("../migrations/002_context_manifests.sql"))?;
+        connection.execute_batch(include_str!("../migrations/003_runtime_commits.sql"))?;
         Ok(Self {
             connection,
             path: PathBuf::from(":memory:"),
@@ -857,6 +859,72 @@ impl Store {
         self.connection.execute(
             "INSERT OR IGNORE INTO turns(id,session_id,project_id,workstream_id,role,ordinal,normalized_text,content_hash,packet_digest,completeness,captured_at,provider_timestamp) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)",
             params![record.id, record.session_id, record.project_id, record.workstream_id, record.role, record.ordinal, record.normalized_text, record.content_hash, record.packet_digest, record.completeness, record.captured_at, record.provider_timestamp],
+        )?;
+        Ok(())
+    }
+
+    pub fn mark_context_sent(
+        &self,
+        project_id: &str,
+        packet_digest: &str,
+        turn_id: &str,
+    ) -> Result<()> {
+        self.connection.execute(
+            "INSERT OR IGNORE INTO sent_contexts VALUES(?1,?2,?3)",
+            params![project_id, packet_digest, turn_id],
+        )?;
+        if self
+            .sent_turn_for_packet(project_id, packet_digest)?
+            .is_none_or(|sent| sent.id != turn_id)
+        {
+            return Err(StoreError::Integrity(
+                "packet already bound to another sent turn".into(),
+            ));
+        }
+        Ok(())
+    }
+
+    pub fn sent_turn_for_packet(
+        &self,
+        project_id: &str,
+        packet_digest: &str,
+    ) -> Result<Option<TurnRecord>> {
+        let id: Option<String> = self
+            .connection
+            .query_row(
+                "SELECT turn_id FROM sent_contexts WHERE project_id=?1 AND packet_digest=?2",
+                params![project_id, packet_digest],
+                |row| row.get(0),
+            )
+            .optional()?;
+        match id {
+            Some(id) => self.turn(&id),
+            None => Ok(None),
+        }
+    }
+
+    pub fn runtime_commit_for_sent(&self, turn_id: &str) -> Result<Option<serde_json::Value>> {
+        let raw: Option<String> = self
+            .connection
+            .query_row(
+                "SELECT result_json FROM runtime_commit_receipts WHERE sent_turn_id=?1",
+                [turn_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+        raw.map(|text| serde_json::from_str(&text).map_err(Into::into))
+            .transpose()
+    }
+
+    pub fn record_runtime_commit(
+        &self,
+        sent_turn_id: &str,
+        evaluation_id: &str,
+        result: &serde_json::Value,
+    ) -> Result<()> {
+        self.connection.execute(
+            "INSERT OR IGNORE INTO runtime_commit_receipts VALUES(?1,?2,?3)",
+            params![sent_turn_id, evaluation_id, serde_json::to_string(result)?],
         )?;
         Ok(())
     }

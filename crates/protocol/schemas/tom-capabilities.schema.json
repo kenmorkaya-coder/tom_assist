@@ -4,8 +4,11 @@
   "title": "TomCapabilities",
   "type": "object",
   "additionalProperties": false,
-  "required": ["runtime_version", "state_format_version", "supports_load_ingest", "supports_branch_activation", "supports_candidate_ranking", "supports_state_snapshot", "supports_commit", "supports_conflict_check", "supports_trajectory_digest", "supports_readonly_ranking", "supports_checkpoint_restore", "supports_nonmutating_load_preview", "engine_parity_profile", "engine_parity_verified_at_commit", "seed_profile", "seed_artifact_sha256", "seed_tick", "seed_branch_count", "mechanics_profile", "mechanics_profile_sha256", "mechanics_parameters", "kappa_decay_source"],
+  "required": ["runtime_version", "state_format_version", "supports_load_ingest", "supports_branch_activation", "supports_candidate_ranking", "supports_state_snapshot", "supports_commit", "supports_conflict_check", "supports_trajectory_digest", "supports_readonly_ranking", "supports_checkpoint_restore", "supports_nonmutating_load_preview", "engine_parity_profile", "engine_parity_verified_at_commit", "seed_profile", "seed_artifact_sha256", "seed_tick", "seed_branch_count", "mechanics_profile", "mechanics_profile_sha256", "mechanics_parameters", "kappa_decay_source", "commit_dynamics", "front_row_capacity", "teach_on_conflict"],
   "properties": {
+    "commit_dynamics": {"const":["step","rgm_write","leaf_vec_teach","usage_rotation","front_row_reseat"]},
+    "front_row_capacity": {"type":"integer","minimum":1},
+    "teach_on_conflict": {"type":"boolean"},
     "preview_channels": {"type":"array","prefixItems":[{"const":"lexical"},{"const":"structural_geometry"}],"minItems":2,"maxItems":2},
     "runtime_version": {"type": "string"},
     "state_format_version": {"const": "sicd-engine-save/1"},
