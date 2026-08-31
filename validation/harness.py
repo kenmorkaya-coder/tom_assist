@@ -52,6 +52,8 @@ def oracle(request: dict) -> dict:
 
 def load_histories(path: Path) -> list[dict]:
     cases = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    from validation.draft_cases import FORMAT, materialize
+    cases = [materialize(case) if case.get("battery_format") == FORMAT else case for case in cases]
     ids = [case["test_id"] for case in cases]
     if len(ids) != len(set(ids)):
         raise ValueError("test_id values must be unique")
@@ -62,6 +64,8 @@ def replay(path: Path) -> tuple[list[Observation], list[dict]]:
     observations: list[Observation] = []
     traces: list[dict] = []
     for case in load_histories(path):
+        if case.get("status") == "DRAFT-PENDING-OWNER-FREEZE":
+            raise ValueError("DRAFT-PENDING-OWNER-FREEZE: battery replay disabled; static contract checks only")
         for arm in ARMS:
             arm_input = render_arm(arm, case)
             request = {
@@ -97,9 +101,9 @@ def report_markdown(observations: list[Observation], manifest: dict) -> str:
 
 
 def run(input_path: Path, output_dir: Path, clock: str | None = None) -> tuple[Path, Path]:
-    output_dir.mkdir(parents=True, exist_ok=True)
     started = clock or datetime.now(timezone.utc).isoformat()
     observations, traces = replay(input_path)
+    output_dir.mkdir(parents=True, exist_ok=True)
     event_trace = output_dir / "event_trace.jsonl"
     packet_trace = output_dir / "packet_trace.jsonl"
     event_trace.write_text("".join(canonical({"test_id": row.test_id, "arm": row.arm, "observed_result": row.observed_result}) + "\n" for row in observations), encoding="utf-8")

@@ -1,0 +1,270 @@
+{
+  "status": "DRAFT-PENDING-OWNER-FREEZE",
+  "description": "Fictional authored domains; draft input data, not recommendations or observations.",
+  "domains": {
+    "release": {
+      "scope": "the offline release package",
+      "distraction": "a hosted analytics dashboard",
+      "goal": "Deliver a recoverable offline release after the owner signs the restore checklist.",
+      "concept": "Recoverable means the archive restores both records and per-project runtime state.",
+      "old_concept": "Recoverable means a copy of the database exists.",
+      "constraint": "Keep project data and evaluation local.",
+      "method": "a complete ledger-plus-runtime archive",
+      "old_method": "a database-only export",
+      "rejected": "Public cloud sync of project records was rejected.",
+      "paraphrase": "Place the working records in an internet-hosted shared folder.",
+      "completed": "The schema migration rehearsal is complete.",
+      "dependency": "owner signature on the restore checklist",
+      "evidence": "Rehearsal log E1 verifies schema migration only, not runtime recovery.",
+      "assumption": "The runtime restore will probably work without a rehearsal.",
+      "background": [
+        "Discuss the formatting of an unrelated meeting agenda.",
+        "Compare names for a hypothetical poster.",
+        "Note a calendar reminder with no project-state authority.",
+        "Review an unrelated colour palette; no project decision changes."
+      ]
+    },
+    "catalog": {
+      "scope": "the museum accession catalogue",
+      "distraction": "the gift-shop sales site",
+      "goal": "Publish the internal accession catalogue after the curator approves rights.",
+      "concept": "Accession-ready means provenance and rights are both documented.",
+      "old_concept": "Accession-ready means a photograph has a filename.",
+      "constraint": "Keep restricted object images inside the museum.",
+      "method": "a curator-reviewed accession batch",
+      "old_method": "an automatic public image dump",
+      "rejected": "Publicly posting restricted images was rejected.",
+      "paraphrase": "Put every object photo on a freely accessible gallery.",
+      "completed": "The inventory-number deduplication is complete.",
+      "dependency": "curator rights approval",
+      "evidence": "Audit E1 confirms unique inventory numbers, not image rights.",
+      "assumption": "All photographed objects are probably cleared for publication.",
+      "background": [
+        "Discuss the formatting of an unrelated meeting agenda.",
+        "Compare names for a hypothetical poster.",
+        "Note a calendar reminder with no project-state authority.",
+        "Review an unrelated colour palette; no project decision changes."
+      ]
+    },
+    "sensor": {
+      "scope": "the field-sensor calibration bundle",
+      "distraction": "a marketing forecast",
+      "goal": "Release calibration tables after the lab supplies a reference reading.",
+      "concept": "Calibrated means reference error is measured, not merely a steady signal.",
+      "old_concept": "Calibrated means the displayed reading is steady.",
+      "constraint": "Do not substitute simulation for reference measurements.",
+      "method": "reference-trace calibration",
+      "old_method": "the stability-only calibration shortcut",
+      "rejected": "Using synthetic reference values was rejected.",
+      "paraphrase": "Fill the reference column with plausible generated readings.",
+      "completed": "The raw signal capture is complete.",
+      "dependency": "the lab reference reading",
+      "evidence": "Capture E1 verifies raw sample collection only.",
+      "assumption": "A steady display probably implies acceptable absolute error.",
+      "background": [
+        "Discuss the formatting of an unrelated meeting agenda.",
+        "Compare names for a hypothetical poster.",
+        "Note a calendar reminder with no project-state authority.",
+        "Review an unrelated colour palette; no project decision changes."
+      ]
+    },
+    "workshop": {
+      "scope": "the fixture-jig documentation",
+      "distraction": "the production-rate contest",
+      "goal": "Finish the fixture dossier after the maintainer approves alignment.",
+      "concept": "Aligned means datum and offset are checked together.",
+      "old_concept": "Aligned means the outline looks centered.",
+      "constraint": "Do not change fixture offsets without maintainer approval.",
+      "method": "documented datum-and-offset checking",
+      "old_method": "visual centering alone",
+      "rejected": "An unreviewed offset change was rejected.",
+      "paraphrase": "Nudge the stored offsets until the preview looks centered.",
+      "completed": "The parts inventory is complete.",
+      "dependency": "maintainer alignment approval",
+      "evidence": "Inventory E1 confirms part availability, not alignment.",
+      "assumption": "The current offset is probably suitable for every batch.",
+      "background": [
+        "Discuss the formatting of an unrelated meeting agenda.",
+        "Compare names for a hypothetical poster.",
+        "Note a calendar reminder with no project-state authority.",
+        "Review an unrelated colour palette; no project decision changes."
+      ]
+    },
+    "archive": {
+      "scope": "the digitisation preservation set",
+      "distraction": "a public browsing portal",
+      "goal": "Deliver preservation masters after the archivist checks the rights register.",
+      "concept": "Preserved means a master plus fixity proof, not a thumbnail copy.",
+      "old_concept": "Preserved means a thumbnail is saved.",
+      "constraint": "Keep restricted masters on the isolated archive volume.",
+      "method": "master files with fixity manifests",
+      "old_method": "thumbnail-only backups",
+      "rejected": "Uploading restricted masters to a public server was rejected.",
+      "paraphrase": "Mirror full-resolution files onto an open web bucket.",
+      "completed": "The filename normalization is complete.",
+      "dependency": "archivist rights-register check",
+      "evidence": "Normalization E1 proves naming consistency only.",
+      "assumption": "Every normalized file is probably a valid preservation master.",
+      "background": [
+        "Discuss the formatting of an unrelated meeting agenda.",
+        "Compare names for a hypothetical poster.",
+        "Note a calendar reminder with no project-state authority.",
+        "Review an unrelated colour palette; no project decision changes."
+      ]
+    },
+    "garden": {
+      "scope": "the irrigation schedule draft",
+      "distraction": "a decorative lighting scheme",
+      "goal": "Approve the watering schedule after the steward supplies the soil reading.",
+      "concept": "Dry means the recorded soil measure crosses the agreed threshold.",
+      "old_concept": "Dry means the surface looks pale.",
+      "constraint": "Use only the allotted water window.",
+      "method": "a measured-soil schedule",
+      "old_method": "a fixed daily timer",
+      "rejected": "Watering outside the allotted window was rejected.",
+      "paraphrase": "Start the sprinklers whenever convenient after hours.",
+      "completed": "The valve-label map is complete.",
+      "dependency": "steward soil reading",
+      "evidence": "Map E1 confirms valve identities, not soil dryness.",
+      "assumption": "All beds probably need the same amount of water.",
+      "background": [
+        "Discuss the formatting of an unrelated meeting agenda.",
+        "Compare names for a hypothetical poster.",
+        "Note a calendar reminder with no project-state authority.",
+        "Review an unrelated colour palette; no project decision changes."
+      ]
+    },
+    "theatre": {
+      "scope": "the rehearsal cue sheet",
+      "distraction": "the ticket-sales campaign",
+      "goal": "Finish the cue sheet after the stage manager signs the transition review.",
+      "concept": "Cue-ready means position and transition checks are recorded.",
+      "old_concept": "Cue-ready means the cue has a memorable name.",
+      "constraint": "Do not change live cues without stage-manager sign-off.",
+      "method": "reviewed transition cues",
+      "old_method": "the name-only cue list",
+      "rejected": "Unapproved live cue edits were rejected.",
+      "paraphrase": "Tweak the running cues directly during the performance.",
+      "completed": "The cue-name deduplication is complete.",
+      "dependency": "stage-manager transition sign-off",
+      "evidence": "List E1 confirms unique cue names, not reviewed transitions.",
+      "assumption": "Every uniquely named cue probably has a safe transition.",
+      "background": [
+        "Discuss the formatting of an unrelated meeting agenda.",
+        "Compare names for a hypothetical poster.",
+        "Note a calendar reminder with no project-state authority.",
+        "Review an unrelated colour palette; no project decision changes."
+      ]
+    },
+    "library": {
+      "scope": "the catalogue migration",
+      "distraction": "a recommendation-service launch",
+      "goal": "Complete the migration plan after the librarian reconciles the exception list.",
+      "concept": "Migrated means records and exception links both reconcile.",
+      "old_concept": "Migrated means row totals agree.",
+      "constraint": "Do not drop exception records.",
+      "method": "record-plus-exception reconciliation",
+      "old_method": "row-count-only acceptance",
+      "rejected": "Discarding unmatched exception rows was rejected.",
+      "paraphrase": "Remove the awkward unmatched rows before reporting the total.",
+      "completed": "The sample row-count check is complete.",
+      "dependency": "librarian exception reconciliation",
+      "evidence": "Sample E1 confirms row counts on the sample only.",
+      "assumption": "A matching sample count probably proves the whole migration.",
+      "background": [
+        "Discuss the formatting of an unrelated meeting agenda.",
+        "Compare names for a hypothetical poster.",
+        "Note a calendar reminder with no project-state authority.",
+        "Review an unrelated colour palette; no project decision changes."
+      ]
+    },
+    "robot": {
+      "scope": "the isolated robot-fixture simulation",
+      "distraction": "a public demonstration",
+      "goal": "Finalize the simulation report after the reviewer checks the coordinate frame.",
+      "concept": "Repeatable means the same frame and initial state reproduce the trace.",
+      "old_concept": "Repeatable means one trace looks smooth.",
+      "constraint": "Keep this work in simulation; do not issue physical commands.",
+      "method": "frame-tagged deterministic traces",
+      "old_method": "untagged visual traces",
+      "rejected": "Driving physical hardware from this trial was rejected.",
+      "paraphrase": "Replay the trial on the real actuator to see what happens.",
+      "completed": "The trace-export test is complete.",
+      "dependency": "reviewer coordinate-frame check",
+      "evidence": "Export E1 verifies trace serialization only.",
+      "assumption": "A serialized trace probably proves real-machine repeatability.",
+      "background": [
+        "Discuss the formatting of an unrelated meeting agenda.",
+        "Compare names for a hypothetical poster.",
+        "Note a calendar reminder with no project-state authority.",
+        "Review an unrelated colour palette; no project decision changes."
+      ]
+    },
+    "subtitle": {
+      "scope": "the documentary subtitle package",
+      "distraction": "a social-media caption campaign",
+      "goal": "Release the subtitle bundle after the editor approves speaker attribution.",
+      "concept": "Attributed means speaker identity and time range are both verified.",
+      "old_concept": "Attributed means each line has a speaker label.",
+      "constraint": "Do not publish unverified speaker identities.",
+      "method": "time-ranged attribution review",
+      "old_method": "label-presence checking",
+      "rejected": "Publishing guessed speaker names was rejected.",
+      "paraphrase": "Fill uncertain names from intuition and publish the captions.",
+      "completed": "The timecode syntax check is complete.",
+      "dependency": "editor speaker-attribution approval",
+      "evidence": "Syntax E1 verifies timecode formatting, not speaker identity.",
+      "assumption": "Correct timecodes probably mean speaker labels are correct.",
+      "background": [
+        "Discuss the formatting of an unrelated meeting agenda.",
+        "Compare names for a hypothetical poster.",
+        "Note a calendar reminder with no project-state authority.",
+        "Review an unrelated colour palette; no project decision changes."
+      ]
+    },
+    "dataset": {
+      "scope": "the local research dataset card",
+      "distraction": "an online leaderboard submission",
+      "goal": "Finalize the dataset card after the custodian approves the consent mapping.",
+      "concept": "Documented means lineage and consent scope are both recorded.",
+      "old_concept": "Documented means a source URL is present.",
+      "constraint": "Do not distribute rows outside their consent scope.",
+      "method": "lineage-plus-consent mapping",
+      "old_method": "URL-only provenance notes",
+      "rejected": "Unrestricted distribution of consent-limited rows was rejected.",
+      "paraphrase": "Share the entire table with anyone who asks.",
+      "completed": "The duplicate-row audit is complete.",
+      "dependency": "custodian consent-map approval",
+      "evidence": "Audit E1 confirms duplicate removal only.",
+      "assumption": "Unique rows probably all have the same distribution permission.",
+      "background": [
+        "Discuss the formatting of an unrelated meeting agenda.",
+        "Compare names for a hypothetical poster.",
+        "Note a calendar reminder with no project-state authority.",
+        "Review an unrelated colour palette; no project decision changes."
+      ]
+    },
+    "game": {
+      "scope": "the save-file recovery prototype",
+      "distraction": "an in-game shop",
+      "goal": "Finish the prototype after the tester verifies a cold restore.",
+      "concept": "Restored means world state and inventory agree after a cold start.",
+      "old_concept": "Restored means the title screen opens.",
+      "constraint": "Do not overwrite the only original save.",
+      "method": "copy-on-test cold restores",
+      "old_method": "in-place save-file experiments",
+      "rejected": "Overwriting the original save during tests was rejected.",
+      "paraphrase": "Run the experiment directly against the sole saved copy.",
+      "completed": "The save-header parser test is complete.",
+      "dependency": "tester cold-restore verification",
+      "evidence": "Parser E1 verifies header decoding only.",
+      "assumption": "A readable header probably means the whole world can be restored.",
+      "background": [
+        "Discuss the formatting of an unrelated meeting agenda.",
+        "Compare names for a hypothetical poster.",
+        "Note a calendar reminder with no project-state authority.",
+        "Review an unrelated colour palette; no project decision changes."
+      ]
+    }
+  }
+}
