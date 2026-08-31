@@ -661,6 +661,16 @@ def run(args: argparse.Namespace) -> int:
             run_manifest["captures"] += result["capture_count"]
             run_manifest["last_completed_sequence"] = sequence
             atomic_json(output / "run_manifest.json", run_manifest)
+            print(json.dumps({
+                "event": "observation_complete",
+                "sequence": sequence,
+                "total": AUTHORIZED_GENERATIONS,
+                "test_id": case["test_id"],
+                "arm": arm,
+                "action_consistent": scored["action_consistent"],
+                "explicit_mismatch": scored["explicit_mismatch"],
+                "gratuitous_packet_injected": telemetry["gratuitous_packet_injected"],
+            }, sort_keys=True), flush=True)
         run_manifest["completed"] = len(rows) == AUTHORIZED_GENERATIONS and run_manifest["captures"] == AUTHORIZED_GENERATIONS
         if not run_manifest["completed"]:
             raise RuntimeError("matrix or capture count incomplete")
