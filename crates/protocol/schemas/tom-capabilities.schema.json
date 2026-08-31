@@ -31,6 +31,6 @@
       "type": "object",
       "additionalProperties": {"type": "string"}
     },
-    "kappa_decay_source": {"const": "upstream_literal_0.03_growth_effective"}
+    "kappa_decay_source": {"const": "profile_env_reader_wp18_effective_0.03"}
   }
 }

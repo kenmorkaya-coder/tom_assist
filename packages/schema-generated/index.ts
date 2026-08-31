@@ -103,7 +103,7 @@ export interface TomCapabilities {
   mechanics_parameters: {
     [k: string]: string;
   };
-  kappa_decay_source: "upstream_literal_0.03_growth_effective";
+  kappa_decay_source: "profile_env_reader_wp18_effective_0.03";
 }
 export interface StateObject {
   id: string;

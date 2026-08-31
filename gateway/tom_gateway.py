@@ -27,7 +27,7 @@ from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any
 
-PINNED_SHA = "8799ccbdd"
+PINNED_SHA = "e9fdef81c"
 STATE_FORMAT_VERSION = "sicd-engine-save/1"
 GATEWAY_VERSION = "tom-gateway/1.0"
 SEED_PROFILE = "msr_8d_native_10k"
@@ -37,7 +37,7 @@ SEED_TICK = 4707
 SEED_BRANCH_COUNT = 10_000
 MECHANICS_PROFILE_RELATIVE = Path("config/profiles/msr_8d_native_10k.env")
 EFFECTIVE_KAPPA_DECAY = 0.03
-KAPPA_DECAY_SOURCE = "upstream_literal_0.03_growth_effective"
+KAPPA_DECAY_SOURCE = "profile_env_reader_wp18_effective_0.03"
 REQUIRED_KAPPA_PARAMETERS = frozenset(
     {
         "TOM_TAU1",
@@ -242,7 +242,7 @@ class ProjectRuntime:
         return self.state_dir / "creation_metadata.json"
 
     def _new_engine_config(self) -> Any:
-        """Apply the pinned profile through upstream env reads plus explicit kappa binding."""
+        """Apply the audited profile and reject unreviewed effective-physics changes."""
         from agency.mechanics.sicd_engine import TreeGrowthConfig
 
         config = TreeGrowthConfig()
@@ -250,14 +250,12 @@ class ProjectRuntime:
         config.tau1 = float(parameters["TOM_TAU1"])
         config.kappa_update.heal_rate = float(parameters["TOM_HEAL_RATE"])
         config.kappa_update.damage_rate = float(parameters["TOM_DAMAGE_RATE"])
-        # Pin 8799ccbdd's effective growth/operating physics is 0.03 because:
-        # (1) sicd_kappa_update.py:205 is a literal with no TOM_KAPPA_DECAY reader;
-        # (2) grow_msr_8d_channel_separated_10k.py:501-507 sources the profile,
-        #     so the inert export did not change the tree grower's config;
-        # (3) the live backend uses that same profile-env -> TreeGrowthConfig path;
-        # (4) sicd_kappa_update.py:197-205 warns that values near 0.05 degrade recovery.
-        # Keep this explicit so any future repin must re-derive the effective value.
-        config.kappa_update.kappa_decay = EFFECTIVE_KAPPA_DECAY
+        # WP-18/WP-19: profile + reader are authoritative as of e9fdef81c.
+        # Review 3 audited 0.03 as the effective growth/operating value;
+        # any future divergence requires an explicit reviewed decision.
+        config.kappa_update.kappa_decay = float(parameters["TOM_KAPPA_DECAY"])
+        if not abs(config.kappa_update.kappa_decay - EFFECTIVE_KAPPA_DECAY) <= 1e-12:
+            raise ValueError("kappa_decay differs from audited effective physics (0.03)")
         config.kappa_update.kappa_delta_cap = float(parameters["TOM_KAPPA_DELTA_CAP"])
         config.kappa_update.kappa_nourish_recovery = float(
             parameters["TOM_KAPPA_NOURISH_RECOVERY"]

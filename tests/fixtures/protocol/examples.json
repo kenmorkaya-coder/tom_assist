@@ -21,7 +21,7 @@
   },
   "tom_capabilities": {
     "preview_channels": ["lexical", "structural_geometry"],
-    "runtime_version": "8799ccbdd",
+    "runtime_version": "e9fdef81c",
     "state_format_version": "sicd-engine-save/1",
     "supports_load_ingest": true,
     "supports_branch_activation": true,
@@ -34,7 +34,7 @@
     "supports_checkpoint_restore": true,
     "supports_nonmutating_load_preview": false,
     "engine_parity_profile": "tom-master/direct",
-    "engine_parity_verified_at_commit": "8799ccbdd",
+    "engine_parity_verified_at_commit": "e9fdef81c",
     "seed_profile": "msr_8d_native_10k",
     "seed_artifact_sha256": "d9aec9b424459d0948f569c7e424bb5632bd118ad01bda372f62df7ca17a82ac",
     "seed_tick": 4707,
@@ -43,9 +43,9 @@
     "mechanics_profile_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "mechanics_parameters": {
       "TOM_TAU1": "4.0",
-      "TOM_KAPPA_DECAY": "0.053193359375"
+      "TOM_KAPPA_DECAY": "0.03"
     },
-    "kappa_decay_source": "upstream_literal_0.03_growth_effective"
+    "kappa_decay_source": "profile_env_reader_wp18_effective_0.03"
   },
   "state_object": {
     "id": "10000000-0000-4000-8000-000000000001",

@@ -70,7 +70,7 @@ fn live_gateway_handshake_commit_preview_and_checkpoint() {
     assert_eq!(capabilities.seed_branch_count, 10_000);
     assert_eq!(
         capabilities.kappa_decay_source,
-        "upstream_literal_0.03_growth_effective"
+        "profile_env_reader_wp18_effective_0.03"
     );
     let committed = client
         .commit_turn("rust-live", "user", "Keep preview pure.", "turn-1")

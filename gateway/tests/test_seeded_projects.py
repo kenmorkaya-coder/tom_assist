@@ -37,13 +37,13 @@ def test_two_fresh_projects_have_identical_seed_artifacts_and_checkpoint_lineage
     assert not right.rgm.state.anchors
 
     parameters = gateway.seed.mechanics_parameters
-    assert parameters["TOM_KAPPA_DECAY"] == "0.053193359375"
+    assert parameters["TOM_KAPPA_DECAY"] == "0.03"
     for runtime in (left, right):
         assert runtime.engine.cfg.tau1 == float(parameters["TOM_TAU1"])
         assert runtime.engine.cfg.kappa_update.heal_rate == float(parameters["TOM_HEAL_RATE"])
         assert runtime.engine.cfg.kappa_update.damage_rate == float(parameters["TOM_DAMAGE_RATE"])
         assert runtime.engine.cfg.kappa_update.kappa_decay == EFFECTIVE_KAPPA_DECAY == 0.03
-        assert runtime.engine.cfg.kappa_update.kappa_decay != float(
+        assert runtime.engine.cfg.kappa_update.kappa_decay == float(
             parameters["TOM_KAPPA_DECAY"]
         )
         assert runtime.engine.cfg.kappa_update.kappa_delta_cap == float(
@@ -77,6 +77,15 @@ def test_corrupted_seed_copy_fails_project_creation_closed(tmp_path: Path) -> No
     with pytest.raises(ValueError, match="seed artifact sha256 mismatch"):
         gateway.project("must-fail-closed")
     assert not (tmp_path / "data" / "projects" / "must-fail-closed" / "tom" / "tree_state.json").exists()
+
+
+@pytest.mark.parametrize("unreviewed_decay", ["0.053193359375", "nan", "inf"])
+def test_kappa_profile_divergence_refuses_project_creation(tmp_path, unreviewed_decay):
+    gateway = TomGateway(tmp_path / "data", TOM_MASTER)
+    gateway.seed.mechanics_parameters["TOM_KAPPA_DECAY"] = unreviewed_decay
+    with pytest.raises(ValueError, match="kappa_decay differs from audited effective physics"):
+        gateway.project("unreviewed-physics")
+    assert not (tmp_path / "data/projects/unreviewed-physics/tom/tree_state.json").exists()
 
 
 def test_seeded_preview_latency_guard(tmp_path: Path) -> None:

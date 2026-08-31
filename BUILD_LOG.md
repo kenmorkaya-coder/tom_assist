@@ -312,3 +312,54 @@ Decisions: `context-policy/1.1` was already declared on main; this WP makes the 
 Evidence: gateway pytest **11 passed**, including mirror-vs-pinned selection on an isolated clone, loading-aware-score parity, RRF ordering, restart determinism, and **100 mixed structural previews byte-identical in engine and RGM** while forbidden entrypoints are instrumented to fail. Twenty 10k-tree previews: p50 **17.066 ms**, p95 **29.325 ms**, max **30.352 ms** (500 ms guard). `cargo test --workspace`: **34 passed, 1 ignored**; updated byte-stable golden digest `sha256:d601e32f29e48c70c10030209e0bd89706a8f43175b051a860e36aa5a7c78601`; cohort changes alter the digest. Schema generation/validation: **9 fixtures, 33 methods**. Extension tests: **6 passed**; desktop tests: **1 passed**. Initial golden/conformance failures were expected fixture additions and were corrected before the passing rerun.
 
 ESCALATE: none. No upstream files changed, no TCP listener or forbidden port used, and no G-gate verdict asserted. WP-17 remains a separate commit and this branch will not be merged before orchestrator audit.
+
+## WP-18 — Governed upstream kappa declaration and pure preview surface [DONE; AUDIT HOLD]
+
+Authority/sequencing: `ORCHESTRATOR_REVIEW_5.md` and the owner's subsequent instruction supersede Review 4's sequencing. WP-16 `38883bf` is accepted as interim. WP-17 was stopped before any implementation edits; WP-16b and WP-17 are not started and require the orchestrator-issued repin. No product runtime pin, gateway override, mirror or production code was changed in WP-18.
+
+Isolation: upstream branch `tom-assist/upstream-v1`, based exactly on `8799ccbdddf3d5b5939360b91993581af7dab470`, lives at `/Users/kenmorkaya/PycharmProjects/ToM_assist/.upstream-worktree/tom-master-wp18`. Before creating it, `git status --porcelain=v1 -- <five target paths>` in the owner's checkout was empty. All upstream edits and tests ran in the linked worktree, with bytecode writing disabled and pytest's cache disabled. Every staging operation named one explicit file; no broad staging, stash, reset, owner checkout switch, merge, push or worktree removal occurred.
+
+Exactly two upstream commits (`git rev-list --count 8799ccbdd..HEAD` = **2**):
+
+1. `6dbd5c6c49d76e7cf755c6682bda1bf691bd1fea` — `fix(kappa): add TOM_KAPPA_DECAY env reader and correct stale profile export`. Only `agency/mechanics/sicd_kappa_update.py`, `config/profiles/msr_8d_native_10k.env`, `tests/test_kappa_decay_config.py`. The field at line 205 now uses the neighboring `_env_float` factory pattern with unchanged default `0.03`; the profile export at line 15 is corrected to `0.03` with the required provenance comment. Tests cover unset/default, construction-time environment overrides (including zero), invalid input fallback, explicit constructor precedence, and the corrected profile. No equation or mechanical default changes; explicit non-default environment values are now honored by design.
+2. `e9fdef81c8a366ebbec07be9772189eea15cb2ac` — `feat(preview): add pure preview readout module for product previews`. Only `agency/mechanics/preview_readout.py`, `tests/test_preview_readout.py`. The selector preserves the original alignment gate, `stiffness_proxy`, usage penalty, input-order ties, axis fallback, filtering and return shape, while omitting usage mutation. It never calls the mutating selector. Existing resonance, channel-separated projection, readout angle, loading-aware score and ranking are direct re-exports. The module explicitly documents purity and the existing read-only-reference return semantics. No translator or commit dynamics added.
+
+Build-verification evidence (linked worktree, product `.venv-gateway/bin/python`, stub provider; no services):
+
+- First commit tests: `pytest -q -o addopts='' -p no:cacheprovider tests/test_kappa_decay_config.py tests/test_kappa_patchD_semantic_decay.py` → **8 passed**.
+- Final required tests plus adjacent kappa regressions: `pytest -q -o addopts='' -p no:cacheprovider tests/test_kappa_decay_config.py tests/test_preview_readout.py tests/test_kappa_patchD_semantic_decay.py` → **59 passed in 3.78 s** (57 new tests and 2 existing regressions).
+- Exact selector equality against the mutating original on deep-copied fixtures across 48 axis/K/container cases; stable ties and usage penalties verified separately. **100 mixed readonly calls over the real 10,000-branch seed left serialized engine bytes, every usage count and sample anchor contents identical**, while step, teaching and the mutating selector were instrumented to fail. The 100-call test also exercises re-exported resonance and loading-aware ranking.
+- Additional existing leaf-vector regressions: **50 passed, 1 deselected in 0.22 s**. The initially attempted full four-file run produced **109 passed, 1 failed**: the unchanged `TestStage1gFullPoolCoverage::test_leaf_rank_covers_score_rank_and_cos_rank_pools` imports the controller/interface stack and fails on missing `requests` in the minimal gateway environment. It is not a pure-preview test; no dependencies or unrelated source files were changed to mask it.
+- Both commit hooks (`gitleaks`) passed; `git diff --check` clean; final linked-worktree `git status --short` empty. The range diff contains exactly the five authorized source/config/test paths above.
+
+Owner-checkout protection evidence, before **and** after both commits/tests:
+
+| Check in `/Users/kenmorkaya/PycharmProjects/tom_master` | Identical before/after result |
+| --- | --- |
+| `git rev-parse HEAD` | `8799ccbdddf3d5b5939360b91993581af7dab470` |
+| `git symbolic-ref HEAD` | `refs/heads/tom-as/assurance-promote-handler` |
+| `git --no-optional-locks status --porcelain=v1` | Byte-identical: **53 tracked modifications**, **1,970 untracked entries** |
+| SHA-256 of full status output | `efd935faf8a04042f9f2c8c1e0df5cd7a8f1c98f04c5d881a90868ad156ba809` |
+| SHA-256 of `git diff --binary HEAD` | `86cb4a857e782653e21d24b24b336304b42c4aaade9ea07823ba1797e8bbbdc9` |
+| SHA-256 of `git diff --cached --binary` | `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` (empty) |
+| Status restricted to the five WP-18 target paths | Empty before and after |
+
+Full status snapshots are retained for local audit at `.upstream-worktree/wp18-evidence/owner-status.before.txt` and `owner-status.after.txt`; they compare byte-for-byte equal. The worktree and evidence remain in place and are intentionally not staged into the product repository. Shared Git metadata necessarily gains the requested linked-worktree registration, branch and two commits; the owner's checkout branch, index diff and working-file diff are unchanged.
+
+ESCALATE (non-blocking environment limitation): the optional older controller-import regression needs `requests`, absent from the minimal gateway venv. Safest default: leave dependencies and that unrelated test untouched, disclose the failure, and run all required WP-18 tests successfully. The orchestrator may use a full upstream test environment for that additional regression during audit.
+
+STOP: awaiting orchestrator audit and joint repin. No WP-16b/WP-17 implementation, no merge, no push, no use of port 18790, no access to the off-limits runtime, and no G-gate verdict. This evidence is appended to the product BUILD_LOG; the upstream branch contains exactly the two requested commits.
+
+## WP-19 — Runtime repin and kappa override retirement [DONE]
+
+Commit: containing commit `chore(wp-19): repin runtime to e9fdef81c and retire kappa override`.
+
+Authority/precondition: Review 6 initially stopped on owner HEAD `8799ccbdd`. The owner's subsequent explicit instruction, “YOU DO IT”, authorized the checkout previously reserved for the owner. After verifying all five upstream target paths clean, the clean linked audit worktree was detached at its existing audited commit (retained in place), freeing `tom-assist/upstream-v1`; the owner's checkout was then switched to that branch. Verified HEAD `e9fdef81c8a366ebbec07be9772189eea15cb2ac`. All 53 tracked modifications and 1,970 untracked status entries remained byte-identical; before/after working diff hash `86cb4a857e782653e21d24b24b336304b42c4aaade9ea07823ba1797e8bbbdc9`, staged diff hash `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`. No stash, force switch, reset, upstream edit, merge or push.
+
+Changes: product pin `e9fdef81c`; profile-derived kappa assignment replaces the literal override, guarded at project creation by an absolute-difference tolerance of `1e-12` around audited effective `0.03` (also rejects NaN/infinity). Provenance becomes `profile_env_reader_wp18_effective_0.03`. References pin, capability schema/generated type/shared example and the live Rust provenance assertion agree. The prior WP-18 log section is committed as-is.
+
+Decisions: the protocol capability schema uses a const, so its provenance and example needed coordinated updates beyond the four named Review 6 paths. Existing tests asserting the old inert profile export and inequality were updated to the corrected `0.03` export and equality; the actual seeded-project assertion `kappa_decay == EFFECTIVE_KAPPA_DECAY == 0.03` is unchanged. No packet golden or canonical digest fixture changed. Added three explicit fail-closed cases for stale `0.053193359375`, NaN and infinity.
+
+Evidence against the audited owner checkout: gateway pytest **14 passed** (all prior 11 plus three tripwire cases), 100-preview byte purity intact; 20-call latency p50 **16.327 ms**, p95 **28.430 ms**, max **32.412 ms**. Dedicated live Rust gateway test **1 passed**. `cargo test --workspace`: **34 passed, 1 ignored**, including the unchanged packet golden. Extension tests **6 passed**. Schema generation/validation **9 fixtures, 33 methods**. `git diff --check` clean. Local build verification only; no G-gate verdict.
+
+ESCALATE: none. Proceed next to WP-16b's strict unchanged-output check; any divergence must be reported without changing goldens.
