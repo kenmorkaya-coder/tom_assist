@@ -13,7 +13,7 @@ cd ToM_assist
 git -C ../tom_master rev-parse HEAD
 ```
 
-The expected tom_master prefix is `8799ccbdd`. Do not run this project against `tom_master17D`; it is outside the authorized boundary.
+The expected tom_master SHA is `e9fdef81c8a366ebbec07be9772189eea15cb2ac` (reviewed WP-19 repin). Do not switch or modify the owner's checkout. The excluded runtime repository remains outside the authorized boundary.
 
 ## 2. Install build-only dependencies
 
@@ -35,7 +35,7 @@ npm run schema:validate
 npm run adapters:test
 npm run extension:test
 npm run desktop:test
-PYTHONPATH="$(cd ../tom_master && pwd):$PWD" .venv-gateway/bin/python -m pytest -q gateway/tests
+PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$(cd ../tom_master && pwd):$PWD" .venv-gateway/bin/python -m pytest -q gateway/tests
 python3 -m unittest discover -s validation/tests -v
 scripts/dev-run.sh --check
 ```
@@ -55,7 +55,7 @@ In the desktop window:
 1. Confirm `Local Release Console` shows 16 state objects and state version 16.
 2. Create and rename a project, quick-capture a decision, supersede it with a reason, and inspect the Audit view.
 3. Review Interventions, mark a fixture finding accepted or false-positive when present, then inspect Settings and Diagnostics.
-4. Export a project to an empty directory and import it; checksum verification occurs before import.
+4. Export or back up a project to a new directory. Verify it before importing into a fresh store; existing project identities are never overwritten. See [complete project recovery](PROJECT_RECOVERY.md) for retained content, runtime compatibility, interruption recovery and the real packaged-app journey test.
 
 ## 5. Install and load the Chromium extension
 

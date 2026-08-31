@@ -1,5 +1,6 @@
 //! Snapshot-bound PREPARE_TURN / EVALUATE_TURN orchestration.
 pub mod experience;
+pub mod recovery;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};

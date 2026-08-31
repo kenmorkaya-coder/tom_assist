@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::io::{BufRead, BufReader, Write};
+use std::os::unix::net::UnixStream;
 use std::sync::Mutex;
+use std::time::Duration;
 use tauri::Manager;
 use tom_assist_persistence::{
     CanonicalState, EventRecord, InterventionRecord, Project, Store, StoreMode, TurnRecord,
@@ -61,6 +64,55 @@ fn gateway(store: &Store) -> tom_assist_tom_adapter::GatewayClient {
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| store.path().with_file_name("tom_gateway.sock"));
     tom_assist_tom_adapter::GatewayClient::new(socket)
+}
+
+#[tauri::command]
+fn exchange_request(
+    envelope: tom_assist_protocol::Envelope,
+    state: tauri::State<'_, DesktopState>,
+) -> Result<Value, String> {
+    use tom_assist_protocol::Method;
+    if !matches!(
+        envelope.method,
+        Method::TurnPrepare | Method::TurnSent | Method::ResponseEvaluate
+    ) {
+        return Err("local exchange diagnostics only support prepare, sent and evaluate".into());
+    }
+    let store = locked(&state);
+    let project = envelope
+        .project_id
+        .as_deref()
+        .ok_or("project is required")?;
+    if envelope.payload["project_id"].as_str() != Some(project)
+        || store.project(project).map_err(|e| e.to_string())?.is_none()
+    {
+        return Err("exchange project mismatch".into());
+    }
+    let socket = std::env::var_os("TOM_ASSISTD_SOCKET")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|| store.path().with_file_name("tom-assistd.sock"));
+    drop(store);
+    let mut stream = UnixStream::connect(socket).map_err(|e| e.to_string())?;
+    stream
+        .set_read_timeout(Some(Duration::from_secs(60)))
+        .map_err(|e| e.to_string())?;
+    stream
+        .set_write_timeout(Some(Duration::from_secs(60)))
+        .map_err(|e| e.to_string())?;
+    serde_json::to_writer(&mut stream, &envelope).map_err(|e| e.to_string())?;
+    stream.write_all(b"\n").map_err(|e| e.to_string())?;
+    let mut line = String::new();
+    BufReader::new(stream)
+        .read_line(&mut line)
+        .map_err(|e| e.to_string())?;
+    let response: tom_assistd::WireResponse =
+        serde_json::from_str(&line).map_err(|e| e.to_string())?;
+    if !response.ok {
+        return Err(serde_json::to_string(&response.error).unwrap_or_default());
+    }
+    response
+        .payload
+        .ok_or_else(|| "daemon response was empty".into())
 }
 
 fn locked<'a>(state: &'a tauri::State<'_, DesktopState>) -> std::sync::MutexGuard<'a, Store> {
@@ -240,10 +292,15 @@ fn export_project(
     directory: String,
     state: tauri::State<'_, DesktopState>,
 ) -> Result<String, String> {
-    locked(&state)
-        .export_project(&project_id, directory)
-        .map(|path| path.display().to_string())
-        .map_err(|error| error.to_string())
+    let store = locked(&state);
+    tom_assistd::recovery::export_project(
+        &store,
+        &gateway(&store),
+        &project_id,
+        std::path::Path::new(&directory),
+    )
+    .map(|path| path.display().to_string())
+    .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -251,9 +308,30 @@ fn import_project(
     directory: String,
     state: tauri::State<'_, DesktopState>,
 ) -> Result<Project, String> {
-    locked(&state)
-        .import_project(directory)
+    let mut store = locked(&state);
+    let client = gateway(&store);
+    tom_assistd::recovery::import_project(&mut store, &client, std::path::Path::new(&directory))
         .map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn backup_project(
+    project_id: String,
+    directory: String,
+    state: tauri::State<'_, DesktopState>,
+) -> Result<String, String> {
+    // A backup is the same verified complete archive, not a raw WAL-file copy.
+    export_project(project_id, directory, state)
+}
+
+#[tauri::command]
+fn verify_archive(
+    directory: String,
+    state: tauri::State<'_, DesktopState>,
+) -> Result<Value, String> {
+    let store = locked(&state);
+    tom_assistd::recovery::verify_project(&gateway(&store), std::path::Path::new(&directory))
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -448,6 +526,9 @@ fn main() {
             resolve_intervention,
             export_project,
             import_project,
+            backup_project,
+            verify_archive,
+            exchange_request,
             diagnostics,
             memory_settings,
             seed_demo

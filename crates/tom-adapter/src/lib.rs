@@ -104,6 +104,27 @@ impl GatewayClient {
     pub fn health(&self) -> Result<Value> {
         self.request("GET", "/health", None)
     }
+    pub fn export_runtime(&self, project_id: &str, directory: &Path) -> Result<Value> {
+        self.request(
+            "POST",
+            "/archive/runtime/export",
+            Some(json!({"project_id":project_id,"directory":directory})),
+        )
+    }
+    pub fn verify_runtime(&self, directory: &Path) -> Result<Value> {
+        self.request(
+            "POST",
+            "/archive/runtime/verify",
+            Some(json!({"directory":directory})),
+        )
+    }
+    pub fn import_runtime(&self, action: &str, directory: &Path, context: &Value) -> Result<Value> {
+        self.request(
+            "POST",
+            "/archive/runtime/import",
+            Some(json!({"action":action,"directory":directory,"context":context})),
+        )
+    }
     pub fn capabilities(&self) -> Result<TomCapabilities> {
         self.request("GET", "/capabilities", None)
     }

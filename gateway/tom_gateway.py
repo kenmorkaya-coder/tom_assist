@@ -364,6 +364,8 @@ class ProjectRuntime:
         with self.lock:
             events = self.library.events(after)
             return {**self.settings, "front_row_count": len(self.rgm.state.anchors),
+                    "engine_tick": self.engine.state.tick, "rgm_current_tick": self.rgm.state.current_tick,
+                    "checkpoint_digest": self._current_checkpoint_digest(), "commit_count": len(self._idempotency),
                     "library_count": self.library.db.execute("SELECT COUNT(*) FROM library_records").fetchone()[0],
                     "demotion_count": self.library.db.execute("SELECT COUNT(*) FROM demotions").fetchone()[0],
                     "demotions": events, "next_event_id": events[-1]["event_id"] if events else after}
@@ -721,6 +723,8 @@ class TomGateway:
         with self._projects_lock:
             runtime = self._projects.get(project_id)
             if runtime is None:
+                from gateway.runtime_archive import finalize_pending
+                finalize_pending(self.data_dir / "projects" / project_id)
                 runtime = ProjectRuntime(
                     project_id,
                     self.data_dir / "projects" / project_id / "tom",
@@ -766,6 +770,18 @@ class TomGateway:
                 return 200, {"status": "ok", "gateway_version": GATEWAY_VERSION, "runtime_version": self.runtime_sha, "pinned_sha_match": self.pinned_sha_match}
             if method == "GET" and path == "/capabilities":
                 return 200, self.capabilities()
+            if method == "POST" and path == "/archive/runtime/export":
+                from gateway.runtime_archive import export_snapshot
+                return 200, export_snapshot(self, _safe_project_id(payload.get("project_id")), payload["directory"])
+            if method == "POST" and path == "/archive/runtime/verify":
+                from gateway.runtime_archive import validate_snapshot
+                return 200, validate_snapshot(self, Path(payload["directory"]))
+            if method == "POST" and path == "/archive/runtime/import":
+                from gateway.runtime_archive import import_snapshot
+                with self._projects_lock:
+                    if payload["context"]["project_id"] in self._projects:
+                        raise ValueError("runtime project is already active; import never overwrites")
+                    return 200, import_snapshot(self, payload["action"], payload["directory"], payload["context"])
             if method == "POST" and path == "/preview/rank":
                 k = max(1, min(int(payload.get("k", 10)), 100))
                 max_chars = max(1, min(int(payload.get("max_chars", 2000)), 12000))

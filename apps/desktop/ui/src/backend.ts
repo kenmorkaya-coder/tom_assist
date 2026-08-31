@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { AuditEvent, CanonicalState, InterventionRecord, Project, StateObject } from "./types";
 
 export interface MemorySettings { front_row_capacity: number; teach_on_conflict: boolean; }
+export interface PreparedExchange { packet: { packet_digest: string; activated_branch_ids: string[]; retrieved_anchor_ids: string[] }; packet_text: string; }
 
 export interface DesktopBackend {
   seedDemo(): Promise<Project>;
@@ -19,6 +20,9 @@ export interface DesktopBackend {
   memorySettings(projectId: string, settings?: Partial<MemorySettings>): Promise<MemorySettings>;
   exportProject(projectId: string, directory: string): Promise<string>;
   importProject(directory: string): Promise<Project>;
+  backupProject(projectId: string, directory: string): Promise<string>;
+  verifyArchive(directory: string): Promise<Record<string, unknown>>;
+  exchange(projectId: string, method: "turn.prepare" | "turn.sent" | "response.evaluate", payload: Record<string, unknown>): Promise<unknown>;
 }
 
 function now(): string { return new Date().toISOString(); }
@@ -54,4 +58,11 @@ export const tauriBackend: DesktopBackend = {
   memorySettings: (projectId, settings = {}) => invoke("memory_settings", { projectId, settings }),
   exportProject: (projectId, directory) => invoke("export_project", { projectId, directory }),
   importProject: (directory) => invoke("import_project", { directory }),
+  backupProject: (projectId, directory) => invoke("backup_project", { projectId, directory }),
+  verifyArchive: (directory) => invoke("verify_archive", { directory }),
+  exchange: (projectId, method, payload) => invoke("exchange_request", { envelope: {
+    protocol: "tom-assist/1.0", request_id: id(), idempotency_key: id(), method,
+    actor: { type: "desktop", instance_id: id() }, project_id: projectId,
+    payload: { ...payload, project_id: projectId }, sent_at: now(),
+  } }),
 };

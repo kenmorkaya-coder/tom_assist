@@ -1,4 +1,5 @@
 //! Event-sourced SQLite persistence with deterministic canonical digests.
+pub mod recovery;
 
 use rusqlite::{
     Connection, OpenFlags, OptionalExtension, Transaction, TransactionBehavior, params,
@@ -250,6 +251,7 @@ impl Store {
         connection.execute_batch(include_str!("../migrations/001_init.sql"))?;
         connection.execute_batch(include_str!("../migrations/002_context_manifests.sql"))?;
         connection.execute_batch(include_str!("../migrations/003_runtime_commits.sql"))?;
+        connection.execute_batch(include_str!("../migrations/004_recovery.sql"))?;
         Ok(Self { connection, path })
     }
 
@@ -259,6 +261,7 @@ impl Store {
         connection.execute_batch(include_str!("../migrations/001_init.sql"))?;
         connection.execute_batch(include_str!("../migrations/002_context_manifests.sql"))?;
         connection.execute_batch(include_str!("../migrations/003_runtime_commits.sql"))?;
+        connection.execute_batch(include_str!("../migrations/004_recovery.sql"))?;
         Ok(Self {
             connection,
             path: PathBuf::from(":memory:"),

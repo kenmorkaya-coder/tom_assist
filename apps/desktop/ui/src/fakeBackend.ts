@@ -41,6 +41,12 @@ export class FakeDesktopBackend implements DesktopBackend {
   }
   async exportProject(_projectId: string, directory: string): Promise<string> { return directory; }
   async importProject(_directory: string): Promise<Project> { return this.createProject("Imported project"); }
+  async backupProject(projectId: string, directory: string): Promise<string> { return this.exportProject(projectId, directory); }
+  async verifyArchive(_directory: string): Promise<Record<string, unknown>> { return { verified: true }; }
+  async exchange(_projectId: string, method: string): Promise<unknown> {
+    if (method === "turn.prepare") return { packet: { packet_digest: "fixture-packet", activated_branch_ids: ["fixture-branch"], retrieved_anchor_ids: [] }, packet_text: "[TOM_ASSIST_STATE v1] fixture" };
+    return { result: "PASS", diagnostics: [] };
+  }
   private update(id: string, version: number) { const project = this.projects.find((row) => row.id === id)!; project.state_version = version; project.state_digest = `sha256:v${version}`; }
   private event(type: string, base: number): AuditEvent { return { id: crypto.randomUUID(), event_type: type, actor_type: "user", actor_id: "desktop", base_state_version: base, prior_digest: `sha256:v${base}`, resulting_digest: `sha256:v${base + 1}`, created_at: new Date().toISOString() }; }
   private object(projectId: string, title: string, version: number): StateObject { const at = new Date().toISOString(); return { id: crypto.randomUUID(), project_id: projectId, type: "DECISION", title, canonical_text: title, status: "active", authority: "user", confidence: 1, binding_strength: "hard", source_turn_ids: ["desktop-capture"], evidence_ids: [], branch_refs: [], created_at: at, updated_at: at, effective_at: at, content_hash: `sha256:${title}`, state_version: version, last_selection_reason: "manual structured capture" }; }
