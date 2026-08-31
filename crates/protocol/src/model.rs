@@ -150,6 +150,7 @@ pub struct TomCapabilities {
     pub mechanics_profile_sha256: String,
     pub mechanics_parameters: BTreeMap<String, String>,
     pub kappa_decay_source: String,
+    pub preview_channels: Vec<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -276,6 +277,8 @@ pub struct ExcludedItem {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ContinuityPacket {
+    #[serde(default)]
+    pub activated_branch_ids: Vec<String>,
     pub packet_id: String,
     pub packet_digest: String,
     pub project_id: String,

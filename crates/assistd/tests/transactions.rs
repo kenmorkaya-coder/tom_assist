@@ -56,6 +56,8 @@ fn prepare_with_sections(
 ) -> tom_assistd::PreparedTurn {
     service
         .prepare_turn(PrepareTurnRequest {
+            activated_branch_ids: vec![],
+            candidate_trace: json!([]),
             project_id: "project-a".into(),
             workstream_id: "workstream-main".into(),
             provider_session_id: "session-a".into(),

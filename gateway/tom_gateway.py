@@ -53,6 +53,8 @@ DEFAULT_DATA_DIR = Path.home() / "Library" / "Application Support" / "TomAssist"
 MAX_REQUEST_BYTES = 2 * 1024 * 1024
 
 LOGGER = logging.getLogger("tom_assist.gateway")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from gateway.structural_preview import POLICY_VERSION, project_text, select_cohort, fuse_anchors
 
 
 def canonical_json(value: Any) -> bytes:
@@ -193,7 +195,7 @@ class ProjectRuntime:
         # create_client (external_api.py:2722). It keeps runtime state in this
         # project's exact directory and avoids controller-owned provider paths.
         from agency.mechanics.sicd_engine import TreeGrowthEngine
-        from memory.rgm import ReflectionGatedMemory
+        from gateway.front_row import FrontRowMemory as ReflectionGatedMemory
 
         fresh_project = not self._tree_path.exists()
         config = self._new_engine_config()
@@ -302,7 +304,7 @@ class ProjectRuntime:
         if not self._tree_path.exists() or not self._rgm_path.exists():
             return
         from agency.mechanics.sicd_engine import TreeGrowthEngine
-        from memory.rgm import ReflectionGatedMemory
+        from gateway.front_row import FrontRowMemory as ReflectionGatedMemory
 
         self.engine = TreeGrowthEngine.load(str(self._tree_path), cfg=self._new_engine_config())
         self.rgm = ReflectionGatedMemory()
@@ -357,14 +359,20 @@ class ProjectRuntime:
             # deliberately do not call retrieve_ltm_with_stm_triggers because
             # its pinned implementation contains plastic recall at lines 187-193.
             triggers = _compute_preview_triggers(len(self._idempotency))
-            candidates = self.rgm.vector_store.query(user_text, k=max(1, min(k * 3, 100)))
+            signature, projection, angle = project_text(user_text)
+            cohort, branch_trace = select_cohort(
+                self.engine.state.branches, projection, angle,
+                float(self.seed.mechanics_parameters["TOM_STIFFNESS_KAPPA_FLOOR"]),
+            )
+            candidates = self.rgm.vector_store.query(user_text, k=max(1, len(self.rgm.state.anchors)))
             # The pinned vector store sorts only on similarity. Its in-memory
             # and restored insertion orders differ, so make equal-score ordering
             # explicit before applying both result and character limits.
-            candidates = sorted(candidates, key=lambda item: (-float(item[1]), str(item[0])))
+            fused = fuse_anchors(self.rgm.state.anchors, candidates, cohort)
             ranked: list[dict[str, Any]] = []
             used_chars = 0
-            for record_id, similarity in candidates:
+            for scores in fused:
+                record_id = scores["id"]
                 record = self.rgm.state.anchors.get(record_id)
                 if record is None:
                     continue
@@ -380,8 +388,7 @@ class ProjectRuntime:
                     {
                         "id": str(record_id),
                         "text": bounded,
-                        "semantic_score": float(similarity),
-                        "structural_resonance": float(record.anchor_strength),
+                        **scores,
                         "dependency_relevance": 0.0,
                         "authority_strength": 1.0 if record.policy_outcome.value == "permit" else 0.0,
                     }
@@ -402,6 +409,11 @@ class ProjectRuntime:
                 "activation_id": activation_id,
                 "triggers": [asdict(trigger) for trigger in triggers],
                 "ranked_anchors": ranked,
+                "activated_branch_ids": [bid for bid, _, _ in cohort],
+                "candidate_trace": fused,
+                "branch_trace": branch_trace,
+                "load_signature": signature.as_dict(),
+                "policy_version": POLICY_VERSION,
                 "checkpoint_digest": checkpoint_digest,
             }
 
@@ -449,6 +461,8 @@ class ProjectRuntime:
                     "created_tick": self.engine.state.tick,
                 },
             )
+            if stored_id != "deferred":
+                self.rgm.state.anchors[stored_id].leaf_vec = list(project_text(text)[1].vector_8d)
             checkpoint_digest = self._persist_current_artifacts()
             result = {
                 "idempotency_key": idempotency_key,
@@ -605,6 +619,7 @@ class TomGateway:
             "mechanics_profile_sha256": self.seed.mechanics_profile_sha256,
             "mechanics_parameters": dict(sorted(self.seed.mechanics_parameters.items())),
             "kappa_decay_source": KAPPA_DECAY_SOURCE,
+            "preview_channels": ["lexical", "structural_geometry"],
         }
 
     def handle(self, method: str, path: str, payload: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:

@@ -70,6 +70,7 @@ fn fixture_lineage_survives_response_intervention_user_gate_and_restart() {
         AssistService::with_governance_verifier(Store::open(&database).unwrap(), FixtureVerifier);
     let draft = "Should we revive the obsolete pipeline?";
     let prepared = service.prepare_turn(PrepareTurnRequest {
+        activated_branch_ids: vec![], candidate_trace: json!([]),
         project_id: "fixture-project".into(), workstream_id: "main".into(), provider_session_id: "fixture-session".into(), user_draft: draft.into(),
         tom_checkpoint_digest: "sha256:checkpoint-v0".into(), tom_activation_id: "fixture-activation".into(),
         provider_capabilities: ProviderCapabilities { provider_surface: "fixture".into(), visible_prompt_injection: true, response_capture: true, hidden_context_visibility: false, model_internal_bias: ModelInternalBias::None, max_context_tokens: None, exact_tokenizer: None, supports_system_field: Some(false) },

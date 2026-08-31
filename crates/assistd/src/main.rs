@@ -18,7 +18,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .next()
         .map(PathBuf::from)
         .unwrap_or_else(|| socket.with_file_name("tom_gateway.sock"));
-    let service = Arc::new(AssistService::with_governance_verifier(
+    let service = Arc::new(AssistService::with_gateway(
         Store::open(database)?,
         GatewayClient::new(gateway_socket),
     ));

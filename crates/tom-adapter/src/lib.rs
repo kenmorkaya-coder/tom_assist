@@ -49,6 +49,10 @@ pub struct GatewayClient {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RankedAnchor {
+    pub rrf_score: f64,
+    pub lexical_rank: Option<u64>,
+    pub structural_rank: Option<u64>,
+    pub matched_branch_id: Option<String>,
     pub id: String,
     pub text: String,
     pub semantic_score: f64,
@@ -59,6 +63,10 @@ pub struct RankedAnchor {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RankPreview {
+    pub activated_branch_ids: Vec<String>,
+    pub candidate_trace: Vec<Value>,
+    pub branch_trace: Vec<Value>,
+    pub policy_version: String,
     pub activation_id: String,
     pub triggers: Vec<Value>,
     pub ranked_anchors: Vec<RankedAnchor>,

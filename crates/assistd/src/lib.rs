@@ -10,6 +10,10 @@ use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use tom_assist_context_admission::{
+    AdmissionRequest, Candidate, CandidatePool, ContextAdmissionEngine, IntegrityStatus,
+    ScoreComponents,
+};
 use tom_assist_governance::{
     CandidateChannel, EvaluationRequest, EvaluationState as GovernanceEvaluationState,
     GatewayVerifier, GovernanceEngine, GovernanceError, LedgerRule, extract_candidates,
@@ -22,6 +26,7 @@ use tom_assist_protocol::{
     PacketSection, ProviderCapabilities, StateMutationCandidate, StateObject, canonical_sha256,
     packet_digest,
 };
+use tom_assist_tom_adapter::GatewayClient;
 
 pub const SERVICE_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const SERVICE_PROTOCOL_VERSION: &str = tom_assist_protocol::PROTOCOL_VERSION;
@@ -86,6 +91,10 @@ pub type Result<T> = std::result::Result<T, ServiceError>;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PrepareTurnRequest {
+    #[serde(default)]
+    pub activated_branch_ids: Vec<String>,
+    #[serde(default)]
+    pub candidate_trace: Value,
     pub project_id: String,
     pub workstream_id: String,
     pub provider_session_id: String,
@@ -199,6 +208,7 @@ pub struct WireError {
 /// Process-local service core. SQLite remains the cross-process CAS authority;
 /// these locks ensure one logical writer enters a project transaction at a time.
 pub struct AssistService {
+    gateway: Option<GatewayClient>,
     store: Mutex<Store>,
     project_writers: Mutex<HashMap<String, Arc<Mutex<()>>>>,
     governance_verifier: Arc<dyn GatewayVerifier>,
@@ -214,10 +224,17 @@ impl AssistService {
         V: GatewayVerifier + 'static,
     {
         Self {
+            gateway: None,
             store: Mutex::new(store),
             project_writers: Mutex::new(HashMap::new()),
             governance_verifier: Arc::new(verifier),
         }
+    }
+
+    pub fn with_gateway(store: Store, gateway: GatewayClient) -> Self {
+        let mut service = Self::with_governance_verifier(store, gateway.clone());
+        service.gateway = Some(gateway);
+        service
     }
 
     fn project_lock(&self, project_id: &str) -> Arc<Mutex<()>> {
@@ -229,12 +246,110 @@ impl AssistService {
             .clone()
     }
 
-    pub fn prepare_turn(&self, request: PrepareTurnRequest) -> Result<PreparedTurn> {
+    pub fn prepare_turn(&self, mut request: PrepareTurnRequest) -> Result<PreparedTurn> {
+        let project_lock = self.project_lock(&request.project_id);
+        let _writer = project_lock.lock().expect("project lock poisoned");
         let store = self.store.lock().expect("store poisoned");
         let project = store
             .project(&request.project_id)?
             .ok_or_else(|| StoreError::ProjectNotFound(request.project_id.clone()))?;
         let state = store.current_state(&request.project_id)?;
+        if let Some(gateway) = &self.gateway {
+            // Production owns projection/admission; page-provided manifests are not trusted.
+            let preview = gateway
+                .preview_rank(&request.project_id, &request.user_draft, 10, 2000)
+                .map_err(|error| {
+                    ServiceError::Invalid(format!("TOM_RUNTIME_UNAVAILABLE: {error}"))
+                })?;
+            let mut candidates: Vec<Candidate> = state
+                .objects
+                .iter()
+                .map(|object| Candidate {
+                    id: object.id.clone(),
+                    project_id: object.project_id.clone(),
+                    workstream_id: object.workstream_id.clone(),
+                    pool: CandidatePool::AuthoritativeState,
+                    state_type: Some(object.object_type),
+                    status: Some(object.status),
+                    text: object.canonical_text.clone(),
+                    authority: serde_json::to_value(object.authority)
+                        .unwrap()
+                        .as_str()
+                        .unwrap()
+                        .into(),
+                    binding_hard: object.binding_strength
+                        == Some(tom_assist_protocol::BindingStrength::Hard),
+                    integrity: IntegrityStatus::Verified,
+                    privacy_allowed: true,
+                    dependencies: vec![],
+                    provenance: None,
+                    reconsideration_condition: object.reconsideration_condition.clone(),
+                    scores: ScoreComponents {
+                        retrieval_rrf: None,
+                        semantic_relevance: 0.0,
+                        structural_resonance: 0.0,
+                        dependency_sequence_relevance: 0.0,
+                        authority_strength: 1.0,
+                        bounded_recency: 0.0,
+                        stale_probability: 0.0,
+                        conflict_penalty: 0.0,
+                        redundancy_penalty: 0.0,
+                    },
+                })
+                .collect();
+            candidates.extend(preview.ranked_anchors.iter().map(|anchor| Candidate {
+                id: anchor.id.clone(),
+                project_id: request.project_id.clone(),
+                workstream_id: Some(request.workstream_id.clone()),
+                pool: CandidatePool::RetrievedAnchor,
+                state_type: None,
+                status: None,
+                text: anchor.text.clone(),
+                authority: "observation".into(),
+                binding_hard: false,
+                integrity: IntegrityStatus::Verified,
+                privacy_allowed: true,
+                dependencies: vec![],
+                provenance: Some(anchor.id.clone()),
+                reconsideration_condition: None,
+                scores: ScoreComponents {
+                    retrieval_rrf: Some(anchor.rrf_score),
+                    semantic_relevance: anchor.semantic_score,
+                    structural_resonance: anchor.structural_resonance,
+                    dependency_sequence_relevance: 0.0,
+                    authority_strength: 0.0,
+                    bounded_recency: 0.0,
+                    stale_probability: 0.0,
+                    conflict_penalty: 0.0,
+                    redundancy_penalty: 0.0,
+                },
+            }));
+            let admitted = ContextAdmissionEngine::default().build(AdmissionRequest {
+                project_id: request.project_id.clone(),
+                project_name: project.name.clone(),
+                workstream_id: request.workstream_id.clone(),
+                workstream_name: request.workstream_id.clone(),
+                provider_session_id: request.provider_session_id.clone(),
+                state_version: state.state_version,
+                state_digest: project.state_digest.clone(),
+                tom_checkpoint_digest: preview.checkpoint_digest.clone(),
+                tom_activation_id: preview.activation_id.clone(),
+                activated_branch_ids: preview.activated_branch_ids.clone(),
+                user_draft: request.user_draft.clone(),
+                provider_capabilities: request.provider_capabilities.clone(),
+                candidates,
+                budget_tokens: 500,
+            })?;
+            request.tom_checkpoint_digest = preview.checkpoint_digest;
+            request.tom_activation_id = preview.activation_id;
+            request.activated_branch_ids = preview.activated_branch_ids;
+            request.candidate_trace = json!({"retrieval":preview.candidate_trace,"branches":preview.branch_trace,"admission":admitted.trace});
+            request.sections = admitted.packet.sections;
+            request.retrieved_anchor_ids = admitted.packet.retrieved_anchor_ids;
+            request.excluded = admitted.packet.excluded;
+            request.warnings = admitted.packet.warnings;
+            request.packet_text = admitted.state_block;
+        }
         let draft_hash = canonical_sha256(&request.user_draft)?;
         let mut admitted_item_ids: Vec<&str> = request
             .sections
@@ -248,6 +363,11 @@ impl AssistService {
             state_version: state.state_version,
             tom_checkpoint_digest: &request.tom_checkpoint_digest,
             admitted_item_ids,
+            activated_branch_ids: request
+                .activated_branch_ids
+                .iter()
+                .map(String::as_str)
+                .collect(),
             renderer_version: RENDERER_VERSION,
             policy_version: POLICY_VERSION,
             user_draft_hash: &draft_hash,
@@ -255,6 +375,7 @@ impl AssistService {
         let packet_id = canonical_sha256(&json!({"kind":"packet","digest":digest}))?;
         let estimated_tokens = request.packet_text.chars().count().div_ceil(4) as u64;
         let packet = ContinuityPacket {
+            activated_branch_ids: request.activated_branch_ids.clone(),
             packet_id: packet_id.clone(),
             packet_digest: digest.clone(),
             project_id: request.project_id.clone(),
@@ -275,6 +396,9 @@ impl AssistService {
             warnings: request.warnings,
         };
         store.record_context_run(&ContextRunRecord {
+            activated_branch_ids: request.activated_branch_ids,
+            admitted_anchor_ids: packet.retrieved_anchor_ids.clone(),
+            candidate_trace_json: serde_json::to_string(&request.candidate_trace)?,
             id: packet_id,
             project_id: request.project_id,
             workstream_id: request.workstream_id,

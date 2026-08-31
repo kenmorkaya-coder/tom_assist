@@ -75,6 +75,11 @@ export interface ProviderCapabilities {
   supports_system_field?: boolean;
 }
 export interface TomCapabilities {
+  /**
+   * @minItems 2
+   * @maxItems 2
+   */
+  preview_channels?: [unknown, unknown];
   runtime_version: string;
   state_format_version: "sicd-engine-save/1";
   supports_load_ingest: boolean;
@@ -152,6 +157,7 @@ export interface StateEdge {
   created_event_id: string;
 }
 export interface ContinuityPacket {
+  activated_branch_ids?: string[];
   packet_id: string;
   packet_digest: string;
   project_id: string;

@@ -19,6 +19,7 @@ tom-assist-persistence = { path = "../persistence" }
 tom-assist-protocol = { path = "../protocol" }
 tom-assist-governance = { path = "../governance" }
 tom-assist-tom-adapter = { path = "../tom-adapter" }
+tom-assist-context-admission = { path = "../context-admission" }
 
 [dev-dependencies]
 tempfile = "3"

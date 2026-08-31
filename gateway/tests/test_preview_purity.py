@@ -33,7 +33,7 @@ def test_preview_path_has_no_forbidden_calls() -> None:
     assert ".step(" not in source
 
 
-def test_one_hundred_mixed_previews_are_byte_pure(tmp_path: Path) -> None:
+def test_one_hundred_mixed_previews_are_byte_pure(tmp_path: Path, monkeypatch) -> None:
     _gateway, runtime = seeded_gateway(tmp_path)
     before_tree, before_rgm = runtime.serialized_state_bytes()
     before_tick = runtime.rgm.state.current_tick
@@ -44,13 +44,20 @@ def test_one_hundred_mixed_previews_are_byte_pure(tmp_path: Path) -> None:
 
     runtime.rgm.read_memory = forbidden
     runtime.engine.step = forbidden
+    runtime.engine.apply_leaf_vec_update = forbidden
+    import agency.mechanics.leaf_vectors as leaf_vectors
+    monkeypatch.setattr(leaf_vectors, "select_activated_branches", forbidden)
+    drafts = ["connected beam column load path", "rule contradiction equations", "first then after stage sequence"]
     for index in range(100):
         result = runtime.preview_rank(
-            f"draft {index % 13}: what held constraint applies?",
+            f"{drafts[index % 3]} draft {index % 13}",
             1 + (index % 10),
             80 + (index % 17) * 37,
         )
         assert result["activation_id"].startswith("sha256:")
+        assert len(result["activated_branch_ids"]) == 16
+        assert any(row["structural_rank"] is not None for row in result["candidate_trace"])
+        assert result["policy_version"] == "context-policy/1.1"
 
     after_tree, after_rgm = runtime.serialized_state_bytes()
     assert after_tree == before_tree

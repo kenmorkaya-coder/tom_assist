@@ -6,6 +6,7 @@ use tom_assist_protocol::{ModelInternalBias, ProviderCapabilities, StateStatus, 
 
 fn scores(structural: f64, semantic: f64) -> ScoreComponents {
     ScoreComponents {
+        retrieval_rrf: None,
         semantic_relevance: semantic,
         structural_resonance: structural,
         dependency_sequence_relevance: 0.5,
@@ -41,6 +42,7 @@ fn request(mut candidates: Vec<Candidate>) -> AdmissionRequest {
     // Deliberately unsorted input proves the engine owns deterministic ordering.
     candidates.reverse();
     AdmissionRequest {
+        activated_branch_ids: vec!["branch-golden".into()],
         project_id: "project-alpha".into(),
         project_name: "Alpha".into(),
         workstream_id: "workstream-core".into(),
@@ -163,7 +165,7 @@ fn golden_packet_renderer_manifest_and_digest_are_byte_stable() {
     assert_eq!(first.packet.excluded.len(), 2);
     assert_eq!(
         first.packet.packet_digest,
-        "sha256:a7292077bb2dfb40f92d7d051a0fa7ba900f57050d1b4edc1e0cddb5b6f83910"
+        "sha256:d601e32f29e48c70c10030209e0bd89706a8f43175b051a860e36aa5a7c78601"
     );
     assert!(first.composer_text.ends_with(
         "[CURRENT_USER_REQUEST]\nWhat should I implement next?\nKeep the answer concise."

@@ -9,6 +9,7 @@ pub struct PacketDigestInput<'a> {
     pub state_version: u64,
     pub tom_checkpoint_digest: &'a str,
     pub admitted_item_ids: Vec<&'a str>,
+    pub activated_branch_ids: Vec<&'a str>,
     pub renderer_version: &'a str,
     pub policy_version: &'a str,
     pub user_draft_hash: &'a str,
@@ -42,9 +43,12 @@ pub fn canonical_sha256<T: Serialize>(value: &T) -> Result<String, serde_json::E
 }
 
 pub fn packet_digest(mut input: PacketDigestInput<'_>) -> Result<String, serde_json::Error> {
+    input.activated_branch_ids.sort_unstable();
+    input.activated_branch_ids.dedup();
     input
         .admitted_item_ids
         .sort_unstable_by(|a, b| a.as_bytes().cmp(b.as_bytes()));
+    input.admitted_item_ids.dedup();
     canonical_sha256(&input)
 }
 
@@ -70,6 +74,7 @@ mod tests {
             state_version: 7,
             tom_checkpoint_digest: "sha256:checkpoint",
             admitted_item_ids: ids,
+            activated_branch_ids: vec!["branch-1"],
             renderer_version: "authoritative-state/1.0",
             policy_version: "context-policy/1.0",
             user_draft_hash: "sha256:draft",
@@ -77,6 +82,12 @@ mod tests {
         assert_eq!(
             packet_digest(base(vec!["b", "a"])).unwrap(),
             packet_digest(base(vec!["a", "b"])).unwrap()
+        );
+        let mut different_cohort = base(vec!["a", "b"]);
+        different_cohort.activated_branch_ids = vec!["branch-2"];
+        assert_ne!(
+            packet_digest(base(vec!["a", "b"])).unwrap(),
+            packet_digest(different_cohort).unwrap()
         );
     }
 }

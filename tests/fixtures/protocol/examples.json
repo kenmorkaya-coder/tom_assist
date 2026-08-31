@@ -20,6 +20,7 @@
     "supports_system_field": false
   },
   "tom_capabilities": {
+    "preview_channels": ["lexical", "structural_geometry"],
     "runtime_version": "8799ccbdd",
     "state_format_version": "sicd-engine-save/1",
     "supports_load_ingest": true,
@@ -106,6 +107,7 @@
       }]
     }],
     "retrieved_anchor_ids": [],
+    "activated_branch_ids": ["branch-example"],
     "excluded": [{"id": "old-item", "reason": "superseded"}],
     "estimated_tokens": 123,
     "warnings": []

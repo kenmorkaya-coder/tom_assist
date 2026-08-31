@@ -6,6 +6,7 @@
   "additionalProperties": false,
   "required": ["packet_id", "packet_digest", "project_id", "workstream_id", "provider_session_id", "project_state_version", "project_state_digest", "tom_checkpoint_digest", "draft_hash", "policy_version", "renderer_version", "provider_capabilities", "tom_activation_id", "sections", "retrieved_anchor_ids", "excluded", "estimated_tokens", "warnings"],
   "properties": {
+    "activated_branch_ids": {"type":"array","items":{"type":"string"},"uniqueItems":true},
     "packet_id": {"type": "string"},
     "packet_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "project_id": {"type": "string", "format": "uuid"},
@@ -60,4 +61,3 @@
     "warnings": {"type": "array", "items": {"type": "string"}}
   }
 }
-

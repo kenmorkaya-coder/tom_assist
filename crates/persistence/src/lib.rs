@@ -149,6 +149,9 @@ pub struct Snapshot {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ContextRunRecord {
+    pub activated_branch_ids: Vec<String>,
+    pub admitted_anchor_ids: Vec<String>,
+    pub candidate_trace_json: String,
     pub id: String,
     pub project_id: String,
     pub workstream_id: String,
@@ -245,6 +248,7 @@ impl Store {
             "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;",
         )?;
         connection.execute_batch(include_str!("../migrations/001_init.sql"))?;
+        connection.execute_batch(include_str!("../migrations/002_context_manifests.sql"))?;
         Ok(Self { connection, path })
     }
 
@@ -252,6 +256,7 @@ impl Store {
         let connection = Connection::open_in_memory()?;
         connection.execute_batch("PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL;")?;
         connection.execute_batch(include_str!("../migrations/001_init.sql"))?;
+        connection.execute_batch(include_str!("../migrations/002_context_manifests.sql"))?;
         Ok(Self {
             connection,
             path: PathBuf::from(":memory:"),
@@ -810,10 +815,16 @@ impl Store {
     }
 
     pub fn record_context_run(&self, record: &ContextRunRecord) -> Result<()> {
-        self.connection.execute(
+        let transaction = self.connection.unchecked_transaction()?;
+        transaction.execute(
+            "INSERT OR IGNORE INTO context_manifests(context_id,activated_branch_ids_json,admitted_anchor_ids_json,candidate_trace_json) VALUES(?1,?2,?3,?4)",
+            params![record.id, serde_json::to_string(&record.activated_branch_ids)?, serde_json::to_string(&record.admitted_anchor_ids)?, record.candidate_trace_json],
+        )?;
+        transaction.execute(
             "INSERT OR IGNORE INTO context_runs(id,project_id,workstream_id,provider_session_id,draft_hash,state_version,tom_checkpoint_digest,activation_id,policy_version,renderer_version,selected_json,excluded_json,packet_text,packet_digest,estimated_tokens,latency_ms,created_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17)",
             params![record.id, record.project_id, record.workstream_id, record.provider_session_id, record.draft_hash, record.state_version, record.tom_checkpoint_digest, record.activation_id, record.policy_version, record.renderer_version, record.selected_json, record.excluded_json, record.packet_text, record.packet_digest, record.estimated_tokens, record.latency_ms, record.created_at],
         )?;
+        transaction.commit()?;
         Ok(())
     }
 
@@ -822,11 +833,24 @@ impl Store {
         project_id: &str,
         digest: &str,
     ) -> Result<Option<ContextRunRecord>> {
-        self.connection.query_row(
+        let record = self.connection.query_row(
             "SELECT id,project_id,COALESCE(workstream_id,''),COALESCE(provider_session_id,''),draft_hash,state_version,tom_checkpoint_digest,activation_id,policy_version,renderer_version,selected_json,excluded_json,packet_text,packet_digest,estimated_tokens,latency_ms,created_at FROM context_runs WHERE project_id=?1 AND packet_digest=?2 ORDER BY rowid DESC LIMIT 1",
             params![project_id, digest],
-            |row| Ok(ContextRunRecord { id: row.get(0)?, project_id: row.get(1)?, workstream_id: row.get(2)?, provider_session_id: row.get(3)?, draft_hash: row.get(4)?, state_version: row.get(5)?, tom_checkpoint_digest: row.get(6)?, activation_id: row.get(7)?, policy_version: row.get(8)?, renderer_version: row.get(9)?, selected_json: row.get(10)?, excluded_json: row.get(11)?, packet_text: row.get(12)?, packet_digest: row.get(13)?, estimated_tokens: row.get(14)?, latency_ms: row.get(15)?, created_at: row.get(16)? }),
-        ).optional().map_err(Into::into)
+            |row| Ok(ContextRunRecord { activated_branch_ids: vec![], admitted_anchor_ids: vec![], candidate_trace_json: "[]".into(), id: row.get(0)?, project_id: row.get(1)?, workstream_id: row.get(2)?, provider_session_id: row.get(3)?, draft_hash: row.get(4)?, state_version: row.get(5)?, tom_checkpoint_digest: row.get(6)?, activation_id: row.get(7)?, policy_version: row.get(8)?, renderer_version: row.get(9)?, selected_json: row.get(10)?, excluded_json: row.get(11)?, packet_text: row.get(12)?, packet_digest: row.get(13)?, estimated_tokens: row.get(14)?, latency_ms: row.get(15)?, created_at: row.get(16)? }),
+        ).optional()?;
+        if let Some(mut record) = record {
+            if let Some((branches, anchors, trace)) = self.connection.query_row(
+                "SELECT activated_branch_ids_json,admitted_anchor_ids_json,candidate_trace_json FROM context_manifests WHERE context_id=?1",
+                [&record.id], |row| Ok((row.get::<_,String>(0)?,row.get::<_,String>(1)?,row.get::<_,String>(2)?)),
+            ).optional()? {
+                record.activated_branch_ids = serde_json::from_str(&branches)?;
+                record.admitted_anchor_ids = serde_json::from_str(&anchors)?;
+                record.candidate_trace_json = trace;
+            }
+            Ok(Some(record))
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn record_turn(&self, record: &TurnRecord) -> Result<()> {

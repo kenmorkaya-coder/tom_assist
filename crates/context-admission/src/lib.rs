@@ -35,6 +35,8 @@ pub enum IntegrityStatus {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ScoreComponents {
+    #[serde(default)]
+    pub retrieval_rrf: Option<f64>,
     pub semantic_relevance: f64,
     pub structural_resonance: f64,
     pub dependency_sequence_relevance: f64,
@@ -48,6 +50,7 @@ pub struct ScoreComponents {
 impl ScoreComponents {
     fn clamped(&self) -> Self {
         Self {
+            retrieval_rrf: self.retrieval_rrf,
             semantic_relevance: clamp(self.semantic_relevance),
             structural_resonance: clamp(self.structural_resonance),
             dependency_sequence_relevance: clamp(self.dependency_sequence_relevance),
@@ -113,8 +116,13 @@ impl Default for ScoringPolicy {
 impl ScoringPolicy {
     pub fn score(&self, components: &ScoreComponents) -> f64 {
         let value = components.clamped();
-        self.w_semantic * value.semantic_relevance
-            + self.w_structural * value.structural_resonance
+        value
+            .retrieval_rrf
+            .map(|rrf| clamp(rrf * 61.0) * (self.w_semantic + self.w_structural))
+            .unwrap_or(
+                self.w_semantic * value.semantic_relevance
+                    + self.w_structural * value.structural_resonance,
+            )
             + self.w_sequence * value.dependency_sequence_relevance
             + self.w_authority * value.authority_strength
             + self.w_recency * value.bounded_recency
@@ -126,6 +134,7 @@ impl ScoringPolicy {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AdmissionRequest {
+    pub activated_branch_ids: Vec<String>,
     pub project_id: String,
     pub project_name: String,
     pub workstream_id: String,
@@ -143,6 +152,7 @@ pub struct AdmissionRequest {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AdmissionTrace {
+    pub components: BTreeMap<String, ScoreComponents>,
     pub policy_version: String,
     pub scored: BTreeMap<String, f64>,
     pub admitted_ids: Vec<String>,
@@ -368,6 +378,11 @@ impl ContextAdmissionEngine {
             state_version: request.state_version,
             tom_checkpoint_digest: &request.tom_checkpoint_digest,
             admitted_item_ids: admitted_ids,
+            activated_branch_ids: request
+                .activated_branch_ids
+                .iter()
+                .map(String::as_str)
+                .collect(),
             renderer_version: RENDERER_VERSION,
             policy_version: &self.policy.policy_version,
             user_draft_hash: &draft_hash,
@@ -381,6 +396,7 @@ impl ContextAdmissionEngine {
             warnings.push("one or more selected items has an explicit missing dependency".into());
         }
         let packet = ContinuityPacket {
+            activated_branch_ids: request.activated_branch_ids,
             packet_id: canonical_sha256(&format!("packet\0{digest}"))?,
             packet_digest: digest,
             project_id: request.project_id,
@@ -409,6 +425,10 @@ impl ContextAdmissionEngine {
             state_block,
             composer_text,
             trace: AdmissionTrace {
+                components: ranked_by_id
+                    .iter()
+                    .map(|(id, row)| (id.clone(), row.candidate.scores.clone()))
+                    .collect(),
                 policy_version: self.policy.policy_version.clone(),
                 scored,
                 admitted_ids: selected.into_iter().collect(),
