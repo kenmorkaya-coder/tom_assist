@@ -1,8 +1,10 @@
-# DRAFT-PENDING-OWNER-FREEZE
+# FROZEN-WP25-V1 overlay on byte-preserved WP-23 sources
 
-WP-23 authoring artifacts only. **No battery run, live exchange, quota use, owner
-freeze, efficacy result or G-gate verdict is present.** File/oracle contract checks
-are not results on experimental arms.
+The authored WP-23 case recipes, answer keys and numeric margins remain byte
+unchanged. `FROZEN_V1.md` and `manifest.json` record the Review 8 owner freeze,
+33-case pilot selection, floor-only injection rule and canonical freeze SHA.
+Static file/oracle checks are not experimental results, and neither the freeze nor
+the authorized pilot can issue a G-gate verdict.
 
 ## Inventory and inputs
 
@@ -69,7 +71,7 @@ For no-rot SUB-D, optionally pass the actually observed `packet_injected` boolea
 to `request_for_answer`. `packet_policy_match` is null when unmeasured, false for
 gratuitous injection, true for no injection; it does not change action correctness.
 
-## Limits requiring owner review before freeze
+## Frozen pilot boundary
 
 - Closed-action-choice tasks are not proof of arbitrary free-prose governance,
   native structural semantics, model-internal access or real-work generalization.
@@ -83,10 +85,10 @@ gratuitous injection, true for no injection; it does not change action correctne
   not a claim this renderer/product meets it. Missing telemetry is not success.
 - Session/restart boundaries are input recipes, not evidence of real browser or
   service restarts. Recipe IDs are fixture IDs, not ready-made native UUID imports.
-- Owner freeze must audit content/labels, realistic pressure, baselines, native
-  import/production runner, run pins, model/token budget, statistics, stop rules
-  and consent. No live command is supplied. Do not alter a key/criterion after
-  seeing an outcome; create a new version before a separately authorized run.
+- Review 8 freezes the draft margins and authorizes only the recorded 33 × 5
+  pilot. Do not alter a key/criterion after seeing an outcome; create a new
+  pre-registration version before a separately authorized run.
 
-See `PREREGISTRATION.md`. Every artifact remains **DRAFT-PENDING-OWNER-FREEZE**;
-the manifest has `owner_frozen:false`, `runs:[]`, and no verdicts.
+See byte-preserved `PREREGISTRATION.md` plus `FROZEN_V1.md`. The manifest has
+`owner_frozen:true`; pilot run artifacts are recorded separately and contain no
+G-gate verdict.

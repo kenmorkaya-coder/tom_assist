@@ -117,8 +117,23 @@ def main() -> int:
         manifest_path = ROOT / "manifest.json"
         if manifest_path.exists():
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            assert manifest["owner_frozen"] is False and manifest["status"] == STATUS
-            assert manifest["files_sha256"] == inventory(), "draft file checksum mismatch; intentional draft revision requires new inventory"
+            if manifest["owner_frozen"] is True:
+                assert manifest["status"] == "FROZEN-WP25-V1"
+                assert manifest["freeze"]["version"] == "wp25-prereg-frozen/1"
+                # The authoring inventory is retained as the immutable source
+                # snapshot. Freeze/runner code is separately pinned by WP-25.
+                for relative, expected in manifest["files_sha256"].items():
+                    if ("/cases/" in relative or "/answers/" in relative
+                            or relative.endswith("/domains.json")
+                            or relative.endswith("/PREREGISTRATION.md")):
+                        repository = ROOT.parents[2]
+                        actual = "sha256:" + hashlib.sha256((repository / relative).read_bytes()).hexdigest()
+                        assert actual == expected, f"frozen authored file changed: {relative}"
+                result["freeze_status"] = manifest["status"]
+                result["freeze_version"] = manifest["freeze"]["version"]
+            else:
+                assert manifest["status"] == STATUS
+                assert manifest["files_sha256"] == inventory(), "draft file checksum mismatch; intentional draft revision requires new inventory"
             assert manifest["materialized_case_sha256"] == result["materialized_case_sha256"]
         result.pop("materialized_case_sha256")
         print(json.dumps(result,sort_keys=True))

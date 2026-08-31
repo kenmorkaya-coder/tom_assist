@@ -1,6 +1,6 @@
 # Validation harness scaffold
 
-This directory is instrumentation only and emits no gate verdicts. WP-23 adds [draft battery artifacts](batteries/wp23-draft/README.md), all **DRAFT-PENDING-OWNER-FREEZE**; they are not frozen validation batteries and cannot be replayed by this scaffold.
+This directory is instrumentation only and emits no G-gate verdicts. WP-23's authored battery sources remain byte-preserved; Review 8 freezes them through the [WP-25 frozen overlay](batteries/wp23-draft/FROZEN_V1.md) for the explicitly authorized 33-case production pilot. The old fixture replay stays disabled; `production_runner.py` is the stop-rule-bound real-product runner.
 
 `harness.py` replays stored JSONL histories through SUB-A…SUB-E, invokes the deterministic oracle as a separate stdin/stdout process, records packet/event traces, and emits an Appendix-C-format Markdown report plus the G15 reproducibility fields. `fixtures/toy_cases.jsonl` is a three-case plumbing smoke fixture, not a product-validation corpus.
 

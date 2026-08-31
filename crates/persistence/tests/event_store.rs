@@ -1,7 +1,8 @@
 use tempfile::tempdir;
 use tom_assist_persistence::{Store, StoreError, StoreMode};
 use tom_assist_protocol::{
-    Authority, BindingStrength, StateObject, StateStatus, StateType, canonical_sha256,
+    Authority, BindingStrength, EdgeType, StateEdge, StateObject, StateStatus, StateType,
+    canonical_sha256,
 };
 
 const NOW: &str = "2026-08-09T12:00:00Z";
@@ -155,6 +156,64 @@ fn provider_candidates_cannot_cross_the_authority_gate() {
         store.project("project-1").unwrap().unwrap().state_version,
         0
     );
+}
+
+#[test]
+fn native_import_batches_preserve_authority_provenance_and_event_versions() {
+    let mut store = Store::open_memory().unwrap();
+    store
+        .create_project(
+            "project-1",
+            "Imported fixture",
+            "state-focused",
+            "default",
+            "owner",
+            "create-import",
+            NOW,
+        )
+        .unwrap();
+    let first = object("project-1", "old", StateType::Decision, "Old method");
+    let mut second = object("project-1", "new", StateType::Decision, "New method");
+    second.authority = Authority::ProviderCandidate;
+    second.status = StateStatus::Proposed;
+    second.source_turn_ids = vec!["60000000-0000-4000-8000-000000000001:assistant".into()];
+    store
+        .import_state_batch(
+            "project-1",
+            vec![first],
+            vec![],
+            0,
+            "wp25-importer",
+            "import-1",
+            NOW,
+        )
+        .unwrap();
+    store
+        .import_state_batch(
+            "project-1",
+            vec![second],
+            vec![StateEdge {
+                id: "edge-1".into(),
+                project_id: "project-1".into(),
+                from_state_id: "new".into(),
+                edge_type: EdgeType::Supersedes,
+                to_state_id: "old".into(),
+                created_event_id: "import-2".into(),
+            }],
+            1,
+            "wp25-importer",
+            "import-2",
+            NOW,
+        )
+        .unwrap();
+    let state = store.current_state("project-1").unwrap();
+    assert_eq!(state.state_version, 2);
+    assert_eq!(state.edges.len(), 1);
+    let imported = state.objects.iter().find(|row| row.id == "new").unwrap();
+    assert_eq!(imported.authority, Authority::ProviderCandidate);
+    assert_eq!(imported.status, StateStatus::Proposed);
+    assert_eq!(imported.source_turn_ids[0], "60000000-0000-4000-8000-000000000001:assistant");
+    assert_eq!(store.replay("project-1").unwrap(), state);
 }
 
 #[test]

@@ -490,6 +490,51 @@ impl Store {
         )
     }
 
+    /// Import one ordered batch through the native event/CAS path.
+    ///
+    /// This is used by audited project importers that already validated their
+    /// source bundle. It preserves the source authority/status instead of
+    /// silently promoting candidates, and it advances the ordinary event log.
+    #[allow(clippy::too_many_arguments)]
+    pub fn import_state_batch(
+        &mut self,
+        project_id: &str,
+        mut objects: Vec<StateObject>,
+        edges: Vec<StateEdge>,
+        base_state_version: u64,
+        actor_id: &str,
+        idempotency_key: &str,
+        created_at: &str,
+    ) -> Result<EventRecord> {
+        if objects.is_empty() && edges.is_empty() {
+            return Err(StoreError::Integrity(
+                "import batch must contain state or relationships".into(),
+            ));
+        }
+        if objects.iter().any(|object| object.project_id != project_id)
+            || edges.iter().any(|edge| edge.project_id != project_id)
+        {
+            return Err(StoreError::Integrity(
+                "import batch contains cross-project state".into(),
+            ));
+        }
+        let next_version = base_state_version + 1;
+        for object in &mut objects {
+            object.state_version = next_version;
+        }
+        self.commit_mutation(
+            project_id.to_owned(),
+            objects,
+            edges,
+            base_state_version,
+            "imported",
+            actor_id,
+            idempotency_key,
+            created_at,
+            "STATE_IMPORTED",
+        )
+    }
+
     pub fn supersede(
         &mut self,
         project_id: &str,

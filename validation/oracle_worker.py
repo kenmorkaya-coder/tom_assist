@@ -30,7 +30,7 @@ def score(request: dict) -> dict:
 
 
 def score_action(request: dict) -> dict:
-    """DRAFT-PENDING-OWNER-FREEZE: exact recorded-answer checks, not context search.
+    """Frozen exact recorded-answer checks, not context search.
 
     Context/probe are deliberately ignored. This module never chooses an answer.
     Dict key order is immaterial; pre-registered list order and all values exact.
@@ -51,7 +51,7 @@ def score_action(request: dict) -> dict:
     packet_policy = None
     if isinstance(request.get("expected_packet_injected"), bool) and isinstance(request.get("packet_injected"), bool):
         packet_policy = request["packet_injected"] == request["expected_packet_injected"]
-    return {"oracle_version":"typed-action-oracle/1", "label":"DRAFT-PENDING-OWNER-FREEZE",
+    return {"oracle_version":"typed-action-oracle/1", "label":"FROZEN-WP25-V1",
             "answer_shape_valid":shape, "field_matches":fields,
             "action_consistent":action_consistent, "explicit_mismatch":explicit_mismatch,
             "packet_policy_match":packet_policy,

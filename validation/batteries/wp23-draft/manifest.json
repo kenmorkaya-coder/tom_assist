@@ -1,6 +1,6 @@
 {
   "cases": 132,
-  "check_kind": "authoring-contract-only",
+  "check_kind": "frozen-corpus-and-production-pilot-contract",
   "families": {
     "ASSUMPTION": 12,
     "COMPLETED_WORK": 12,
@@ -49,7 +49,7 @@
   },
   "format": "tom-assist-draft-inventory/1",
   "gate_verdicts": [],
-  "hypothesis_status": "unexecuted draft",
+  "hypothesis_status": "frozen, pilot unexecuted",
   "materialized_case_sha256": {
     "D23-ASSUMPTION-01": "sha256:99d2b4f82905889e1709b4cd22ff1f0fdd6155f5f93ef6fcfdf9623db39bc90e",
     "D23-ASSUMPTION-02": "sha256:75f7b79ec4d6ea7d49e6b0620aba8c2f7225977896adca0abd96b36eb68c76fd",
@@ -184,6 +184,63 @@
     "D23-WORKSTREAM-11": "sha256:ecff814c85912e2d4b3cec4314dd99ec12090ec64ea39fa0317da01555a76c3c",
     "D23-WORKSTREAM-12": "sha256:2e54bc38c37cfe7027250f56c9c4fd98ccc733f0296684cbf24cc750c088c6c7"
   },
+  "freeze": {
+    "answer_keys_byte_unchanged": true,
+    "arm_order": "SUB-A..SUB-E rotated left by lexicographic case index modulo five",
+    "authorized_generations": 165,
+    "bootstrap": {
+      "kind": "domain-cluster",
+      "replicates": 10000,
+      "seed": 1729
+    },
+    "freeze_record_sha256": "sha256:df3cdb9bfaf2fb49786c96a41e856b950fabe5f11de55d8128cb49126cafcedc",
+    "freeze_sha256": "sha256:04123dfc3ddd8033264977894fec2b5c7410a9df11b341cdcc72475b53a8a1d9",
+    "frozen_at": "2026-09-01 Australia/Sydney",
+    "gate_verdicts": [],
+    "margins_byte_unchanged": true,
+    "no_rot_floor": "active objectives + active hard constraints + rejected/completed guardrails; optional content is gratuitous",
+    "owner_review": "ORCHESTRATOR_REVIEW_8.md",
+    "pilot_case_ids": [
+      "D23-ASSUMPTION-01",
+      "D23-ASSUMPTION-02",
+      "D23-ASSUMPTION-11",
+      "D23-COMPLETED_WORK-01",
+      "D23-COMPLETED_WORK-02",
+      "D23-COMPLETED_WORK-11",
+      "D23-CONCEPT-01",
+      "D23-CONCEPT-02",
+      "D23-CONCEPT-11",
+      "D23-CONSTRAINT-01",
+      "D23-CONSTRAINT-02",
+      "D23-CONSTRAINT-11",
+      "D23-DECISION-01",
+      "D23-DECISION-02",
+      "D23-DECISION-11",
+      "D23-EVIDENCE-01",
+      "D23-EVIDENCE-02",
+      "D23-EVIDENCE-11",
+      "D23-OBJECTIVE-01",
+      "D23-OBJECTIVE-02",
+      "D23-OBJECTIVE-11",
+      "D23-REJECTED_PATH-01",
+      "D23-REJECTED_PATH-02",
+      "D23-REJECTED_PATH-11",
+      "D23-SUPERSESSION-01",
+      "D23-SUPERSESSION-02",
+      "D23-SUPERSESSION-11",
+      "D23-UNRESOLVED_DEPENDENCY-01",
+      "D23-UNRESOLVED_DEPENDENCY-02",
+      "D23-UNRESOLVED_DEPENDENCY-11",
+      "D23-WORKSTREAM-01",
+      "D23-WORKSTREAM-02",
+      "D23-WORKSTREAM-11"
+    ],
+    "selection_rule": "per family: first two long and first no-rot by lexicographic test_id; global case order lexicographic",
+    "self_report": "off",
+    "source_authoring_manifest_sha256": "sha256:0bffc6ed6136e47fb2e76607c27b00ac0ad12eaf8c022999370250f0ae3a8d0a",
+    "source_prereg_sha256": "sha256:0321f8a55847ee9159dbf923ffd86f0dd5eb1e7d01c059e62ead48b97218bce6",
+    "version": "wp25-prereg-frozen/1"
+  },
   "modes": {
     "cross_session": 22,
     "dilution": 22,
@@ -192,8 +249,8 @@
     "supersession": 22,
     "truncation": 22
   },
-  "owner_frozen": false,
+  "owner_frozen": true,
   "provider_calls": 0,
   "runs": [],
-  "status": "DRAFT-PENDING-OWNER-FREEZE"
+  "status": "FROZEN-WP25-V1"
 }
