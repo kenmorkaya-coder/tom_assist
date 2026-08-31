@@ -75,6 +75,7 @@ fn base(response: &str) -> EvaluationRequest {
         response_text: response.into(),
         complete: true,
         rules: vec![],
+        guardrail_anchors: vec![],
         asserted_candidates: vec![],
         evidence_used: vec![],
         supersession_attempts: vec![],

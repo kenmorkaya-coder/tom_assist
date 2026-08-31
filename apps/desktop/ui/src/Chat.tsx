@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { ChatMethod, DesktopBackend } from "./backend";
 import type { Project, StateObject, InterventionRecord } from "./types";
+import { SelfReport, type SelfReportRecord } from "./SelfReport";
 
 export interface Conversation {
   id: string;
@@ -26,11 +27,13 @@ export interface ConversationView {
     exchange: Exchange;
     evaluation?: { result: string; turn_id: string };
     commit?: unknown;
+    self_report?: SelfReportRecord;
   }[];
   interventions: (InterventionRecord & { turn_id: string })[];
 }
 export interface ProviderStatus {
   connected: boolean;
+  self_report_enabled?: boolean;
   code: string;
   model?: string;
   streaming?: boolean;
@@ -151,11 +154,13 @@ export function Chat({
         </button>
       </div>
       <p class="chat-boundary">
-        Only Send with Tom transmits your visible packet, bounded conversation
+        Send with Tom transmits your visible packet, bounded conversation
         history and draft. Credentials stay in the connected runtime. Responses
         arrive when complete; no token streaming or hidden-context visibility is
         claimed. Conversation text and approved prompts are retained locally and
         in complete archives, unencrypted. No automatic expiry is applied.
+        Experimental provider self-report is off by default and requires a
+        separate preview and explicit send for its one extra call.
       </p>
       {provider && (
         <details>
@@ -221,7 +226,7 @@ export function Chat({
         )}
         {view?.exchanges
           .filter((row) => row.exchange.status !== "prepared")
-          .map(({ exchange: e, evaluation, commit }) => (
+          .map(({ exchange: e, evaluation, commit, self_report }) => (
             <article key={e.id} class="chat-exchange">
               <div class="chat-message user">
                 <strong>You</strong>
@@ -343,6 +348,8 @@ export function Chat({
                         ))}
                     </div>
                   ))}
+                {e.response_text && <SelfReport enabled={provider?.self_report_enabled === true} report={self_report} exchangeId={e.id} busy={busy}
+                  act={(method, payload) => void run(async () => { await request(method, payload); await reload(); })} />}
               </div>
             </article>
           ))}

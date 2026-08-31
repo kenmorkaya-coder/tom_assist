@@ -116,6 +116,12 @@ pub enum Method {
     ConversationSend,
     #[serde(rename = "conversation.evaluate")]
     ConversationEvaluate,
+    #[serde(rename = "conversation.self_report.prepare")]
+    SelfReportPrepare,
+    #[serde(rename = "conversation.self_report.send")]
+    SelfReportSend,
+    #[serde(rename = "conversation.self_report.label")]
+    SelfReportLabel,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

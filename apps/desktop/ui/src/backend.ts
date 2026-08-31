@@ -26,7 +26,10 @@ export type ChatMethod =
   | "conversation.get"
   | "conversation.prepare"
   | "conversation.send"
-  | "conversation.evaluate";
+  | "conversation.evaluate"
+  | "conversation.self_report.prepare"
+  | "conversation.self_report.send"
+  | "conversation.self_report.label";
 
 export interface DesktopBackend {
   seedDemo(): Promise<Project>;

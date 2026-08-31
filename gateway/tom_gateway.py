@@ -819,6 +819,9 @@ class TomGateway:
                 return 200, self.project(payload.get("project_id")).restore_checkpoint(str(payload.get("checkpoint_id") or ""))
             if method == "POST" and path == "/verify/drift":
                 return 200, self._verify_drift(payload)
+            if method == "POST" and path == "/verify/guardrails":
+                from gateway.guardrail_resonance import resonate_guardrails
+                return 200, resonate_guardrails(payload)
             if method == "POST" and path == "/verify/claims":
                 return 200, self._verify_claims(payload)
             if method == "POST" and path == "/adjudicate/structure":

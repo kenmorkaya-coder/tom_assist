@@ -10,7 +10,7 @@ def project_text(text: str):
     # Mirror only the existing pure preparation chain, never the runtime bridge:
     # integration/tomowner_msr_runtime_bridge.py:85-103; projection.py:15-181;
     # integration/msr_field_packet.py:158-226; sicd_msr_load.py:65-124.
-    # No new prose-to-shape rules: Box 2 remains held.
+    # No new prose-to-shape rules. WP-22 also reuses this teaching projection.
     from integration.msr_prompt_text_projection import project_prompt_text_to_neutral_packet
     from integration.msr_field_packet import adapt_to_msr_field_packet
     from agency.mechanics.preview_readout import (

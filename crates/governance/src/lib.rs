@@ -91,6 +91,14 @@ pub struct StructureCheck {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct GuardrailAnchor {
+    pub state_id: String,
+    pub kind: StateType,
+    pub text: String,
+    pub evidence_turn_ids: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EvaluationRequest {
     pub project_id: String,
     pub workstream_id: String,
@@ -100,6 +108,8 @@ pub struct EvaluationRequest {
     pub response_text: String,
     pub complete: bool,
     pub rules: Vec<LedgerRule>,
+    #[serde(default)]
+    pub guardrail_anchors: Vec<GuardrailAnchor>,
     #[serde(default)]
     pub asserted_candidates: Vec<StateMutationCandidate>,
     #[serde(default)]
@@ -134,6 +144,9 @@ pub struct GovernanceResult {
 }
 
 pub trait GatewayVerifier: Send + Sync {
+    fn resonate_guardrails(&self, _payload: Value) -> std::result::Result<Value, String> {
+        Err("structural guardrail verifier unavailable".into())
+    }
     fn health(&self) -> std::result::Result<(), String> {
         Ok(())
     }
@@ -143,6 +156,9 @@ pub trait GatewayVerifier: Send + Sync {
 }
 
 impl GatewayVerifier for GatewayClient {
+    fn resonate_guardrails(&self, payload: Value) -> std::result::Result<Value, String> {
+        GatewayClient::resonate_guardrails(self, payload).map_err(|e| e.to_string())
+    }
     fn health(&self) -> std::result::Result<(), String> {
         GatewayClient::health(self)
             .map(|_| ())
@@ -163,6 +179,9 @@ impl GatewayVerifier for GatewayClient {
 }
 
 impl<T: GatewayVerifier + ?Sized> GatewayVerifier for Arc<T> {
+    fn resonate_guardrails(&self, payload: Value) -> std::result::Result<Value, String> {
+        (**self).resonate_guardrails(payload)
+    }
     fn health(&self) -> std::result::Result<(), String> {
         (**self).health()
     }
@@ -390,7 +409,7 @@ impl<V: GatewayVerifier> GovernanceEngine<V> {
                 .then(left.2.as_bytes().cmp(right.2.as_bytes()))
         });
         hits.dedup_by(|left, right| left.0 == right.0 && left.2 == right.2);
-        let interventions: Vec<Intervention> = hits
+        let mut interventions: Vec<Intervention> = hits
             .into_iter()
             .map(
                 |(code, summary, state_id, evidence_turn_ids, patch, confidence)| {
@@ -423,6 +442,65 @@ impl<V: GatewayVerifier> GovernanceEngine<V> {
                 },
             )
             .collect();
+        if !request.guardrail_anchors.is_empty() {
+            let result = self
+                .verifier
+                .resonate_guardrails(json!({
+                    "response_text": request.response_text, "anchors": request.guardrail_anchors
+                }))
+                .map_err(GovernanceError::Gateway)?;
+            let matches = result["matches"]
+                .as_array()
+                .ok_or_else(|| GovernanceError::Gateway("invalid guardrail response".into()))?;
+            for hit in matches {
+                let anchor = request
+                    .guardrail_anchors
+                    .iter()
+                    .find(|a| hit["state_id"] == a.state_id)
+                    .ok_or_else(|| GovernanceError::Gateway("unknown guardrail anchor".into()))?;
+                let excerpt = hit["response_excerpt"]
+                    .as_str()
+                    .filter(|s| !s.is_empty() && request.response_text.contains(s))
+                    .ok_or_else(|| {
+                        GovernanceError::Gateway("invalid guardrail source span".into())
+                    })?;
+                let score = hit["score"]
+                    .as_f64()
+                    .filter(|s| s.is_finite() && *s >= 0.98 && *s <= 1.000000000001)
+                    .ok_or_else(|| GovernanceError::Gateway("invalid guardrail score".into()))?;
+                let (code, description) = match anchor.kind {
+                    StateType::Constraint => (
+                        InterventionCode::ConstraintDropped,
+                        "possible constraint violation",
+                    ),
+                    StateType::RejectedPath => (
+                        InterventionCode::SupersededPathRevived,
+                        "possible rejected-path revival",
+                    ),
+                    StateType::CompletedWork => (
+                        InterventionCode::CompletedWorkReproposed,
+                        "possible completed-work revival",
+                    ),
+                    _ => return Err(GovernanceError::Gateway("invalid guardrail kind".into())),
+                };
+                if interventions
+                    .iter()
+                    .any(|i| i.code == code && i.conflicting_state_ids.contains(&anchor.state_id))
+                {
+                    continue; // Preserve a separately established direct-ledger finding.
+                }
+                interventions.push(Intervention {
+                    id: deterministic_uuid(&format!("guardrail/1\0{}\0{}\0{}", request.project_id, request.turn_id, anchor.state_id)),
+                    project_id: request.project_id.clone(), turn_id: request.turn_id.clone(), code,
+                    severity: InterventionSeverity::Warning, // Never policy-upgrade similarity to blocking.
+                    confidence: self.policy.heuristic_confidence,
+                    summary: format!("Structural proximity: {description}; not a semantic verdict. Response: “{excerpt}” Matched guardrail {}: “{}” (cosine {score:.6}).", anchor.state_id, anchor.text),
+                    response_excerpt: excerpt.into(), conflicting_state_ids: vec![anchor.state_id.clone()],
+                    evidence_turn_ids: anchor.evidence_turn_ids.clone(), suggested_context_patch: Some(anchor.text.clone()),
+                    status: InterventionStatus::Open, policy_version: "guardrail-resonance/1".into(),
+                });
+            }
+        }
         let state = if interventions
             .iter()
             .any(|item| item.severity == InterventionSeverity::BlockingCommit)

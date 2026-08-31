@@ -53,7 +53,10 @@ export type Method =
   | "conversation.get"
   | "conversation.prepare"
   | "conversation.send"
-  | "conversation.evaluate";
+  | "conversation.evaluate"
+  | "conversation.self_report.prepare"
+  | "conversation.self_report.send"
+  | "conversation.self_report.label";
 
 export interface Envelope {
   protocol: "tom-assist/1.0";

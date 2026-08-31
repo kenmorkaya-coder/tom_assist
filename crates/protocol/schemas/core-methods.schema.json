@@ -14,6 +14,7 @@
     "model.bias.preview", "model.bias.apply", "snapshot.create", "snapshot.verify",
     "snapshot.restore", "project.export", "project.import", "diagnostics.run",
     "provider.status", "conversation.list", "conversation.create", "conversation.get",
-    "conversation.prepare", "conversation.send", "conversation.evaluate"
+    "conversation.prepare", "conversation.send", "conversation.evaluate",
+    "conversation.self_report.prepare", "conversation.self_report.send", "conversation.self_report.label"
   ]
 }

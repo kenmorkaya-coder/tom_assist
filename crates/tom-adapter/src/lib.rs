@@ -199,6 +199,9 @@ impl GatewayClient {
     pub fn verify_drift(&self, payload: Value) -> Result<Value> {
         self.request("POST", "/verify/drift", Some(payload))
     }
+    pub fn resonate_guardrails(&self, payload: Value) -> Result<Value> {
+        self.request("POST", "/verify/guardrails", Some(payload))
+    }
     pub fn verify_claims(&self, payload: Value) -> Result<Value> {
         self.request("POST", "/verify/claims", Some(payload))
     }

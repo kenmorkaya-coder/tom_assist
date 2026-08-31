@@ -4,6 +4,7 @@ pub mod conversations;
 pub mod experience;
 pub mod provider;
 pub mod recovery;
+pub mod self_report;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -219,6 +220,7 @@ pub struct AssistService {
     governance_verifier: Arc<dyn GatewayVerifier>,
     provider: Arc<dyn provider::ProviderAdapter>,
     provider_inflight: Mutex<std::collections::HashSet<String>>,
+    provider_self_report: bool,
 }
 
 impl AssistService {
@@ -237,6 +239,7 @@ impl AssistService {
             governance_verifier: Arc::new(verifier),
             provider: Arc::new(provider::DisconnectedProvider),
             provider_inflight: Mutex::new(std::collections::HashSet::new()),
+            provider_self_report: false,
         }
     }
 
@@ -594,6 +597,46 @@ impl AssistService {
                 response_text: request.response_text.clone(),
                 complete: true,
                 rules: governance_rules(&sections),
+                guardrail_anchors: store
+                    .current_state(&request.project_id)?
+                    .objects
+                    .into_iter()
+                    .filter(|o| {
+                        matches!(
+                            o.authority,
+                            tom_assist_protocol::Authority::User
+                                | tom_assist_protocol::Authority::TomVerified
+                                | tom_assist_protocol::Authority::Imported
+                        )
+                    })
+                    .filter(|o| {
+                        o.workstream_id
+                            .as_ref()
+                            .is_none_or(|w| w == &context.workstream_id)
+                    })
+                    .filter(|o| {
+                        matches!(
+                            (o.object_type, o.status),
+                            (
+                                tom_assist_protocol::StateType::Constraint,
+                                tom_assist_protocol::StateStatus::Active
+                            ) | (
+                                tom_assist_protocol::StateType::RejectedPath,
+                                tom_assist_protocol::StateStatus::Rejected
+                            ) | (
+                                tom_assist_protocol::StateType::CompletedWork,
+                                tom_assist_protocol::StateStatus::Satisfied
+                                    | tom_assist_protocol::StateStatus::Active
+                            )
+                        )
+                    })
+                    .map(|o| tom_assist_governance::GuardrailAnchor {
+                        state_id: o.id,
+                        kind: o.object_type,
+                        text: o.canonical_text,
+                        evidence_turn_ids: o.source_turn_ids,
+                    })
+                    .collect(),
                 asserted_candidates: candidates.clone(),
                 evidence_used: vec![],
                 supersession_attempts: vec![],
@@ -805,7 +848,10 @@ impl AssistService {
             | Method::ConversationGet
             | Method::ConversationPrepare
             | Method::ConversationSend
-            | Method::ConversationEvaluate => self.dispatch_conversation(envelope),
+            | Method::ConversationEvaluate
+            | Method::SelfReportPrepare
+            | Method::SelfReportSend
+            | Method::SelfReportLabel => self.dispatch_conversation(envelope),
             Method::CapabilitiesGet => Ok(json!({
                 "protocol": SERVICE_PROTOCOL_VERSION,
                 "service_version": SERVICE_VERSION,
@@ -872,8 +918,9 @@ impl GatewayVerifier for NativeOnlyVerifier {
 }
 
 fn native_governance(
-    request: EvaluationRequest,
+    mut request: EvaluationRequest,
 ) -> Result<tom_assist_governance::GovernanceResult> {
+    request.guardrail_anchors.clear(); // Unavailable resonance caps production at REVIEW; no fabricated hits.
     GovernanceEngine::new(NativeOnlyVerifier)
         .evaluate(request)
         .map_err(|error| ServiceError::Invalid(format!("native governance failed: {error}")))

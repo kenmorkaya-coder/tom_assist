@@ -28,6 +28,7 @@ const TABLES: &[&str] = &[
     "recovery_imports",
     "chat_conversations",
     "provider_exchanges",
+    "provider_self_reports",
 ];
 const FORMAT: &str = "tom-assist-recovery/2";
 
@@ -52,6 +53,7 @@ mod compatibility_tests {
         let mut ledger = source.recovery_ledger("old-project").unwrap();
         ledger.tables.remove("chat_conversations");
         ledger.tables.remove("provider_exchanges");
+        ledger.tables.remove("provider_self_reports");
         let restored = Store::open_memory().unwrap();
         restored.insert_recovery_ledger(&ledger, false).unwrap();
         assert_eq!(
@@ -221,9 +223,19 @@ impl Store {
         let legacy: std::collections::BTreeSet<_> = TABLES
             .iter()
             .copied()
-            .filter(|t| !matches!(*t, "chat_conversations" | "provider_exchanges"))
+            .filter(|t| {
+                !matches!(
+                    *t,
+                    "chat_conversations" | "provider_exchanges" | "provider_self_reports"
+                )
+            })
             .collect();
-        if actual != expected && actual != legacy {
+        let wp21: std::collections::BTreeSet<_> = TABLES
+            .iter()
+            .copied()
+            .filter(|t| *t != "provider_self_reports")
+            .collect();
+        if actual != expected && actual != legacy && actual != wp21 {
             return Err(integrity("archive table inventory mismatch"));
         }
         for table in TABLES {

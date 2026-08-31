@@ -157,6 +157,350 @@ fn capture_request(source: &str) -> tom_assistd::chat_capture::ChatCaptureReques
     serde_json::from_value(json!({"project_id":"chat-project","source_turn_id":source,"text":"Owner-confirmed new decision","object_id":"captured-decision","idempotency_key":"capture","base_state_version":0,"confirmed":true,"created_at":AT})).unwrap()
 }
 
+#[derive(Clone, Default)]
+struct ReportFixture {
+    calls: Arc<AtomicUsize>,
+    reply: Arc<Mutex<Option<String>>>,
+    fail: bool,
+}
+impl ProviderAdapter for ReportFixture {
+    fn status(&self) -> tom_assistd::Result<Value> {
+        Ok(json!({"connected":true}))
+    }
+    fn complete(&self, prompt: &str) -> tom_assistd::Result<String> {
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        if prompt.starts_with("[TOM_ASSIST_SELF_REPORT") {
+            if self.fail {
+                return Err(tom_assistd::ServiceError::Invalid(
+                    "fixture lost reply".into(),
+                ));
+            }
+            return Ok(self
+                .reply
+                .lock()
+                .unwrap()
+                .clone()
+                .expect("fixture reply configured"));
+        }
+        Ok("The beam transfers force through the connected columns.".into())
+    }
+}
+fn report_candidate(report: &Value) -> Value {
+    json!({"candidate_id":report["candidate_slots"][0],"project_id":"chat-project",
+        "source_turn_ids":[report["source_turn_id"]],"proposed_by":"provider_candidate","operation":"CREATE",
+        "object":{"type":"CONSTRAINT","title":"Local only","canonical_text":"Keep all processing local.",
+            "status":"proposed","confidence":0.5,"evidence_ids":[],"target_state_id":null,"reason":null},
+        "tom_check":{"result":"review","conflicts":[],"requires_user_confirmation":true}})
+}
+fn report_send(report: &Value) -> Value {
+    json!({"exchange_id":report["exchange_id"],"confirmed_prompt_hash":report["prompt_hash"],"explicit_send":true})
+}
+fn report_service(h: &Harness, fixture: &ReportFixture, enabled: bool) -> AssistService {
+    AssistService::with_gateway(h.observer(), h.gateway.1.clone())
+        .with_provider_adapter(fixture.clone())
+        .with_provider_self_report(enabled)
+}
+
+#[test]
+fn structural_guardrails_are_review_only_pure_and_quote_the_matched_span() {
+    let h = Harness::new();
+    for (n, (kind, status)) in [
+        ("REJECTED_PATH", "rejected"),
+        ("CONSTRAINT", "active"),
+        ("COMPLETED_WORK", "satisfied"),
+    ]
+    .iter()
+    .enumerate()
+    {
+        let mut object = json!(decision(
+            "A beam connects two columns and supports load.",
+            "active"
+        ));
+        object["type"] = json!(kind);
+        object["status"] = json!(status);
+        object["id"] = json!(format!("guard-{n}"));
+        h.observer()
+            .commit_object(
+                serde_json::from_value(object).unwrap(),
+                n as u64,
+                "user",
+                "owner",
+                &format!("plant-{n}"),
+                AT,
+            )
+            .unwrap();
+    }
+    let fixture = ReportFixture::default();
+    let service = report_service(&h, &fixture, false);
+    let prepared = prepare(&service, "resonance", "Describe the structure.");
+    let before = h.gateway.1.memory_diagnostics("chat-project", 0).unwrap();
+    let view = service
+        .conversation_send("chat-project", &send_payload(&prepared), AT)
+        .unwrap();
+    assert_eq!(view["exchanges"][0]["evaluation"]["result"], "REVIEW");
+    assert!(view["exchanges"][0]["commit"].is_null());
+    let findings = view["interventions"].as_array().unwrap();
+    assert_eq!(findings.len(), 3);
+    for finding in findings {
+        assert_eq!(finding["severity"], "warning");
+        assert_eq!(finding["policy_version"], "guardrail-resonance/1");
+        assert!(
+            finding["summary"]
+                .as_str()
+                .unwrap()
+                .contains("The beam transfers force through the connected columns.")
+        );
+    }
+    assert_eq!(
+        before,
+        h.gateway.1.memory_diagnostics("chat-project", 0).unwrap()
+    );
+    assert_eq!(
+        h.observer()
+            .current_state("chat-project")
+            .unwrap()
+            .state_version,
+        3
+    );
+    assert_eq!(fixture.calls.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn self_report_is_explicit_once_candidate_only_labelled_and_recoverable() {
+    let h = Harness::new();
+    let f = ReportFixture::default();
+    let disabled = report_service(&h, &f, false);
+    let p = prepare(&disabled, "report", "Describe the structure.");
+    disabled
+        .conversation_send("chat-project", &send_payload(&p), AT)
+        .unwrap();
+    assert!(
+        disabled
+            .self_report_prepare("chat-project", "report", AT)
+            .is_err()
+    );
+    let s = report_service(&h, &f, true);
+    let before = h.gateway.1.memory_diagnostics("chat-project", 0).unwrap();
+    let r = s.self_report_prepare("chat-project", "report", AT).unwrap();
+    assert_eq!(
+        r,
+        s.self_report_prepare("chat-project", "report", AT).unwrap()
+    );
+    assert_eq!(f.calls.load(Ordering::SeqCst), 1);
+    let mut forged = report_send(&r);
+    forged["explicit_send"] = json!(false);
+    assert!(s.self_report_send("chat-project", &forged, AT).is_err());
+    forged = report_send(&r);
+    forged["confirmed_prompt_hash"] = json!("wrong");
+    assert!(s.self_report_send("chat-project", &forged, AT).is_err());
+    assert!(
+        s.self_report_send("other-project", &report_send(&r), AT)
+            .is_err()
+    );
+    let candidates: Vec<Value> = ["CONSTRAINT", "DECISION", "REJECTED_PATH", "COMPLETED_WORK"]
+        .iter()
+        .enumerate()
+        .map(|(n, kind)| {
+            let mut candidate = report_candidate(&r);
+            candidate["candidate_id"] = r["candidate_slots"][n].clone();
+            candidate["object"]["type"] = json!(kind);
+            candidate
+        })
+        .collect();
+    *f.reply.lock().unwrap() = Some(json!({"candidates":candidates}).to_string());
+    let result = s
+        .self_report_send("chat-project", &report_send(&r), AT)
+        .unwrap();
+    assert_eq!(result["status"], "complete");
+    assert_eq!(result["metrics"]["logical_calls_claimed"], 1);
+    assert_eq!(result["metrics"]["adjudicated"], 4);
+    assert_eq!(result["metrics"]["emitted"], 4);
+    assert_eq!(result["adjudications"][0]["result"]["accepted"], true);
+    assert!(result["precision"]["value"].is_null());
+    let cid = result["candidates"][0]["candidate_id"].as_str().unwrap();
+    let saved = h.observer().candidate(cid).unwrap().unwrap();
+    assert_eq!(
+        saved.proposed_by,
+        tom_assist_protocol::Authority::ProviderCandidate
+    );
+    assert_eq!(saved.object["status"], "proposed");
+    assert_eq!(saved.tom_check.result, "review");
+    assert!(saved.tom_check.requires_user_confirmation);
+    for (label, value) in [
+        ("accurate", json!(1.0)),
+        ("false_positive", json!(0.0)),
+        ("unreviewed", Value::Null),
+    ] {
+        let labelled = h
+            .observer()
+            .label_self_report("chat-project", "report", cid, label, AT)
+            .unwrap();
+        assert_eq!(
+            tom_assistd::self_report::measured(labelled)["precision"]["value"],
+            value
+        );
+    }
+    assert_eq!(
+        h.observer()
+            .current_state("chat-project")
+            .unwrap()
+            .state_version,
+        0
+    );
+    assert_eq!(
+        before,
+        h.gateway.1.memory_diagnostics("chat-project", 0).unwrap()
+    );
+    s.conversation_evaluate("chat-project", &json!({"exchange_id":"report"}), AT)
+        .unwrap();
+    let restarted = report_service(&h, &f, true);
+    restarted
+        .self_report_send("chat-project", &report_send(&r), AT)
+        .unwrap();
+    assert_eq!(f.calls.load(Ordering::SeqCst), 2); // One ordinary exchange + one follow-up.
+    let saved_report = h.observer().self_report("chat-project", "report").unwrap();
+    let archive = h._tmp.path().join("self-report-backup");
+    recovery::export_project(&h.observer(), &h.gateway.1, "chat-project", &archive).unwrap();
+    let target = Gateway::start(
+        &h._tmp.path().join("restored-runtime"),
+        &h._tmp.path().join("restored.sock"),
+    );
+    let mut restored = Store::open(h._tmp.path().join("restored.sqlite3")).unwrap();
+    recovery::import_project(&mut restored, &target.1, &archive).unwrap();
+    assert_eq!(
+        restored.self_report("chat-project", "report").unwrap(),
+        saved_report
+    );
+    assert_eq!(restored.candidate(cid).unwrap(), Some(saved));
+}
+
+#[test]
+fn self_report_rejects_forgery_invented_evidence_invalid_json_and_lost_reply_without_resend() {
+    let h = Harness::new();
+    for (n, mode) in [
+        "authority",
+        "evidence",
+        "target",
+        "foreign",
+        "extra",
+        "json",
+        "lost",
+    ]
+    .iter()
+    .enumerate()
+    {
+        let f = ReportFixture {
+            fail: *mode == "lost",
+            ..ReportFixture::default()
+        };
+        let s = report_service(&h, &f, true);
+        let exchange = format!("bad-report-{n}");
+        let p = prepare(&s, &exchange, "Describe the structure.");
+        s.conversation_send("chat-project", &send_payload(&p), AT)
+            .unwrap();
+        let r = s
+            .self_report_prepare("chat-project", &exchange, AT)
+            .unwrap();
+        let mut candidate = report_candidate(&r);
+        match *mode {
+            "authority" => candidate["proposed_by"] = json!("tom_verified"),
+            "evidence" => candidate["object"]["evidence_ids"] = json!(["invented"]),
+            "target" => {
+                candidate["operation"] = json!("SUPERSEDE");
+                candidate["object"]["target_state_id"] = json!("foreign-target");
+            }
+            "foreign" => candidate["project_id"] = json!("other-project"),
+            "extra" => candidate["approve"] = json!(true),
+            _ => {}
+        }
+        *f.reply.lock().unwrap() = Some(if *mode == "json" {
+            "not JSON".into()
+        } else {
+            json!({"candidates":[candidate]}).to_string()
+        });
+        let result = s
+            .self_report_send("chat-project", &report_send(&r), AT)
+            .unwrap();
+        assert_eq!(result["candidates"], json!([]), "{mode}");
+        if ["authority", "evidence", "target"].contains(mode) {
+            assert_eq!(result["metrics"]["adjudicator_rejected"], 1, "{mode}");
+            assert_eq!(result["adjudications"][0]["result"]["accepted"], false);
+        }
+        s.self_report_send("chat-project", &report_send(&r), AT)
+            .unwrap();
+        report_service(&h, &f, true)
+            .self_report_send("chat-project", &report_send(&r), AT)
+            .unwrap();
+        assert_eq!(f.calls.load(Ordering::SeqCst), 2);
+        assert!(
+            h.observer()
+                .candidate(r["candidate_slots"][0].as_str().unwrap())
+                .unwrap()
+                .is_none()
+        );
+    }
+    assert_eq!(
+        h.observer()
+            .current_state("chat-project")
+            .unwrap()
+            .state_version,
+        0
+    );
+}
+
+#[test]
+fn self_report_stale_and_interrupted_claim_never_infer_authority_or_resend() {
+    let h = Harness::new();
+    let f = ReportFixture::default();
+    let s = report_service(&h, &f, true);
+    let p = prepare(&s, "crash-report", "Describe the structure.");
+    s.conversation_send("chat-project", &send_payload(&p), AT)
+        .unwrap();
+    let r = s
+        .self_report_prepare("chat-project", "crash-report", AT)
+        .unwrap();
+    h.observer()
+        .commit_object(
+            decision("Later owner decision", "active"),
+            0,
+            "user",
+            "owner",
+            "changed",
+            AT,
+        )
+        .unwrap();
+    assert!(
+        s.self_report_send("chat-project", &report_send(&r), AT)
+            .is_err()
+    );
+    assert!(
+        !h.observer()
+            .claim_self_report("chat-project", "crash-report")
+            .unwrap()
+    );
+    let refreshed = s
+        .self_report_prepare("chat-project", "crash-report", AT)
+        .unwrap();
+    assert_ne!(refreshed["prompt_hash"], r["prompt_hash"]);
+    assert!(
+        s.self_report_send("chat-project", &report_send(&r), AT)
+            .is_err()
+    );
+    assert!(
+        h.observer()
+            .claim_self_report("chat-project", "crash-report")
+            .unwrap()
+    );
+    let restarted = report_service(&h, &f, true);
+    assert_eq!(
+        restarted
+            .self_report_send("chat-project", &report_send(&refreshed), AT)
+            .unwrap()["status"],
+        "sending"
+    );
+    assert_eq!(f.calls.load(Ordering::SeqCst), 1);
+}
+
 fn decision(text: &str, status: &str) -> tom_assist_protocol::StateObject {
     serde_json::from_value(json!({"id":"owner-decision","project_id":"chat-project","type":if status=="rejected" {"REJECTED_PATH"} else {"DECISION"},"title":text,"canonical_text":text,"status":status,"authority":"user","confidence":1,"binding_strength":"hard","source_turn_ids":[],"evidence_ids":[],"branch_refs":[],"created_at":AT,"updated_at":AT,"effective_at":AT,"content_hash":tom_assist_protocol::canonical_sha256(&text).unwrap(),"state_version":1})).unwrap()
 }

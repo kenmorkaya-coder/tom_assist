@@ -81,6 +81,9 @@ async fn chat_request(
             | Method::ConversationPrepare
             | Method::ConversationSend
             | Method::ConversationEvaluate
+            | Method::SelfReportPrepare
+            | Method::SelfReportSend
+            | Method::SelfReportLabel
     ) {
         return Err("unsupported chat operation".into());
     }

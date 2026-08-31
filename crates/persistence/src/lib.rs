@@ -254,6 +254,7 @@ impl Store {
         connection.execute_batch(include_str!("../migrations/003_runtime_commits.sql"))?;
         connection.execute_batch(include_str!("../migrations/004_recovery.sql"))?;
         connection.execute_batch(include_str!("../migrations/005_conversations.sql"))?;
+        connection.execute_batch(include_str!("../migrations/006_self_reports.sql"))?;
         Ok(Self { connection, path })
     }
 
@@ -265,6 +266,7 @@ impl Store {
         connection.execute_batch(include_str!("../migrations/003_runtime_commits.sql"))?;
         connection.execute_batch(include_str!("../migrations/004_recovery.sql"))?;
         connection.execute_batch(include_str!("../migrations/005_conversations.sql"))?;
+        connection.execute_batch(include_str!("../migrations/006_self_reports.sql"))?;
         Ok(Self {
             connection,
             path: PathBuf::from(":memory:"),
@@ -1026,10 +1028,19 @@ impl Store {
     }
 
     pub fn record_intervention(&self, intervention: &Intervention, created_at: &str) -> Result<()> {
-        self.connection.execute(
+        let inserted = self.connection.execute(
             "INSERT OR IGNORE INTO interventions(id,project_id,turn_id,code,severity,confidence,summary,conflicting_state_ids_json,status,policy_version,created_at,resolved_at) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,NULL)",
             params![intervention.id, intervention.project_id, intervention.turn_id, serde_json::to_value(intervention.code)?.as_str(), serde_json::to_value(intervention.severity)?.as_str(), intervention.confidence, intervention.summary, serde_json::to_string(&intervention.conflicting_state_ids)?, serde_json::to_value(intervention.status)?.as_str(), intervention.policy_version, created_at],
         )?;
+        if inserted == 1 && intervention.policy_version == "guardrail-resonance/1" {
+            self.audit(
+                &intervention.project_id,
+                "STRUCTURAL_GUARDRAIL_REVIEW",
+                &intervention.id,
+                &serde_json::to_value(intervention)?,
+                created_at,
+            )?;
+        }
         Ok(())
     }
 

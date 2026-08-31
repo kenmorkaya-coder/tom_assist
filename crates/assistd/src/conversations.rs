@@ -44,7 +44,15 @@ impl AssistService {
                 )?;
             }
         }
-        Ok(store.conversation_view(project, session)?)
+        let mut view = store.conversation_view(project, session)?;
+        if let Some(rows) = view["exchanges"].as_array_mut() {
+            for row in rows {
+                if row["self_report"].is_object() {
+                    row["self_report"] = self_report::measured(row["self_report"].take());
+                }
+            }
+        }
+        Ok(view)
     }
     pub fn conversation_prepare(&self, project: &str, payload: &Value, at: &str) -> Result<Value> {
         let session = field(payload, "session_id")?;
@@ -252,7 +260,10 @@ impl AssistService {
     }
     pub fn dispatch_conversation(&self, envelope: Envelope) -> Result<Value> {
         if envelope.method == Method::ProviderStatus {
-            return self.provider.status();
+            let mut status = self.provider.status()?;
+            status["self_report_enabled"] = json!(self.provider_self_report);
+            status["self_report_policy"] = json!({"default_off":true,"extra_explicit_send":true,"max_followups_per_exchange":1,"candidate_only":true,"strict_provider_schema":false});
+            return Ok(status);
         }
         let project = envelope.project_id.ok_or(ServiceError::MissingProject)?;
         if envelope.payload["project_id"] != project {
@@ -284,6 +295,25 @@ impl AssistService {
             Method::ConversationPrepare => self.conversation_prepare(&project, &payload, &at),
             Method::ConversationSend => self.conversation_send(&project, &payload, &at),
             Method::ConversationEvaluate => self.conversation_evaluate(&project, &payload, &at),
+            Method::SelfReportPrepare => {
+                self.self_report_prepare(&project, &field(&payload, "exchange_id")?, &at)
+            }
+            Method::SelfReportSend => self.self_report_send(&project, &payload, &at),
+            Method::SelfReportLabel => {
+                if payload["confirmed"] != true {
+                    return Err(ServiceError::Invalid(
+                        "explicit label confirmation required".into(),
+                    ));
+                }
+                let report = self.store.lock().unwrap().label_self_report(
+                    &project,
+                    &field(&payload, "exchange_id")?,
+                    &field(&payload, "candidate_id")?,
+                    &field(&payload, "label")?,
+                    &at,
+                )?;
+                Ok(self_report::measured(report))
+            }
             _ => Err(ServiceError::Invalid("unknown conversation method".into())),
         }
     }

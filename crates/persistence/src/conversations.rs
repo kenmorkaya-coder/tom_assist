@@ -51,6 +51,83 @@ fn exchange_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<ProviderExchange> {
     })
 }
 impl Store {
+    pub fn self_report(&self, project: &str, exchange: &str) -> Result<Option<Value>> {
+        let row: Option<(String, String)> = self.connection.query_row(
+            "SELECT status,report_json FROM provider_self_reports WHERE project_id=?1 AND exchange_id=?2",
+            params![project,exchange], |r| Ok((r.get(0)?,r.get(1)?))).optional()?;
+        row.map(|(status, body)| {
+            let mut value: Value = serde_json::from_str(&body)?;
+            value["status"] = json!(status);
+            Ok(value)
+        })
+        .transpose()
+    }
+    pub fn prepare_self_report(&self, project: &str, exchange: &str, report: &Value) -> Result<()> {
+        self.connection.execute(
+            "INSERT INTO provider_self_reports VALUES(?1,?2,'prepared',?3) ON CONFLICT(exchange_id) DO UPDATE SET report_json=excluded.report_json WHERE provider_self_reports.project_id=excluded.project_id AND provider_self_reports.status='prepared'",
+            params![exchange, project, serde_json::to_string(report)?],
+        )?;
+        Ok(())
+    }
+    pub fn claim_self_report(&self, project: &str, exchange: &str) -> Result<bool> {
+        Ok(self.connection.execute("UPDATE provider_self_reports SET status='sending' WHERE project_id=?1 AND exchange_id=?2 AND status='prepared' AND EXISTS (SELECT 1 FROM projects p WHERE p.id=provider_self_reports.project_id AND p.status='active' AND p.state_version=json_extract(provider_self_reports.report_json,'$.state_version'))",
+            params![project,exchange])? == 1)
+    }
+    pub fn finish_self_report(
+        &self,
+        project: &str,
+        exchange: &str,
+        status: &str,
+        report: &Value,
+        candidates: &[StateMutationCandidate],
+        at: &str,
+    ) -> Result<()> {
+        let tx = self.connection.unchecked_transaction()?;
+        for candidate in candidates {
+            self.record_candidate(candidate, at)?;
+        }
+        self.connection.execute("UPDATE provider_self_reports SET status=?3,report_json=?4 WHERE project_id=?1 AND exchange_id=?2",
+            params![project,exchange,status,serde_json::to_string(report)?])?;
+        tx.commit()?;
+        Ok(())
+    }
+    pub fn label_self_report(
+        &self,
+        project: &str,
+        exchange: &str,
+        candidate: &str,
+        label: &str,
+        at: &str,
+    ) -> Result<Value> {
+        if !matches!(label, "accurate" | "false_positive" | "unreviewed") {
+            return Err(StoreError::Integrity("invalid precision label".into()));
+        }
+        let tx = self.connection.unchecked_transaction()?;
+        let mut report = self
+            .self_report(project, exchange)?
+            .ok_or_else(|| StoreError::Integrity("self-report missing".into()))?;
+        if report["status"] != "complete"
+            || !report["candidates"]
+                .as_array()
+                .is_some_and(|rows| rows.iter().any(|r| r["candidate_id"] == candidate))
+        {
+            return Err(StoreError::Integrity(
+                "candidate not in completed self-report".into(),
+            ));
+        }
+        report["labels"][candidate] = json!(label);
+        self.connection.execute("UPDATE provider_self_reports SET report_json=?3 WHERE project_id=?1 AND exchange_id=?2",
+            params![project,exchange,serde_json::to_string(&report)?])?;
+        self.audit(
+            project,
+            "SELF_REPORT_PRECISION_LABEL",
+            exchange,
+            &json!({"candidate_id":candidate,"label":label,"authority_changed":false}),
+            at,
+        )?;
+        tx.commit()?;
+        Ok(report)
+    }
     pub fn create_conversation(
         &self,
         project: &str,
@@ -190,7 +267,7 @@ impl Store {
         })?;
         let exchanges = self.provider_exchanges(project,id)?.into_iter().map(|e| {
             let evaluation_id = canonical_sha256(&json!({"kind":"evaluation","turn_id":e.response_id(),"packet_digest":e.packet_digest}))?;
-            Ok(json!({"exchange":e,"evaluation":self.response_evaluation(&evaluation_id)?,"commit":self.runtime_commit_for_sent(&e.sent_id())?}))
+            Ok(json!({"exchange":e,"evaluation":self.response_evaluation(&evaluation_id)?,"commit":self.runtime_commit_for_sent(&e.sent_id())?,"self_report":self.self_report(project,&e.id)?}))
         }).collect::<Result<Vec<Value>>>()?;
         Ok(
             json!({"session":session,"turns":self.conversation_turns(project,id)?,"exchanges":exchanges,"interventions":self.interventions(project)?}),
