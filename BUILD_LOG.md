@@ -363,3 +363,33 @@ Decisions: the protocol capability schema uses a const, so its provenance and ex
 Evidence against the audited owner checkout: gateway pytest **14 passed** (all prior 11 plus three tripwire cases), 100-preview byte purity intact; 20-call latency p50 **16.327 ms**, p95 **28.430 ms**, max **32.412 ms**. Dedicated live Rust gateway test **1 passed**. `cargo test --workspace`: **34 passed, 1 ignored**, including the unchanged packet golden. Extension tests **6 passed**. Schema generation/validation **9 fixtures, 33 methods**. `git diff --check` clean. Local build verification only; no G-gate verdict.
 
 ESCALATE: none. Proceed next to WP-16b's strict unchanged-output check; any divergence must be reported without changing goldens.
+
+## WP-16b — Upstream import conversion [STOPPED: strict output-parity divergence]
+
+Preflight at product commit `cbc3f87`, runtime `e9fdef81c8a366ebbec07be9772189eea15cb2ac`: compared the existing `gateway.structural_preview.select_cohort` output directly with `agency.mechanics.preview_readout.select_activated_branches_readonly`, using the same fresh 10,000-branch project, ID-sorted input, identical projected axes and K=16. Compared each current loading-aware trace score with the upstream exported `loading_aware_8d_score`. All inputs were read-only; the comparison used a disposable product-local temporary project, never a live owner runtime or service.
+
+The branch IDs and their order were identical for all four sampled drafts: “first then after the construction stage”, “connected beam column load path”, “rule contradiction equations”, and “warm the deterministic query path”. Numeric output equality was **not** exact. Examples:
+
+| Draft / field / branch | Gateway mirror | Audited upstream |
+| --- | --- | --- |
+| construction stage / selection score / `108486` | `0.00019005414645648184` | `0.0001900541464564818` |
+| rule contradiction / selection score / `3` | `0.008997110523346763` | `0.008997110523346761` |
+| construction stage / loading trace / `93686` | `0.4632659227078507` | `0.46326592270785094` |
+
+Observed maximum absolute differences in this sample: selection score `1.734723475976807e-18`, loading trace `2.220446049250313e-16`. These are consistent with NumPy-versus-scalar floating-point evaluation differences; the existing geometry tests compare these scores using `pytest.approx`, so their passing result does not establish bit-identical outputs. This preflight does not establish full packet/anchor equivalence after conversion.
+
+ESCALATE: Review 6 explicitly requires STOP on any output divergence. Question: may WP-16b accept a documented numerical tolerance (recommended `1e-12` for score fields only), while still requiring exact branch/anchor identity and ordering, unchanged packet text/digests and untouched goldens? Alternative: require bit-exact diagnostics and commission a separately reviewed canonical arithmetic change; upstream is currently frozen, so that is not authorized here. Safest reversible default: leave the gateway mirror and every golden unchanged; do not implement or commit the conversion, and do not start WP-17. WP-19 remains complete as `cbc3f87`. This blocked section is appended for audit, not a completion claim or G-gate verdict.
+
+## WP-16b — Canonical upstream import conversion [DONE]
+
+Commit: containing commit `refactor(wp-16b): import upstream preview_readout, retire gateway mirrors`.
+
+Resolution: owner/orchestrator approved `1e-12` only for raw-score floats in the transitional mirror-versus-upstream comparison; selection, ordering, packet text, ID lists and digests remain exact. The difference comes from NumPy vector operations (power, normalization, dot-product reduction and trigonometry) versus the pure-Python scalar operation order in the audited upstream implementation. No formula, weight, policy or golden was changed to absorb those last-bit differences. **Upstream `e9fdef81c` arithmetic is now canonical.**
+
+Changes: gateway projection, branch selection and anchor resonance delegate to `agency.mechanics.preview_readout`; duplicated NumPy scoring is removed. Product ID sorting, trace assembly, triggers and RRF (`w_leaf=0.6`, `k=60`) remain product glue. Trace stiffness uses upstream `semantic_metrics.stiffness_proxy`; alignment is decomposed from the canonical selection result rather than implementing a second selector. The upstream scalar scan meets the latency guard, so no parallel arithmetic implementation is retained merely to preserve vectorization. `context-policy/1.1` is unchanged.
+
+Evidence: a one-time, non-persistent transition comparison loaded the exact old mirror from product commit `cbc3f87` and compared **20 full previews** against the new adapter on the same seeded project with three committed anchors. Every non-score field, branch/anchor ID and ordering, text, activation ID and checkpoint digest matched exactly. 855 raw-score differences were bounded by **3.885780586188048e-16**, below the authorized `1e-12`; engine+RGM bytes unchanged. This temporary tolerance comparison is retired, not added to the regression suite. The permanent structural test is re-pinned to the canonical upstream selector and loading-aware score using exact equality, with no tolerance.
+
+Gateway tests **14 passed**, including unchanged 100-preview byte purity and restart determinism; 20-call preview latency p50 **13.253 ms**, p95 **24.872 ms**, max **25.035 ms**. Rust workspace **34 passed, 1 ignored**; packet renderer/text/manifest golden and digest `sha256:d601e32f29e48c70c10030209e0bd89706a8f43175b051a860e36aa5a7c78601` pass unchanged. No golden files were edited. Schema validation **9 fixtures, 33 methods**; extension **6 passed**. `git diff --check` clean. No upstream changes or G-gate verdicts.
+
+ESCALATE: resolved by the explicitly limited transitional tolerance; proceed to WP-17.

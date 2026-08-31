@@ -358,10 +358,7 @@ class ProjectRuntime:
             # its pinned implementation contains plastic recall at lines 187-193.
             triggers = _compute_preview_triggers(len(self._idempotency))
             signature, projection, angle = project_text(user_text)
-            cohort, branch_trace = select_cohort(
-                self.engine.state.branches, projection, angle,
-                float(self.seed.mechanics_parameters["TOM_STIFFNESS_KAPPA_FLOOR"]),
-            )
+            cohort, branch_trace = select_cohort(self.engine.state.branches, signature)
             candidates = self.rgm.vector_store.query(user_text, k=max(1, len(self.rgm.state.anchors)))
             # The pinned vector store sorts only on similarity. Its in-memory
             # and restored insertion orders differ, so make equal-score ordering

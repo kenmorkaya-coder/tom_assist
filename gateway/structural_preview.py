@@ -1,7 +1,5 @@
-"""Read-only geometry mirrors at tom_master 8799ccbdd; no load application."""
+"""Product fusion/trace adapter; e9fdef81c upstream arithmetic is canonical."""
 from __future__ import annotations
-
-import numpy as np
 
 POLICY_VERSION = "context-policy/1.1"
 W_LEAF = 0.6  # Review 4 calibration prior, not a product efficacy claim.
@@ -15,7 +13,7 @@ def project_text(text: str):
     # No new prose-to-shape rules: Box 2 remains held.
     from integration.msr_prompt_text_projection import project_prompt_text_to_neutral_packet
     from integration.msr_field_packet import adapt_to_msr_field_packet
-    from agency.mechanics.msr_8d_loading_aware_readout import (
+    from agency.mechanics.preview_readout import (
         project_load_signature_to_channel_separated_basis,
         load_signature_120_readout_angle,
     )
@@ -28,60 +26,35 @@ def project_text(text: str):
     return signature, projection, load_signature_120_readout_angle(signature)
 
 
-def unit_rows(values):
-    values = np.asarray(values, dtype=float)
-    return values / np.maximum(np.linalg.norm(values, axis=1, keepdims=True), 1e-12)
-
-
-def select_cohort(branches, projection, angle, kappa_floor: float, k: int = 16):
-    """Vectorized leaf_vectors.py:197-253; deliberately omit mutation :255-257."""
-    rows = sorted(((str(bid), b) for bid, b in branches.items()
-                   if getattr(b, "sem_vec", None) is not None and len(b.sem_vec) == 8))
-    if not rows:
-        return [], []
-    ids, objects = zip(*rows)
-    vectors = unit_rows([b.sem_vec for b in objects])
-    axis = np.asarray(projection.raw_8d[:3], dtype=float)
-    axis = axis / axis.sum() if axis.sum() > 1e-12 else np.full(3, 1 / 3)
-    axes = np.asarray([getattr(b, "axis_w", None) or (1 / 3,) * 3 for b in objects])[:, :3]
-    sums = axes.sum(axis=1, keepdims=True)
-    axes = np.divide(axes, sums, out=np.full_like(axes, 1 / 3), where=sums > 1e-12)
-    align = (np.ones(len(rows)) if np.all(np.abs(axis - 1 / 3) < 0.05 / 3)
-             else np.maximum(0.0, (axes * axis).sum(axis=1) - 1 / 3) / (2 / 3))
-    # semantic_metrics.py:303-318, including the pinned kappa floor and EPS.
-    radii = np.asarray([float(b.r or 0) for b in objects])
-    lengths = np.asarray([float(b.ell or 0) for b in objects])
-    kappa = np.asarray([float(b.kappa) for b in objects])
-    kappa = np.maximum(np.where(kappa < 0, 1.0, kappa), kappa_floor)
-    stiffness = np.maximum(1e-8, radii ** 4 * kappa / np.maximum(1e-8, lengths))
-    usage = np.asarray([int(getattr(b, "usage_count", 0)) for b in objects])
-    score = align * stiffness / (1 + usage)
-    # Loading-aware cosine + theta gate mirror, msr_8d_loading_aware_readout.py:187-230.
-    theta = np.asarray([float(getattr(b, "theta", 0) or 0) for b in objects])
-    loading = (vectors * np.asarray(projection.vector_8d)).sum(axis=1) * (
-        0.75 + 0.25 * np.maximum(0, 0.5 + 0.5 * np.cos(theta - angle)) ** 2)
-    eligible = np.flatnonzero(align >= 1e-6)
-    selected = eligible[np.argsort(-score[eligible], kind="stable")[:k]]
-    cohort = [(ids[i], objects[i].sem_vec, float(score[i])) for i in selected]
-    trace = [{"branch_id": ids[i], "alignment_gate": float(align[i]),
-              "stiffness": float(stiffness[i]), "usage_count": int(usage[i]),
-              "selection_score": float(score[i]), "loading_aware_score": float(loading[i])}
-             for i in selected]
+def select_cohort(branches, signature, k: int = 16):
+    """Delegate scoring; sort input IDs to retain the product's stable tie rule."""
+    from agency.mechanics.preview_readout import (
+        select_activated_branches_readonly, loading_aware_8d_score,
+        project_load_signature_to_channel_separated_basis,
+    )
+    from agency.mechanics.semantic_metrics import stiffness_proxy
+    rows = dict(sorted((str(bid), branch) for bid, branch in branches.items()))
+    projection = project_load_signature_to_channel_separated_basis(signature)
+    cohort = select_activated_branches_readonly(rows, list(projection.raw_8d[:3]), k)
+    trace = []
+    for bid, _, score in cohort:
+        branch = rows[bid]
+        stiffness = stiffness_proxy(branch)
+        usage = int(getattr(branch, "usage_count", 0))
+        trace.append({"branch_id": bid,
+                      # Decompose the canonical result; do not reimplement its gate.
+                      "alignment_gate": score * (1 + usage) / stiffness,
+                      "stiffness": stiffness, "usage_count": usage,
+                      "selection_score": score,
+                      "loading_aware_score": loading_aware_8d_score(branch, signature)})
     return cohort, trace
 
 
 def fuse_anchors(records, lexical, cohort):
-    # rank_by_branch_resonance mirror, leaf_vectors.py:262-304: max cosine,
-    # invalid/missing leaf vectors omitted. Stable ID ties survive restart.
-    structural = []
-    valid = sorted((rid, rec.leaf_vec) for rid, rec in records.items()
-                   if getattr(rec, "leaf_vec", None) is not None and len(rec.leaf_vec) == 8)
-    if valid and cohort:
-        scores = unit_rows([v for _, v in valid]) @ unit_rows([v for _, v, _ in cohort]).T
-        best = scores.argmax(axis=1)
-        structural = [(rid, float(scores[i, best[i]]), cohort[best[i]][0])
-                      for i, (rid, _) in enumerate(valid)]
-        structural.sort(key=lambda row: (-row[1], row[0]))
+    from agency.mechanics.preview_readout import rank_by_branch_resonance
+    _, details = rank_by_branch_resonance(dict(sorted(records.items())), cohort)
+    structural = sorted(((rid, score, bid) for rid, bid, score in details),
+                        key=lambda row: (-row[1], row[0]))
     lexical = sorted(lexical, key=lambda row: (-row[1], row[0]))
     lexical_map = {rid: (rank, score) for rank, (rid, score) in enumerate(lexical, 1)}
     structural_map = {rid: (rank, score, bid) for rank, (rid, score, bid) in enumerate(structural, 1)}
