@@ -25,6 +25,20 @@ MAPPING = {
     "error": "error.schema.json",
 }
 
+SOURCE_ID_VERSION = "source-id.v1.1.schema.json"
+VALID_SOURCE_IDS = (
+    "60000000-0000-4000-8000-000000000001",
+    "60000000-0000-4000-8000-000000000001:user",
+    "60000000-0000-4000-8000-000000000001:assistant",
+)
+INVALID_SOURCE_IDS = (
+    "conversation-turn-1",
+    "60000000-0000-4000-8000-000000000001:",
+    "60000000-0000-4000-8000-000000000001:system",
+    "60000000-0000-4000-8000-000000000001:assistant:extra",
+    "not-a-uuid:assistant",
+)
+
 
 def main() -> None:
     schemas = {path.name: json.loads(path.read_text()) for path in SCHEMA_DIR.glob("*.json")}
@@ -43,10 +57,25 @@ def main() -> None:
         )
         validator.validate(examples[fixture_name])
 
+    source_id_validator = Draft202012Validator(
+        schemas[SOURCE_ID_VERSION],
+        registry=registry,
+        format_checker=FormatChecker(),
+    )
+    for source_id in VALID_SOURCE_IDS:
+        source_id_validator.validate(source_id)
+    for source_id in INVALID_SOURCE_IDS:
+        if source_id_validator.is_valid(source_id):
+            raise AssertionError(f"invalid source ID accepted: {source_id}")
+
     methods = schemas["core-methods.schema.json"]["enum"]
     if len(methods) != 43 or len(methods) != len(set(methods)):
         raise AssertionError(f"expected 43 unique core methods, got {len(methods)}")
-    print(f"validated {len(MAPPING)} fixtures and {len(methods)} core methods")
+    print(
+        f"validated {len(MAPPING)} fixtures, {len(methods)} core methods, "
+        f"and source-id/1.1 ({len(VALID_SOURCE_IDS)} valid, "
+        f"{len(INVALID_SOURCE_IDS)} invalid cases)"
+    )
 
 
 if __name__ == "__main__":

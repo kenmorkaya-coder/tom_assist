@@ -57,6 +57,10 @@ export type Method =
   | "conversation.self_report.prepare"
   | "conversation.self_report.send"
   | "conversation.self_report.label";
+/**
+ * Source-turn identifier contract source-id/1.1. Legacy UUIDs remain valid; provider conversation turns may append the recorded user or assistant role.
+ */
+export type SourceId = string;
 
 export interface Envelope {
   protocol: "tom-assist/1.0";
@@ -140,7 +144,7 @@ export interface StateObject {
   authority: "user" | "tom_verified" | "imported" | "provider_candidate" | "local_model_candidate";
   confidence: number;
   binding_strength?: "hard" | "soft" | "advisory";
-  source_turn_ids: string[];
+  source_turn_ids: SourceId[];
   evidence_ids: string[];
   branch_refs: string[];
   created_at: string;
@@ -206,7 +210,7 @@ export interface ContinuityPacket {
 export interface StateMutationCandidate {
   candidate_id: string;
   project_id: string;
-  source_turn_ids: string[];
+  source_turn_ids: SourceId[];
   proposed_by: "user" | "tom_verified" | "imported" | "provider_candidate" | "local_model_candidate";
   operation: "CREATE" | "UPDATE" | "SUPERSEDE" | "REOPEN";
   object: {
@@ -221,7 +225,7 @@ export interface StateMutationCandidate {
 export interface Intervention {
   id: string;
   project_id: string;
-  turn_id: string;
+  turn_id: SourceId;
   code:
     | "CONTRADICTION"
     | "SUPERSEDED_PATH_REVIVED"
@@ -239,7 +243,7 @@ export interface Intervention {
   summary: string;
   response_excerpt: string;
   conflicting_state_ids: string[];
-  evidence_turn_ids: string[];
+  evidence_turn_ids: SourceId[];
   suggested_context_patch?: string;
   status: "open" | "accepted" | "dismissed" | "false_positive" | "resolved";
   policy_version: string;

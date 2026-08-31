@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tom-assist.local/schemas/source-id.v1.1.schema.json",
+  "title": "SourceId",
+  "description": "Source-turn identifier contract source-id/1.1. Legacy UUIDs remain valid; provider conversation turns may append the recorded user or assistant role.",
+  "oneOf": [
+    {
+      "type": "string",
+      "format": "uuid"
+    },
+    {
+      "type": "string",
+      "pattern": "^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}:(user|assistant)$"
+    }
+  ]
+}

@@ -726,3 +726,26 @@ ESCALATE WP23-1 (owner-freeze prerequisite, not an authoring blocker): audit con
 Final protection check: owner `tom_master` remains on `tom-assist/upstream-v1` at **e9fdef81c8a366ebbec07be9772189eea15cb2ac**; status-output / working-diff / staged-diff SHA-256 values remain **efd935faf8a04042f9f2c8c1e0df5cd7a8f1c98f04c5d881a90868ad156ba809** / **86cb4a857e782653e21d24b24b336304b42c4aaade9ea07823ba1797e8bbbdc9** / **e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855**. Linked worktree is clean at the same pin and retained. No protected upstream source edits, prohibited preview calls, use of port 18790, live generation, push or merge.
 
 **STOP FOR ORCHESTRATOR AUDIT. WP-22 is implementation-verified; WP-23 is DRAFT-PENDING-OWNER-FREEZE only. No G-gate verdict is issued.**
+
+## WP-24 — Versioned shared source-turn IDs [DONE]
+
+Commit: this work-package commit, `fix(wp-24): version shared source turn IDs` (resolved SHA is reported in the audit handoff). Branch `codex/wp-24-source-id-schema`, created from merged `main` at **c598eed918878ce62f8763edeb555c93f932b3d0**. The accepted WP-22/WP-23 branch was fast-forwarded to `main` before this branch was created; the retained `.upstream-worktree/` directory remained the sole untracked pre-existing entry and was never staged.
+
+Implementation and decisions:
+
+1. Added the shared JSON Schema **`source-id/1.1`** as `crates/protocol/schemas/source-id.v1.1.schema.json`. It preserves the v1 UUID form and admits the production provider-turn composite form `<uuid>:user` or `<uuid>:assistant`. Role suffixes are deliberately limited to the two ledger roles the governed conversation path records; empty, arbitrary, repeated and non-UUID composites remain invalid.
+2. State-object `source_turn_ids`, state-mutation-candidate `source_turn_ids`, intervention `turn_id`, and intervention `evidence_turn_ids` now reference that single contract. The shared fixture exercises legacy UUID provenance in a state object and composite assistant provenance in a candidate and intervention.
+3. Regenerated `packages/schema-generated/index.ts`. It now publishes the documented `SourceId` alias and uses it at every referenced field. TypeScript cannot encode JSON Schema format/pattern refinements in a string type, so runtime schema validation remains the executable syntax boundary.
+4. **WP22-1 CLOSED:** the exact `<exchange UUID>:assistant` ID already stored by WP-21/WP-22 is now valid shared protocol provenance. No aliases were invented and no existing ID was renamed. No migration, persistence code, archive, database or ledger record was read or rewritten by WP-24; ledger history is untouched.
+
+Evidence (offline implementation verification only):
+
+- `npm run schema:generate` -> exit 0. `npm run schema:validate` -> **9 fixtures, 43 core methods, source-id/1.1: 3 valid and 5 invalid cases**, exit 0. Accepted cases cover UUID, UUID:user and UUID:assistant; rejection cases cover opaque legacy text, empty/unknown/doubled roles and a non-UUID base.
+- `cargo test -p tom-assist-protocol` -> **5 passed, 0 failed, 0 ignored**, including fixture round trips with both source-ID forms.
+- `env -u TOM_ASSIST_LIVE_OAUTH -u TOM_ASSIST_OAUTH_RUNTIME_URL cargo test --workspace` -> **49 passed, 0 failed, 2 ignored**, exit 0. The first sandboxed run reached one disposable gateway socket and failed with `PermissionError: Operation not permitted`; the permitted rerun passed the same test unchanged. The ignored tests remain the explicitly opt-in live OAuth test and live drift verifier.
+- `npm run desktop:build` and `npm run extension:build` -> exit 0. `git diff --check` -> clean.
+- Changed product paths are limited to the versioned/shared schemas, regenerated types, schema validator, conformance fixture and this log. There is no persistence migration or runtime mutation path change.
+
+Protected source evidence: owner `tom_master` remains on `tom-assist/upstream-v1` at **e9fdef81c8a366ebbec07be9772189eea15cb2ac**. Status-output / working-diff / staged-diff SHA-256 values remain **efd935faf8a04042f9f2c8c1e0df5cd7a8f1c98f04c5d881a90868ad156ba809** / **86cb4a857e782653e21d24b24b336304b42c4aaade9ea07823ba1797e8bbbdc9** / **e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855**. The linked worktree is clean at the same pin and retained. No upstream edit, live provider call, quota use, prohibited preview mutation, port 18790 use, push or G-gate claim occurred.
+
+**STOP FOR ORCHESTRATOR AUDIT. WP-24 is implementation-verified; WP22-1 is closed by the versioned schema change, with ledger history untouched. No G-gate verdict is issued.**

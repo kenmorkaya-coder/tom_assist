@@ -8,7 +8,7 @@
   "properties": {
     "candidate_id": {"type": "string", "format": "uuid"},
     "project_id": {"type": "string", "format": "uuid"},
-    "source_turn_ids": {"type": "array", "items": {"type": "string", "format": "uuid"}},
+    "source_turn_ids": {"type": "array", "items": {"$ref": "source-id.v1.1.schema.json"}},
     "proposed_by": {"enum": ["user", "tom_verified", "imported", "provider_candidate", "local_model_candidate"]},
     "operation": {"enum": ["CREATE", "UPDATE", "SUPERSEDE", "REOPEN"]},
     "object": {"type": "object"},
@@ -24,4 +24,3 @@
     }
   }
 }
-

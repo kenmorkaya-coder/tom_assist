@@ -16,7 +16,7 @@
     "authority": {"enum": ["user", "tom_verified", "imported", "provider_candidate", "local_model_candidate"]},
     "confidence": {"type": "number", "minimum": 0, "maximum": 1},
     "binding_strength": {"enum": ["hard", "soft", "advisory"]},
-    "source_turn_ids": {"type": "array", "items": {"type": "string", "format": "uuid"}, "uniqueItems": true},
+    "source_turn_ids": {"type": "array", "items": {"$ref": "source-id.v1.1.schema.json"}, "uniqueItems": true},
     "evidence_ids": {"type": "array", "items": {"type": "string", "format": "uuid"}, "uniqueItems": true},
     "branch_refs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
     "created_at": {"type": "string", "format": "date-time"},
@@ -28,4 +28,3 @@
     "state_version": {"type": "integer", "minimum": 0}
   }
 }
-
