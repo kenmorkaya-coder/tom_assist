@@ -53,6 +53,6 @@ Commit: `feat(wp-17): full commit dynamics and two-shelf memory`.
 
 Branch: `build/commit-dynamics-v1` off `main`; both WPs on it; stop after WP-17 and report for orchestrator audit before merge.
 
-## Standing constraints (unchanged)
+## Standing constraints (unchanged, with owner re-affirmation 31 Aug)
 
-tom_master, tom_master17D, tom_sicd_gemma strictly read-only; all mirrors cite pinned file:line; preview purity is non-negotiable and now covers the structural channel; no G-gate verdicts; Box 2 (translator) remains held — do not implement anything for it.
+tom_master and tom_sicd_gemma are strictly read-only. **tom_master17D is off-limits entirely — no changes, no reads, no imports, no references, at this stage or any stage of this build** (owner directive, 31 Aug 2026; this restates BUILD_INSTRUCTION.md §0 in its strong form). 17D work reaches the product only by the graduation path: owner merges into tom_master → renewed inspection → reviewed repin — never directly. All mirrors cite pinned tom_master file:line; preview purity is non-negotiable and now covers the structural channel; no G-gate verdicts; Box 2 (translator) remains held — do not implement anything for it.
