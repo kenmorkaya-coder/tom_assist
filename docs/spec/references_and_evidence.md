@@ -1,12 +1,12 @@
 # References, Evidence Anchors and Claim Boundaries
 
-## Repositories (all READ-ONLY for this build)
+## Repositories (status amended 31 Aug 2026 — see ORCHESTRATOR_REVIEW_5.md)
 
-| Repo | Path | Role | Pin |
+| Repo | Path | Role / status | Pin |
 |---|---|---|---|
-| tom_master | `/Users/kenmorkaya/PycharmProjects/tom_master` | The ToM runtime this product binds to. Public remote: github.com/kenmorkaya-coder/Tree_of_Mind | commit `8799ccbdd` |
-| tom_sicd_gemma | `/Users/kenmorkaya/PycharmProjects/tom_sicd_gemma` | [R1] experiment repo: generator, runner, coupling code, result JSONs, experiment contract | branch `feat/rgm-memory-bridge` |
-| tom_master17D | `/Users/kenmorkaya/PycharmProjects/tom_master17D` | Ken's research fork. **OFF-LIMITS: never import from, reference, or modify.** | — |
+| tom_master | `/Users/kenmorkaya/PycharmProjects/tom_master` | The ToM runtime this product binds to. Public remote: github.com/kenmorkaya-coder/Tree_of_Mind. **Governed changes allowed** (31 Aug 2026) per the class policy in ORCHESTRATOR_REVIEW_5.md: joint decision → worktree branch → audit → repin. | commit `8799ccbdd` (until WP-18 repin) |
+| tom_sicd_gemma | `/Users/kenmorkaya/PycharmProjects/tom_sicd_gemma` | [R1] experiment repo: generator, runner, coupling code, result JSONs, experiment contract. **FROZEN FOREVER** — reproducibility archive. | branch `feat/rgm-memory-bridge` |
+| tom_master17D | `/Users/kenmorkaya/PycharmProjects/tom_master17D` | Ken's research fork. **OFF-LIMITS ENTIRELY: no reads, no imports, no references, no changes** (owner directive, 31 Aug 2026). Reaches the product only via owner merge into tom_master → renewed inspection → repin. | — |
 
 ## Primary evidence [R1]
 

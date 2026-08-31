@@ -18,6 +18,7 @@ Read these three documents before writing any code:
 ## 0. Ground rules
 
 - **Read-only repos:** `tom_master` (pinned `8799ccbdd`), `tom_sicd_gemma`, `tom_master17D`. You may read the first two; you must never write to any of them. `tom_master17D` is off-limits entirely — do not read, import, or reference it.
+  **[Amended 31 Aug 2026, owner decision:** `tom_master` now accepts **governed changes** under the class policy in `ORCHESTRATOR_REVIEW_5.md` — linked-worktree protocol, explicit-path staging, orchestrator audit, reviewed repin. `tom_sicd_gemma` remains frozen forever (reproducibility archive); `tom_master17D` remains off-limits entirely.**]**
 - **This repo is yours.** Initialize git here (`main`), commit the docs first, then work on branch `build/one-shot-v1` with one commit per work package (conventional commit messages, e.g. `feat(wp-03): tom gateway with preview purity tests`).
 - **No LLM APIs, no network services, no cloud.** The product is local-first; the build must not add any network dependency beyond package registries at build time.
 - **No gate claims.** You are building instruments (tests, harnesses, reports). You never report a spec G-gate (G1–G17) as *passed* — that authority belongs to the validation programme, run later by the owner. In-shot tests are labeled as build verification, not gate verdicts.
