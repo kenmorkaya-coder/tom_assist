@@ -1,5 +1,8 @@
 //! Snapshot-bound PREPARE_TURN / EVALUATE_TURN orchestration.
+pub mod chat_capture;
+pub mod conversations;
 pub mod experience;
+pub mod provider;
 pub mod recovery;
 
 use serde::{Deserialize, Serialize};
@@ -214,6 +217,8 @@ pub struct AssistService {
     store: Mutex<Store>,
     project_writers: Mutex<HashMap<String, Arc<Mutex<()>>>>,
     governance_verifier: Arc<dyn GatewayVerifier>,
+    provider: Arc<dyn provider::ProviderAdapter>,
+    provider_inflight: Mutex<std::collections::HashSet<String>>,
 }
 
 impl AssistService {
@@ -230,12 +235,17 @@ impl AssistService {
             store: Mutex::new(store),
             project_writers: Mutex::new(HashMap::new()),
             governance_verifier: Arc::new(verifier),
+            provider: Arc::new(provider::DisconnectedProvider),
+            provider_inflight: Mutex::new(std::collections::HashSet::new()),
         }
     }
 
     pub fn with_gateway(store: Store, gateway: GatewayClient) -> Self {
         let mut service = Self::with_governance_verifier(store, gateway.clone());
         service.gateway = Some(gateway);
+        service.provider = Arc::new(provider::RuntimeOAuthAdapter(
+            service.gateway.as_ref().unwrap().clone(),
+        ));
         service
     }
 
@@ -789,6 +799,13 @@ impl AssistService {
             });
         }
         match envelope.method {
+            Method::ProviderStatus
+            | Method::ConversationList
+            | Method::ConversationCreate
+            | Method::ConversationGet
+            | Method::ConversationPrepare
+            | Method::ConversationSend
+            | Method::ConversationEvaluate => self.dispatch_conversation(envelope),
             Method::CapabilitiesGet => Ok(json!({
                 "protocol": SERVICE_PROTOCOL_VERSION,
                 "service_version": SERVICE_VERSION,

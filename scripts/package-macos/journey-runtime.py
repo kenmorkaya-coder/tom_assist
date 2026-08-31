@@ -6,6 +6,7 @@ helper owns only the three child PIDs it launches and disposable local stores.
 """
 import argparse
 import hashlib
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
@@ -13,6 +14,30 @@ import socket
 import sqlite3
 import subprocess
 import time
+from threading import Thread
+
+FIXTURE_RESPONSE = 'The connected beam transfers force to both columns. ' * 32 + 'END-WP21-永久-🙂'
+
+
+class FixtureRuntime(BaseHTTPRequestHandler):
+    """Only this helper substitutes upstream HTTP. Production adapter unchanged."""
+    calls = []
+
+    def log_message(self, *_): pass
+
+    def do_GET(self):
+        if self.path == '/api/oauth/status': value = {'ready':True, 'mode':'oauth'}
+        elif self.path == '/api/llm/status': value = {'auth_mode':'oauth','oauth_ready':True,'provider':'openai'}
+        else: self.send_error(404); return
+        self.send_response(200); self.end_headers(); self.wfile.write(json.dumps(value).encode())
+
+    def do_POST(self):
+        if self.path != '/api/llm/complete': self.send_error(404); return
+        payload = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+        assert set(payload) == {'prompt'} and '[TOM_ASSIST_STATE' in payload['prompt']
+        self.calls.append(payload)
+        time.sleep(2)  # Exercise live waiting/polling, not token streaming.
+        self.send_response(200); self.end_headers(); self.wfile.write(json.dumps({'text':FIXTURE_RESPONSE,'model':'default'}).encode())
 
 
 def write_json(path, value):
@@ -38,8 +63,10 @@ def snapshot(data):
         row = db.execute("SELECT id,state_version,state_digest FROM projects WHERE name='New Project'").fetchall()
         assert len(row) == 1, "expected exactly one UI-created New Project"
         project, version, state_digest = row[0]
-        counts = {table:db.execute(f"SELECT COUNT(*) FROM {table} WHERE project_id=?", (project,)).fetchone()[0] for table in ("state_events", "state_objects", "turns", "context_runs", "response_evaluations")}
+        counts = {table:db.execute(f"SELECT COUNT(*) FROM {table} WHERE project_id=?", (project,)).fetchone()[0] for table in ("state_events", "state_objects", "turns", "context_runs", "response_evaluations", "provider_sessions", "chat_conversations", "provider_exchanges")}
         receipts = db.execute("SELECT result_json FROM runtime_commit_receipts WHERE sent_turn_id IN (SELECT id FROM turns WHERE project_id=?) ORDER BY sent_turn_id", (project,)).fetchall()
+        sessions = db.execute("SELECT * FROM provider_sessions WHERE project_id=? ORDER BY id", (project,)).fetchall()
+        exchanges = db.execute("SELECT * FROM provider_exchanges WHERE project_id=? ORDER BY id", (project,)).fetchall()
     library = data / "projects" / project / "tom/library.sqlite3"
     with readonly(library) as db:
         tree, rgm, keys, settings = db.execute("SELECT tree,rgm,idempotency,settings FROM runtime_head").fetchone()
@@ -51,7 +78,8 @@ def snapshot(data):
             "tree_sha256":hashlib.sha256(tree).hexdigest(),"rgm_sha256":hashlib.sha256(rgm).hexdigest(),
             "engine_tick":json.loads(tree)["tick"],"rgm_tick":json.loads(rgm)["current_tick"],
             "idempotency":json.loads(keys),"settings":json.loads(settings),"receipts":[json.loads(x[0]) for x in receipts],
-            "originals":originals,"demotions":demotions}
+            "originals":originals,"demotions":demotions,"sessions":sessions,"exchanges":exchanges,
+            "provider_calls":len(FixtureRuntime.calls)}
 
 
 def main():
@@ -66,6 +94,11 @@ def main():
     assert app.is_dir() and (app / "Contents/MacOS/Tom Assist").is_file()
     children, logs = [], []
     data = root / "source"
+    # Always offline. Ignore inherited owner URL; live OAuth has a separate opt-in test.
+    fixture = ThreadingHTTPServer(('127.0.0.1', 0), FixtureRuntime)
+    assert fixture.server_port != 18790
+    fixture_worker = Thread(target=fixture.serve_forever, daemon=True)
+    fixture_worker.start()
 
     def stop():
         for child in reversed(children):
@@ -81,7 +114,8 @@ def main():
     def launch():
         data.mkdir(mode=0o700, exist_ok=True)
         env = {**os.environ,"PYTHONDONTWRITEBYTECODE":"1","TOM_ASSIST_APP_SUPPORT":str(data),
-               "TOM_ASSIST_GATEWAY_SOCKET":str(root / "gateway.sock"),"TOM_ASSISTD_SOCKET":str(root / "assistd.sock")}
+               "TOM_ASSIST_GATEWAY_SOCKET":str(root / "gateway.sock"),"TOM_ASSISTD_SOCKET":str(root / "assistd.sock"),
+               "TOM_ASSIST_OAUTH_RUNTIME_URL":f"http://127.0.0.1:{fixture.server_port}"}
         commands = [
             [str(repo / ".venv-gateway/bin/python"), str(repo / "gateway/tom_gateway.py"), "--socket", env["TOM_ASSIST_GATEWAY_SOCKET"], "--data-dir", str(data)],
             [str(repo / "target/release/tom-assistd"), env["TOM_ASSISTD_SOCKET"], str(data / "tom-assist.sqlite3"), env["TOM_ASSIST_GATEWAY_SOCKET"]],
@@ -102,7 +136,7 @@ def main():
         # Allow LaunchServices to observe the new GUI PID before Computer Use.
         time.sleep(1)
         assert all(p.poll() is None for p in children), "test child exited during startup"
-        write_json(root / "ready.json", {"app":str(app),"data":str(data),"pids":[p.pid for p in children],"build_verification_only":True})
+        write_json(root / "ready.json", {"app":str(app),"data":str(data),"pids":[p.pid for p in children],"build_verification_only":True,"provider":"offline HTTP fixture, never live OAuth","fixture_port":fixture.server_port})
 
     try:
         launch()
@@ -133,6 +167,7 @@ def main():
                 write_json(root / "response.json", {"id":command["id"],"ok":False,"error":repr(error)})
     finally:
         stop()
+        fixture.shutdown(); fixture.server_close(); fixture_worker.join()
 
 
 if __name__ == "__main__": main()

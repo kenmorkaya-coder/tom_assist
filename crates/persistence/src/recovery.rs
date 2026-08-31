@@ -26,8 +26,56 @@ const TABLES: &[&str] = &[
     "sent_contexts",
     "runtime_commit_receipts",
     "recovery_imports",
+    "chat_conversations",
+    "provider_exchanges",
 ];
 const FORMAT: &str = "tom-assist-recovery/2";
+
+#[cfg(test)]
+mod compatibility_tests {
+    use super::*;
+
+    #[test]
+    fn wp20_inventory_without_chat_is_supported_but_other_omissions_are_not() {
+        let mut source = Store::open_memory().unwrap();
+        source
+            .create_project(
+                "old-project",
+                "WP20",
+                "full-local",
+                "context-policy/1.1",
+                "owner",
+                "create",
+                "2026-08-31T00:00:00Z",
+            )
+            .unwrap();
+        let mut ledger = source.recovery_ledger("old-project").unwrap();
+        ledger.tables.remove("chat_conversations");
+        ledger.tables.remove("provider_exchanges");
+        let restored = Store::open_memory().unwrap();
+        restored.insert_recovery_ledger(&ledger, false).unwrap();
+        assert_eq!(
+            restored.project("old-project").unwrap(),
+            source.project("old-project").unwrap()
+        );
+        assert!(restored.conversations("old-project").unwrap().is_empty());
+        ledger.tables.remove("turns");
+        assert!(
+            Store::open_memory()
+                .unwrap()
+                .insert_recovery_ledger(&ledger, false)
+                .is_err()
+        );
+        let mut current = source.recovery_ledger("old-project").unwrap();
+        current.tables.remove("provider_exchanges");
+        assert!(
+            Store::open_memory()
+                .unwrap()
+                .insert_recovery_ledger(&current, false)
+                .is_err()
+        );
+    }
+}
 
 #[derive(Serialize, Deserialize)]
 struct Rows {
@@ -167,17 +215,25 @@ impl Store {
     }
 
     fn insert_recovery_ledger(&self, ledger: &Ledger, remap_audit_ids: bool) -> Result<()> {
-        if ledger
-            .tables
-            .keys()
-            .map(String::as_str)
-            .collect::<std::collections::BTreeSet<_>>()
-            != TABLES.iter().copied().collect()
-        {
+        let actual: std::collections::BTreeSet<_> =
+            ledger.tables.keys().map(String::as_str).collect();
+        let expected: std::collections::BTreeSet<_> = TABLES.iter().copied().collect();
+        let legacy: std::collections::BTreeSet<_> = TABLES
+            .iter()
+            .copied()
+            .filter(|t| !matches!(*t, "chat_conversations" | "provider_exchanges"))
+            .collect();
+        if actual != expected && actual != legacy {
             return Err(integrity("archive table inventory mismatch"));
         }
         for table in TABLES {
-            let data = &ledger.tables[*table];
+            // WP-20 archives predate chat; their missing chat tables mean empty,
+            // not missing runtime recovery content. No other omissions accepted.
+            let empty = Rows {
+                columns: columns(&self.connection, table)?,
+                rows: vec![],
+            };
+            let data = ledger.tables.get(*table).unwrap_or(&empty);
             if data.columns != columns(&self.connection, table)? {
                 return Err(integrity(format!("archive schema mismatch: {table}")));
             }

@@ -46,7 +46,14 @@ export type Method =
   | "snapshot.restore"
   | "project.export"
   | "project.import"
-  | "diagnostics.run";
+  | "diagnostics.run"
+  | "provider.status"
+  | "conversation.list"
+  | "conversation.create"
+  | "conversation.get"
+  | "conversation.prepare"
+  | "conversation.send"
+  | "conversation.evaluate";
 
 export interface Envelope {
   protocol: "tom-assist/1.0";

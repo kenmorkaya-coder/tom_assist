@@ -102,6 +102,20 @@ pub enum Method {
     ProjectImport,
     #[serde(rename = "diagnostics.run")]
     DiagnosticsRun,
+    #[serde(rename = "provider.status")]
+    ProviderStatus,
+    #[serde(rename = "conversation.list")]
+    ConversationList,
+    #[serde(rename = "conversation.create")]
+    ConversationCreate,
+    #[serde(rename = "conversation.get")]
+    ConversationGet,
+    #[serde(rename = "conversation.prepare")]
+    ConversationPrepare,
+    #[serde(rename = "conversation.send")]
+    ConversationSend,
+    #[serde(rename = "conversation.evaluate")]
+    ConversationEvaluate,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -8,7 +8,7 @@ export class PackagedJourney {
   constructor(sky, app, root) {
     this.sky = sky; this.app = app; this.root = root;
     this.archive = join(root, 'complete-archive');
-    this.evidence = { classification: 'NOT-A-GATE', app, root, stages: [] };
+    this.evidence = { classification: 'NOT-A-GATE', provider: 'offline HTTP fixture; production OAuth adapter, no live quota', app, root, stages: [] };
   }
   async control(action) {
     const id = randomUUID();
@@ -29,11 +29,18 @@ export class PackagedJourney {
     const rows = before.text.split('\n').filter(row => row.trim().endsWith(`button ${label}`));
     assert.equal(rows.length, 1, `Expected one enabled button: ${label}`);
     await this.sky.click({ app: this.app, element_index: Number(rows[0].trim().match(/^\d+/)[0]) });
-    return this.state();
+    let state = await this.state();
+    const deadline=Date.now()+30000;
+    while(state.text.includes('Working locally or waiting for the runtime. No automatic resend.')) {
+      assert.ok(Date.now()<deadline,`Chat action did not settle: ${label}`);
+      await new Promise(resolve=>setTimeout(resolve,200));
+      state=await this.state();
+    }
+    return state;
   }
   async fill(label, value) {
     const before = await this.state();
-    const row = before.text.split('\n').find(row => row.includes(`(settable) ${label}, Value:`));
+    const row = before.text.split('\n').find(row => row.includes(`(settable) ${label},`));
     assert.ok(row, `Missing editable control: ${label}`);
     await this.sky.set_value({ app: this.app, element_index: Number(row.trim().match(/^\d+/)[0]), value });
     return this.state();
@@ -71,21 +78,29 @@ export class PackagedJourney {
     await this.click('Quick capture decision');
     assert.match((await this.click('Ledger')).text, /Document user-gated workflow/);
     await this.record('01-capture');
-    await this.click('Exchange');
-    assert.match((await this.click('Prepare diagnostic packet')).text, /TOM_ASSIST_STATE/);
+    await this.click('Chat');
+    await this.click('New conversation');
+    await this.fill('Message', 'Check the connected beam-column load path.');
+    assert.match((await this.click('Preview packet')).text, /TOM_ASSIST_STATE/);
     const before = await this.control('snapshot');
-    await this.click('Prepare diagnostic packet');
+    await this.click('Preview packet');
     const after = await this.control('snapshot');
     for (const key of ['tree_sha256','rgm_sha256','idempotency','settings','originals','demotions']) assert.deepEqual(after[key], before[key], `Preview changed ${key}`);
     assert.equal(before.engine_tick, 4707); assert.equal(before.rgm_tick, 0);
+    assert.equal(after.provider_calls,0);
     await this.record('02-pure-packet', { before, after });
   }
   async commit() {
-    await this.click('Mark diagnostic turn sent');
-    this.response = 'The connected beam transfers force to both columns. '.repeat(32) + 'END-WP20-永久-🙂';
-    await this.fill('Simulated provider response', this.response);
-    const state = await this.click('Evaluate diagnostic response and commit');
-    assert.match(state.text, /"result": "PASS"/);
+    this.response = 'The connected beam transfers force to both columns. '.repeat(32) + 'END-WP21-永久-🙂';
+    let state = await this.state();
+    // Resume assertion inspection after a driver failure without ever resending.
+    if(state.text.split('\n').some(row=>row.trim().endsWith('button Send with Tom'))) state=await this.click('Send with Tom');
+    for(let i=0;i<25&&!state.text.includes('Five-dynamics experience committed');i++) state=await this.state();
+    assert.match(state.text, /PASS/);
+    assert.match(state.text, /Five-dynamics experience committed/);
+    // macOS AX truncates a long static-text node. Prove display by its prefix;
+    // snapshot below verifies the complete Unicode tail in durable capture.
+    assert.match(state.text, /Assistant The connected beam transfers force/);
     this.committed = await this.control('snapshot');
     assert.equal(this.committed.engine_tick, 4708);
     assert.equal(this.committed.rgm_tick, 4709);
@@ -93,6 +108,9 @@ export class PackagedJourney {
     assert.equal(Object.keys(this.committed.idempotency).length, 1);
     assert.equal(this.committed.counts.turns, 2);
     assert.equal(this.committed.counts.response_evaluations, 1);
+    assert.equal(this.committed.counts.provider_sessions,1);
+    assert.equal(this.committed.counts.chat_conversations,1);
+    assert.equal(this.committed.provider_calls,1);
     assert.equal(this.committed.receipts[0].taught, true);
     assert.equal(this.committed.receipts[0].activated_branch_ids.length, 16);
     assert.equal(this.committed.originals.length, 1);
@@ -116,6 +134,7 @@ export class PackagedJourney {
     const lifecycle = await this.control('restart');
     await this.selectCreatedProject();
     assert.match((await this.click('Ledger')).text, /Document user-gated workflow/);
+    assert.match((await this.click('Chat')).text, /Assistant The connected beam transfers force/);
     assert.deepEqual(await this.control('snapshot'), this.committed);
     const replay = await this.control('replay');
     await this.record('05-cold-restart', { lifecycle, replay, snapshot: await this.control('snapshot') });
@@ -128,6 +147,7 @@ export class PackagedJourney {
     assert.match((await this.click('Import verified recovery archive')).text, /Project recovered: New Project/);
     await this.selectCreatedProject();
     assert.match((await this.click('Ledger')).text, /Document user-gated workflow/);
+    assert.match((await this.click('Chat')).text, /Assistant The connected beam transfers force/);
     assert.deepEqual(await this.control('snapshot'), this.committed);
     await this.record('06-fresh-store-import', { lifecycle, snapshot: await this.control('snapshot') });
   }
@@ -135,6 +155,7 @@ export class PackagedJourney {
     const lifecycle = await this.control('restart');
     await this.selectCreatedProject();
     assert.match((await this.click('Ledger')).text, /Document user-gated workflow/);
+    assert.match((await this.click('Chat')).text, /Assistant The connected beam transfers force/);
     assert.deepEqual(await this.control('snapshot'), this.committed);
     const replay = await this.control('replay');
     await this.record('07-recovered-restart', { lifecycle, replay, snapshot: await this.control('snapshot') });

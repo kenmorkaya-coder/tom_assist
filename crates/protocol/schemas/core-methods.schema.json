@@ -12,7 +12,8 @@
     "packet.get", "packet.verify", "state.candidate.create", "state.commit",
     "state.supersede", "state.reopen", "intervention.resolve",
     "model.bias.preview", "model.bias.apply", "snapshot.create", "snapshot.verify",
-    "snapshot.restore", "project.export", "project.import", "diagnostics.run"
+    "snapshot.restore", "project.export", "project.import", "diagnostics.run",
+    "provider.status", "conversation.list", "conversation.create", "conversation.get",
+    "conversation.prepare", "conversation.send", "conversation.evaluate"
   ]
 }
-

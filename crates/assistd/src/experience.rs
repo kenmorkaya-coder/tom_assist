@@ -34,6 +34,12 @@ pub fn commit_captured_exchange(
     if let Some(receipt) = store.runtime_commit_for_sent(&sent.id)? {
         return Ok(Some(receipt));
     }
+    if evaluation.result != "PASS"
+        && evaluation.intervention_ids.is_empty()
+        && !store.reviewed_exchange_accepted(&sent.id)?
+    {
+        return Ok(None);
+    }
     let mut dismissed = false;
     // Native conflicts can be persisted as REVIEW while the gateway is down.
     // They still require resolution before any experience is applied.

@@ -34,6 +34,10 @@ from the imported permanent library without applying experience again.
   workstreams, sessions, turns, anchors, state objects/edges, evidence, events,
   candidates, context runs/manifests, evaluations, interventions, checkpoints,
   snapshots, audit events, sent bindings, runtime receipts and recovery receipts.
+  WP-21 also includes chat conversation metadata and durable provider exchanges
+  (approved prompts, drafts, response captures, review acceptance and send status).
+  Earlier WP-20 archives without both new tables load with empty chat tables;
+  arbitrary missing tables still fail closed. Interrupted sends never auto-resend.
 - `state.json`, `events.jsonl`: canonical materialized state and replayable events.
 - `transcript-policy.json`: retention profile and explicit full-content warning.
 - `runtime/library.sqlite3`: SQLite online backup, including WAL-committed data;
@@ -89,31 +93,36 @@ take a verified complete project backup before changing the installation.
 
 This drives the real unsigned release `.app` through macOS accessibility controls,
 native Tauri IPC, the release daemon and real pinned gateway. There is no injected
-WebView driver or fake backend. The Exchange tab is an explicitly local diagnostic
-fixture: no provider call is made, but the marked-sent response follows real
-evaluation/commit wiring. Use only the helper's disposable project.
+WebView driver or fake desktop backend. WP-21 replaces the Exchange diagnostic
+with the real Chat surface: create a conversation, preview the full prompt,
+explicitly Send, capture, evaluate and commit. The helper supplies an offline
+loopback HTTP runtime fixture to the **production provider adapter**, overriding
+any inherited owner URL. No actual OAuth/provider quota is consumed. Use only
+the helper's disposable project. The separate ignored live test is described in
+`OAUTH_CHAT.md`.
 
 Build a separate artifact (choose a fresh output path each run):
 
 ```sh
-scripts/package-macos/package-unsigned-app.sh --output-dir .tmp/wp20-package \
-  --bundle-id local.tom.assist.wp20
+scripts/package-macos/package-unsigned-app.sh --output-dir .tmp/wp21-package \
+  --bundle-id local.tom.assist.wp21
 cargo build --release -p tom-assistd
 PYTHONDONTWRITEBYTECODE=1 .venv-gateway/bin/python \
   scripts/package-macos/journey-runtime.py \
-  --app "$PWD/.tmp/wp20-package/Tom Assist.app" \
-  --run-root /tmp/tom-assist-wp20-journey
+  --app "$PWD/.tmp/wp21-package/Tom Assist.app" \
+  --run-root /tmp/tom-assist-wp21-journey
 ```
 
 The run root must not already exist. The helper controls only its three child PIDs
-and isolated stores/sockets; it never controls the GUI or uses a TCP port. In a
+and isolated stores/sockets plus one disposable localhost HTTP fixture on a
+system-assigned ephemeral port (never 18790); it never controls the GUI. In a
 Codex Computer Use `node_repl` session, import the test and run each phase (separate
 calls make progress and failures visible):
 
 ```js
 var sky = (await import('@oai/sky')).sky;
 var { PackagedJourney } = await import('/absolute/ToM_assist/scripts/package-macos/packaged-journey.mjs');
-var journey = new PackagedJourney(sky, '/absolute/ToM_assist/.tmp/wp20-package/Tom Assist.app', '/private/tmp/tom-assist-wp20-journey');
+var journey = new PackagedJourney(sky, '/absolute/ToM_assist/.tmp/wp21-package/Tom Assist.app', '/private/tmp/tom-assist-wp21-journey');
 await journey.capture();
 await journey.commit();
 await journey.backup();

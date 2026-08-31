@@ -104,6 +104,16 @@ impl GatewayClient {
     pub fn health(&self) -> Result<Value> {
         self.request("GET", "/health", None)
     }
+    pub fn provider_status(&self) -> Result<Value> {
+        self.request("GET", "/provider/status", None)
+    }
+    pub fn provider_complete(&self, prompt: &str) -> Result<Value> {
+        self.request(
+            "POST",
+            "/provider/complete",
+            Some(json!({"prompt":prompt,"explicit_send":true})),
+        )
+    }
     pub fn export_runtime(&self, project_id: &str, directory: &Path) -> Result<Value> {
         self.request(
             "POST",
@@ -207,6 +217,14 @@ impl GatewayClient {
             .transpose()?
             .unwrap_or_default();
         let mut stream = UnixStream::connect(&self.socket_path)?;
+        stream.set_read_timeout(Some(std::time::Duration::from_secs(
+            if path == "/provider/complete" {
+                200
+            } else {
+                60
+            },
+        )))?;
+        stream.set_write_timeout(Some(std::time::Duration::from_secs(60)))?;
         let header = format!(
             "{method} {path} HTTP/1.0\r\nHost: localhost\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
             body.len()

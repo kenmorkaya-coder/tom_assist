@@ -44,8 +44,8 @@ def main() -> None:
         validator.validate(examples[fixture_name])
 
     methods = schemas["core-methods.schema.json"]["enum"]
-    if len(methods) != 33 or len(methods) != len(set(methods)):
-        raise AssertionError(f"expected 33 unique core methods, got {len(methods)}")
+    if len(methods) != 40 or len(methods) != len(set(methods)):
+        raise AssertionError(f"expected 40 unique core methods, got {len(methods)}")
     print(f"validated {len(MAPPING)} fixtures and {len(methods)} core methods")
 
 

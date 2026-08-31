@@ -55,7 +55,7 @@ struct Diagnostics {
     storage_mode: String,
     migration_backup: Option<String>,
     migration_error: Option<String>,
-    network_services: bool,
+    provider_status: Value,
     memory: Value,
 }
 
@@ -64,6 +64,78 @@ fn gateway(store: &Store) -> tom_assist_tom_adapter::GatewayClient {
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| store.path().with_file_name("tom_gateway.sock"));
     tom_assist_tom_adapter::GatewayClient::new(socket)
+}
+
+#[tauri::command]
+async fn chat_request(
+    envelope: tom_assist_protocol::Envelope,
+    state: tauri::State<'_, DesktopState>,
+) -> Result<Value, String> {
+    use tom_assist_protocol::Method;
+    if !matches!(
+        envelope.method,
+        Method::ProviderStatus
+            | Method::ConversationList
+            | Method::ConversationCreate
+            | Method::ConversationGet
+            | Method::ConversationPrepare
+            | Method::ConversationSend
+            | Method::ConversationEvaluate
+    ) {
+        return Err("unsupported chat operation".into());
+    }
+    let socket = {
+        let store = locked(&state);
+        if envelope.method != Method::ProviderStatus {
+            let project = envelope.project_id.as_deref().ok_or("project required")?;
+            if envelope.payload["project_id"].as_str() != Some(project)
+                || store.project(project).map_err(|e| e.to_string())?.is_none()
+            {
+                return Err("chat project mismatch".into());
+            }
+        }
+        std::env::var_os("TOM_ASSISTD_SOCKET")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| store.path().with_file_name("tom-assistd.sock"))
+    };
+    // The long provider request must not block the native window or polling.
+    tauri::async_runtime::spawn_blocking(move || {
+        let mut stream = UnixStream::connect(socket).map_err(|_| "Local service unavailable")?;
+        stream
+            .set_read_timeout(Some(Duration::from_secs(240)))
+            .map_err(|e| e.to_string())?;
+        stream
+            .set_write_timeout(Some(Duration::from_secs(10)))
+            .map_err(|e| e.to_string())?;
+        serde_json::to_writer(&mut stream, &envelope).map_err(|e| e.to_string())?;
+        stream.write_all(b"\n").map_err(|e| e.to_string())?;
+        let mut line = String::new();
+        BufReader::new(stream)
+            .read_line(&mut line)
+            .map_err(|_| "Send may still be running. Refresh conversation; do not resend.")?;
+        let response: tom_assistd::WireResponse =
+            serde_json::from_str(&line).map_err(|_| "Invalid local service reply")?;
+        if !response.ok {
+            return Err(response
+                .error
+                .map(|e| e.message)
+                .unwrap_or_else(|| "Chat operation failed".into()));
+        }
+        response
+            .payload
+            .ok_or_else(|| "Empty local service reply".into())
+    })
+    .await
+    .map_err(|_| "Chat worker failed")?
+}
+
+#[tauri::command]
+fn capture_chat_state(
+    request: tom_assistd::chat_capture::ChatCaptureRequest,
+    state: tauri::State<'_, DesktopState>,
+) -> Result<(), String> {
+    tom_assistd::chat_capture::capture_decision(&mut locked(&state), request)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -356,7 +428,9 @@ fn diagnostics(
         .into(),
         migration_backup: state.migration_backup.clone(),
         migration_error: state.migration_error.clone(),
-        network_services: false,
+        provider_status: gateway(&store).provider_status().unwrap_or_else(
+            |_| serde_json::json!({"connected":false,"code":"OAUTH_RUNTIME_UNAVAILABLE"}),
+        ),
         memory: gateway(&store)
             .memory_diagnostics(&project_id, after_event_id.unwrap_or(0))
             .unwrap_or_else(|error| serde_json::json!({"unavailable":error.to_string()})),
@@ -529,6 +603,8 @@ fn main() {
             backup_project,
             verify_archive,
             exchange_request,
+            chat_request,
+            capture_chat_state,
             diagnostics,
             memory_settings,
             seed_demo

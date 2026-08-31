@@ -707,6 +707,8 @@ class TomGateway:
             LOGGER.warning("tom_master pin mismatch: expected %s, actual %s", PINNED_SHA, self.runtime_sha)
         self._projects: dict[str, ProjectRuntime] = {}
         self._projects_lock = threading.Lock()
+        from gateway.oauth_provider import OAuthProvider
+        self.oauth_provider = OAuthProvider()
         self._probe_imports()
 
     @staticmethod
@@ -766,6 +768,16 @@ class TomGateway:
     def handle(self, method: str, path: str, payload: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
         payload = payload or {}
         try:
+            if method == "GET" and path == "/provider/status":
+                return 200, self.oauth_provider.status()
+            if method == "POST" and path == "/provider/complete":
+                from gateway.oauth_provider import ProviderFailure
+                try:
+                    if payload.get("explicit_send") is not True:
+                        raise ProviderFailure("EXPLICIT_SEND_REQUIRED")
+                    return 200, self.oauth_provider.complete(payload.get("prompt"))
+                except ProviderFailure as error:
+                    return 409, {"error":str(error)}
             if method == "GET" and path == "/health":
                 return 200, {"status": "ok", "gateway_version": GATEWAY_VERSION, "runtime_version": self.runtime_sha, "pinned_sha_match": self.pinned_sha_match}
             if method == "GET" and path == "/capabilities":
