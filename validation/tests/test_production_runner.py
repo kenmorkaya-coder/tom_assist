@@ -3,6 +3,7 @@ import json
 import unittest
 import uuid
 from argparse import Namespace
+from unittest.mock import patch
 
 from validation.production_runner import (
     AUTHORIZED_GENERATIONS,
@@ -97,9 +98,10 @@ class ProductionRunnerContractTests(unittest.TestCase):
         self.assertEqual(scored["oracle_version"], "typed-action-oracle/2")
         self.assertTrue(scored["action_consistent"])
 
-    def test_v3_live_path_is_blocked_until_owner_freezes_v2(self):
-        with self.assertRaisesRegex(ValueError, "DRAFT-PENDING-OWNER-FREEZE"):
-            run(Namespace())
+    def test_v3_live_path_requires_fresh_explicit_authorization(self):
+        with patch.dict("os.environ", {}, clear=True):
+            with self.assertRaisesRegex(ValueError, "explicit WP-29 pilot-v3 authorization"):
+                run(Namespace(authorized_generations=165))
 
     def test_substrate_engagement_requires_every_native_tripwire(self):
         telemetry = {

@@ -1,6 +1,20 @@
 {
   "case_selection": "unchanged-wp25-prereg-frozen/1-33-cases",
-  "freeze_sha256": null,
+  "code_sha": "9c3c5d30281eab07bfd5d625fca74117557f4959",
+  "corpus_freeze_sha256": "sha256:04123dfc3ddd8033264977894fec2b5c7410a9df11b341cdcc72475b53a8a1d9",
+  "files_sha256": {
+    "crates/assistd/src/bin/wp25-battery-driver.rs": "sha256:e2b8caa71666ac9e343c54194f3201ab687d7719976e754118593bd94bcaa45e",
+    "crates/context-admission/src/lib.rs": "sha256:3b541317adb884270cb702d1c9864e535b6662abaf6524e7d91c933006fdbdc9",
+    "gateway/structural_preview.py": "sha256:46cb57e9e0c40fff842cfee7768ed9f64b610bf608801a7f40b3206d4676a2d0",
+    "gateway/tom_gateway.py": "sha256:8d62ff8d7c03b201d781ce91f5e9de2f36497d241519ac29988815c09747a6e7",
+    "validation/batteries/wp23-draft/manifest.json": "sha256:dfb9998a380db531c423f8f57abb16e2bd40050ec24e54ec43809f329e9ec78f",
+    "validation/batteries/wp29-v2-draft/FROZEN_V2.md": "sha256:fdd5993fe0ff6827e5a6a8decd9f7ff2e72ee2df520d7478d8311f183fa978d1",
+    "validation/batteries/wp29-v2-draft/PREREGISTRATION.md": "sha256:c0add32c150fcee48e0f582ce3246c46982da3bf7567b866122266451317061d",
+    "validation/oracle_worker.py": "sha256:244f4420de00d7c293df12853c7c52cdae2c67ab24c290ee326aebb2bf585527",
+    "validation/production_runner.py": "sha256:17477a82aff9236168b175301a28361f6fcb5a0d000ec001486a06d8b2e36576"
+  },
+  "freeze_sha256": "sha256:38f5f606be0a364d01dc7dc6fbb16bde36ba710be7db24969f2023aac043f220",
+  "frozen_at": "2026-09-01 Australia/Sydney",
   "generations": 165,
   "hypothesis_slots": [
     "H1",
@@ -10,10 +24,11 @@
   ],
   "margins": "unchanged-wp25-prereg-frozen/1",
   "oracle": "typed-action-oracle/2",
-  "owner_frozen": false,
+  "owner_frozen": true,
+  "owner_review": "ORCHESTRATOR_REVIEW_11.md",
   "provider_self_report": "off",
   "runs": [],
   "seed": 1729,
-  "status": "DRAFT-PENDING-OWNER-FREEZE",
-  "version": "wp29-prereg-draft/2"
+  "status": "FROZEN-WP29-V2",
+  "version": "wp29-prereg-frozen/2"
 }
