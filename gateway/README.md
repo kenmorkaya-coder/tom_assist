@@ -50,18 +50,26 @@ legacy checkpoints lacking commit-key/settings snapshots are not silently restor
 The versioned replacement for prose-to-load keyword counting is available in
 `shadow` and `authoritative` modes. It keeps two signals separate:
 
-1. local MiniLM produces a unit-normalized 384-dimensional content vector for
-   RAG-style semantic comparison;
-2. local Gemma fills `structural-candidate/1.0` through its native tool-call
-   interface. The candidate contains exact source spans, entities, directed
-   orientations, cause-to-effect relations, modality, negation and typed
-   signals. It contains no 17D values.
+1. local MiniLM tokenizes the complete passage into sentence-preferred windows
+   of at most 192 tokens with a 32-token overlap, then produces one
+   unit-normalized 384-dimensional vector per window. Retrieval compares every
+   query window with every stored window; the passage centroid is telemetry,
+   never the only retrieval signal;
+2. local Gemma fills one `structural-candidate/1.0` native tool call per window.
+   Window-local spans are rebound to original passage offsets, and exact overlap
+   duplicates are merged deterministically. Candidates contain entities,
+   directed orientations, cause-to-effect relations, modality, negation and
+   typed signals, but no 17D values. Product code supplies only trusted envelope
+   metadata and missing empty signal containers; it never supplies a semantic
+   fact, relationship, quote, direction or confidence on Gemma's behalf.
 
 The gateway validates every quoted span and endpoint. Product-owned,
-deterministic code calculates all 17 channels. Frequency, persistence,
+deterministic code calculates all 17 channels. Static channels use the strongest
+bounded-window evidence rather than sums, so adding neutral chunks cannot
+inflate the load. Frequency, persistence,
 burstiness, novelty, recurrence, volatility and decay use only previously
 committed semantic/structural history. The complete candidate, MiniLM and Gemma
-model revisions, vector, channel evidence, compiler version and digest are
+model revisions, vectors, channel evidence, compiler/chunking versions and digest are
 committed to the permanent library.
 Prepared analyses are checkpoint-bound and replayed byte-for-byte at commit;
 stale or altered analyses fail closed.
@@ -80,6 +88,8 @@ export TOM_ASSIST_STRUCTURE_PYTHON="$PWD/.venv-structure/bin/python"
 export TOM_ASSIST_GEMMA_PYTHON="$PWD/.venv-structure/bin/python"
 export TOM_ASSIST_MINILM_MODEL="/absolute/local/MiniLM/snapshot"
 export TOM_ASSIST_GEMMA_MODEL="/absolute/local/Gemma/snapshot"
+# Optional; default 600 seconds, permitted range 30..1800.
+export TOM_ASSIST_STRUCTURE_TIMEOUT_SECONDS=600
 ```
 
 Modes are:

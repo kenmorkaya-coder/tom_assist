@@ -121,12 +121,19 @@ class PermanentLibrary:
             if allowed is not None and commit_key not in allowed:
                 continue
             analysis = json.loads(encoded)
+            semantic_profile = analysis.get("semantic_profile")
+            if semantic_profile is None and "semantic_vector" in analysis:
+                # Read-only compatibility for the unactivated WP-30 single-vector
+                # prototype. New commits always use the multi-vector profile.
+                semantic_profile = {
+                    "chunks": [{"index": 0, "values": analysis["semantic_vector"]["values"]}]
+                }
             result.append({
                 "commit_key": commit_key,
                 "record_id": record_id,
                 "tick": tick,
                 "candidate": analysis["candidate"],
-                "semantic_vector": analysis["semantic_vector"],
+                "semantic_profile": semantic_profile,
                 "static_load": analysis["static_load"],
                 "load_signature": analysis["load_signature"],
                 "analysis_digest": analysis["analysis_digest"],

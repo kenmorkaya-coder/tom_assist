@@ -15,13 +15,13 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from gateway.structural_analysis import (  # noqa: E402
+from gateway.semantic_chunks import (  # noqa: E402
     EMBEDDING_DIMENSION,
-    EMBEDDING_VERSION,
-    PARSER_VERSION,
-    validate_candidate,
-    validate_semantic_vector,
+    MAX_CHUNK_TOKENS,
+    build_semantic_profile,
+    build_token_chunks,
 )
+from gateway.structural_analysis import PARSER_VERSION, validate_candidate  # noqa: E402
 from gateway.structure_provider import WORKER_PROTOCOL  # noqa: E402
 
 
@@ -106,26 +106,55 @@ def main() -> int:
                 source_text = request["source_text"]
                 if not isinstance(source_text, str) or not source_text.strip() or len(source_text) > 48_000:
                     raise ValueError("source text must contain 1..48000 characters")
-                encoded = tokenizer(
-                    [source_text], padding=True, truncation=True, max_length=256,
-                    return_tensors="pt",
+                offset_payload = tokenizer(
+                    source_text, add_special_tokens=False, return_offsets_mapping=True,
                 )
-                with torch.no_grad():
-                    hidden = model(**encoded).last_hidden_state
-                mask = encoded["attention_mask"].unsqueeze(-1).expand(hidden.size()).float()
-                vector = ((hidden * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1e-9))[0]
-                vector = torch.nn.functional.normalize(vector, p=2, dim=0)
-                values = [float(value) for value in vector.tolist()]
-                if len(values) != EMBEDDING_DIMENSION:
-                    raise ValueError(f"embedding model returned {len(values)} dimensions")
-                semantic_vector = validate_semantic_vector({
-                    "version": EMBEDDING_VERSION, "model": model_name, "revision": revision,
-                    "dimension": EMBEDDING_DIMENSION, "values": values,
-                })
-                candidate = validate_candidate(gemma.analyze(request_id, source_text), source_text)
+                plan = build_token_chunks(source_text, offset_payload["offset_mapping"])
+                chunk_texts = [source_text[item["start"]:item["end"]] for item in plan]
+                vectors: list[list[float]] = []
+                for batch_start in range(0, len(chunk_texts), 16):
+                    batch = chunk_texts[batch_start:batch_start + 16]
+                    encoded = tokenizer(
+                        batch, padding=True, truncation=False, return_tensors="pt",
+                    )
+                    lengths = encoded["attention_mask"].sum(dim=1).tolist()
+                    if any(int(length) > MAX_CHUNK_TOKENS + 2 for length in lengths):
+                        raise ValueError("a semantic chunk exceeds the MiniLM token window")
+                    with torch.no_grad():
+                        hidden = model(**encoded).last_hidden_state
+                    mask = encoded["attention_mask"].unsqueeze(-1).expand(hidden.size()).float()
+                    pooled = (hidden * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1e-9)
+                    pooled = torch.nn.functional.normalize(pooled, p=2, dim=1)
+                    for vector in pooled:
+                        values = [float(value) for value in vector.tolist()]
+                        if len(values) != EMBEDDING_DIMENSION:
+                            raise ValueError(
+                                f"embedding model returned {len(values)} dimensions"
+                            )
+                        vectors.append(values)
+                semantic_profile = build_semantic_profile(
+                    source_text,
+                    [
+                        {"start": item["start"], "end": item["end"], "values": vector}
+                        for item, vector in zip(plan, vectors)
+                    ],
+                    model=model_name,
+                    revision=revision,
+                )
+                chunk_candidates = []
+                for chunk_index, chunk_text in enumerate(chunk_texts):
+                    candidate = validate_candidate(
+                        gemma.analyze(f"{request_id}:{chunk_index}", chunk_text),
+                        chunk_text,
+                    )
+                    chunk_candidates.append({
+                        "chunk_index": chunk_index,
+                        "candidate": candidate,
+                    })
                 response = {
                     "protocol": WORKER_PROTOCOL, "request_id": request_id,
-                    "candidate": candidate, "semantic_vector": semantic_vector,
+                    "chunk_candidates": chunk_candidates,
+                    "semantic_profile": semantic_profile,
                     "parser_model": {
                         "version": PARSER_VERSION,
                         "model": "local/gemma-instruct-tool-parser",

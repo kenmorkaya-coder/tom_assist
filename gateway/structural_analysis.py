@@ -11,17 +11,29 @@ import hashlib
 import json
 import math
 import re
+from copy import deepcopy
 from typing import Any, Mapping, Sequence
+
+from gateway.semantic_chunks import (
+    EMBEDDING_VERSION,
+    profile_similarity,
+    validate_semantic_profile,
+)
 
 
 CANDIDATE_VERSION = "tom-assist-structural-candidate/1.0"
-ANALYSIS_VERSION = "tom-assist-structural-analysis/1.0"
-COMPILER_VERSION = "tom-assist-evidence-load17/1.0"
-EMBEDDING_VERSION = "minilm-l6-v2/384d-mean-pool-max256/1.0"
+ANALYSIS_VERSION = "tom-assist-structural-analysis/1.1"
+COMPILER_VERSION = "tom-assist-evidence-load17/1.1"
+SUPPORTED_COMPILER_VERSIONS = {
+    "tom-assist-evidence-load17/1.0",
+    COMPILER_VERSION,
+}
 PARSER_VERSION = "gemma-native-tool-structural-candidate/1.0"
-EMBEDDING_DIMENSION = 384
 NEAR_SEMANTIC_THRESHOLD = 0.70
 HISTORY_WINDOW = 12
+MAX_MERGED_ENTITIES = 2048
+MAX_MERGED_RELATIONS = 4096
+MAX_MERGED_SIGNALS = 4096
 
 ENTITY_KINDS = {
     "actor", "object", "concept", "decision", "constraint", "event",
@@ -122,7 +134,14 @@ def _label(value: Any, name: str) -> str:
     return result
 
 
-def validate_candidate(payload: Any, source_text: str) -> dict[str, Any]:
+def validate_candidate(
+    payload: Any,
+    source_text: str,
+    *,
+    max_entities: int = 64,
+    max_relations: int = 64,
+    max_signals: int = 32,
+) -> dict[str, Any]:
     """Strictly validate and normalize one model-produced candidate."""
     if not isinstance(source_text, str) or not source_text.strip() or len(source_text) > 48_000:
         raise ValueError("source text must contain 1..48000 characters")
@@ -137,8 +156,8 @@ def validate_candidate(payload: Any, source_text: str) -> dict[str, Any]:
         raise ValueError("candidate is not bound to the source text")
 
     raw_entities = row["entities"]
-    if not isinstance(raw_entities, list) or len(raw_entities) > 64:
-        raise ValueError("entities must be an array with at most 64 items")
+    if not isinstance(raw_entities, list) or len(raw_entities) > max_entities:
+        raise ValueError(f"entities must be an array with at most {max_entities} items")
     entities: list[dict[str, Any]] = []
     entity_ids: set[str] = set()
     for index, value in enumerate(raw_entities):
@@ -161,8 +180,10 @@ def validate_candidate(payload: Any, source_text: str) -> dict[str, Any]:
         })
 
     raw_orientations = row["orientations"]
-    if not isinstance(raw_orientations, list) or len(raw_orientations) > 64:
-        raise ValueError("orientations must be an array with at most 64 items")
+    if not isinstance(raw_orientations, list) or len(raw_orientations) > max_relations:
+        raise ValueError(
+            f"orientations must be an array with at most {max_relations} items"
+        )
     orientations: list[dict[str, Any]] = []
     relation_ids: set[str] = set()
     for index, value in enumerate(raw_orientations):
@@ -192,8 +213,10 @@ def validate_candidate(payload: Any, source_text: str) -> dict[str, Any]:
         })
 
     raw_causal = row["causal_relations"]
-    if not isinstance(raw_causal, list) or len(raw_causal) > 64:
-        raise ValueError("causal_relations must be an array with at most 64 items")
+    if not isinstance(raw_causal, list) or len(raw_causal) > max_relations:
+        raise ValueError(
+            f"causal_relations must be an array with at most {max_relations} items"
+        )
     causal: list[dict[str, Any]] = []
     for index, value in enumerate(raw_causal):
         item = _require_object(
@@ -224,8 +247,10 @@ def validate_candidate(payload: Any, source_text: str) -> dict[str, Any]:
     signals: dict[str, list[dict[str, Any]]] = {}
     for signal_name in SIGNAL_NAMES:
         values = signals_row[signal_name]
-        if not isinstance(values, list) or len(values) > 32:
-            raise ValueError(f"signals.{signal_name} must have at most 32 items")
+        if not isinstance(values, list) or len(values) > max_signals:
+            raise ValueError(
+                f"signals.{signal_name} must have at most {max_signals} items"
+            )
         normalized = []
         for index, value in enumerate(values):
             item = _require_object(
@@ -259,35 +284,283 @@ def validate_candidate(payload: Any, source_text: str) -> dict[str, Any]:
     }
 
 
-def validate_semantic_vector(payload: Any) -> dict[str, Any]:
-    row = _require_object(
-        payload, "semantic_vector", {"version", "model", "revision", "dimension", "values"}
-    )
-    if row["version"] != EMBEDDING_VERSION or row["dimension"] != EMBEDDING_DIMENSION:
-        raise ValueError("semantic vector version or dimension is not supported")
-    if not isinstance(row["model"], str) or not row["model"]:
-        raise ValueError("semantic vector model is required")
-    if not isinstance(row["revision"], str) or not row["revision"]:
-        raise ValueError("semantic vector revision is required")
-    values = row["values"]
-    if not isinstance(values, list) or len(values) != EMBEDDING_DIMENSION:
-        raise ValueError(f"semantic vector must contain {EMBEDDING_DIMENSION} values")
-    vector = []
-    for value in values:
-        if isinstance(value, bool):
-            raise ValueError("semantic vector values must be finite numbers")
-        number = float(value)
-        if not math.isfinite(number):
-            raise ValueError("semantic vector values must be finite numbers")
-        vector.append(number)
-    norm = math.sqrt(sum(value * value for value in vector))
-    if abs(norm - 1.0) > 1e-3:
-        raise ValueError(f"semantic vector must be unit normalized, got norm {norm}")
+def canonicalize_candidate_ids(payload: Any) -> Any:
+    """Rename model-local IDs without weakening evidence or endpoint checks."""
+    if not isinstance(payload, Mapping):
+        return payload
+    candidate = deepcopy(dict(payload))
+    entities = candidate.get("entities")
+    orientations = candidate.get("orientations")
+    causal = candidate.get("causal_relations")
+    if not isinstance(entities, list) or not isinstance(orientations, list) or not isinstance(causal, list):
+        return candidate
+    entity_ids: dict[str, str] = {}
+    for index, entity in enumerate(entities):
+        if not isinstance(entity, Mapping) or not isinstance(entity.get("id"), str):
+            return candidate
+        original = entity["id"]
+        if not original or original in entity_ids:
+            raise ValueError("model candidate contains duplicate or empty entity IDs")
+        canonical = f"entity_{index + 1:04d}"
+        entity_ids[original] = canonical
+        entity["id"] = canonical
+    for index, relation in enumerate(orientations):
+        if not isinstance(relation, Mapping):
+            return candidate
+        source = relation.get("source_entity_id")
+        target = relation.get("target_entity_id")
+        if source not in entity_ids or target not in entity_ids:
+            raise ValueError("model orientation refers to an unknown entity")
+        relation["id"] = f"orientation_{index + 1:04d}"
+        relation["source_entity_id"] = entity_ids[source]
+        relation["target_entity_id"] = entity_ids[target]
+    for index, relation in enumerate(causal):
+        if not isinstance(relation, Mapping):
+            return candidate
+        cause = relation.get("cause_entity_id")
+        effect = relation.get("effect_entity_id")
+        if cause not in entity_ids or effect not in entity_ids:
+            raise ValueError("model causal relation refers to an unknown entity")
+        relation["id"] = f"causal_{index + 1:04d}"
+        relation["cause_entity_id"] = entity_ids[cause]
+        relation["effect_entity_id"] = entity_ids[effect]
+    return candidate
+
+
+def bind_candidate_metadata(payload: Any, source_text: str) -> Any:
+    """Bind trusted envelope metadata and empty containers, never facts."""
+    if not isinstance(payload, Mapping):
+        return payload
+    candidate = deepcopy(dict(payload))
+    candidate["schema_version"] = CANDIDATE_VERSION
+    candidate["source_text_sha256"] = text_digest(source_text)
+    if "signals" not in candidate:
+        candidate["signals"] = {name: [] for name in SIGNAL_NAMES}
+    elif isinstance(candidate["signals"], Mapping):
+        candidate["signals"] = dict(candidate["signals"])
+        for name in SIGNAL_NAMES:
+            candidate["signals"].setdefault(name, [])
+    return candidate
+
+
+def canonicalize_candidate_spans(payload: Any, source_text: str) -> Any:
+    """Repair only uniquely locatable model quotes; never infer missing text."""
+    if not isinstance(payload, Mapping):
+        return payload
+    candidate = deepcopy(dict(payload))
+
+    def bind(span: Any, name: str) -> None:
+        if not isinstance(span, Mapping):
+            return
+        quote = span.get("quote")
+        start, end = span.get("start"), span.get("end")
+        if (
+            isinstance(quote, str)
+            and type(start) is int
+            and type(end) is int
+            and 0 <= start < end <= len(source_text)
+            and source_text[start:end] == quote
+        ):
+            return
+        if not isinstance(quote, str) or not quote:
+            raise ValueError(f"{name} has no exact evidence quote")
+        locations = [match.start() for match in re.finditer(re.escape(quote), source_text)]
+        if len(locations) != 1:
+            raise ValueError(f"{name} evidence quote is missing or ambiguous")
+        span["start"] = locations[0]
+        span["end"] = locations[0] + len(quote)
+
+    for index, entity in enumerate(candidate.get("entities", [])):
+        if isinstance(entity, Mapping):
+            bind(entity.get("evidence"), f"entities[{index}]")
+    for name in ("orientations", "causal_relations"):
+        for index, relation in enumerate(candidate.get(name, [])):
+            if isinstance(relation, Mapping):
+                bind(relation.get("evidence"), f"{name}[{index}]")
+    signals = candidate.get("signals")
+    if isinstance(signals, Mapping):
+        for signal_name in SIGNAL_NAMES:
+            for index, fact in enumerate(signals.get(signal_name, [])):
+                if isinstance(fact, Mapping):
+                    bind(
+                        fact.get("evidence"),
+                        f"signals.{signal_name}[{index}]",
+                    )
+    return candidate
+
+
+def _rebase_span(span: Mapping[str, Any], offset: int) -> dict[str, Any]:
     return {
-        "version": EMBEDDING_VERSION, "model": row["model"],
-        "revision": row["revision"], "dimension": EMBEDDING_DIMENSION,
-        "values": vector,
+        "start": int(span["start"]) + offset,
+        "end": int(span["end"]) + offset,
+        "quote": span["quote"],
     }
+
+
+def merge_chunk_candidates(
+    source_text: str,
+    semantic_profile: Mapping[str, Any],
+    payload: Any,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Validate local chunk parses, rebase spans, and deduplicate overlap."""
+    chunks = semantic_profile.get("chunks")
+    if not isinstance(chunks, list) or not chunks:
+        raise ValueError("semantic profile has no chunks")
+    if not isinstance(payload, list) or len(payload) != len(chunks):
+        raise ValueError("one structural candidate is required per semantic chunk")
+
+    normalized_chunks = []
+    entities: list[dict[str, Any]] = []
+    entity_keys: dict[tuple[Any, ...], str] = {}
+    orientations: list[dict[str, Any]] = []
+    causal_relations: list[dict[str, Any]] = []
+    orientation_keys: set[tuple[Any, ...]] = set()
+    causal_keys: set[tuple[Any, ...]] = set()
+    signals: dict[str, list[dict[str, Any]]] = {name: [] for name in SIGNAL_NAMES}
+    signal_keys: dict[str, dict[tuple[Any, ...], int]] = {
+        name: {} for name in SIGNAL_NAMES
+    }
+    unknown_fields: set[str] = set()
+    confidences = []
+
+    for chunk_index, (item, chunk) in enumerate(zip(payload, chunks)):
+        if not isinstance(item, Mapping) or set(item) != {"chunk_index", "candidate"}:
+            raise ValueError(f"chunk candidate {chunk_index} fields mismatch")
+        if item["chunk_index"] != chunk_index or chunk.get("index") != chunk_index:
+            raise ValueError("chunk candidate indices must be contiguous")
+        start, end = int(chunk["start"]), int(chunk["end"])
+        local_text = source_text[start:end]
+        candidate = validate_candidate(item["candidate"], local_text)
+        normalized_chunks.append({"chunk_index": chunk_index, "candidate": candidate})
+        confidences.append(float(candidate["confidence"]))
+        unknown_fields.update(candidate["unknown_fields"])
+
+        local_entity_ids: dict[str, str] = {}
+        for entity in sorted(
+            candidate["entities"],
+            key=lambda row: (
+                row["evidence"]["start"], row["evidence"]["end"],
+                row["label"].casefold(), row["kind"], row["id"],
+            ),
+        ):
+            evidence = _rebase_span(entity["evidence"], start)
+            key = (
+                entity["label"].casefold(), entity["kind"], evidence["start"],
+                evidence["end"], evidence["quote"],
+            )
+            global_id = entity_keys.get(key)
+            if global_id is None:
+                if len(entities) >= MAX_MERGED_ENTITIES:
+                    raise ValueError("merged candidate exceeds the entity limit")
+                global_id = f"entity_{len(entities) + 1:04d}"
+                entity_keys[key] = global_id
+                entities.append({
+                    "id": global_id,
+                    "label": entity["label"],
+                    "kind": entity["kind"],
+                    "evidence": evidence,
+                    "confidence": entity["confidence"],
+                })
+            else:
+                existing = next(row for row in entities if row["id"] == global_id)
+                existing["confidence"] = max(
+                    float(existing["confidence"]), float(entity["confidence"])
+                )
+            local_entity_ids[entity["id"]] = global_id
+
+        for relation in sorted(
+            candidate["orientations"],
+            key=lambda row: (row["evidence"]["start"], row["id"]),
+        ):
+            evidence = _rebase_span(relation["evidence"], start)
+            source = local_entity_ids[relation["source_entity_id"]]
+            target = local_entity_ids[relation["target_entity_id"]]
+            key = (
+                source, target, relation["kind"], relation["polarity"],
+                relation["modality"], relation["negated"], evidence["start"],
+                evidence["end"], evidence["quote"],
+            )
+            if key in orientation_keys:
+                continue
+            if len(orientations) >= MAX_MERGED_RELATIONS:
+                raise ValueError("merged candidate exceeds the orientation limit")
+            orientation_keys.add(key)
+            orientations.append({
+                "id": f"orientation_{len(orientations) + 1:04d}",
+                "source_entity_id": source,
+                "target_entity_id": target,
+                "kind": relation["kind"],
+                "polarity": relation["polarity"],
+                "modality": relation["modality"],
+                "negated": relation["negated"],
+                "evidence": evidence,
+                "confidence": relation["confidence"],
+            })
+
+        for relation in sorted(
+            candidate["causal_relations"],
+            key=lambda row: (row["evidence"]["start"], row["id"]),
+        ):
+            evidence = _rebase_span(relation["evidence"], start)
+            cause = local_entity_ids[relation["cause_entity_id"]]
+            effect = local_entity_ids[relation["effect_entity_id"]]
+            key = (
+                cause, effect, relation["kind"], relation["modality"],
+                relation["negated"], evidence["start"], evidence["end"],
+                evidence["quote"],
+            )
+            if key in causal_keys:
+                continue
+            if len(causal_relations) >= MAX_MERGED_RELATIONS:
+                raise ValueError("merged candidate exceeds the causal-relation limit")
+            causal_keys.add(key)
+            causal_relations.append({
+                "id": f"causal_{len(causal_relations) + 1:04d}",
+                "cause_entity_id": cause,
+                "effect_entity_id": effect,
+                "kind": relation["kind"],
+                "modality": relation["modality"],
+                "negated": relation["negated"],
+                "evidence": evidence,
+                "confidence": relation["confidence"],
+            })
+
+        for signal_name in SIGNAL_NAMES:
+            for fact in candidate["signals"][signal_name]:
+                evidence = _rebase_span(fact["evidence"], start)
+                key = (evidence["start"], evidence["end"], evidence["quote"])
+                existing_index = signal_keys[signal_name].get(key)
+                if existing_index is None:
+                    if len(signals[signal_name]) >= MAX_MERGED_SIGNALS:
+                        raise ValueError(f"merged candidate exceeds {signal_name} limit")
+                    signal_keys[signal_name][key] = len(signals[signal_name])
+                    signals[signal_name].append({
+                        "evidence": evidence,
+                        "confidence": fact["confidence"],
+                    })
+                else:
+                    existing = signals[signal_name][existing_index]
+                    existing["confidence"] = max(
+                        float(existing["confidence"]), float(fact["confidence"])
+                    )
+
+    merged = {
+        "schema_version": CANDIDATE_VERSION,
+        "source_text_sha256": text_digest(source_text),
+        "entities": entities,
+        "orientations": orientations,
+        "causal_relations": causal_relations,
+        "signals": signals,
+        "unknown_fields": sorted(unknown_fields),
+        "confidence": sum(confidences) / len(confidences),
+    }
+    return normalized_chunks, validate_candidate(
+        merged,
+        source_text,
+        max_entities=MAX_MERGED_ENTITIES,
+        max_relations=MAX_MERGED_RELATIONS,
+        max_signals=MAX_MERGED_SIGNALS,
+    )
 
 
 def validate_parser_model(payload: Any) -> dict[str, str]:
@@ -313,15 +586,6 @@ def _saturate(weight: float, scale: float) -> float:
 
 def _weights(rows: Sequence[Mapping[str, Any]]) -> float:
     return sum(float(row["confidence"]) for row in rows)
-
-
-def _cosine(left: Sequence[float], right: Sequence[float]) -> float:
-    if len(left) != len(right) or not left:
-        raise ValueError("semantic history vector dimension mismatch")
-    denom = math.sqrt(sum(x * x for x in left) * sum(y * y for y in right))
-    if denom < 1e-12:
-        raise ValueError("semantic history contains a zero vector")
-    return _clamp(sum(x * y for x, y in zip(left, right)) / denom)
 
 
 def _entity_labels(candidate: Mapping[str, Any]) -> dict[str, str]:
@@ -358,19 +622,21 @@ def directed_graph_similarity(left: Mapping[str, Any], right: Mapping[str, Any])
 
 
 def rank_structural_history(
-    candidate: Mapping[str, Any], semantic_vector: Mapping[str, Any],
+    candidate: Mapping[str, Any], semantic_profile: Mapping[str, Any],
     history: Sequence[Mapping[str, Any]],
 ) -> list[dict[str, Any]]:
     """Dense RAG score with a separate direction-sensitive structural component."""
     rows = []
     for item in history:
-        dense = _cosine(semantic_vector["values"], item["semantic_vector"]["values"])
+        semantic = profile_similarity(semantic_profile, item["semantic_profile"])
+        dense = semantic["query_relevance_score"]
         directed = directed_graph_similarity(candidate, item["candidate"])
         rows.append({
             "record_id": str(item["record_id"]),
             "dense_semantic_score": dense,
             "directed_graph_score": directed,
             "combined_score": 0.8 * dense + 0.2 * directed,
+            "semantic_match": semantic,
         })
     return sorted(rows, key=lambda row: (-row["combined_score"], row["record_id"]))
 
@@ -440,21 +706,44 @@ def _static_load(candidate: Mapping[str, Any]) -> tuple[dict[str, float], dict[s
 
 
 def compile_load(
-    candidate: Mapping[str, Any], semantic_vector: Mapping[str, Any],
+    candidate: Mapping[str, Any],
+    semantic_profile: Mapping[str, Any],
+    chunk_candidates: Sequence[Mapping[str, Any]],
     history: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
     """Compile validated evidence and committed history into canonical channels."""
-    static, channel_evidence = _static_load(candidate)
-    current = semantic_vector["values"]
+    per_chunk_static = []
+    per_chunk_evidence = []
+    for item in chunk_candidates:
+        values, evidence = _static_load(item["candidate"])
+        per_chunk_static.append(values)
+        per_chunk_evidence.append(evidence)
+    if not per_chunk_static:
+        raise ValueError("structural analysis has no chunk candidates")
+    # Neutral extra passage chunks cannot inflate a channel. Each channel
+    # reflects the strongest bounded local evidence window.
+    static = {
+        name: max(row[name] for row in per_chunk_static)
+        for name in STATIC_CHANNELS
+    }
+    channel_evidence = {
+        "aggregation": "per_channel_max_across_bounded_chunks",
+        "chunk_static_loads": per_chunk_static,
+        "chunk_evidence": per_chunk_evidence,
+        "directed_graph": directed_graph_fingerprint(candidate),
+    }
     bounded_history = list(history)[-HISTORY_WINDOW:]
     similarities: list[float] = []
     graph_scores: list[float] = []
+    semantic_matches: list[dict[str, Any]] = []
     for row in bounded_history:
-        prior_vector = row.get("semantic_vector", {}).get("values")
+        prior_profile = row.get("semantic_profile")
         prior_candidate = row.get("candidate")
-        if not isinstance(prior_vector, list) or not isinstance(prior_candidate, Mapping):
+        if not isinstance(prior_profile, Mapping) or not isinstance(prior_candidate, Mapping):
             raise ValueError("committed structural history is incomplete")
-        similarities.append(_cosine(current, prior_vector))
+        semantic_match = profile_similarity(semantic_profile, prior_profile)
+        semantic_matches.append(semantic_match)
+        similarities.append(semantic_match["symmetric_score"])
         graph_scores.append(directed_graph_similarity(candidate, prior_candidate))
     combined = [0.8 * semantic + 0.2 * graph for semantic, graph in zip(similarities, graph_scores)]
     max_similarity = max(combined, default=0.0)
@@ -489,19 +778,30 @@ def compile_load(
         ) / math.sqrt(len(STATIC_CHANNELS))
     else:
         distance = 0.0
-    change_evidence = _weights(candidate["signals"]["contradictions"]) + _weights(candidate["signals"]["rejections"])
-    change_evidence += _weights([
-        row for row in candidate["orientations"] if row["kind"] == "supersedes"
-    ])
+    change_evidence = max(
+        _weights(item["candidate"]["signals"]["contradictions"])
+        + _weights(item["candidate"]["signals"]["rejections"])
+        + _weights([
+            row for row in item["candidate"]["orientations"]
+            if row["kind"] == "supersedes"
+        ])
+        for item in chunk_candidates
+    )
     volatility = _clamp(0.65 * distance + 0.35 * _saturate(change_evidence, 1.5))
-    threat_weight = _weights(candidate["signals"]["contradictions"]) + _weights(candidate["signals"]["rejections"])
-    threat_weight += 0.6 * _weights([
-        row for row in candidate["orientations"]
-        if row["kind"] in {"opposes", "supersedes"} or row["polarity"] == "negative"
-    ])
-    threat_weight += 0.7 * _weights([
-        row for row in candidate["causal_relations"] if row["kind"] == "prevents" and not row["negated"]
-    ])
+    threat_weight = max(
+        _weights(item["candidate"]["signals"]["contradictions"])
+        + _weights(item["candidate"]["signals"]["rejections"])
+        + 0.6 * _weights([
+            row for row in item["candidate"]["orientations"]
+            if row["kind"] in {"opposes", "supersedes"}
+            or row["polarity"] == "negative"
+        ])
+        + 0.7 * _weights([
+            row for row in item["candidate"]["causal_relations"]
+            if row["kind"] == "prevents" and not row["negated"]
+        ])
+        for item in chunk_candidates
+    )
     threat = _saturate(threat_weight, 1.5)
 
     # Explicit memory evidence and actual semantic recurrence both contribute;
@@ -527,6 +827,7 @@ def compile_load(
         "history_metrics": {
             "history_count": len(history), "bounded_history_count": len(bounded_history),
             "semantic_similarities": similarities, "directed_graph_similarities": graph_scores,
+            "semantic_chunk_matches": semantic_matches,
             "combined_similarities": combined, "near_threshold": NEAR_SEMANTIC_THRESHOLD,
             "near_count": sum(near), "turns_since_near_match": turns_since_match,
             "static_distance_from_previous": distance,
@@ -535,14 +836,19 @@ def compile_load(
 
 
 def build_analysis(
-    source_text: str, candidate_payload: Any, semantic_vector_payload: Any,
-    parser_model_payload: Any, history: Sequence[Mapping[str, Any]],
+    source_text: str,
+    chunk_candidates_payload: Any,
+    semantic_profile_payload: Any,
+    parser_model_payload: Any,
+    history: Sequence[Mapping[str, Any]],
     prior_checkpoint_digest: str,
 ) -> dict[str, Any]:
-    candidate = validate_candidate(candidate_payload, source_text)
-    semantic_vector = validate_semantic_vector(semantic_vector_payload)
+    semantic_profile = validate_semantic_profile(semantic_profile_payload, source_text)
+    chunk_candidates, candidate = merge_chunk_candidates(
+        source_text, semantic_profile, chunk_candidates_payload
+    )
     parser_model = validate_parser_model(parser_model_payload)
-    compiled = compile_load(candidate, semantic_vector, history)
+    compiled = compile_load(candidate, semantic_profile, chunk_candidates, history)
     base = {
         "analysis_version": ANALYSIS_VERSION,
         "compiler_version": COMPILER_VERSION,
@@ -550,8 +856,9 @@ def build_analysis(
         "prior_checkpoint_digest": str(prior_checkpoint_digest),
         "candidate_digest": digest(candidate),
         "candidate": candidate,
+        "chunk_candidates": chunk_candidates,
         "parser_model": parser_model,
-        "semantic_vector": semantic_vector,
+        "semantic_profile": semantic_profile,
         **compiled,
     }
     return {**base, "analysis_digest": digest(base)}
@@ -563,8 +870,8 @@ def validate_frozen_analysis(
 ) -> dict[str, Any]:
     fields = {
         "analysis_version", "compiler_version", "source_text_sha256",
-        "prior_checkpoint_digest", "candidate_digest", "candidate", "parser_model",
-        "semantic_vector", "load_signature", "static_load", "channel_evidence",
+        "prior_checkpoint_digest", "candidate_digest", "candidate", "chunk_candidates",
+        "parser_model", "semantic_profile", "load_signature", "static_load", "channel_evidence",
         "history_metrics", "analysis_digest",
     }
     row = _require_object(payload, "structural_analysis", fields)
@@ -573,8 +880,8 @@ def validate_frozen_analysis(
     if row["prior_checkpoint_digest"] != prior_checkpoint_digest:
         raise ValueError("structural analysis is stale; prepare again")
     rebuilt = build_analysis(
-        source_text, row["candidate"], row["semantic_vector"], row["parser_model"], history,
-        prior_checkpoint_digest,
+        source_text, row["chunk_candidates"], row["semantic_profile"],
+        row["parser_model"], history, prior_checkpoint_digest,
     )
     if rebuilt != dict(row):
         raise ValueError("structural analysis does not replay exactly")
@@ -680,10 +987,18 @@ def build_gemma_prompt(source_text: str) -> str:
 
 Fill record_structural_candidate exactly once from SOURCE_TEXT. Use exact character
 offsets and exact quoted substrings. Preserve who or what points toward whom.
+Internal IDs should be lower-case identifiers; they will be normalized after the
+tool call and carry no semantic meaning.
 Orientation source_entity_id -> target_entity_id means the source bears the named
 orientation toward the target. Causality always means cause_entity_id ->
 effect_entity_id; never reverse it. For example, "A enables B" maps A -> B, while
 "B requires A" also maps A -> B because A is the required condition for B.
+Orientations may use only: {", ".join(sorted(ORIENTATION_KINDS))}.
+Causal relations may use only: {", ".join(sorted(CAUSAL_KINDS))}. Put explicit
+causal verbs such as causes, enables, prevents, contributes to, and requires only
+in causal_relations; do not duplicate them as orientations. For "A prevents B",
+record causal A -> B with kind prevents and leave orientations empty unless the
+text separately states a non-causal orientation.
 Do not infer causation from correlation, proximity, or sequence alone. Mark
 negation and modality. Use unknown_fields when evidence is absent or ambiguous.
 Do not invent entities, relations, confidence, history, emotion labels, or load

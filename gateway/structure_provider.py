@@ -70,12 +70,22 @@ class StructureWorkerClient:
             if not path.is_absolute() or not path.exists():
                 raise StructureProviderError(f"{names[key]} must be an existing absolute path")
         script = Path(__file__).with_name("structure_worker.py").resolve()
+        try:
+            timeout = float(os.environ.get("TOM_ASSIST_STRUCTURE_TIMEOUT_SECONDS", "600"))
+        except ValueError:
+            raise StructureProviderError(
+                "TOM_ASSIST_STRUCTURE_TIMEOUT_SECONDS must be numeric"
+            ) from None
+        if not 30.0 <= timeout <= 1800.0:
+            raise StructureProviderError(
+                "TOM_ASSIST_STRUCTURE_TIMEOUT_SECONDS must be in [30,1800]"
+            )
         return cls([
             str(Path(values["structure_python"]).resolve()), str(script),
             "--embedding-model", str(Path(values["embedding_model"]).resolve()),
             "--gemma-python", str(Path(values["gemma_python"]).resolve()),
             "--gemma-model", str(Path(values["gemma_model"]).resolve()),
-        ])
+        ], timeout_seconds=timeout)
 
     def _start(self) -> subprocess.Popen[str]:
         if self._process is not None and self._process.poll() is None:
@@ -134,12 +144,13 @@ class StructureWorkerClient:
             if "error" in response:
                 raise StructureProviderError(str(response["error"])[:500])
             if set(response) != {
-                "protocol", "request_id", "candidate", "semantic_vector", "parser_model"
+                "protocol", "request_id", "chunk_candidates", "semantic_profile",
+                "parser_model",
             }:
                 raise StructureProviderError("local structure worker response shape mismatch")
             return {
-                "candidate": response["candidate"],
-                "semantic_vector": response["semantic_vector"],
+                "chunk_candidates": response["chunk_candidates"],
+                "semantic_profile": response["semantic_profile"],
                 "parser_model": response["parser_model"],
             }
 

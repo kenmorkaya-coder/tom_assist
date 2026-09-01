@@ -102,7 +102,10 @@ def validate_snapshot(gateway, root):
             if originals.get(rid) != digest or reason not in ("decayed", "capacity"):
                 raise ValueError("invalid demotion provenance")
         if ("table", "structural_commits") in objects:
-            from gateway.structural_analysis import COMPILER_VERSION, digest as structural_digest
+            from gateway.structural_analysis import (
+                SUPPORTED_COMPILER_VERSIONS,
+                digest as structural_digest,
+            )
             for commit_key, rid, source_digest, compiler, analysis_digest, encoded, tick in db.execute(
                 "SELECT commit_key,record_id,source_text_sha256,compiler_version,"
                 "analysis_digest,analysis_json,tick FROM structural_commits"
@@ -111,7 +114,7 @@ def validate_snapshot(gateway, root):
                 unsigned = {key:value for key,value in analysis.items() if key != "analysis_digest"}
                 if (
                     not commit_key or rid not in originals or type(tick) is not int
-                    or compiler != COMPILER_VERSION
+                    or compiler not in SUPPORTED_COMPILER_VERSIONS
                     or analysis.get("compiler_version") != compiler
                     or analysis.get("source_text_sha256") != source_digest
                     or analysis.get("candidate", {}).get("source_text_sha256") != source_digest

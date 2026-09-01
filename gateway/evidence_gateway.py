@@ -56,8 +56,8 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
         proposed = self.structure_provider.analyze(text)
         return build_analysis(
             text,
-            proposed.get("candidate"),
-            proposed.get("semantic_vector"),
+            proposed.get("chunk_candidates"),
+            proposed.get("semantic_profile"),
             proposed.get("parser_model"),
             self._active_structural_history(),
             checkpoint_digest,
@@ -95,7 +95,7 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
                 user_text, k=max(1, len(self.rgm.state.anchors))
             )
             structural_rows = rank_structural_history(
-                analysis["candidate"], analysis["semantic_vector"],
+                analysis["candidate"], analysis["semantic_profile"],
                 self._active_structural_history(),
             )
             candidates = lexical

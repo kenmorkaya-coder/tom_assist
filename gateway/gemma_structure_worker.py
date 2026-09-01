@@ -14,7 +14,10 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from gateway.structural_analysis import (  # noqa: E402
+    bind_candidate_metadata,
     build_gemma_prompt,
+    canonicalize_candidate_ids,
+    canonicalize_candidate_spans,
     candidate_tool_schema,
     validate_candidate,
 )
@@ -65,7 +68,15 @@ def main() -> int:
                 call = call[0]
             if not isinstance(call, dict) or call.get("name") != "record_structural_candidate":
                 raise ValueError("Gemma called the wrong structure tool")
-            candidate = validate_candidate(call.get("arguments"), source_text)
+            candidate = validate_candidate(
+                canonicalize_candidate_spans(
+                    canonicalize_candidate_ids(
+                        bind_candidate_metadata(call.get("arguments"), source_text)
+                    ),
+                    source_text,
+                ),
+                source_text,
+            )
             response = {
                 "protocol": WORKER_PROTOCOL, "request_id": request_id,
                 "candidate": candidate,

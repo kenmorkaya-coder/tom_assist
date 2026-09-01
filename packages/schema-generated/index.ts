@@ -101,8 +101,8 @@ export interface TomCapabilities {
   front_row_capacity: number;
   teach_on_conflict: boolean;
   structural_load_mode: "legacy" | "shadow" | "authoritative";
-  structural_load_compiler_version: "tom-assist-evidence-load17/1.0";
-  semantic_embedding_version: "minilm-l6-v2/384d-mean-pool-max256/1.0";
+  structural_load_compiler_version: "tom-assist-evidence-load17/1.1";
+  semantic_embedding_version: "minilm-l6-v2/384d-multivector/2.0";
   local_gemma_candidate_required: boolean;
   model_generated_load_values: false;
   feeling_wheel_used: false;

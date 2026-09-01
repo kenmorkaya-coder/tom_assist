@@ -2,21 +2,30 @@ from __future__ import annotations
 
 from copy import deepcopy
 import json
+import re
 import sqlite3
 
 import pytest
 
 from gateway.structural_analysis import (
     CANDIDATE_VERSION,
-    EMBEDDING_DIMENSION,
-    EMBEDDING_VERSION,
     PARSER_VERSION,
+    bind_candidate_metadata,
     build_analysis,
+    canonicalize_candidate_ids,
+    canonicalize_candidate_spans,
     directed_graph_fingerprint,
     directed_graph_similarity,
+    rank_structural_history,
     text_digest,
     validate_candidate,
     validate_frozen_analysis,
+)
+from gateway.semantic_chunks import (
+    EMBEDDING_DIMENSION,
+    build_semantic_profile,
+    build_token_chunks,
+    profile_similarity,
 )
 from gateway.evidence_gateway import EvidenceProjectRuntime, EvidenceTomGateway as TomGateway
 from gateway.runtime_archive import export_snapshot, validate_snapshot
@@ -77,16 +86,51 @@ def _candidate(
     }
 
 
-def _vector(axis=0):
+def _values(axis=0):
     values = [0.0] * EMBEDDING_DIMENSION
     values[axis] = 1.0
+    return values
+
+
+def _profile(text: str, axis=0):
+    return build_semantic_profile(
+        text,
+        [{"start": 0, "end": len(text), "values": _values(axis)}],
+        model="sentence-transformers/all-MiniLM-L6-v2",
+        revision="fixture",
+    )
+
+
+def _chunk_candidates(candidate):
+    return [{"chunk_index": 0, "candidate": candidate}]
+
+
+def _empty_candidate(text: str):
     return {
-        "version": EMBEDDING_VERSION,
-        "model": "sentence-transformers/all-MiniLM-L6-v2",
-        "revision": "fixture",
-        "dimension": EMBEDDING_DIMENSION,
-        "values": values,
+        "schema_version": CANDIDATE_VERSION,
+        "source_text_sha256": text_digest(text),
+        "entities": [],
+        "orientations": [],
+        "causal_relations": [],
+        "signals": {name: [] for name in (
+            "rules", "contradictions", "inferences", "sequences",
+            "memory_references", "future_references", "completions", "rejections",
+        )},
+        "unknown_fields": [],
+        "confidence": 1.0,
     }
+
+
+def _multi_profile(text: str, spans, axes):
+    return build_semantic_profile(
+        text,
+        [
+            {"start": start, "end": end, "values": _values(axis)}
+            for (start, end), axis in zip(spans, axes)
+        ],
+        model="sentence-transformers/all-MiniLM-L6-v2",
+        revision="fixture",
+    )
 
 
 def _parser():
@@ -105,19 +149,24 @@ class _Provider:
         self.calls.append(text)
         if text == "A causes B.":
             return {
-                "candidate": _candidate(text), "semantic_vector": _vector(0),
+                "chunk_candidates": _chunk_candidates(_candidate(text)),
+                "semantic_profile": _profile(text, 0),
                 "parser_model": _parser(),
             }
         if text == "B causes A.":
             return {
-                "candidate": _candidate(text, cause="B", effect="A"),
-                "semantic_vector": _vector(1),
+                "chunk_candidates": _chunk_candidates(
+                    _candidate(text, cause="B", effect="A")
+                ),
+                "semantic_profile": _profile(text, 1),
                 "parser_model": _parser(),
             }
         if text == "A prevents B.":
             return {
-                "candidate": _candidate(text, kind="prevents", contradiction=True),
-                "semantic_vector": _vector(2),
+                "chunk_candidates": _chunk_candidates(
+                    _candidate(text, kind="prevents", contradiction=True)
+                ),
+                "semantic_profile": _profile(text, 2),
                 "parser_model": _parser(),
             }
         raise AssertionError(f"unexpected fixture text: {text}")
@@ -133,6 +182,117 @@ def test_causal_direction_is_preserved_not_collapsed_into_magnitude():
     assert directed_graph_similarity(forward, reverse) == 0.0
     assert directed_graph_fingerprint(forward)[0][2:4] == ["a", "b"]
     assert directed_graph_fingerprint(reverse)[0][2:4] == ["b", "a"]
+
+
+def test_token_chunking_overlaps_a_hard_boundary_without_losing_tail_text():
+    words = [f"w{index}" for index in range(10)] + [
+        "brake", "prevents", "cart", "movement", "safely", "today."
+    ]
+    text = " ".join(words)
+    offsets = [(match.start(), match.end()) for match in re.finditer(r"\S+", text)]
+    chunks = build_token_chunks(
+        text, offsets, max_tokens=12, overlap_tokens=3, min_boundary_tokens=6
+    )
+    assert len(chunks) == 2
+    assert chunks[0]["start"] == 0 and chunks[-1]["end"] == len(text)
+    assert chunks[1]["start"] < chunks[0]["end"]
+    bridge = text[chunks[1]["start"]:chunks[1]["end"]]
+    assert "brake prevents cart" in bridge
+    assert "today." in bridge
+
+
+def test_overlap_candidates_rebase_and_deduplicate_exact_causal_evidence():
+    text = "Opening words. A causes B. Closing words."
+    relation_start = text.index("A causes B.")
+    relation_end = relation_start + len("A causes B.")
+    spans = [(0, relation_end), (relation_start, len(text))]
+    profile = _multi_profile(text, spans, [0, 1])
+    local_texts = [text[start:end] for start, end in spans]
+    local_candidates = [_candidate(value) for value in local_texts]
+    for local_text, candidate in zip(local_texts, local_candidates):
+        candidate["causal_relations"][0]["evidence"] = _span(
+            local_text, "A causes B."
+        )
+    analysis = build_analysis(
+        text,
+        [
+            {"chunk_index": 0, "candidate": local_candidates[0]},
+            {"chunk_index": 1, "candidate": local_candidates[1]},
+        ],
+        profile,
+        _parser(),
+        [],
+        "checkpoint-overlap",
+    )
+    assert len(analysis["semantic_profile"]["chunks"]) == 2
+    assert len(analysis["candidate"]["entities"]) == 2
+    assert len(analysis["candidate"]["causal_relations"]) == 1
+    relation = analysis["candidate"]["causal_relations"][0]
+    assert relation["evidence"] == {
+        "start": relation_start,
+        "end": relation_end,
+        "quote": "A causes B.",
+    }
+    assert directed_graph_fingerprint(analysis["candidate"])[0][2:4] == ["a", "b"]
+
+
+def test_multivector_retrieval_finds_relevant_tail_chunk_without_centroid_collapse():
+    query_text = "tail query"
+    query = _profile(query_text, 5)
+    long_text = "front material. tail material."
+    split = long_text.index("tail")
+    long_profile = _multi_profile(
+        long_text, [(0, split + 5), (split, len(long_text))], [0, 5]
+    )
+    unrelated = _profile("front only", 0)
+    semantic = profile_similarity(query, long_profile)
+    assert semantic["best_chunk_score"] == 1.0
+    assert semantic["best_right_chunk_index"] == 1
+    empty_query = _empty_candidate(query_text)
+    ranked = rank_structural_history(empty_query, query, [
+        {"record_id": "long", "candidate": _empty_candidate(long_text),
+         "semantic_profile": long_profile},
+        {"record_id": "front", "candidate": _empty_candidate("front only"),
+         "semantic_profile": unrelated},
+    ])
+    assert [row["record_id"] for row in ranked] == ["long", "front"]
+    assert ranked[0]["semantic_match"]["pair_count"] == 2
+
+
+def test_neutral_extra_chunks_do_not_inflate_the_17d_load():
+    short = "A prevents B."
+    short_analysis = build_analysis(
+        short,
+        _chunk_candidates(_candidate(short, kind="prevents", contradiction=True)),
+        _profile(short, 0),
+        _parser(),
+        [],
+        "checkpoint-short",
+    )
+    long = short + " " + ("Neutral background material. " * 30)
+    boundary = 80
+    second_start = 60
+    spans = [(0, boundary), (second_start, len(long))]
+    local_first = long[:boundary]
+    local_second = long[second_start:]
+    long_analysis = build_analysis(
+        long,
+        [
+            {"chunk_index": 0, "candidate": _candidate(
+                local_first, kind="prevents", contradiction=True
+            )},
+            {"chunk_index": 1, "candidate": _empty_candidate(local_second)},
+        ],
+        _multi_profile(long, spans, [0, 1]),
+        _parser(),
+        [],
+        "checkpoint-long",
+    )
+    assert long_analysis["static_load"] == short_analysis["static_load"]
+    assert long_analysis["load_signature"] == short_analysis["load_signature"]
+    assert long_analysis["channel_evidence"]["aggregation"] == (
+        "per_channel_max_across_bounded_chunks"
+    )
 
 
 def test_orientation_direction_is_preserved_separately_from_load_magnitude():
@@ -176,10 +336,58 @@ def test_exact_evidence_binding_and_endpoint_validation_fail_closed():
         validate_candidate(extra_load, text)
 
 
+def test_model_local_ids_are_canonicalized_but_unknown_endpoints_still_fail():
+    text = "A causes B."
+    candidate = _candidate(text)
+    candidate["entities"][0]["id"] = "A"
+    candidate["entities"][1]["id"] = "B"
+    candidate["causal_relations"][0]["cause_entity_id"] = "A"
+    candidate["causal_relations"][0]["effect_entity_id"] = "B"
+    normalized = validate_candidate(canonicalize_candidate_ids(candidate), text)
+    assert [row["id"] for row in normalized["entities"]] == [
+        "entity_0001", "entity_0002"
+    ]
+    assert normalized["causal_relations"][0]["cause_entity_id"] == "entity_0001"
+    bad = deepcopy(candidate)
+    bad["causal_relations"][0]["effect_entity_id"] = "missing"
+    with pytest.raises(ValueError, match="unknown entity"):
+        canonicalize_candidate_ids(bad)
+
+
+def test_trusted_worker_binds_only_candidate_envelope_metadata():
+    text = "A causes B."
+    candidate = _candidate(text)
+    del candidate["schema_version"]
+    del candidate["signals"]
+    candidate["source_text_sha256"] = "model-cannot-compute-this"
+    bound = bind_candidate_metadata(candidate, text)
+    assert bound["schema_version"] == CANDIDATE_VERSION
+    assert bound["source_text_sha256"] == text_digest(text)
+    assert all(value == [] for value in bound["signals"].values())
+    assert bound["causal_relations"] == candidate["causal_relations"]
+    assert validate_candidate(bound, text)["causal_relations"]
+
+
+def test_unique_quote_offsets_are_repaired_but_ambiguous_quotes_fail():
+    text = "A causes B."
+    candidate = _candidate(text)
+    candidate["entities"][1]["evidence"]["start"] = 0
+    candidate["entities"][1]["evidence"]["end"] = 1
+    repaired = validate_candidate(canonicalize_candidate_spans(candidate, text), text)
+    assert repaired["entities"][1]["evidence"] == _span(text, "B")
+
+    repeated = "A causes B. A remains."
+    ambiguous = _candidate(repeated)
+    ambiguous["entities"][0]["evidence"] = {"start": 99, "end": 100, "quote": "A"}
+    with pytest.raises(ValueError, match="missing or ambiguous"):
+        canonicalize_candidate_spans(ambiguous, repeated)
+
+
 def test_history_dynamics_are_distinct_and_replay_exactly():
     text = "A causes B."
     first = build_analysis(
-        text, _candidate(text), _vector(0), _parser(), [], "checkpoint-0"
+        text, _chunk_candidates(_candidate(text)), _profile(text, 0),
+        _parser(), [], "checkpoint-0"
     )
     assert first["load_signature"]["novelty"] == 1.0
     assert first["load_signature"]["decay"] == 1.0
@@ -188,11 +396,12 @@ def test_history_dynamics_are_distinct_and_replay_exactly():
     history = [{
         "record_id": "turn-1",
         "candidate": first["candidate"],
-        "semantic_vector": first["semantic_vector"],
+        "semantic_profile": first["semantic_profile"],
         "static_load": first["static_load"],
     }]
     repeated = build_analysis(
-        text, _candidate(text, memory=True), _vector(0), _parser(), history, "checkpoint-1"
+        text, _chunk_candidates(_candidate(text, memory=True)), _profile(text, 0),
+        _parser(), history, "checkpoint-1"
     )
     load = repeated["load_signature"]
     assert load["recurrence"] == 1.0
@@ -212,12 +421,13 @@ def test_history_dynamics_are_distinct_and_replay_exactly():
         {
             "record_id": "turn-2",
             "candidate": first["candidate"],
-            "semantic_vector": _vector(1),
+            "semantic_profile": _profile(text, 1),
             "static_load": first["static_load"],
         },
     ]
     mixed = build_analysis(
-        text, _candidate(text), _vector(0), _parser(), mixed_history, "checkpoint-2"
+        text, _chunk_candidates(_candidate(text)), _profile(text, 0),
+        _parser(), mixed_history, "checkpoint-2"
     )
     assert mixed["load_signature"]["recurrence"] == 1.0
     assert mixed["load_signature"]["frequency"] == 0.5
@@ -229,8 +439,8 @@ def test_history_dynamics_are_distinct_and_replay_exactly():
 def test_structural_evidence_activates_dimensions_without_keyword_wheel():
     text = "A prevents B."
     analysis = build_analysis(
-        text, _candidate(text, kind="prevents", contradiction=True), _vector(0),
-        _parser(), [], "checkpoint"
+        text, _chunk_candidates(_candidate(text, kind="prevents", contradiction=True)),
+        _profile(text, 0), _parser(), [], "checkpoint"
     )
     load = analysis["load_signature"]
     for channel in (
