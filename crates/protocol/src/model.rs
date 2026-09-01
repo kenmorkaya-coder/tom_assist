@@ -174,6 +174,149 @@ pub struct TomCapabilities {
     pub front_row_capacity: u64,
     pub teach_on_conflict: bool,
     pub preview_channels: Vec<String>,
+    #[serde(default)]
+    pub structural_load_mode: String,
+    #[serde(default)]
+    pub structural_load_compiler_version: String,
+    #[serde(default)]
+    pub semantic_embedding_version: String,
+    #[serde(default)]
+    pub local_gemma_candidate_required: bool,
+    #[serde(default)]
+    pub model_generated_load_values: bool,
+    #[serde(default)]
+    pub feeling_wheel_used: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EvidenceSpan {
+    pub start: u64,
+    pub end: u64,
+    pub quote: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StructuralEvidenceFact {
+    pub evidence: EvidenceSpan,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StructuralEntity {
+    pub id: String,
+    pub label: String,
+    pub kind: StructuralEntityKind,
+    pub evidence: EvidenceSpan,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StructuralEntityKind {
+    Actor,
+    Object,
+    Concept,
+    Decision,
+    Constraint,
+    Event,
+    State,
+    Outcome,
+    Work,
+    Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StructuralOrientation {
+    pub id: String,
+    pub source_entity_id: String,
+    pub target_entity_id: String,
+    pub kind: OrientationKind,
+    pub polarity: StructuralPolarity,
+    pub modality: StructuralModality,
+    pub negated: bool,
+    pub evidence: EvidenceSpan,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OrientationKind {
+    Supports,
+    Opposes,
+    DependsOn,
+    Contains,
+    Owns,
+    Controls,
+    Targets,
+    RefersTo,
+    Precedes,
+    Follows,
+    Supersedes,
+    NeutralToward,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StructuralPolarity {
+    Positive,
+    Negative,
+    Neutral,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StructuralModality {
+    Asserted,
+    Inferred,
+    Tentative,
+    Hypothetical,
+    Questioned,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StructuralCausalRelation {
+    pub id: String,
+    pub cause_entity_id: String,
+    pub effect_entity_id: String,
+    pub kind: CausalRelationKind,
+    pub modality: StructuralModality,
+    pub negated: bool,
+    pub evidence: EvidenceSpan,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CausalRelationKind {
+    Causes,
+    Enables,
+    Prevents,
+    ContributesTo,
+    Requires,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StructuralSignals {
+    pub rules: Vec<StructuralEvidenceFact>,
+    pub contradictions: Vec<StructuralEvidenceFact>,
+    pub inferences: Vec<StructuralEvidenceFact>,
+    pub sequences: Vec<StructuralEvidenceFact>,
+    pub memory_references: Vec<StructuralEvidenceFact>,
+    pub future_references: Vec<StructuralEvidenceFact>,
+    pub completions: Vec<StructuralEvidenceFact>,
+    pub rejections: Vec<StructuralEvidenceFact>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StructuralCandidate {
+    pub schema_version: String,
+    pub source_text_sha256: String,
+    pub entities: Vec<StructuralEntity>,
+    pub orientations: Vec<StructuralOrientation>,
+    pub causal_relations: Vec<StructuralCausalRelation>,
+    pub signals: StructuralSignals,
+    pub unknown_fields: Vec<String>,
+    pub confidence: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

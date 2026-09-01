@@ -48,7 +48,7 @@ trap cleanup EXIT INT TERM
 
 "$repo_dir/target/debug/tom-assist-oauth" serve --socket "$oauth_socket" >"$app_support/logs/oauth-broker.log" 2>&1 &
 oauth_pid=$!
-TOM_ASSIST_OAUTH_BROKER_SOCKET="$oauth_socket" PYTHONPATH="$tom_master_dir:$repo_dir" "$gateway_python" -m gateway.tom_gateway --socket "$gateway_socket" --data-dir "$app_support" --tom-master "$tom_master_dir" >"$app_support/logs/gateway.log" 2>&1 &
+TOM_ASSIST_OAUTH_BROKER_SOCKET="$oauth_socket" PYTHONPATH="$tom_master_dir:$repo_dir" "$gateway_python" -m gateway.evidence_gateway --socket "$gateway_socket" --data-dir "$app_support" --tom-master "$tom_master_dir" >"$app_support/logs/gateway.log" 2>&1 &
 gateway_pid=$!
 "$repo_dir/target/debug/tom-assistd" "$assistd_socket" "$database" >"$app_support/logs/assistd.log" 2>&1 &
 assistd_pid=$!

@@ -21,6 +21,7 @@ MAPPING = {
     "state_edge": "state-edge.schema.json",
     "continuity_packet": "continuity-packet.schema.json",
     "state_mutation_candidate": "state-mutation-candidate.schema.json",
+    "structural_candidate": "structural-candidate.schema.json",
     "intervention": "intervention.schema.json",
     "error": "error.schema.json",
 }

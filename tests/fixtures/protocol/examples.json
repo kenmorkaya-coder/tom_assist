@@ -48,7 +48,13 @@
       "TOM_TAU1": "4.0",
       "TOM_KAPPA_DECAY": "0.03"
     },
-    "kappa_decay_source": "profile_env_reader_wp18_effective_0.03"
+    "kappa_decay_source": "profile_env_reader_wp18_effective_0.03",
+    "structural_load_mode": "legacy",
+    "structural_load_compiler_version": "tom-assist-evidence-load17/1.0",
+    "semantic_embedding_version": "minilm-l6-v2/384d-mean-pool-max256/1.0",
+    "local_gemma_candidate_required": false,
+    "model_generated_load_values": false,
+    "feeling_wheel_used": false
   },
   "state_object": {
     "id": "10000000-0000-4000-8000-000000000001",
@@ -123,6 +129,21 @@
     "operation": "CREATE",
     "object": {"type": "DECISION", "title": "Candidate only", "status": "proposed"},
     "tom_check": {"result": "compatible", "conflicts": [], "requires_user_confirmation": true}
+  },
+  "structural_candidate": {
+    "schema_version": "tom-assist-structural-candidate/1.0",
+    "source_text_sha256": "sha256:a5f2d1d8590f6fdd2273c9ff184444c5543dcd6b826bb2753e54d529313a8192",
+    "entities": [
+      {"id": "brake", "label": "brake", "kind": "object", "evidence": {"start": 4, "end": 9, "quote": "brake"}, "confidence": 1.0},
+      {"id": "cart", "label": "cart", "kind": "object", "evidence": {"start": 23, "end": 27, "quote": "cart"}, "confidence": 1.0}
+    ],
+    "orientations": [],
+    "causal_relations": [
+      {"id": "brake_prevents_cart", "cause_entity_id": "brake", "effect_entity_id": "cart", "kind": "prevents", "modality": "asserted", "negated": false, "evidence": {"start": 0, "end": 40, "quote": "The brake prevents the cart from moving."}, "confidence": 1.0}
+    ],
+    "signals": {"rules": [], "contradictions": [], "inferences": [], "sequences": [], "memory_references": [], "future_references": [], "completions": [], "rejections": []},
+    "unknown_fields": [],
+    "confidence": 1.0
   },
   "intervention": {
     "id": "70000000-0000-4000-8000-000000000001",

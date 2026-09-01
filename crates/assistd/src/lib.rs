@@ -358,7 +358,14 @@ impl AssistService {
             request.tom_checkpoint_digest = preview.checkpoint_digest;
             request.tom_activation_id = preview.activation_id;
             request.activated_branch_ids = preview.activated_branch_ids;
-            request.candidate_trace = json!({"retrieval":preview.candidate_trace,"branches":preview.branch_trace,"admission":admitted.trace});
+            request.candidate_trace = json!({
+                "retrieval": preview.candidate_trace,
+                "branches": preview.branch_trace,
+                "admission": admitted.trace,
+                "structural_load_mode": preview.structural_load_mode,
+                "structural_analysis": preview.structural_analysis,
+                "shadow_structural_retrieval": preview.shadow_structural_retrieval,
+            });
             request.sections = admitted.packet.sections;
             request.retrieved_anchor_ids = admitted.packet.retrieved_anchor_ids;
             request.excluded = admitted.packet.excluded;

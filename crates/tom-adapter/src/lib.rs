@@ -71,6 +71,12 @@ pub struct RankPreview {
     pub triggers: Vec<Value>,
     pub ranked_anchors: Vec<RankedAnchor>,
     pub checkpoint_digest: String,
+    #[serde(default)]
+    pub structural_load_mode: String,
+    #[serde(default)]
+    pub structural_analysis: Option<Value>,
+    #[serde(default)]
+    pub shadow_structural_retrieval: Vec<Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

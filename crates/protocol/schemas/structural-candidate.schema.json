@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tom-assist.local/schemas/structural-candidate.schema.json",
+  "title": "StructuralCandidate",
+  "description": "Candidate-only, quoted-evidence structure emitted by a local parser. It contains no load values.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source_text_sha256", "entities", "orientations", "causal_relations", "signals", "unknown_fields", "confidence"],
+  "properties": {
+    "schema_version": {"const": "tom-assist-structural-candidate/1.0"},
+    "source_text_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "entities": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "label", "kind", "evidence", "confidence"],
+        "properties": {
+          "id": {"$ref": "#/$defs/localId"},
+          "label": {"type": "string", "minLength": 1, "maxLength": 160},
+          "kind": {"enum": ["actor", "object", "concept", "decision", "constraint", "event", "state", "outcome", "work", "unknown"]},
+          "evidence": {"$ref": "#/$defs/span"},
+          "confidence": {"$ref": "#/$defs/confidence"}
+        }
+      }
+    },
+    "orientations": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "source_entity_id", "target_entity_id", "kind", "polarity", "modality", "negated", "evidence", "confidence"],
+        "properties": {
+          "id": {"$ref": "#/$defs/localId"},
+          "source_entity_id": {"$ref": "#/$defs/localId"},
+          "target_entity_id": {"$ref": "#/$defs/localId"},
+          "kind": {"enum": ["supports", "opposes", "depends_on", "contains", "owns", "controls", "targets", "refers_to", "precedes", "follows", "supersedes", "neutral_toward"]},
+          "polarity": {"enum": ["positive", "negative", "neutral"]},
+          "modality": {"$ref": "#/$defs/modality"},
+          "negated": {"type": "boolean"},
+          "evidence": {"$ref": "#/$defs/span"},
+          "confidence": {"$ref": "#/$defs/confidence"}
+        }
+      }
+    },
+    "causal_relations": {
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "cause_entity_id", "effect_entity_id", "kind", "modality", "negated", "evidence", "confidence"],
+        "properties": {
+          "id": {"$ref": "#/$defs/localId"},
+          "cause_entity_id": {"$ref": "#/$defs/localId"},
+          "effect_entity_id": {"$ref": "#/$defs/localId"},
+          "kind": {"enum": ["causes", "enables", "prevents", "contributes_to", "requires"]},
+          "modality": {"$ref": "#/$defs/modality"},
+          "negated": {"type": "boolean"},
+          "evidence": {"$ref": "#/$defs/span"},
+          "confidence": {"$ref": "#/$defs/confidence"}
+        }
+      }
+    },
+    "signals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rules", "contradictions", "inferences", "sequences", "memory_references", "future_references", "completions", "rejections"],
+      "properties": {
+        "rules": {"$ref": "#/$defs/evidenceFacts"},
+        "contradictions": {"$ref": "#/$defs/evidenceFacts"},
+        "inferences": {"$ref": "#/$defs/evidenceFacts"},
+        "sequences": {"$ref": "#/$defs/evidenceFacts"},
+        "memory_references": {"$ref": "#/$defs/evidenceFacts"},
+        "future_references": {"$ref": "#/$defs/evidenceFacts"},
+        "completions": {"$ref": "#/$defs/evidenceFacts"},
+        "rejections": {"$ref": "#/$defs/evidenceFacts"}
+      }
+    },
+    "unknown_fields": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"enum": ["entities", "orientations", "causal_relations", "rules", "contradictions", "inferences", "sequences", "memory_references", "future_references", "completions", "rejections"]}
+    },
+    "confidence": {"$ref": "#/$defs/confidence"}
+  },
+  "$defs": {
+    "localId": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,63}$"},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "modality": {"enum": ["asserted", "inferred", "tentative", "hypothetical", "questioned"]},
+    "span": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end", "quote"],
+      "properties": {
+        "start": {"type": "integer", "minimum": 0},
+        "end": {"type": "integer", "minimum": 1},
+        "quote": {"type": "string", "minLength": 1}
+      }
+    },
+    "evidenceFacts": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidence", "confidence"],
+        "properties": {
+          "evidence": {"$ref": "#/$defs/span"},
+          "confidence": {"$ref": "#/$defs/confidence"}
+        }
+      }
+    }
+  }
+}

@@ -3,6 +3,7 @@ target/
 node_modules/
 dist/
 .venv-gateway/
+.venv-structure/
 .pytest_cache/
 .tmp/
 __pycache__/

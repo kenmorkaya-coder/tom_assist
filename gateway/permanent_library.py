@@ -28,6 +28,14 @@ class PermanentLibrary:
                 event_id INTEGER PRIMARY KEY, record_id TEXT NOT NULL, content_hash TEXT NOT NULL,
                 reason TEXT NOT NULL CHECK(reason IN ('decayed','capacity')),
                 commit_key TEXT NOT NULL, tick INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS structural_commits(
+                commit_key TEXT PRIMARY KEY,
+                record_id TEXT NOT NULL,
+                source_text_sha256 TEXT NOT NULL,
+                compiler_version TEXT NOT NULL,
+                analysis_digest TEXT NOT NULL,
+                analysis_json TEXT NOT NULL,
+                tick INTEGER NOT NULL);
         """)
 
     def retain(self, record, encoded):
@@ -77,3 +85,56 @@ class PermanentLibrary:
                                (after, limit)).fetchall()
         names = ("event_id", "record_id", "content_hash", "reason", "commit_key", "tick")
         return [dict(zip(names, row)) for row in rows]
+
+    def retain_structural_commit(self, commit_key, record_id, analysis, tick):
+        """Atomically retain the validated analysis used by one runtime commit."""
+        encoded = json.dumps(analysis, sort_keys=True, separators=(",", ":"))
+        existing = self.db.execute(
+            "SELECT record_id,analysis_json,tick FROM structural_commits WHERE commit_key=?",
+            (commit_key,),
+        ).fetchone()
+        if existing is not None:
+            if existing != (record_id, encoded, tick):
+                raise ValueError("structural commit idempotency conflict")
+            return
+        self.db.execute(
+            "INSERT INTO structural_commits VALUES(?,?,?,?,?,?,?)",
+            (
+                commit_key,
+                record_id,
+                analysis["source_text_sha256"],
+                analysis["compiler_version"],
+                analysis["analysis_digest"],
+                encoded,
+                tick,
+            ),
+        )
+
+    def structural_history(self, active_commit_keys=None):
+        rows = self.db.execute(
+            "SELECT commit_key,record_id,analysis_json,tick "
+            "FROM structural_commits ORDER BY tick, rowid"
+        ).fetchall()
+        allowed = None if active_commit_keys is None else set(active_commit_keys)
+        result = []
+        for commit_key, record_id, encoded, tick in rows:
+            if allowed is not None and commit_key not in allowed:
+                continue
+            analysis = json.loads(encoded)
+            result.append({
+                "commit_key": commit_key,
+                "record_id": record_id,
+                "tick": tick,
+                "candidate": analysis["candidate"],
+                "semantic_vector": analysis["semantic_vector"],
+                "static_load": analysis["static_load"],
+                "load_signature": analysis["load_signature"],
+                "analysis_digest": analysis["analysis_digest"],
+            })
+        return result
+
+    def structural_analysis(self, commit_key):
+        row = self.db.execute(
+            "SELECT analysis_json FROM structural_commits WHERE commit_key=?", (commit_key,)
+        ).fetchone()
+        return None if row is None else json.loads(row[0])

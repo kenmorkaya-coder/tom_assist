@@ -75,7 +75,9 @@ def validate_snapshot(gateway, root):
         if db.execute("PRAGMA quick_check").fetchone() != ("ok",):
             raise ValueError("library integrity check failed")
         objects = {(kind, name) for kind, name in db.execute("SELECT type,name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'")}
-        if objects != {("table", "library_records"), ("table", "runtime_head"), ("table", "demotions"), ("index", "library_content_hash")}:
+        legacy_objects = {("table", "library_records"), ("table", "runtime_head"), ("table", "demotions"), ("index", "library_content_hash")}
+        current_objects = legacy_objects | {("table", "structural_commits")}
+        if objects not in (legacy_objects, current_objects):
             raise ValueError("unrecognized library schema objects")
         originals = {}
         for rid, digest, content, encoded in db.execute("SELECT record_id,content_hash,content,record_json FROM library_records"):
@@ -99,6 +101,25 @@ def validate_snapshot(gateway, root):
         for rid, digest, reason in db.execute("SELECT record_id,content_hash,reason FROM demotions"):
             if originals.get(rid) != digest or reason not in ("decayed", "capacity"):
                 raise ValueError("invalid demotion provenance")
+        if ("table", "structural_commits") in objects:
+            from gateway.structural_analysis import COMPILER_VERSION, digest as structural_digest
+            for commit_key, rid, source_digest, compiler, analysis_digest, encoded, tick in db.execute(
+                "SELECT commit_key,record_id,source_text_sha256,compiler_version,"
+                "analysis_digest,analysis_json,tick FROM structural_commits"
+            ):
+                analysis = json.loads(encoded)
+                unsigned = {key:value for key,value in analysis.items() if key != "analysis_digest"}
+                if (
+                    not commit_key or rid not in originals or type(tick) is not int
+                    or compiler != COMPILER_VERSION
+                    or analysis.get("compiler_version") != compiler
+                    or analysis.get("source_text_sha256") != source_digest
+                    or analysis.get("candidate", {}).get("source_text_sha256") != source_digest
+                    or analysis.get("analysis_digest") != analysis_digest
+                    or structural_digest(unsigned) != analysis_digest
+                    or structural_digest(analysis.get("candidate")) != analysis.get("candidate_digest")
+                ):
+                    raise ValueError("invalid structural-commit provenance")
         for folder in (root / "checkpoints").glob("*"):
             expected_files = {"tree_state.json", "rgm_state.json", "commit_state.json", "metadata.json"}
             if {p.name for p in folder.iterdir()} != expected_files:
@@ -194,7 +215,12 @@ def import_snapshot(gateway, action, directory, context):
         stage.mkdir(mode=0o700)
         shutil.copytree(root, stage / "tom")
         validate_snapshot(gateway, stage / "tom")  # Recheck the copied bytes.
-        probe = ProjectRuntime(project_id, stage / "tom", gateway.runtime_sha, gateway.seed)
+        factory = getattr(gateway, "create_project_runtime", None)
+        probe = (
+            factory(project_id, stage / "tom")
+            if callable(factory)
+            else ProjectRuntime(project_id, stage / "tom", gateway.runtime_sha, gateway.seed)
+        )
         try:
             expected = probe.library.head()
             if probe.serialized_state_bytes() != expected[:2]:

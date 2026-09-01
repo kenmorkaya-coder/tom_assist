@@ -11,6 +11,7 @@ export type TomAssistProtocol =
   | StateEdge
   | ContinuityPacket
   | StateMutationCandidate
+  | StructuralCandidate
   | Intervention
   | ProtocolError;
 export type Method =
@@ -61,6 +62,13 @@ export type Method =
  * Source-turn identifier contract source-id/1.1. Legacy UUIDs remain valid; provider conversation turns may append the recorded user or assistant role.
  */
 export type SourceId = string;
+/**
+ * @maxItems 32
+ */
+export type EvidenceFacts = {
+  evidence: Span;
+  confidence: number;
+}[];
 
 export interface Envelope {
   protocol: "tom-assist/1.0";
@@ -92,6 +100,12 @@ export interface TomCapabilities {
   commit_dynamics: ["step", "rgm_write", "leaf_vec_teach", "usage_rotation", "front_row_reseat"];
   front_row_capacity: number;
   teach_on_conflict: boolean;
+  structural_load_mode: "legacy" | "shadow" | "authoritative";
+  structural_load_compiler_version: "tom-assist-evidence-load17/1.0";
+  semantic_embedding_version: "minilm-l6-v2/384d-mean-pool-max256/1.0";
+  local_gemma_candidate_required: boolean;
+  model_generated_load_values: false;
+  feeling_wheel_used: false;
   /**
    * @minItems 2
    * @maxItems 2
@@ -221,6 +235,92 @@ export interface StateMutationCandidate {
     conflicts: string[];
     requires_user_confirmation: true;
   };
+}
+/**
+ * Candidate-only, quoted-evidence structure emitted by a local parser. It contains no load values.
+ */
+export interface StructuralCandidate {
+  schema_version: "tom-assist-structural-candidate/1.0";
+  source_text_sha256: string;
+  /**
+   * @maxItems 64
+   */
+  entities: {
+    id: string;
+    label: string;
+    kind:
+      "actor" | "object" | "concept" | "decision" | "constraint" | "event" | "state" | "outcome" | "work" | "unknown";
+    evidence: Span;
+    confidence: number;
+  }[];
+  /**
+   * @maxItems 64
+   */
+  orientations: {
+    id: string;
+    source_entity_id: string;
+    target_entity_id: string;
+    kind:
+      | "supports"
+      | "opposes"
+      | "depends_on"
+      | "contains"
+      | "owns"
+      | "controls"
+      | "targets"
+      | "refers_to"
+      | "precedes"
+      | "follows"
+      | "supersedes"
+      | "neutral_toward";
+    polarity: "positive" | "negative" | "neutral";
+    modality: "asserted" | "inferred" | "tentative" | "hypothetical" | "questioned";
+    negated: boolean;
+    evidence: Span;
+    confidence: number;
+  }[];
+  /**
+   * @maxItems 64
+   */
+  causal_relations: {
+    id: string;
+    cause_entity_id: string;
+    effect_entity_id: string;
+    kind: "causes" | "enables" | "prevents" | "contributes_to" | "requires";
+    modality: "asserted" | "inferred" | "tentative" | "hypothetical" | "questioned";
+    negated: boolean;
+    evidence: Span;
+    confidence: number;
+  }[];
+  signals: {
+    rules: EvidenceFacts;
+    contradictions: EvidenceFacts;
+    inferences: EvidenceFacts;
+    sequences: EvidenceFacts;
+    memory_references: EvidenceFacts;
+    future_references: EvidenceFacts;
+    completions: EvidenceFacts;
+    rejections: EvidenceFacts;
+  };
+  unknown_fields: (
+    | "entities"
+    | "orientations"
+    | "causal_relations"
+    | "rules"
+    | "contradictions"
+    | "inferences"
+    | "sequences"
+    | "memory_references"
+    | "future_references"
+    | "completions"
+    | "rejections"
+  )[];
+  confidence: number;
+}
+export interface Span {
+  start: number;
+  end: number;
+  quote: string;
 }
 export interface Intervention {
   id: string;
