@@ -1,70 +1,49 @@
-# Governed desktop chat (WP-21)
+# Governed desktop chat and Tom Assist OAuth
 
-Implementation/build verification only, **NOT-A-GATE**. No product-owned login,
-token refresh, credentials, API key, provider SDK or direct OpenAI HTTP transport.
+Implementation/build verification only, **NOT-A-GATE**. OAuth is now a
+Tom Assist-owned package. It does not read TomOwner files, call the TomOwner app,
+reuse its process, or share its credential store.
 
-## Connect the already running runtime
+## Connect in Tom Assist
 
-Connect OAuth in the owner's existing ToM runtime. Leave its provider set to
-OpenAI and its auth mode set to OAuth while a send is in flight. Tom Assist does
-not launch, reconfigure, log into or switch that runtime. Start the Tom Assist
-gateway with `TOM_ASSIST_OAUTH_RUNTIME_URL` set to the existing runtime's HTTP
-origin: literal `127.0.0.1` or `[::1]`, with its actual explicit port. There is no
-default, scanning or discovery of owner services. Port **18790 is refused**.
-Paths, credentials, query strings, fragments, remote hosts and redirects are
-refused. The URL is configuration, never stored in the project ledger.
+The packaged desktop starts `tom-assist-oauth` as its own sidecar. The developer
+runner starts the same binary and gives the gateway its user-only Unix socket via
+`TOM_ASSIST_OAUTH_BROKER_SOCKET`. No TCP service, port discovery or owner runtime
+is involved. Port **18790 is never used**. In Chat, choose **Connect OAuth**. The
+broker opens the provider authorization page and listens only on
+`127.0.0.1:1455` for the registered callback. The user completes sign-in in the
+browser; Tom Assist never asks the user to type credentials into its webview.
 
-Desktop, daemon and gateway share `TOM_ASSIST_APP_SUPPORT`,
-`TOM_ASSISTD_SOCKET` and `TOM_ASSIST_GATEWAY_SOCKET` as in the development runner.
-The normal packaged app still requires these installed local services; this WP
-does not add bundled sidecars or start an owner runtime. In Chat, Refresh
-connection checks the credential-free readiness endpoint. Missing configuration,
-unreachable runtime or disconnected OAuth permits local preparation but disables
-Send. Tom Assist has no login button and never calls `/api/oauth/push`.
+OAuth uses authorization-code PKCE-S256 with fresh verifier, state and nonce.
+The callback requires the exact method, path and state. Before accepting tokens,
+the broker requires an RS256 ID token and validates its signature from HTTPS
+JWKS plus issuer, audience, expiry and nonce. Access/refresh tokens and the
+provider account identifier are stored only in the macOS Keychain entry owned by
+service `local.tom.assist.oauth`; in-memory secret records zeroize on drop. Logout
+attempts provider revocation and always clears the local entry. Refresh occurs
+inside the broker before a send and persists rotated refresh tokens.
 
-## Runtime reuse, not auth reimplementation
+The gateway sees only `/status` and `/complete` over a mode-0600 Unix socket.
+Status is secret-free and never refreshes or generates. Completion accepts the
+exact approved prompt only after both the desktop/daemon consent checks and the
+broker's `explicit_send: true` check. The broker permits one concurrent
+generation, makes one provider request, has no generation retry, and returns only
+response text, resolved model label and completion state. No token, account ID,
+authorization header or raw provider error crosses to the gateway, project
+database, logs, recovery archive or webview.
 
-Read-only inspection of `tom_master` at
-`e9fdef81c8a366ebbec07be9772189eea15cb2ac` found the existing thin endpoint
-`interface/desktop_api.py` `/api/llm/complete`. It calls
-`integration.llm_provider.make_llm()` → `_make_openai_client()` → the runtime's
-process-local `AuthProfileManager` / `CredentialType.OAUTH` from `auth_profiles.py`
-→ `integration.openai_client.OpenAIClient.complete_text()` / `generate()`.
-The endpoint constructs its normal client using the connected process's auth
-state; Tom Assist does not instantiate an independently authenticated client.
-Importing that factory into a different process would not reuse those in-memory
-profiles/tokens. The existing HTTP bridge preserves this boundary.
-
-The upstream client's OAuth Responses transport, refresh, semaphore, cross-process
-flock, TPM bucket and retry policy remain upstream-owned. Tom Assist adds a
-single-flight gateway limit of one, never increases the runtime concurrency cap,
-does not override model/generation settings, and adds **no generation retries**.
-The existing upstream client may itself retry infrastructure failures. Model is
-honestly reported as **runtime-managed**, not inferred from the endpoint's
-non-authoritative `default` response label. Prompts ask for a minimal reply in
-the live test; the runtime controls the actual output limit and quota.
-
-Status calls only `/api/oauth/status`; it does not refresh auth or generate.
-After explicit Send only, the adapter checks `/api/llm/status` for OAuth-ready
-OpenAI and calls `/api/llm/complete` with the approved `prompt` only. It never
-uses `/api/chat` or `/api/chat/stream`, which would run the owner's ToM loop.
-Only whitelisted output fields and generic error codes leave the gateway;
-upstream headers, config fields, masked keys and raw errors are discarded.
-
-Boundary limitation: the pinned runtime does not expose an atomic
-“OAuth-only completion” parameter. Its config could change between readiness
-and completion. Keep provider/auth mode stable during sends; the adapter
-preflights and refuses observed mismatches but cannot claim an atomic auth-mode
-pin without an upstream change. No upstream change is made here. Readiness is
-local auth state, not proof that a network request or quota check will succeed.
-The upstream `/api/llm/status` API-key branch can validate remotely if the owner
-changes mode between the two checks; it is consequently never part of preview.
-
-OpenAI's [official authentication documentation](https://learn.chatgpt.com/docs/auth)
-distinguishes ChatGPT sign-in from separately billed API keys and describes cached
-credentials as private. This implementation reuses the runtime's existing
-integration, not a new generally available OAuth client registration or a claim
-of entitlement to API-key billing through ChatGPT sign-in.
+The current provider exchange uses the owner-authorized compatibility client and
+the provider's Codex Responses surface. It was derived from read-only inspection
+of the previously approved integration behavior, but imports and calls none of
+that source at runtime. This is intentionally documented as an owner-authorized,
+undocumented compatibility path: OpenAI's public API reference documents API-key
+and workload-identity bearer authentication, not a generally available third-party
+ChatGPT subscription OAuth registration. It therefore must not be represented as
+an official public OpenAI OAuth API or an entitlement/billing guarantee. A provider
+contract change can require a product update. See the
+[official API authentication reference](https://developers.openai.com/api/reference/overview).
+An owner-issued replacement client registration can be supplied to the broker as
+`TOM_ASSIST_OPENAI_OAUTH_CLIENT_ID`; no client secret is accepted or stored.
 
 ## Conversation and consent
 
@@ -114,8 +93,8 @@ experience step.
 
 Timeout/lost response is an **unknown outcome**, not proof nothing was sent.
 There is no automatic resend or remote cancellation. On daemon restart, an
-unowned `sending` intent becomes unknown. Check the owner runtime before a new
-send. A durably captured response can be evaluated/retried offline from that
+unowned `sending` intent becomes unknown. Check the Tom Assist connection and
+provider account activity before a new send. A durably captured response can be evaluated/retried offline from that
 capture; the five-dynamics idempotency key survives crash, restart and archive.
 WP-20 archives without both new conversation tables remain readable; current
 archives include both plus `provider_sessions`. Missing arbitrary tables still
@@ -126,18 +105,19 @@ fail closed. A recovery import never generates.
 The normal Rust, gateway and UI tests use deterministic provider fixtures; the
 real gateway still performs preview/governance/commit against disposable local
 runtime state. The packaged journey also routes through the production provider
-adapter but supplies a localhost HTTP fixture, overrides any inherited owner URL,
-and makes zero real OAuth exchanges. See [project recovery](PROJECT_RECOVERY.md).
+adapter but supplies a local Unix-socket broker fixture and makes zero real OAuth
+exchanges. The packaged artifact separately contains the real broker binary. See
+[project recovery](PROJECT_RECOVERY.md).
 
-The single live test is ignored by default. Explicitly configure the real runtime
-origin above, opt in with `TOM_ASSIST_LIVE_OAUTH=1`, then run:
+The single live test is ignored by default. Connect Tom Assist first, point the
+gateway at that broker socket, opt in with `TOM_ASSIST_LIVE_OAUTH=1`, then run:
 
 ```sh
 cargo test -p tom-assistd --test conversations live_oauth_one_disposable_exchange -- --ignored --nocapture
 ```
 
 It cleanly reports SKIP if not opted in or OAuth is disconnected/unconfigured.
-It uses a disposable project, one minimal logical exchange (upstream retries may
-apply), no parallel requests, and GET-only restart verification. It never reads
+It uses a disposable project, one minimal logical exchange, no retry, no parallel
+requests, and GET-only restart verification. The test process never reads
 credentials and does not retry to turn a live failure green. A skipped test is
 not evidence of a successful live exchange.

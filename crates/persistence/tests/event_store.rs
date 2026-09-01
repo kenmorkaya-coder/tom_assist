@@ -212,7 +212,10 @@ fn native_import_batches_preserve_authority_provenance_and_event_versions() {
     let imported = state.objects.iter().find(|row| row.id == "new").unwrap();
     assert_eq!(imported.authority, Authority::ProviderCandidate);
     assert_eq!(imported.status, StateStatus::Proposed);
-    assert_eq!(imported.source_turn_ids[0], "60000000-0000-4000-8000-000000000001:assistant");
+    assert_eq!(
+        imported.source_turn_ids[0],
+        "60000000-0000-4000-8000-000000000001:assistant"
+    );
     assert_eq!(store.replay("project-1").unwrap(), state);
 }
 

@@ -1,89 +1,166 @@
-"""Credential-free adapter to the owner's ALREADY connected runtime process.
+"""Secret-free adapter to the Tom Assist-owned OAuth broker.
 
-Pinned upstream: interface/desktop_api.py:1671 -> llm_provider.make_llm
-(:202, :518) -> auth_profiles CredentialType.OAUTH -> OpenAIClient.complete_text
-/generate (:1721, :836). Never import the desktop server or copy its tokens.
-The upstream client retains its semaphore/flock/TPM limits and refresh policy.
+Only the broker can read Tom Assist's macOS Keychain entry or contact the
+provider. The gateway uses an owner-only Unix socket and receives readiness
+metadata or response text; tokens and account identifiers never cross this
+boundary.
 """
 import http.client
 import json
 import os
+import socket
+import stat
 import threading
-from urllib.parse import urlsplit
+from pathlib import Path
 
-CAPABILITIES = {"provider_surface":"tom-master/openai-oauth", "visible_prompt_injection":True,
-                "response_capture":True, "hidden_context_visibility":False,
-                "model_internal_bias":"none", "supports_system_field":False}
+CAPABILITIES = {
+    "provider_surface": "tom-assist/openai-oauth",
+    "visible_prompt_injection": True,
+    "response_capture": True,
+    "hidden_context_visibility": False,
+    "model_internal_bias": "none",
+    "supports_system_field": False,
+}
+
+_SAFE_BROKER_ERRORS = {
+    "OAUTH_NOT_CONNECTED",
+    "OAUTH_REFRESH_REQUIRED",
+    "PROVIDER_BUSY",
+    "PROVIDER_PROMPT_INVALID",
+    "PROVIDER_REQUEST_FAILED",
+    "PROVIDER_RESPONSE_INVALID",
+    "PROVIDER_EMPTY_OR_OVERSIZE_RESPONSE",
+}
 
 
 class ProviderFailure(Exception):
     pass
 
 
-class OAuthProvider:
-    def __init__(self, runtime_url=None):
-        self.url = runtime_url if runtime_url is not None else os.environ.get("TOM_ASSIST_OAUTH_RUNTIME_URL", "")
-        self.slot = threading.BoundedSemaphore(1)  # Never increase the upstream cap.
+class _UnixHTTPConnection(http.client.HTTPConnection):
+    def __init__(self, socket_path, timeout):
+        super().__init__("localhost", timeout=timeout)
+        self.socket_path = socket_path
 
-    def address(self):
-        url = urlsplit(self.url)
-        if (url.scheme != "http" or url.hostname not in ("127.0.0.1", "::1")
-                or not url.port or url.port == 18790 or url.username or url.password
-                or url.path not in ("", "/") or url.query or url.fragment):
-            raise ProviderFailure("OAUTH_RUNTIME_NOT_CONFIGURED")
-        return url.hostname, url.port
+    def connect(self):
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.settimeout(self.timeout)
+        self.sock.connect(self.socket_path)
+
+
+class OAuthProvider:
+    def __init__(self, socket_path=None):
+        configured = (
+            socket_path
+            if socket_path is not None
+            else os.environ.get("TOM_ASSIST_OAUTH_BROKER_SOCKET", "")
+        )
+        self.socket_path = str(configured)
+        self.slot = threading.BoundedSemaphore(1)
+
+    def validated_socket(self):
+        if not self.socket_path or "\x00" in self.socket_path:
+            raise ProviderFailure("OAUTH_BROKER_NOT_CONFIGURED")
+        path = Path(self.socket_path)
+        if not path.is_absolute() or len(os.fsencode(path)) >= 104:
+            raise ProviderFailure("OAUTH_BROKER_NOT_CONFIGURED")
+        try:
+            mode = os.lstat(path).st_mode
+        except OSError:
+            raise ProviderFailure("OAUTH_BROKER_UNAVAILABLE") from None
+        if not stat.S_ISSOCK(mode):
+            raise ProviderFailure("OAUTH_BROKER_UNAVAILABLE")
+        return str(path)
 
     def request(self, path, payload=None):
-        host, port = self.address()
-        connection = http.client.HTTPConnection(host, port, timeout=180 if payload else 3)
+        connection = _UnixHTTPConnection(
+            self.validated_socket(), timeout=180 if payload is not None else 3
+        )
         try:
-            body = json.dumps(payload).encode() if payload is not None else None
-            connection.request("POST" if body is not None else "GET", path, body=body,
-                               headers={"Content-Type":"application/json"})
+            body = (
+                json.dumps(payload, separators=(",", ":")).encode()
+                if payload is not None
+                else None
+            )
+            connection.request(
+                "POST" if body is not None else "GET",
+                path,
+                body=body,
+                headers={"Content-Type": "application/json"},
+            )
             response = connection.getresponse()
-            raw = response.read(1024 * 1024 + 1)
-            if response.status != 200 or len(raw) > 1024 * 1024:
-                raise ProviderFailure("OAUTH_RUNTIME_REQUEST_FAILED")
-            value = json.loads(raw)
-            if not isinstance(value, dict): raise ProviderFailure("OAUTH_RUNTIME_INVALID_RESPONSE")
+            raw = response.read(768 * 1024 + 1)
+            if len(raw) > 768 * 1024:
+                raise ProviderFailure("OAUTH_BROKER_INVALID_RESPONSE")
+            try:
+                value = json.loads(raw)
+            except (TypeError, ValueError):
+                raise ProviderFailure("OAUTH_BROKER_INVALID_RESPONSE") from None
+            if response.status != 200:
+                code = (
+                    value.get("error", {}).get("code")
+                    if isinstance(value, dict)
+                    else None
+                )
+                raise ProviderFailure(
+                    code
+                    if code in _SAFE_BROKER_ERRORS
+                    else "OAUTH_BROKER_REQUEST_FAILED"
+                )
+            if not isinstance(value, dict):
+                raise ProviderFailure("OAUTH_BROKER_INVALID_RESPONSE")
             return value
         except ProviderFailure:
             raise
         except Exception:
-            # Upstream errors can include HTTP bodies; no credential-bearing
-            # exception text, headers, auth status fields or config is forwarded.
-            raise ProviderFailure("OAUTH_RUNTIME_UNAVAILABLE") from None
+            raise ProviderFailure("OAUTH_BROKER_UNAVAILABLE") from None
         finally:
             connection.close()
 
     def status(self):
-        result = {"connected":False, "code":"OAUTH_DISCONNECTED", "capabilities":dict(CAPABILITIES),
-                  "streaming":False, "model":"runtime-managed", "credentials":"runtime-owned",
-                  "history_policy":"visible bounded local conversation history + current packet + draft"}
+        result = {
+            "connected": False,
+            "code": "OAUTH_NOT_CONNECTED",
+            "capabilities": dict(CAPABILITIES),
+            "streaming": False,
+            "model": "broker-managed",
+            "credential_owner": "tom-assist-keychain",
+            "history_policy": "visible bounded local conversation history + current packet + draft",
+        }
         try:
-            status = self.request("/api/oauth/status")  # No auth refresh or LLM request.
-            result["connected"] = status.get("ready") is True and status.get("mode") == "oauth"
-            if result["connected"]: result["code"] = "OAUTH_READY"
-        except (ProviderFailure, ValueError):
-            result["code"] = "OAUTH_RUNTIME_UNAVAILABLE" if self.url else "OAUTH_RUNTIME_NOT_CONFIGURED"
+            status = self.request("/status")
+            result["connected"] = status.get("connected") is True
+            result["code"] = str(status.get("code", "OAUTH_NOT_CONNECTED"))
+            if isinstance(status.get("model"), str):
+                result["model"] = status["model"]
+            if status.get("capabilities") == CAPABILITIES:
+                result["capabilities"] = dict(CAPABILITIES)
+        except ProviderFailure as error:
+            result["code"] = str(error)
         return result
 
     def complete(self, prompt):
         if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > 48_000:
             raise ProviderFailure("PROVIDER_PROMPT_INVALID")
-        if not self.slot.acquire(blocking=False): raise ProviderFailure("PROVIDER_BUSY")
+        if not self.slot.acquire(blocking=False):
+            raise ProviderFailure("PROVIDER_BUSY")
         try:
-            if not self.status()["connected"]: raise ProviderFailure("OAUTH_DISCONNECTED")
-            # Only explicit SEND reaches this endpoint. Never query /llm/status
-            # from preview/status: its API-key branch can validate a key remotely.
-            status = self.request("/api/llm/status")
-            if status.get("auth_mode") != "oauth" or status.get("oauth_ready") is not True or status.get("provider") != "openai":
-                raise ProviderFailure("OAUTH_PROVIDER_MISMATCH")
-            response = self.request("/api/llm/complete", {"prompt":prompt})
+            if not self.status()["connected"]:
+                raise ProviderFailure("OAUTH_NOT_CONNECTED")
+            response = self.request(
+                "/complete", {"explicit_send": True, "prompt": prompt}
+            )
             text = response.get("text")
-            if not isinstance(text, str) or not text.strip() or len(text.encode()) > 512_000:
+            model = response.get("model")
+            if (
+                not isinstance(text, str)
+                or not text.strip()
+                or len(text.encode()) > 512_000
+                or not isinstance(model, str)
+                or not model
+                or response.get("complete") is not True
+            ):
                 raise ProviderFailure("PROVIDER_EMPTY_OR_OVERSIZE_RESPONSE")
-            # The endpoint reports 'default', not an authoritative resolved model.
-            return {"text":text, "model":"runtime-managed", "complete":True}
+            return {"text": text, "model": model, "complete": True}
         finally:
             self.slot.release()

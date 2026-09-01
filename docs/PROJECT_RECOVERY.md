@@ -96,8 +96,8 @@ native Tauri IPC, the release daemon and real pinned gateway. There is no inject
 WebView driver or fake desktop backend. WP-21 replaces the Exchange diagnostic
 with the real Chat surface: create a conversation, preview the full prompt,
 explicitly Send, capture, evaluate and commit. The helper supplies an offline
-loopback HTTP runtime fixture to the **production provider adapter**, overriding
-any inherited owner URL. No actual OAuth/provider quota is consumed. Use only
+Unix-socket broker fixture to the **production provider adapter**, overriding
+the packaged sidecar for that disposable run. No actual OAuth/provider quota is consumed. Use only
 the helper's disposable project. The separate ignored live test is described in
 `OAUTH_CHAT.md`.
 
@@ -114,8 +114,8 @@ PYTHONDONTWRITEBYTECODE=1 .venv-gateway/bin/python \
 ```
 
 The run root must not already exist. The helper controls only its three child PIDs
-and isolated stores/sockets plus one disposable localhost HTTP fixture on a
-system-assigned ephemeral port (never 18790); it never controls the GUI. In a
+and isolated stores/sockets plus one disposable Unix-socket broker fixture; it
+never controls the GUI or accesses Keychain. In a
 Codex Computer Use `node_repl` session, import the test and run each phase (separate
 calls make progress and failures visible):
 

@@ -12,7 +12,7 @@ use tom_assist_protocol::{StateEdge, StateObject, canonical_sha256};
 use tom_assist_tom_adapter::GatewayClient;
 use tom_assistd::{
     AssistService, EvaluateTurnRequest, PrepareTurnRequest, SendTurnRequest,
-    provider::{ProviderAdapter, RuntimeOAuthAdapter, capabilities},
+    provider::{OAuthBrokerAdapter, ProviderAdapter, capabilities},
 };
 
 #[derive(Debug, Deserialize)]
@@ -133,8 +133,10 @@ fn prepare(
         created_at: input.created_at.clone(),
     };
     if input.arm == "SUB-D" {
-        Ok(AssistService::with_gateway(Store::open(database)?, gateway.clone())
-            .prepare_turn(request(String::new()))?)
+        Ok(
+            AssistService::with_gateway(Store::open(database)?, gateway.clone())
+                .prepare_turn(request(String::new()))?,
+        )
     } else {
         Ok(AssistService::new(Store::open(database)?)
             .prepare_turn(request(baseline_context(input)?))?)
@@ -171,7 +173,10 @@ fn run() -> Result<Value, Box<dyn std::error::Error>> {
         return Err("unexpected driver arguments".into());
     }
     let input: DriverInput = serde_json::from_slice(&std::fs::read(&input_path)?)?;
-    if !matches!(input.arm.as_str(), "SUB-A" | "SUB-B" | "SUB-C" | "SUB-D" | "SUB-E") {
+    if !matches!(
+        input.arm.as_str(),
+        "SUB-A" | "SUB-B" | "SUB-C" | "SUB-D" | "SUB-E"
+    ) {
         return Err("unknown arm".into());
     }
     if database.exists() {
@@ -179,7 +184,7 @@ fn run() -> Result<Value, Box<dyn std::error::Error>> {
     }
     let gateway = GatewayClient::new(gateway_socket);
     let health = gateway.health()?;
-    let provider = RuntimeOAuthAdapter(gateway.clone());
+    let provider = OAuthBrokerAdapter(gateway.clone());
     let provider_status = provider.status()?;
     if provider_status["connected"] != true {
         return Err("OAuth provider is not connected".into());

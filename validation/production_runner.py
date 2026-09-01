@@ -11,7 +11,6 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
-import http.client
 import json
 import math
 import os
@@ -23,7 +22,6 @@ import time
 import uuid
 from collections import Counter, defaultdict
 from pathlib import Path
-from urllib.parse import urlsplit
 
 from validation.draft_cases import FAMILIES, ROOT as BATTERY, materialize
 from validation.draft_contract import load_answers
@@ -278,35 +276,27 @@ def failure_taxonomy(case: dict, scored: dict) -> list[str]:
     return sorted(set(failures or ["wrong action"]))
 
 
-def preflight_runtime(runtime_url: str) -> dict:
-    parsed = urlsplit(runtime_url)
-    if parsed.scheme != "http" or parsed.hostname not in {"127.0.0.1", "::1"} or not parsed.port:
-        raise ValueError("runtime URL must be an explicit loopback HTTP origin")
-    if parsed.port == 18790 or parsed.username or parsed.password or parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
-        raise ValueError("runtime URL violates the frozen transport boundary")
-    result = {}
-    for path in ("/health", "/api/oauth/status", "/api/llm/status"):
-        connection = http.client.HTTPConnection(parsed.hostname, parsed.port, timeout=5)
-        try:
-            connection.request("GET", path)
-            response = connection.getresponse()
-            value = json.loads(response.read())
-            if response.status != 200 or not isinstance(value, dict):
-                raise ValueError(f"runtime preflight failed at {path}")
-            result[path] = value
-        finally:
-            connection.close()
-    oauth, llm = result["/api/oauth/status"], result["/api/llm/status"]
-    if oauth.get("ready") is not True or oauth.get("mode") != "oauth":
-        raise ValueError("persisted OAuth is not ready")
-    if llm.get("connected") is not True or llm.get("oauth_ready") is not True or llm.get("auth_mode") != "oauth" or llm.get("provider") != "openai":
-        raise ValueError("runtime LLM provider is not connected OAuth OpenAI")
-    health = result["/health"]
+def preflight_broker(socket_path: Path) -> dict:
+    socket_path = socket_path.resolve()
+    health = unix_get(socket_path, "/health")
+    status = unix_get(socket_path, "/status")
+    if health.get("protocol") != "tom-assist-oauth/1.0" or health.get("ok") is not True:
+        raise ValueError("Tom Assist OAuth broker protocol mismatch")
+    if status.get("connected") is not True or status.get("code") != "OAUTH_READY":
+        raise ValueError("Tom Assist OAuth is not connected")
+    capabilities = status.get("capabilities")
+    if not isinstance(capabilities, dict) or capabilities.get("provider_surface") != "tom-assist/openai-oauth":
+        raise ValueError("Tom Assist OAuth provider capability mismatch")
+    if status.get("credential_owner") != "tom-assist-keychain":
+        raise ValueError("Tom Assist credential boundary mismatch")
     return {
-        "origin": f"http://{parsed.hostname}:{parsed.port}",
-        "health": {key: health.get(key) for key in ("status", "version", "runtime_version", "profile", "python_version")},
-        "oauth": {"ready": oauth.get("ready"), "mode": oauth.get("mode")},
-        "llm": {key: llm.get(key) for key in ("connected", "oauth_ready", "auth_mode", "provider", "model")},
+        "socket": str(socket_path),
+        "protocol": health["protocol"],
+        "connected": True,
+        "code": status["code"],
+        "credential_owner": status["credential_owner"],
+        "model": status.get("model") or "broker-managed-unreported",
+        "capabilities": capabilities,
     }
 
 
@@ -546,11 +536,11 @@ def run(args: argparse.Namespace) -> int:
     output.mkdir(parents=True)
     temp = args.temp.resolve()
     temp.mkdir(parents=True, exist_ok=False)
-    runtime = preflight_runtime(args.runtime_url)
+    broker = preflight_broker(args.oauth_broker_socket)
     gateway_socket = temp / "gateway.sock"
     gateway_log = (output / "gateway.log").open("wb")
     env = os.environ.copy()
-    env["TOM_ASSIST_OAUTH_RUNTIME_URL"] = args.runtime_url
+    env["TOM_ASSIST_OAUTH_BROKER_SOCKET"] = str(args.oauth_broker_socket.resolve())
     env["TOM_ASSIST_PROVIDER_SELF_REPORT"] = "0"
     env["PYTHONDONTWRITEBYTECODE"] = "1"
     gateway = subprocess.Popen(
@@ -566,14 +556,14 @@ def run(args: argparse.Namespace) -> int:
         "code_sha": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
         "corpus_manifest_sha256": sha256_file(MANIFEST),
         "driver_sha256": sha256_file(args.driver),
-        "runtime": runtime,
-        "provider": "tom-master/openai-oauth",
-        "model": runtime["llm"].get("model") or "runtime-managed-unreported",
+        "oauth_broker": broker,
+        "provider": "tom-assist/openai-oauth",
+        "model": broker["model"],
         "temperature": "unavailable/not exposed",
         "seed": "unavailable/not exposed",
         "provider_context_limit": "product 48000 characters; provider token limit unavailable",
-        "adapter": "gateway/oauth-provider + RuntimeOAuthAdapter",
-        "runtime_pin": subprocess.check_output(["git", "-C", str(args.tom_master), "rev-parse", "HEAD"], text=True).strip(),
+        "adapter": "gateway/oauth-provider + tom-assist-oauth/1.0 broker",
+        "structural_preview_pin": subprocess.check_output(["git", "-C", str(args.tom_master), "rev-parse", "HEAD"], text=True).strip(),
         "state_policy": "context-policy/1.1",
         "renderer": "authoritative-state/1.0",
         "oracle": "typed-action-oracle/1",
@@ -720,7 +710,7 @@ def main() -> int:
     live.add_argument("--output", type=Path, required=True)
     live.add_argument("--temp", type=Path, required=True)
     live.add_argument("--driver", type=Path, required=True)
-    live.add_argument("--runtime-url", required=True)
+    live.add_argument("--oauth-broker-socket", type=Path, required=True)
     live.add_argument("--tom-master", type=Path, required=True)
     live.add_argument("--authorized-generations", type=int, required=True)
     args = parser.parse_args()

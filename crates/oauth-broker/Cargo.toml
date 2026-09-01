@@ -1,0 +1,23 @@
+[package]
+name = "tom-assist-oauth"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+base64 = "0.22"
+getrandom = "0.3"
+jsonwebtoken = { version = "11.0", default-features = false, features = ["rust_crypto"] }
+keyring = "4.2"
+reqwest = { version = "0.13", default-features = false, features = ["blocking", "form", "json", "rustls"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+url = "2"
+zeroize = { version = "1", features = ["zeroize_derive"] }
+
+[dev-dependencies]
+rand = "0.8"
+rsa = { version = "0.9", features = ["pem"] }
+tempfile = "3"

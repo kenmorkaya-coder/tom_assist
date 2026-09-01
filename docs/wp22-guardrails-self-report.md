@@ -42,14 +42,14 @@ prompt containing the captured request/response and project ledger. No silent
 second call is attached to an ordinary send. The prompt has a 48,000-character
 limit and stale-state sends are rejected; an oversized/stale draft is not sent.
 
-Transport is the unchanged OAuth adapter -> owner's connected runtime -> existing
-OpenAI client/auth profiles. No auth implementation, token storage, model choice,
-concurrency increase, generation retry or schema-enforcement capability is added.
+Transport is the governed OAuth adapter → Tom Assist credential broker → provider.
+Self-report adds no separate auth/token path, model choice, concurrency increase,
+generation retry or schema-enforcement capability.
 JSON is requested in the prompt, then strictly validated locally; provider-side
 strict structured-output support is **not claimed**. The service durably claims
 at most one follow-up per exchange before calling the adapter. Lost replies,
-interrupted claims and verifier failures are not automatically resent. Upstream
-internal retries remain upstream-owned; `logical_calls_claimed` is not a billable
+interrupted claims and verifier failures are not automatically resent. The broker
+also performs no generation retry; `logical_calls_claimed` is not a billable
 request/token counter.
 
 This distinction follows the [official Structured Outputs guide](https://developers.openai.com/api/docs/guides/structured-outputs): a request for JSON does not itself establish schema adherence. A stale, still-unsent request can be explicitly refreshed and re-previewed; any previously approved hash then fails. Once claimed it cannot be refreshed or resent.

@@ -21,8 +21,9 @@ provider sessions, captured conversations and exactly-once receipts. See
 `docs/PROJECT_RECOVERY.md`; archives contain unencrypted full text.
 
 Chat provides project conversations, visible packet preparation, explicit Send,
-runtime OAuth response capture, governance review and confirmed decision capture
-or supersession. Credentials stay in the already connected owner runtime. Set
-`TOM_ASSIST_OAUTH_RUNTIME_URL` only on the gateway to that runtime's existing
-loopback HTTP origin; there is no automatic send or login. See
+OAuth response capture, governance review and confirmed decision capture or
+supersession. **Connect OAuth** runs the Tom Assist broker's browser PKCE flow;
+credentials stay in Tom Assist's macOS Keychain entry and never enter the ledger
+or archives. The packaged desktop owns the broker sidecar; the developer runner
+passes its Unix socket as `TOM_ASSIST_OAUTH_BROKER_SOCKET`. See
 `docs/OAUTH_CHAT.md` for setup, capabilities, recovery and the ignored live test.

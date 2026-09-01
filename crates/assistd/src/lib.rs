@@ -246,7 +246,7 @@ impl AssistService {
     pub fn with_gateway(store: Store, gateway: GatewayClient) -> Self {
         let mut service = Self::with_governance_verifier(store, gateway.clone());
         service.gateway = Some(gateway);
-        service.provider = Arc::new(provider::RuntimeOAuthAdapter(
+        service.provider = Arc::new(provider::OAuthBrokerAdapter(
             service.gateway.as_ref().unwrap().clone(),
         ));
         service

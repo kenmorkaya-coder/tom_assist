@@ -198,6 +198,12 @@ describe("desktop project → capture → supersede → audit smoke", () => {
     expect(
       chat.mock.calls.filter((c) => c[1] === "conversation.send"),
     ).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: "Connect OAuth" }));
+    await screen.findByText(/Tom Assist OAuth connected/);
+    expect(send.disabled).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Disconnect OAuth" }));
+    await screen.findByText(/OAuth not connected/);
+    expect(send.disabled).toBe(true);
   });
   it("keeps the selected project when an earlier project's send finishes", async () => {
     const backend = new FakeDesktopBackend();

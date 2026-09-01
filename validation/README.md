@@ -12,3 +12,20 @@ Run from the repository root:
 python3 -m unittest discover -s validation/tests -v
 python3 -m validation.harness --input validation/fixtures/toy_cases.jsonl --output-dir /tmp/tom-assist-harness-smoke
 ```
+
+The frozen live pilot additionally requires the owner-authorized exact budget,
+a running connected Tom Assist OAuth broker, and the pinned structural-preview
+checkout (OAuth does not use that checkout):
+
+```sh
+TOM_ASSIST_WP25_LIVE=1 python3 -m validation.production_runner run \
+  --output validation/runs/wp25-pilot-frozen-v1 \
+  --temp /private/tmp/tom-assist-wp25-pilot-v1 \
+  --driver target/debug/wp25-battery-driver \
+  --oauth-broker-socket "$HOME/Library/Application Support/TomAssist/tom-assist-oauth.sock" \
+  --tom-master ../tom_master --authorized-generations 165
+```
+
+The runner refuses existing output/temp paths and never resumes or resends an
+unknown outcome. This command is evidence for the frozen pilot only, never a
+G-gate verdict.

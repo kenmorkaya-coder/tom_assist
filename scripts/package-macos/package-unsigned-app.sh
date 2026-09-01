@@ -14,16 +14,19 @@ while [ "$#" -gt 0 ]; do
 done
 cd "$repo_dir"
 npm run desktop:build
-cargo build --release -p tom-assist-desktop --features custom-protocol
+cargo build --release -p tom-assist-desktop -p tom-assist-oauth --features custom-protocol
 
 binary="$repo_dir/target/release/tom-assist-desktop"
+oauth_binary="$repo_dir/target/release/tom-assist-oauth"
 [ -x "$binary" ] || { echo "desktop binary missing: $binary" >&2; exit 1; }
+[ -x "$oauth_binary" ] || { echo "OAuth broker missing: $oauth_binary" >&2; exit 1; }
 mkdir -p "$output_dir"
 stage=$(mktemp -d "${TMPDIR:-/tmp}/tom-assist-app.XXXXXX")
 trap 'rm -rf "$stage"' EXIT INT TERM
 app="$stage/Tom Assist.app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 install -m 0755 "$binary" "$app/Contents/MacOS/Tom Assist"
+install -m 0755 "$oauth_binary" "$app/Contents/MacOS/tom-assist-oauth"
 install -m 0644 "$repo_dir/apps/desktop/src-tauri/icons/icon.png" "$app/Contents/Resources/icon.png"
 python3 - "$app/Contents/Info.plist" "$bundle_id" <<'PY'
 import plistlib, pathlib, re, sys

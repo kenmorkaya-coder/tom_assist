@@ -6,6 +6,7 @@ members = [
   "crates/tom-adapter",
   "crates/context-admission",
   "crates/governance",
+  "crates/oauth-broker",
   "crates/assistd",
   "crates/native-host",
   "apps/desktop/src-tauri",

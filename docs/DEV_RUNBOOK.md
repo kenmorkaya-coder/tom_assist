@@ -1,6 +1,6 @@
 # Tom Assist v1.2 developer runbook
 
-This is a local-only alpha walkthrough for macOS. It does not run or assert any G-gate. Live provider selector validation, signing/notarization, SQLCipher/Keychain, cloud services, and Layer 2 routing are outside this build.
+This is a local-only alpha walkthrough for macOS. It does not run or assert any G-gate. Signing/notarization, SQLCipher, cloud services, and Layer 2 routing are outside this build. Tom Assist OAuth credentials use a product-owned macOS Keychain entry and are never part of project storage.
 
 ## 1. Prerequisites and checkout
 
@@ -25,7 +25,7 @@ cargo build --workspace
 npm run extension:build
 ```
 
-No product path needs an LLM API, provider credential, cookie, telemetry endpoint, or other network service.
+Build and offline verification need no provider credential, cookie, telemetry endpoint, or network generation. Live governed chat is separately user-initiated through Tom Assist OAuth.
 
 ## 3. Build verification
 
@@ -48,7 +48,7 @@ The gateway live UDS and Rust UDS tests require a normal macOS shell capable of 
 scripts/dev-run.sh
 ```
 
-The script starts user-only sockets and SQLite under `~/Library/Application Support/TomAssist`, writes local logs there, and keeps the Tauri window in the foreground. Stop it with Control-C. It passes `TOM_ASSIST_APP_SUPPORT` and `TOM_ASSIST_GATEWAY_SOCKET` to the desktop so projects, interventions, commit-memory settings and diagnostics use the same store/runtime as the daemon. The neutral 30-turn demo is seeded idempotently. Standalone desktop launches retain their existing Tauri app-data database unless `TOM_ASSIST_APP_SUPPORT` is explicitly set; no legacy store is moved or overwritten.
+The script starts user-only sockets, the Tom Assist OAuth broker and SQLite under `~/Library/Application Support/TomAssist`, writes local logs there, and keeps the Tauri window in the foreground. Stop it with Control-C. It passes `TOM_ASSIST_APP_SUPPORT`, `TOM_ASSIST_GATEWAY_SOCKET` and `TOM_ASSIST_OAUTH_BROKER_SOCKET` so projects, interventions, governed chat, commit-memory settings and diagnostics share the intended local services. The neutral 30-turn demo is seeded idempotently. Standalone desktop launches retain their existing Tauri app-data database unless `TOM_ASSIST_APP_SUPPORT` is explicitly set; no legacy store is moved or overwritten.
 
 In the desktop window:
 
@@ -56,6 +56,7 @@ In the desktop window:
 2. Create and rename a project, quick-capture a decision, supersede it with a reason, and inspect the Audit view.
 3. Review Interventions, mark a fixture finding accepted or false-positive when present, then inspect Settings and Diagnostics.
 4. Export or back up a project to a new directory. Verify it before importing into a fresh store; existing project identities are never overwritten. See [complete project recovery](PROJECT_RECOVERY.md) for retained content, runtime compatibility, interruption recovery and the real packaged-app journey test.
+5. In Chat, choose **Connect OAuth** and complete the browser flow if live chat is intended. Preview remains local; only **Send with Tom** contacts the provider. **Disconnect OAuth** revokes best-effort and removes Tom Assist's Keychain entry.
 
 ## 5. Install and load the Chromium extension
 

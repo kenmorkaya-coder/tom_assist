@@ -19,6 +19,12 @@ export interface PreparedExchange {
   };
   packet_text: string;
 }
+export interface OAuthConnectionStatus {
+  connected: boolean;
+  code: string;
+  model?: string;
+  capabilities?: Record<string, unknown>;
+}
 export type ChatMethod =
   | "provider.status"
   | "conversation.list"
@@ -32,6 +38,9 @@ export type ChatMethod =
   | "conversation.self_report.label";
 
 export interface DesktopBackend {
+  oauthStatus(): Promise<OAuthConnectionStatus>;
+  oauthLogin(): Promise<OAuthConnectionStatus>;
+  oauthLogout(): Promise<OAuthConnectionStatus>;
   seedDemo(): Promise<Project>;
   listProjects(): Promise<Project[]>;
   createProject(name: string): Promise<Project>;
@@ -86,6 +95,9 @@ function id(): string {
 }
 
 export const tauriBackend: DesktopBackend = {
+  oauthStatus: () => invoke("oauth_status"),
+  oauthLogin: () => invoke("oauth_login"),
+  oauthLogout: () => invoke("oauth_logout"),
   chat: (projectId, method, payload) =>
     invoke("chat_request", {
       envelope: {

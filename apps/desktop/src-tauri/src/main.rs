@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::UnixStream;
+use std::path::PathBuf;
+use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::time::Duration;
 use tauri::Manager;
@@ -17,6 +19,20 @@ struct DesktopState {
     store_mode: StoreMode,
     migration_backup: Option<String>,
     migration_error: Option<String>,
+    oauth_socket: PathBuf,
+}
+
+struct OAuthSidecar {
+    child: Mutex<Option<Child>>,
+}
+
+impl Drop for OAuthSidecar {
+    fn drop(&mut self) {
+        if let Some(mut child) = self.child.get_mut().ok().and_then(Option::take) {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -64,6 +80,66 @@ fn gateway(store: &Store) -> tom_assist_tom_adapter::GatewayClient {
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| store.path().with_file_name("tom_gateway.sock"));
     tom_assist_tom_adapter::GatewayClient::new(socket)
+}
+
+fn oauth_client(state: &DesktopState) -> tom_assist_oauth::BrokerClient {
+    tom_assist_oauth::BrokerClient::new(state.oauth_socket.clone())
+}
+
+#[tauri::command]
+fn oauth_status(state: tauri::State<'_, DesktopState>) -> Result<Value, String> {
+    serde_json::to_value(
+        oauth_client(&state)
+            .status()
+            .map_err(|error| error.code())?,
+    )
+    .map_err(|_| "BROKER_RESPONSE_INVALID".into())
+}
+
+#[tauri::command]
+async fn oauth_login(state: tauri::State<'_, DesktopState>) -> Result<Value, String> {
+    let client = oauth_client(&state);
+    tauri::async_runtime::spawn_blocking(move || {
+        serde_json::to_value(client.login().map_err(|error| error.code())?)
+            .map_err(|_| "BROKER_RESPONSE_INVALID")
+    })
+    .await
+    .map_err(|_| "BROKER_LOGIN_WORKER_FAILED".to_owned())?
+    .map_err(str::to_owned)
+}
+
+#[tauri::command]
+async fn oauth_logout(state: tauri::State<'_, DesktopState>) -> Result<Value, String> {
+    let client = oauth_client(&state);
+    tauri::async_runtime::spawn_blocking(move || {
+        serde_json::to_value(client.logout().map_err(|error| error.code())?)
+            .map_err(|_| "BROKER_RESPONSE_INVALID")
+    })
+    .await
+    .map_err(|_| "BROKER_LOGOUT_WORKER_FAILED".to_owned())?
+    .map_err(str::to_owned)
+}
+
+fn start_oauth_sidecar(socket: &std::path::Path) -> Option<Child> {
+    let binary = std::env::var_os("TOM_ASSIST_OAUTH_BROKER_BINARY")
+        .map(PathBuf::from)
+        .or_else(|| {
+            std::env::current_exe()
+                .ok()
+                .and_then(|path| path.parent().map(|parent| parent.join("tom-assist-oauth")))
+        })?;
+    if !binary.is_file() {
+        return None;
+    }
+    Command::new(binary)
+        .arg("serve")
+        .arg("--socket")
+        .arg(socket)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .ok()
 }
 
 #[tauri::command]
@@ -432,7 +508,7 @@ fn diagnostics(
         migration_backup: state.migration_backup.clone(),
         migration_error: state.migration_error.clone(),
         provider_status: gateway(&store).provider_status().unwrap_or_else(
-            |_| serde_json::json!({"connected":false,"code":"OAUTH_RUNTIME_UNAVAILABLE"}),
+            |_| serde_json::json!({"connected":false,"code":"OAUTH_BROKER_UNAVAILABLE"}),
         ),
         memory: gateway(&store)
             .memory_diagnostics(&project_id, after_event_id.unwrap_or(0))
@@ -576,6 +652,33 @@ fn main() {
                 .map(std::path::PathBuf::from)
                 .unwrap_or(app.path().app_data_dir()?);
             std::fs::create_dir_all(&data_dir)?;
+            let configured_oauth_socket = std::env::var_os("TOM_ASSIST_OAUTH_BROKER_SOCKET");
+            let oauth_socket = configured_oauth_socket
+                .as_ref()
+                .map(PathBuf::from)
+                .unwrap_or_else(|| data_dir.join("tom-assist-oauth.sock"));
+            let mut oauth_child = if configured_oauth_socket.is_none() {
+                start_oauth_sidecar(&oauth_socket)
+            } else {
+                None
+            };
+            if oauth_child.is_some() {
+                let client = tom_assist_oauth::BrokerClient::new(oauth_socket.clone());
+                for _ in 0..40 {
+                    if client.status().is_ok() {
+                        break;
+                    }
+                    if oauth_child
+                        .as_mut()
+                        .and_then(|child| child.try_wait().ok())
+                        .flatten()
+                        .is_some()
+                    {
+                        break;
+                    }
+                    std::thread::sleep(Duration::from_millis(50));
+                }
+            }
             let mut recovered = Store::open_with_recovery(data_dir.join("tom-assist.sqlite3"))?;
             // Keep the alpha deterministic even if the webview has not invoked a
             // command yet. Never seed or mutate a failed-migration database.
@@ -587,6 +690,10 @@ fn main() {
                 store_mode: recovered.mode,
                 migration_backup: recovered.backup_path.map(|path| path.display().to_string()),
                 migration_error: recovered.migration_error,
+                oauth_socket,
+            });
+            app.manage(OAuthSidecar {
+                child: Mutex::new(oauth_child),
             });
             Ok(())
         })
@@ -608,6 +715,9 @@ fn main() {
             exchange_request,
             chat_request,
             capture_chat_state,
+            oauth_status,
+            oauth_login,
+            oauth_logout,
             diagnostics,
             memory_settings,
             seed_demo

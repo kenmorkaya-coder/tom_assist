@@ -137,11 +137,23 @@ export function Chat({
           <strong>Governed chat</strong>
           <p>
             {provider?.connected
-              ? "Runtime OAuth connected"
-              : "OAuth not connected — connect in the ToM runtime"}{" "}
-            · model: {provider?.model ?? "runtime-managed"}
+              ? "Tom Assist OAuth connected"
+              : "OAuth not connected — connect Tom Assist"}{" "}
+            · model: {provider?.model ?? "broker-managed"}
           </p>
         </div>
+        <button
+          disabled={busy}
+          onClick={() =>
+            void run(async () => {
+              if (provider?.connected) await backend.oauthLogout();
+              else await backend.oauthLogin();
+              setProvider(await request<ProviderStatus>("provider.status"));
+            })
+          }
+        >
+          {provider?.connected ? "Disconnect OAuth" : "Connect OAuth"}
+        </button>
         <button
           disabled={busy}
           onClick={() =>
@@ -155,10 +167,11 @@ export function Chat({
       </div>
       <p class="chat-boundary">
         Send with Tom transmits your visible packet, bounded conversation
-        history and draft. Credentials stay in the connected runtime. Responses
-        arrive when complete; no token streaming or hidden-context visibility is
-        claimed. Conversation text and approved prompts are retained locally and
-        in complete archives, unencrypted. No automatic expiry is applied.
+        history and draft. Credentials stay in Tom Assist's macOS Keychain and
+        credential broker; they never enter the project ledger or archive.
+        Responses arrive when complete; no token streaming or hidden-context
+        visibility is claimed. Conversation text and approved prompts are
+        retained locally and in complete archives, unencrypted. No automatic expiry is applied.
         Experimental provider self-report is off by default and requires a
         separate preview and explicit send for its one extra call.
       </p>
@@ -239,8 +252,8 @@ export function Chat({
                 ) : (
                   <p role="status">
                     {e.status === "sending"
-                      ? "Waiting for the connected runtime…"
-                      : "No response captured. Provider outcome may be unknown; check the runtime before a new send."}
+                      ? "Waiting for the connected provider…"
+                      : "No response captured. Provider outcome may be unknown; check the connection before a new send."}
                   </p>
                 )}
                 {evaluation && (

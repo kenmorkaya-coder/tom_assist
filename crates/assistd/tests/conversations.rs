@@ -963,7 +963,7 @@ fn visible_history_is_whole_message_bounded_and_session_local() {
 }
 
 #[test]
-#[ignore = "Opt-in: TOM_ASSIST_LIVE_OAUTH=1 and explicit loopback TOM_ASSIST_OAUTH_RUNTIME_URL; one owner-quota exchange"]
+#[ignore = "Opt-in: TOM_ASSIST_LIVE_OAUTH=1 and connected TOM_ASSIST_OAUTH_BROKER_SOCKET; one owner-quota exchange"]
 fn live_oauth_one_disposable_exchange() {
     if std::env::var("TOM_ASSIST_LIVE_OAUTH").as_deref() != Ok("1") {
         eprintln!("SKIP: live OAuth not opted in");
@@ -971,7 +971,7 @@ fn live_oauth_one_disposable_exchange() {
     }
     let h = Harness::new();
     if h.gateway.1.provider_status().unwrap_or_default()["connected"] != true {
-        eprintln!("SKIP: runtime OAuth disconnected/unconfigured");
+        eprintln!("SKIP: Tom Assist OAuth disconnected/unconfigured");
         return;
     }
     let s = AssistService::with_gateway(Store::open(&h.database).unwrap(), h.gateway.1.clone());

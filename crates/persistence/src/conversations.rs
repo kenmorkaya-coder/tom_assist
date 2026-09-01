@@ -150,7 +150,7 @@ impl Store {
             return Ok(existing);
         }
         let transaction = self.connection.unchecked_transaction()?;
-        transaction.execute("INSERT INTO provider_sessions(id,project_id,workstream_id,provider,conversation_key_hash,adapter_version,fork_state_version,attached_at) VALUES(?1,?2,?3,'tom-master/openai-oauth',?4,'oauth-provider/1',?5,?6)", params![id,project,format!("chat:{id}"),canonical_sha256(&id)?,owner.state_version,at])?;
+        transaction.execute("INSERT INTO provider_sessions(id,project_id,workstream_id,provider,conversation_key_hash,adapter_version,fork_state_version,attached_at) VALUES(?1,?2,?3,'tom-assist/openai-oauth',?4,'oauth-broker/1',?5,?6)", params![id,project,format!("chat:{id}"),canonical_sha256(&id)?,owner.state_version,at])?;
         transaction.execute(
             "INSERT INTO chat_conversations VALUES(?1,?2,?3,?4)",
             params![id, project, title, at],

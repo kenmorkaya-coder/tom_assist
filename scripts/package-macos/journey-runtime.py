@@ -6,12 +6,13 @@ helper owns only the three child PIDs it launches and disposable local stores.
 """
 import argparse
 import hashlib
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler
 import json
 import os
 from pathlib import Path
 import socket
 import sqlite3
+import socketserver
 import subprocess
 import time
 from threading import Thread
@@ -19,25 +20,32 @@ from threading import Thread
 FIXTURE_RESPONSE = 'The connected beam transfers force to both columns. ' * 32 + 'END-WP21-永久-🙂'
 
 
-class FixtureRuntime(BaseHTTPRequestHandler):
-    """Only this helper substitutes upstream HTTP. Production adapter unchanged."""
+class FixtureBroker(BaseHTTPRequestHandler):
+    """Only this helper substitutes broker output. Production adapter is unchanged."""
     calls = []
 
     def log_message(self, *_): pass
 
     def do_GET(self):
-        if self.path == '/api/oauth/status': value = {'ready':True, 'mode':'oauth'}
-        elif self.path == '/api/llm/status': value = {'auth_mode':'oauth','oauth_ready':True,'provider':'openai'}
-        else: self.send_error(404); return
+        if self.path != '/status': self.send_error(404); return
+        value = {'connected':True,'code':'OAUTH_READY','credential_owner':'tom-assist-keychain',
+                 'model':'fixture-model','streaming':False,
+                 'capabilities':{'provider_surface':'tom-assist/openai-oauth','visible_prompt_injection':True,
+                                 'response_capture':True,'hidden_context_visibility':False,
+                                 'model_internal_bias':'none','supports_system_field':False}}
         self.send_response(200); self.end_headers(); self.wfile.write(json.dumps(value).encode())
 
     def do_POST(self):
-        if self.path != '/api/llm/complete': self.send_error(404); return
+        if self.path != '/complete': self.send_error(404); return
         payload = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-        assert set(payload) == {'prompt'} and '[TOM_ASSIST_STATE' in payload['prompt']
+        assert set(payload) == {'explicit_send','prompt'} and payload['explicit_send'] is True and '[TOM_ASSIST_STATE' in payload['prompt']
         self.calls.append(payload)
         time.sleep(2)  # Exercise live waiting/polling, not token streaming.
-        self.send_response(200); self.end_headers(); self.wfile.write(json.dumps({'text':FIXTURE_RESPONSE,'model':'default'}).encode())
+        self.send_response(200); self.end_headers(); self.wfile.write(json.dumps({'text':FIXTURE_RESPONSE,'model':'fixture-model','complete':True}).encode())
+
+
+class FixtureBrokerServer(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
+    daemon_threads = True
 
 
 def write_json(path, value):
@@ -79,7 +87,7 @@ def snapshot(data):
             "engine_tick":json.loads(tree)["tick"],"rgm_tick":json.loads(rgm)["current_tick"],
             "idempotency":json.loads(keys),"settings":json.loads(settings),"receipts":[json.loads(x[0]) for x in receipts],
             "originals":originals,"demotions":demotions,"sessions":sessions,"exchanges":exchanges,
-            "provider_calls":len(FixtureRuntime.calls)}
+            "provider_calls":len(FixtureBroker.calls)}
 
 
 def main():
@@ -94,9 +102,9 @@ def main():
     assert app.is_dir() and (app / "Contents/MacOS/Tom Assist").is_file()
     children, logs = [], []
     data = root / "source"
-    # Always offline. Ignore inherited owner URL; live OAuth has a separate opt-in test.
-    fixture = ThreadingHTTPServer(('127.0.0.1', 0), FixtureRuntime)
-    assert fixture.server_port != 18790
+    # Always offline. The product gateway still uses its production UDS adapter.
+    fixture_socket = root / "oauth-fixture.sock"
+    fixture = FixtureBrokerServer(str(fixture_socket), FixtureBroker)
     fixture_worker = Thread(target=fixture.serve_forever, daemon=True)
     fixture_worker.start()
 
@@ -115,7 +123,7 @@ def main():
         data.mkdir(mode=0o700, exist_ok=True)
         env = {**os.environ,"PYTHONDONTWRITEBYTECODE":"1","TOM_ASSIST_APP_SUPPORT":str(data),
                "TOM_ASSIST_GATEWAY_SOCKET":str(root / "gateway.sock"),"TOM_ASSISTD_SOCKET":str(root / "assistd.sock"),
-               "TOM_ASSIST_OAUTH_RUNTIME_URL":f"http://127.0.0.1:{fixture.server_port}"}
+               "TOM_ASSIST_OAUTH_BROKER_SOCKET":str(fixture_socket)}
         commands = [
             [str(repo / ".venv-gateway/bin/python"), str(repo / "gateway/tom_gateway.py"), "--socket", env["TOM_ASSIST_GATEWAY_SOCKET"], "--data-dir", str(data)],
             [str(repo / "target/release/tom-assistd"), env["TOM_ASSISTD_SOCKET"], str(data / "tom-assist.sqlite3"), env["TOM_ASSIST_GATEWAY_SOCKET"]],
@@ -136,7 +144,7 @@ def main():
         # Allow LaunchServices to observe the new GUI PID before Computer Use.
         time.sleep(1)
         assert all(p.poll() is None for p in children), "test child exited during startup"
-        write_json(root / "ready.json", {"app":str(app),"data":str(data),"pids":[p.pid for p in children],"build_verification_only":True,"provider":"offline HTTP fixture, never live OAuth","fixture_port":fixture.server_port})
+        write_json(root / "ready.json", {"app":str(app),"data":str(data),"pids":[p.pid for p in children],"build_verification_only":True,"provider":"offline UDS broker fixture, never live OAuth"})
 
     try:
         launch()

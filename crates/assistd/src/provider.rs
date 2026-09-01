@@ -5,12 +5,12 @@ pub trait ProviderAdapter: Send + Sync {
     fn status(&self) -> Result<Value>;
     fn complete(&self, prompt: &str) -> Result<String>;
 }
-pub struct RuntimeOAuthAdapter(pub GatewayClient);
-impl ProviderAdapter for RuntimeOAuthAdapter {
+pub struct OAuthBrokerAdapter(pub GatewayClient);
+impl ProviderAdapter for OAuthBrokerAdapter {
     fn status(&self) -> Result<Value> {
         self.0
             .provider_status()
-            .map_err(|_| ServiceError::Invalid("OAUTH_RUNTIME_UNAVAILABLE".into()))
+            .map_err(|_| ServiceError::Invalid("OAUTH_BROKER_UNAVAILABLE".into()))
     }
     fn complete(&self, prompt: &str) -> Result<String> {
         let result = self
@@ -28,7 +28,7 @@ pub struct DisconnectedProvider;
 impl ProviderAdapter for DisconnectedProvider {
     fn status(&self) -> Result<Value> {
         Ok(
-            json!({"connected":false,"code":"OAUTH_RUNTIME_UNAVAILABLE","capabilities":capabilities()}),
+            json!({"connected":false,"code":"OAUTH_BROKER_UNAVAILABLE","capabilities":capabilities()}),
         )
     }
     fn complete(&self, _: &str) -> Result<String> {
@@ -36,5 +36,5 @@ impl ProviderAdapter for DisconnectedProvider {
     }
 }
 pub fn capabilities() -> ProviderCapabilities {
-    serde_json::from_value(json!({"provider_surface":"tom-master/openai-oauth","visible_prompt_injection":true,"response_capture":true,"hidden_context_visibility":false,"model_internal_bias":"none","supports_system_field":false})).unwrap()
+    serde_json::from_value(json!({"provider_surface":"tom-assist/openai-oauth","visible_prompt_injection":true,"response_capture":true,"hidden_context_visibility":false,"model_internal_bias":"none","supports_system_field":false})).unwrap()
 }

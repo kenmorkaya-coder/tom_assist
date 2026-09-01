@@ -32,19 +32,23 @@ mkdir -p "$app_support/logs" "$app_support/projects"
 gateway_socket="$app_support/tom_gateway.sock"
 assistd_socket="$app_support/tom-assistd.sock"
 database="$app_support/tom-assist.sqlite3"
+oauth_socket="$app_support/tom-assist-oauth.sock"
 
 cd "$repo_dir"
-cargo build -p tom-assistd -p tom-assist-desktop -p tom-assist-native-host
+cargo build -p tom-assistd -p tom-assist-desktop -p tom-assist-native-host -p tom-assist-oauth
 
-gateway_pid=""; assistd_pid=""; vite_pid=""
+gateway_pid=""; assistd_pid=""; oauth_pid=""; vite_pid=""
 cleanup() {
   [ -z "$vite_pid" ] || kill "$vite_pid" 2>/dev/null || true
   [ -z "$assistd_pid" ] || kill "$assistd_pid" 2>/dev/null || true
   [ -z "$gateway_pid" ] || kill "$gateway_pid" 2>/dev/null || true
+  [ -z "$oauth_pid" ] || kill "$oauth_pid" 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
-PYTHONPATH="$tom_master_dir:$repo_dir" "$gateway_python" -m gateway.tom_gateway --socket "$gateway_socket" --data-dir "$app_support" --tom-master "$tom_master_dir" >"$app_support/logs/gateway.log" 2>&1 &
+"$repo_dir/target/debug/tom-assist-oauth" serve --socket "$oauth_socket" >"$app_support/logs/oauth-broker.log" 2>&1 &
+oauth_pid=$!
+TOM_ASSIST_OAUTH_BROKER_SOCKET="$oauth_socket" PYTHONPATH="$tom_master_dir:$repo_dir" "$gateway_python" -m gateway.tom_gateway --socket "$gateway_socket" --data-dir "$app_support" --tom-master "$tom_master_dir" >"$app_support/logs/gateway.log" 2>&1 &
 gateway_pid=$!
 "$repo_dir/target/debug/tom-assistd" "$assistd_socket" "$database" >"$app_support/logs/assistd.log" 2>&1 &
 assistd_pid=$!
@@ -60,5 +64,6 @@ done
 
 echo "gateway socket: $gateway_socket"
 echo "assistd socket: $assistd_socket"
+echo "OAuth broker socket: $oauth_socket"
 echo "desktop logs: $app_support/logs"
-TOM_ASSIST_APP_SUPPORT="$app_support" TOM_ASSIST_GATEWAY_SOCKET="$gateway_socket" TOM_ASSISTD_SOCKET="$assistd_socket" cargo run -p tom-assist-desktop
+TOM_ASSIST_APP_SUPPORT="$app_support" TOM_ASSIST_GATEWAY_SOCKET="$gateway_socket" TOM_ASSISTD_SOCKET="$assistd_socket" TOM_ASSIST_OAUTH_BROKER_SOCKET="$oauth_socket" cargo run -p tom-assist-desktop

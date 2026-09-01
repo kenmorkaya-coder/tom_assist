@@ -16,6 +16,22 @@ export class FakeDesktopBackend implements DesktopBackend {
   private sessions = new Map<string, ConversationView>();
   connected = true; // Test-only transport, never an OAuth client.
 
+  async oauthStatus() {
+    return {
+      connected: this.connected,
+      code: this.connected ? "OAUTH_READY" : "OAUTH_NOT_CONNECTED",
+      model: "fixture",
+    };
+  }
+  async oauthLogin() {
+    this.connected = true;
+    return this.oauthStatus();
+  }
+  async oauthLogout() {
+    this.connected = false;
+    return this.oauthStatus();
+  }
+
   async chat(
     projectId: string,
     method: ChatMethod,
