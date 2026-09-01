@@ -1,0 +1,6 @@
+{"arm":"SUB-A","claimed_before_send":true,"exchange_id":"45fbc4b4-e68c-5f33-a906-0f986393e764","sequence":1,"test_id":"D23-ASSUMPTION-01"}
+{"arm":"SUB-B","claimed_before_send":true,"exchange_id":"5e0e4c6f-1b91-512b-9fa3-bcf148ae649d","sequence":2,"test_id":"D23-ASSUMPTION-01"}
+{"arm":"SUB-C","claimed_before_send":true,"exchange_id":"372849cb-d979-58c5-87df-b90b4bc405cb","sequence":3,"test_id":"D23-ASSUMPTION-01"}
+{"arm":"SUB-D","claimed_before_send":true,"exchange_id":"8e7addd7-aee8-5168-9d43-28b7dd68b9f3","sequence":4,"test_id":"D23-ASSUMPTION-01"}
+{"arm":"SUB-E","claimed_before_send":true,"exchange_id":"738d6158-4f34-5a14-af16-e33c6f17e43e","sequence":5,"test_id":"D23-ASSUMPTION-01"}
+{"arm":"SUB-B","claimed_before_send":true,"exchange_id":"c17e5b49-b6a3-5019-a449-a0248493e322","sequence":6,"test_id":"D23-ASSUMPTION-02"}

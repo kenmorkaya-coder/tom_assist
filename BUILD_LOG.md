@@ -903,3 +903,44 @@ Evidence (offline/local-fixture verification only):
 Protection proof: pinned linked upstream remains clean at **`e9fdef81c8a366ebbec07be9772189eea15cb2ac`**, empty-status SHA-256 **`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`**. Owner `tom_master` remains at the same SHA; status-output / working-diff / staged-diff SHA-256 values are unchanged at **`efd935faf8a04042f9f2c8c1e0df5cd7a8f1c98f04c5d881a90868ad156ba809`** / **`86cb4a857e782653e21d24b24b336304b42c4aaade9ea07823ba1797e8bbbdc9`** / **`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`**. No upstream file, credential, frozen result, owner checkout, remote or prohibited preview path was modified. Provider generations/quota used: **0**. Port 18790 was not used.
 
 **STOP FOR ORCHESTRATOR AUDIT. WP-29 is implementation-verified with zero live generations. Pre-registration v2 remains DRAFT-PENDING-OWNER-FREEZE, and pilot v3 remains blocked pending owner freeze plus fresh authorization. No G-gate verdict is issued or implied.**
+
+## WP-29 pilot v3 supplement — v2 freeze and permanent stop [STOPPED INCOMPLETE]
+
+Authority and merge: `ORCHESTRATOR_REVIEW_11.md` accepts WP-29, freezes the v2 pre-registration exactly as drafted and authorizes one fresh 165-observation pilot under `TOM_ASSIST_WP29_V3_LIVE=1`, with one capture, no retry/best-of and permanent-stop discipline. The accepted branch `codex/wp-29-corrective-pilot-path` fast-forwarded `main` to **`de35721d44b9db1274cfa0482fb910d1710330a8`**. Before freezing, the mandated leading substrate-engagement telemetry was implemented and committed as **`9c3c5d30281eab07bfd5d625fca74117557f4959`** (`fix(wp-29): add substrate engagement telemetry`): the battery driver now proves per authored history turn the exact five-dynamics list, one tick, canonical applied 17-channel drive, 8D routing basis, checkpoint transition and assistant `taught:true`; the runner aggregates that evidence before the hypothesis section. This instrumentation changes no answer, oracle, selection, threshold, arm, packet policy or provider prompt and was deliberately included in the code freeze.
+
+Freeze: commit **`e081d663581d27c1b9eb3ac0b3ea41ae64203c3c`** (`test(wp-29): freeze pilot v3 preregistration`) sets **`owner_frozen:true`**, status **`FROZEN-WP29-V2`**, version **`wp29-prereg-frozen/2`**, code SHA `9c3c5d30281eab07bfd5d625fca74117557f4959`, 165 observations, seed 1729, `typed-action-oracle/2`, self-report off and no prior runs. The accepted `PREREGISTRATION.md` remained byte-identical at SHA-256 **`c0add32c150fcee48e0f582ce3246c46982da3bf7567b866122266451317061d`**. The canonical freeze identity recorded in the manifest is **`sha256:38f5f606be0a364d01dc7dc6fbb16bde36ba710be7db24969f2023aac043f220`**. Freeze verification passed; targeted Rust driver tests passed and the validation suite passed **19/19** before the live run. The sole frozen criteria change remains the accepted multiset comparison for cited/historical ID lists; duplicate sensitivity and every other v1 criterion are unchanged.
+
+### Substrate-engagement telemetry (leads outcome reporting)
+
+The run exercised the corrected substrate on all six observations it reached. Across five captured observations plus the preserved stopped observation: **744/744 authored history turns** have exact five-dynamics receipts, **744/744** applied the canonical 17-channel drive and recorded an 8D routing basis, **288/288 assistant turns** have `taught:true`, aggregate tick advance is **744**, and all **6/6** checkpoints changed. History import made **0 provider calls**. For stopped observation 6 specifically: **144** history turns, **58** assistant teaches, tick **4707 → 4851**, checkpoint **`sha256:aa566823c99d9d4d48f3178d8b58d4dbb50e1310fe0e81d5c96f02001a5e74a5` → `sha256:5157903cd4baa1ed1d698d5cb605e72dcf041c21f26d5b66e83009e6240b697a`**, one explicit-send ledger record, and no response-capture ledger record. This proves substrate execution only, not efficacy.
+
+### Binding stop and raw Appendix-C matrix
+
+The one-shot runner started with `TOM_ASSIST_WP29_V3_LIVE=1` and `TOM_ASSIST_PROVIDER_SELF_REPORT=0` against the Tom Assist-owned OAuth broker on a private Unix socket. Broker preflight returned **connected / `OAUTH_READY`**, provider `tom-assist/openai-oauth`, model `gpt-5.5`, credential owner `tom-assist-keychain`. No TCP listener or port 18790 was used.
+
+Observations 1–5 completed and were captured exactly once. Observation 6 (`D23-ASSUMPTION-02`, SUB-B) timed out at the frozen runner's **240-second** observation boundary after its explicit send. Its provider outcome is unknowable from the preserved evidence: the ledger records the send but no captured assistant response. The runner and broker were stopped. Per the binding stop rule there was **no resume, resend, retry, repair, best-of selection or replacement identity**. Accounting is therefore **5 known completed responses, 1 unknown provider outcome, 0 resends**; it is not represented as six confirmed generations.
+
+The requested 165-row matrix cannot truthfully exist after this binding stop. The permanent Appendix-C artifact therefore contains the complete **5-row captured raw matrix** and explicitly labels itself **STOPPED INCOMPLETE (5/165)**. Partial row outcomes are:
+
+| Sequence | Case | Arm | Exact action consistency | SUB-E containment | Evaluation |
+|---:|---|---|---|---|---|
+| 1 | D23-ASSUMPTION-01 | SUB-A | false | false | REVIEW |
+| 2 | D23-ASSUMPTION-01 | SUB-B | true | false | REVIEW |
+| 3 | D23-ASSUMPTION-01 | SUB-C | false | false | REVIEW |
+| 4 | D23-ASSUMPTION-01 | SUB-D | false | false | REVIEW |
+| 5 | D23-ASSUMPTION-01 | SUB-E | false | true | REVIEW |
+
+Frozen-hypothesis status at the permanent stop boundary:
+
+| Hypothesis | Frozen resolution status |
+|---|---|
+| H1 | **INVALID_INCOMPLETE** — the complete paired matrix and all primary comparisons are unavailable |
+| H0 | **UNRESOLVED_INCOMPLETE** — incomplete data cannot establish that a frozen H1 component fails |
+| H2 | **UNRESOLVED_INCOMPLETE** — the required slices/families were not reached |
+| H3 | **NOT_OBSERVED** in the five captured rows; this is not a claim about the 160 unobserved rows |
+
+Evidence is preserved at `validation/runs/wp29-pilot-v3/`: `raw_matrix.jsonl` SHA-256 **`42b40e8e8b4d9d4e4f578b9f7aa9e056a884c1918f70d3bde4702c7e055634cb`**, `APPENDIX_C.md` **`d7474aab62607b313d2cc9dd160cc46d665cf9cc51247f1f854fd2210e1bc055`**, and `STOP_AUDIT.json` **`45e858cbc78b22cb9e639e58c6170d3970df212179eeddbd5ec9171f3978f648`**. The latter binds the stopped database, WAL, driver input and 144 runtime receipts by SHA-256. Counts are `claims.jsonl` **6**, `raw_matrix.jsonl` **5**, `oracle_trace.jsonl` **5**. The temporary native store remains at `/private/tmp/tom-assist-wp29-v3.AuIy3L/` for audit and was not mutated by the zero-generation finalizer.
+
+Protection proof: pinned linked upstream remains clean at **`e9fdef81c8a366ebbec07be9772189eea15cb2ac`**. Owner `tom_master` remains on `tom-assist/upstream-v1` at the same SHA; its status-output / working-diff / staged-diff SHA-256 values remain **`efd935faf8a04042f9f2c8c1e0df5cd7a8f1c98f04c5d881a90868ad156ba809`** / **`86cb4a857e782653e21d24b24b336304b42c4aaade9ea07823ba1797e8bbbdc9`** / **`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`**. No upstream file, owner checkout, credential, earlier frozen result, golden or remote was modified. Preview purity remains unchanged.
+
+**STOP FOR ORCHESTRATOR AUDIT. Pilot v3 is permanently stopped at observation 6 under the frozen rule. No G-gate verdict is issued or implied. A further live run would require a new identity and renewed owner authorization.**
