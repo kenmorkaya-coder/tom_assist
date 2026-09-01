@@ -1,0 +1,930 @@
+{
+  "additional_reporting_defect": {
+    "cause": "cases = {test_id: row for row in two-arm rows} retains one arm, then filters retained rows for SUB-D",
+    "cluster_bootstrap_case_overwrite": true,
+    "frozen_report": {
+      "invalid_replicates": 10000,
+      "valid_replicates": 0
+    },
+    "h0_effect": "none; all exact arm rates remain zero and other H1 primary components fail"
+  },
+  "audit_id": "wp27-pilot-forensics/1",
+  "capture_lineage": {
+    "accepted_mismatch_rows": 22,
+    "captures": 165,
+    "citation_exact_rows": 0,
+    "rows_captured_once": 165,
+    "taxonomy_definition": "emitted when cited_state_ids exact match is false after exact/accepted-mismatch early return",
+    "taxonomy_rows": 143
+  },
+  "field_mismatch_summary": {
+    "SUB-A": {
+      "action_id": {
+        "exact": 12
+      },
+      "authority": {
+        "exact": 33
+      },
+      "captures": 33,
+      "cited_state_ids": {
+        "exact": 0,
+        "extra_items": 6,
+        "missing_items": 139,
+        "multiset_equal": 10,
+        "order_only": 10
+      },
+      "historical_state_ids": {
+        "exact": 5,
+        "extra_items": 2,
+        "missing_items": 44,
+        "multiset_equal": 11,
+        "order_only": 6
+      },
+      "proposed_mutations": {
+        "exact": 33,
+        "extra_items": 0,
+        "missing_items": 0,
+        "multiset_equal": 33,
+        "order_only": 0
+      },
+      "rejected_action_ids": {
+        "exact": 12,
+        "extra_items": 0,
+        "missing_items": 63,
+        "multiset_equal": 12,
+        "order_only": 0
+      },
+      "relationships": {
+        "exact": 1,
+        "extra_items": 3,
+        "missing_items": 78,
+        "multiset_equal": 11,
+        "order_only": 10
+      },
+      "request_current_project_state": 21,
+      "rows": 33,
+      "set_normalized_all_fields_match_diagnostic_only": 10,
+      "shape_valid": 33
+    },
+    "SUB-B": {
+      "action_id": {
+        "exact": 33
+      },
+      "authority": {
+        "exact": 33
+      },
+      "captures": 33,
+      "cited_state_ids": {
+        "exact": 0,
+        "extra_items": 5,
+        "missing_items": 5,
+        "multiset_equal": 29,
+        "order_only": 29
+      },
+      "historical_state_ids": {
+        "exact": 20,
+        "extra_items": 0,
+        "missing_items": 0,
+        "multiset_equal": 33,
+        "order_only": 13
+      },
+      "proposed_mutations": {
+        "exact": 33,
+        "extra_items": 0,
+        "missing_items": 0,
+        "multiset_equal": 33,
+        "order_only": 0
+      },
+      "rejected_action_ids": {
+        "exact": 33,
+        "extra_items": 0,
+        "missing_items": 0,
+        "multiset_equal": 33,
+        "order_only": 0
+      },
+      "relationships": {
+        "exact": 4,
+        "extra_items": 4,
+        "missing_items": 4,
+        "multiset_equal": 29,
+        "order_only": 25
+      },
+      "request_current_project_state": 0,
+      "rows": 33,
+      "set_normalized_all_fields_match_diagnostic_only": 29,
+      "shape_valid": 33
+    },
+    "SUB-C": {
+      "action_id": {
+        "exact": 33
+      },
+      "authority": {
+        "exact": 33
+      },
+      "captures": 33,
+      "cited_state_ids": {
+        "exact": 0,
+        "extra_items": 0,
+        "missing_items": 0,
+        "multiset_equal": 33,
+        "order_only": 33
+      },
+      "historical_state_ids": {
+        "exact": 14,
+        "extra_items": 0,
+        "missing_items": 0,
+        "multiset_equal": 33,
+        "order_only": 19
+      },
+      "proposed_mutations": {
+        "exact": 33,
+        "extra_items": 0,
+        "missing_items": 0,
+        "multiset_equal": 33,
+        "order_only": 0
+      },
+      "rejected_action_ids": {
+        "exact": 33,
+        "extra_items": 0,
+        "missing_items": 0,
+        "multiset_equal": 33,
+        "order_only": 0
+      },
+      "relationships": {
+        "exact": 4,
+        "extra_items": 0,
+        "missing_items": 0,
+        "multiset_equal": 33,
+        "order_only": 29
+      },
+      "request_current_project_state": 0,
+      "rows": 33,
+      "set_normalized_all_fields_match_diagnostic_only": 33,
+      "shape_valid": 33
+    },
+    "SUB-D": {
+      "action_id": {
+        "exact": 7
+      },
+      "authority": {
+        "exact": 33
+      },
+      "captures": 33,
+      "cited_state_ids": {
+        "exact": 0,
+        "extra_items": 1,
+        "missing_items": 164,
+        "multiset_equal": 6,
+        "order_only": 6
+      },
+      "historical_state_ids": {
+        "exact": 4,
+        "extra_items": 0,
+        "missing_items": 52,
+        "multiset_equal": 7,
+        "order_only": 3
+      },
+      "proposed_mutations": {
+        "exact": 33,
+        "extra_items": 0,
+        "missing_items": 0,
+        "multiset_equal": 33,
+        "order_only": 0
+      },
+      "rejected_action_ids": {
+        "exact": 7,
+        "extra_items": 0,
+        "missing_items": 78,
+        "multiset_equal": 7,
+        "order_only": 0
+      },
+      "relationships": {
+        "exact": 1,
+        "extra_items": 0,
+        "missing_items": 92,
+        "multiset_equal": 7,
+        "order_only": 6
+      },
+      "request_current_project_state": 26,
+      "rows": 33,
+      "set_normalized_all_fields_match_diagnostic_only": 6,
+      "shape_valid": 33
+    },
+    "SUB-E": {
+      "action_id": {
+        "exact": 11
+      },
+      "authority": {
+        "exact": 33
+      },
+      "captures": 33,
+      "cited_state_ids": {
+        "exact": 0,
+        "extra_items": 69,
+        "missing_items": 207,
+        "multiset_equal": 0,
+        "order_only": 0
+      },
+      "historical_state_ids": {
+        "exact": 0,
+        "extra_items": 22,
+        "missing_items": 66,
+        "multiset_equal": 0,
+        "order_only": 0
+      },
+      "proposed_mutations": {
+        "exact": 33,
+        "extra_items": 0,
+        "missing_items": 0,
+        "multiset_equal": 33,
+        "order_only": 0
+      },
+      "rejected_action_ids": {
+        "exact": 11,
+        "extra_items": 0,
+        "missing_items": 66,
+        "multiset_equal": 11,
+        "order_only": 0
+      },
+      "relationships": {
+        "exact": 0,
+        "extra_items": 39,
+        "missing_items": 117,
+        "multiset_equal": 0,
+        "order_only": 0
+      },
+      "request_current_project_state": 22,
+      "rows": 33,
+      "set_normalized_all_fields_match_diagnostic_only": 0,
+      "shape_valid": 33
+    }
+  },
+  "frozen_outcome_unchanged": {
+    "H0": "HOLDS",
+    "H1": "DOES_NOT_HOLD",
+    "H2": "NOT_TRIGGERED_REQUIRES_H1",
+    "H3": "NOT_OBSERVED",
+    "gate_verdict": null
+  },
+  "id_space_mapping": {
+    "SUB-D": {
+      "references": 108,
+      "rows": [
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-ASSUMPTION-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-ASSUMPTION-02"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-ASSUMPTION-11"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-COMPLETED_WORK-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-COMPLETED_WORK-02"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 18,
+          "reference_spaces": {
+            "own_arm_native": 18
+          },
+          "test_id": "D23-COMPLETED_WORK-11"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-CONCEPT-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-CONCEPT-02"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-CONCEPT-11"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-CONSTRAINT-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-CONSTRAINT-02"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 13,
+          "reference_spaces": {
+            "own_arm_native": 13
+          },
+          "test_id": "D23-CONSTRAINT-11"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-DECISION-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-DECISION-02"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 14,
+          "reference_spaces": {
+            "own_arm_native": 14
+          },
+          "test_id": "D23-DECISION-11"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-EVIDENCE-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-EVIDENCE-02"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-EVIDENCE-11"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-OBJECTIVE-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-OBJECTIVE-02"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 16,
+          "reference_spaces": {
+            "own_arm_native": 16
+          },
+          "test_id": "D23-OBJECTIVE-11"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-REJECTED_PATH-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-REJECTED_PATH-02"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 14,
+          "reference_spaces": {
+            "own_arm_native": 14
+          },
+          "test_id": "D23-REJECTED_PATH-11"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-SUPERSESSION-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-SUPERSESSION-02"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 17,
+          "reference_spaces": {
+            "own_arm_native": 17
+          },
+          "test_id": "D23-SUPERSESSION-11"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-UNRESOLVED_DEPENDENCY-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-UNRESOLVED_DEPENDENCY-02"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 16,
+          "reference_spaces": {
+            "own_arm_native": 16
+          },
+          "test_id": "D23-UNRESOLVED_DEPENDENCY-11"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-WORKSTREAM-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-WORKSTREAM-02"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-WORKSTREAM-11"
+        }
+      ],
+      "spaces": {
+        "own_arm_native": 108
+      }
+    },
+    "SUB-E": {
+      "references": 169,
+      "rows": [
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-ASSUMPTION-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": true,
+          "mode": "truncation",
+          "reference_count": 15,
+          "reference_spaces": {
+            "foreign_ablation": 15
+          },
+          "test_id": "D23-ASSUMPTION-02"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-ASSUMPTION-11"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-COMPLETED_WORK-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": true,
+          "mode": "truncation",
+          "reference_count": 17,
+          "reference_spaces": {
+            "foreign_ablation": 17
+          },
+          "test_id": "D23-COMPLETED_WORK-02"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-COMPLETED_WORK-11"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-CONCEPT-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": true,
+          "mode": "truncation",
+          "reference_count": 13,
+          "reference_spaces": {
+            "foreign_ablation": 13
+          },
+          "test_id": "D23-CONCEPT-02"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-CONCEPT-11"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-CONSTRAINT-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": true,
+          "mode": "truncation",
+          "reference_count": 13,
+          "reference_spaces": {
+            "foreign_ablation": 13
+          },
+          "test_id": "D23-CONSTRAINT-02"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-CONSTRAINT-11"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-DECISION-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": true,
+          "mode": "truncation",
+          "reference_count": 14,
+          "reference_spaces": {
+            "foreign_ablation": 14
+          },
+          "test_id": "D23-DECISION-02"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-DECISION-11"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-EVIDENCE-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": true,
+          "mode": "truncation",
+          "reference_count": 18,
+          "reference_spaces": {
+            "foreign_ablation": 18
+          },
+          "test_id": "D23-EVIDENCE-02"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-EVIDENCE-11"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-OBJECTIVE-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": true,
+          "mode": "truncation",
+          "reference_count": 16,
+          "reference_spaces": {
+            "foreign_ablation": 16
+          },
+          "test_id": "D23-OBJECTIVE-02"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-OBJECTIVE-11"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-REJECTED_PATH-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": true,
+          "mode": "truncation",
+          "reference_count": 14,
+          "reference_spaces": {
+            "foreign_ablation": 14
+          },
+          "test_id": "D23-REJECTED_PATH-02"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-REJECTED_PATH-11"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-SUPERSESSION-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": true,
+          "mode": "truncation",
+          "reference_count": 17,
+          "reference_spaces": {
+            "foreign_ablation": 17
+          },
+          "test_id": "D23-SUPERSESSION-02"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-SUPERSESSION-11"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-UNRESOLVED_DEPENDENCY-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": true,
+          "mode": "truncation",
+          "reference_count": 16,
+          "reference_spaces": {
+            "foreign_ablation": 16
+          },
+          "test_id": "D23-UNRESOLVED_DEPENDENCY-02"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-UNRESOLVED_DEPENDENCY-11"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "truncation",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-WORKSTREAM-01"
+        },
+        {
+          "explicit_mismatch": false,
+          "foreign_context": true,
+          "mode": "truncation",
+          "reference_count": 16,
+          "reference_spaces": {
+            "foreign_ablation": 16
+          },
+          "test_id": "D23-WORKSTREAM-02"
+        },
+        {
+          "explicit_mismatch": true,
+          "foreign_context": false,
+          "mode": "no_rot",
+          "reference_count": 0,
+          "reference_spaces": {},
+          "test_id": "D23-WORKSTREAM-11"
+        }
+      ],
+      "spaces": {
+        "foreign_ablation": 169
+      }
+    }
+  },
+  "label": "POST-HOC-DIAGNOSTIC-ONLY",
+  "response_sha": {
+    "distinct_reported_hashes": 97,
+    "distinct_response_texts": 97,
+    "example": {
+      "canonical_json_string": "sha256:562d8da9d0238370c21867e572b5a4194ad4a4e8b0673d4ec74914a6e5564535",
+      "raw_utf8": "sha256:43ce04f25b6d884a5d1819b2b0c7edab3124399f50857dc6d8aefdaa8db981bc",
+      "reported": "sha256:562d8da9d0238370c21867e572b5a4194ad4a4e8b0673d4ec74914a6e5564535",
+      "sequence": 1
+    },
+    "reported_hashes_bound_to_multiple_texts": 0,
+    "reported_matches_canonical_json_string": 165,
+    "reported_matches_raw_utf8": 0
+  },
+  "sources": {
+    "appendix_c": {
+      "path": "validation/runs/wp25-pilot-frozen-v2/APPENDIX_C.md",
+      "sha256": "sha256:9aa7030c084c9fa25540398b54c314e74c5533ad2811480d4e3ba7a15ccc5b32"
+    },
+    "raw_matrix": {
+      "path": "validation/runs/wp25-pilot-frozen-v2/raw_matrix.jsonl",
+      "rows": 165,
+      "sha256": "sha256:f30e87a6ccfed975228a2ac346f2fc178d549c13b5c6624b28cbf1f652d16454"
+    },
+    "run_manifest": {
+      "path": "validation/runs/wp25-pilot-frozen-v2/run_manifest.json",
+      "sha256": "sha256:ca809467e5a818140a7b49913b4b9db5a7bf580e2572eb54b4d861b3a1f2fb56"
+    }
+  },
+  "sub_d_packet_summary": {
+    "admitted_items": 396,
+    "by_mode": {
+      "no_rot": {
+        "cases": 11,
+        "expected_current": 69,
+        "expected_current_admitted": 69,
+        "expected_current_visible_anywhere_in_prompt": 69,
+        "expected_historical": 22,
+        "expected_historical_visible_anywhere_in_prompt": 22
+      },
+      "truncation": {
+        "cases": 22,
+        "expected_current": 138,
+        "expected_current_admitted": 138,
+        "expected_current_visible_anywhere_in_prompt": 2,
+        "expected_historical": 44,
+        "expected_historical_visible_anywhere_in_prompt": 0
+      }
+    },
+    "cases": 33,
+    "estimated_tokens_range": [
+      453,
+      484
+    ],
+    "excluded_items": 66,
+    "excluded_reasons": {
+      "superseded-positive": 66
+    },
+    "excluded_roles": {
+      "concept-old": 33,
+      "decision-old": 33
+    },
+    "expected_current_admitted": 207,
+    "expected_current_objects": 207,
+    "expected_current_rendered_in_state_block": 3,
+    "expected_current_visible_anywhere_in_prompt": 71,
+    "expected_historical_admitted": 0,
+    "expected_historical_objects": 66,
+    "expected_historical_rendered_in_state_block": 0,
+    "expected_historical_visible_anywhere_in_prompt": 22,
+    "focus_retrieval_hits": 33,
+    "focus_retrieval_rate": 1.0,
+    "packet_budget_exclusions": 0,
+    "packet_chars_range": [
+      1812,
+      1935
+    ]
+  },
+  "zero_generations": true
+}

@@ -1,0 +1,83 @@
+{
+  "audit_id": "wp27-native-forensics/1",
+  "cohort": {
+    "alignment_displaced_total": 396,
+    "distinct_loading_aware_8d_cohorts": 2,
+    "distinct_three_axis_cohorts": 2,
+    "selected_branch_usage_nonzero": 0,
+    "stiffness_usage_supported_total": 132,
+    "stored_trace_fallback_consistent": 33,
+    "sub_d_cases": 33,
+    "three_axis_vs_8d_mean_jaccard": 0.0,
+    "three_axis_vs_8d_mean_overlap": 0,
+    "three_axis_vs_8d_overlap_total": 0,
+    "uniform_axis_fallback_count": 0
+  },
+  "commit_dynamics": {
+    "counterfactual_canonical_msr_wind_magnitude": {
+      "max": 0.6978623500893406,
+      "mean": 0.6751534568631826,
+      "median": 0.667886611030812,
+      "min": 0.667886611030812,
+      "p95": 0.6978623500893406
+    },
+    "counterfactual_old_product_max_uniform_delta": {
+      "max": 0.5934959349593496,
+      "median": 0.21878787878787875,
+      "min": 0.01913875598086129,
+      "p95": 0.4897158662308271
+    },
+    "counterfactual_old_product_near_uniform_native_rule": 0,
+    "counterfactual_old_product_wind_magnitude": {
+      "max": 1.2595666044056455,
+      "mean": 0.404163889795309,
+      "median": 0.3803860061769937,
+      "min": 0.03206090243733384,
+      "p95": 0.8147135595571274
+    },
+    "counterfactual_rows": 165,
+    "explanation": "all 165 evaluations remained unresolved REVIEW, so commit_captured_exchange returned without gateway commit",
+    "observed_committed_battery_turns": 0,
+    "observed_semantic_target_population": 0
+  },
+  "frozen_h0_untouched": true,
+  "label": "POST-HOC-DIAGNOSTIC-ONLY",
+  "native_import": {
+    "complete_id_sets": 165,
+    "exact_core_field_sets": 165,
+    "input_edges": 1155,
+    "input_objects": 2310,
+    "ledger_turns": 330,
+    "ledgers": 165,
+    "object_source_turn_ids": 2310,
+    "object_source_turn_ids_present_as_ledger_turns": 0,
+    "runtime_commit_receipts": 0,
+    "stored_edges": 1155,
+    "stored_state_objects": 2310
+  },
+  "retrieval_attribution": {
+    "failures_attributable_to_three_axis_selection": 0,
+    "loading_aware_8d_retrieved_anchor_candidates_counterfactual": 0,
+    "reason": "typed state objects bypass branch/RGM anchor ranking; every focus object was admitted, while every per-project RGM was empty",
+    "sub_d_cases": 33,
+    "sub_d_focus_state_object_hits": 33,
+    "three_axis_retrieved_anchor_candidates": 0
+  },
+  "sources": {
+    "matrix": {
+      "path": "/Users/kenmorkaya/PycharmProjects/ToM_assist/validation/runs/wp25-pilot-frozen-v2/raw_matrix.jsonl",
+      "sha256": "sha256:f30e87a6ccfed975228a2ac346f2fc178d549c13b5c6624b28cbf1f652d16454"
+    },
+    "native_input_aggregate_sha256": "sha256:74f5785155a98072a783a2b2f10238b1b5c14b63b7eb1b0597a6c7a7ff47f997",
+    "native_input_count": 165,
+    "native_root": "/private/tmp/tom-assist-wp25-pilot-v2",
+    "native_store_aggregate_sha256": "sha256:0f171275bde8d921c07f8e9ed0f9080015df4352d164fb4d503ad5ccef97130a",
+    "native_store_count": 165,
+    "runtime_tree_count": 33,
+    "runtime_tree_hashes": {
+      "sha256:999ce84910a2d423e3138f261218e84fa7ccd0bc02a073e41205aacd9d64576e": 33
+    },
+    "tom_master": "/Users/kenmorkaya/PycharmProjects/ToM_assist/.upstream-worktree/tom-master-wp18"
+  },
+  "zero_generations": true
+}
