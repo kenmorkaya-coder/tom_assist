@@ -16,8 +16,17 @@ from validation.production_runner import (
     verify_freeze,
     cluster_bootstrap,
     oracle_result,
-    run,
     substrate_engagement,
+)
+from validation.production_runner_v4 import (
+    MAX_UNKNOWN_OUTCOMES,
+    MIN_COMPLETE_CASES,
+    OBSERVATION_TIMEOUT_SECONDS,
+    V3_APPROVED_CHANGES,
+    V3_DRAFT_MANIFEST,
+    run,
+    v3_analysis,
+    verify_v3_delta,
 )
 
 
@@ -98,10 +107,40 @@ class ProductionRunnerContractTests(unittest.TestCase):
         self.assertEqual(scored["oracle_version"], "typed-action-oracle/2")
         self.assertTrue(scored["action_consistent"])
 
-    def test_v3_live_path_requires_fresh_explicit_authorization(self):
+    def test_v4_draft_and_live_path_require_freeze_then_fresh_authorization(self):
+        registration = json.loads(V3_DRAFT_MANIFEST.read_text())
+        verify_v3_delta(registration, require_frozen=False)
         with patch.dict("os.environ", {}, clear=True):
-            with self.assertRaisesRegex(ValueError, "explicit WP-29 pilot-v3 authorization"):
+            with self.assertRaisesRegex(ValueError, "owner freeze is not active"):
                 run(Namespace(authorized_generations=165))
+
+    def test_v3_delta_is_exactly_the_five_owner_approved_changes(self):
+        registration = json.loads(V3_DRAFT_MANIFEST.read_text())
+        self.assertEqual(registration["changes"], V3_APPROVED_CHANGES)
+        self.assertEqual(OBSERVATION_TIMEOUT_SECONDS, 600)
+        self.assertEqual(MAX_UNKNOWN_OUTCOMES, 8)
+        self.assertEqual(MIN_COMPLETE_CASES, 30)
+        changed = json.loads(json.dumps(registration))
+        changed["changes"].append({"id": 6})
+        with self.assertRaisesRegex(ValueError, "exactly the five"):
+            verify_v3_delta(changed, require_frozen=False)
+
+    def test_v3_excludes_an_entire_case_after_one_unknown_arm(self):
+        captured = []
+        dispositions = []
+        for case_number in range(31):
+            test_id = f"case-{case_number:02}"
+            for arm in ("SUB-A", "SUB-B", "SUB-C", "SUB-D", "SUB-E"):
+                disposition = {"test_id": test_id, "arm": arm, "disposition": "captured"}
+                dispositions.append(disposition)
+                if not (test_id == "case-30" and arm == "SUB-C"):
+                    captured.append(disposition)
+                else:
+                    disposition["disposition"] = "unknown_outcome"
+        analysis_rows, metadata = v3_analysis(captured, dispositions)
+        self.assertEqual(metadata["complete_cases"], 30)
+        self.assertEqual(metadata["excluded_case_ids"], ["case-30"])
+        self.assertEqual(len(analysis_rows), 150)
 
     def test_substrate_engagement_requires_every_native_tripwire(self):
         telemetry = {

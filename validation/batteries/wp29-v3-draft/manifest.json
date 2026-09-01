@@ -1,0 +1,46 @@
+{
+  "base_freeze_sha256": "sha256:38f5f606be0a364d01dc7dc6fbb16bde36ba710be7db24969f2023aac043f220",
+  "base_version": "wp29-prereg-frozen/2",
+  "changes": [
+    {
+      "case_disposition": "exclude-entire-case-from-paired-analysis",
+      "continue": true,
+      "id": 1,
+      "never_resend": true,
+      "outcome": "unknown_outcome"
+    },
+    {
+      "id": 2,
+      "invalid_when_unknown_outcomes_gt": 8,
+      "ninth_unknown_is_preserved": true,
+      "stop_permanently": true
+    },
+    {
+      "complete_case_definition": "all-five-arms-captured",
+      "h1_interpretable_min_complete_cases": 30,
+      "id": 3,
+      "selected_cases": 33
+    },
+    {
+      "id": 4,
+      "observation_timeout_seconds": 600,
+      "record_wall_time_every_disposition": true
+    },
+    {
+      "byte_inherit_everything_else": true,
+      "id": 5
+    }
+  ],
+  "code_sha": null,
+  "files_sha256": {},
+  "freeze_sha256": null,
+  "frozen_at": null,
+  "generations": 165,
+  "owner_frozen": false,
+  "owner_review": "ORCHESTRATOR_REVIEW_12.md",
+  "provider_self_report": "off",
+  "runs": [],
+  "seed": 1729,
+  "status": "DRAFT-PENDING-OWNER-FREEZE",
+  "version": "wp29-prereg-draft/3"
+}
