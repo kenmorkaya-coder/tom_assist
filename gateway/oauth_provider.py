@@ -40,6 +40,12 @@ class ProviderFailure(Exception):
 class _UnixHTTPConnection(http.client.HTTPConnection):
     def __init__(self, socket_path, timeout):
         super().__init__("localhost", timeout=timeout)
+        # The product broker deliberately exposes a small HTTP/1.0-only
+        # protocol over its owner-only Unix socket.  http.client defaults to
+        # HTTP/1.1, so pin the wire version instead of relying on fixture
+        # servers that accept both versions.
+        self._http_vsn = 10
+        self._http_vsn_str = "HTTP/1.0"
         self.socket_path = socket_path
 
     def connect(self):

@@ -773,3 +773,37 @@ Evidence (offline/security/build verification; no live generation):
 Boundaries/protection: no `tom_master`, `tom_master17D` or `tom_sicd_gemma` file was written, staged or packaged. Owner `tom_master` HEAD remained **e9fdef81c8a366ebbec07be9772189eea15cb2ac** on `tom-assist/upstream-v1`; its large owner-managed dirty state is outside this package and was not normalized. The retained linked WP-18 worktree remains at the same pin. The sole pre-existing untracked `.upstream-worktree/` entry is not staged. No credential was read from TomOwner, no live exchange occurred, no push/merge/branch deletion/golden change occurred, and no G-gate verdict is issued.
 
 Pending live step: the owner must complete Tom Assist's new browser PKCE flow once. After `OAUTH_READY`, execute the already frozen WP-25 matrix exactly once under its 165-generation authorization and stop rules; do not copy or migrate TomOwner credentials. A failed/unknown pilot request remains non-resumable and must not be resent.
+
+## WP-26 supplement — Native OAuth sign-in and wire-protocol correction [CONNECTED; FIX VERIFIED]
+
+Containing commit: `fix(wp-26): align oauth gateway wire protocol` (resolved SHA reported in the audit handoff). Owner completed the Tom Assist-native browser authorization. A newly started product broker then returned **`connected:true` / `OAUTH_READY`**, model **`gpt-5.5`**, provider surface **`tom-assist/openai-oauth`**, and credential owner **`tom-assist-keychain`**. No TomOwner credential, token file, process, auth module or account identifier was read or copied. Interactive authorization and token exchange are not counted as provider generations.
+
+The first frozen runner invocation exposed a production transport defect before any provider completion: `gateway/oauth_provider.py` used Python `http.client`'s implicit HTTP/1.1 request line, while the owner-only broker intentionally accepts its bounded **HTTP/1.0** protocol only. The preflight used the broker's native Rust client and therefore succeeded, but the production gateway received `BROKER_REQUEST_INVALID`, sanitized it to `OAUTH_BROKER_REQUEST_FAILED`, and the driver truthfully stopped as disconnected. The fixture broker had accepted both protocol versions, so existing tests did not detect the divergence.
+
+Correction: `_UnixHTTPConnection` now pins `_http_vsn=10` / `HTTP/1.0`; fixture tests record and require HTTP/1.0 for status and explicit completion. No broker security relaxation, retry, credential exposure, provider call, preview path or golden changed. Evidence:
+
+- Targeted offline OAuth gateway tests: **7 passed in 2.22 s**.
+- Full offline gateway suite: **50 passed in 132.10 s**. Existing preview-purity and structural tests passed unchanged.
+- A read-only status request through the corrected real Python gateway boundary returned **`connected:true` / `OAUTH_READY`**, model `gpt-5.5`, the exact capability map and `tom-assist-keychain`. This made no completion request.
+- Frozen-run static check after the correction remains **33 cases / 165 observations / 0 provider calls**, answer files byte-checked **11**, freeze **`sha256:04123dfc3ddd8033264977894fec2b5c7410a9df11b341cdcc72475b53a8a1d9`**. `git diff --check` passed.
+
+## WP-25 — Frozen 33-case production pilot [STOPPED BEFORE GENERATION]
+
+Run identity: `wp25-pilot-frozen-v1`; label **PILOT-NOT-A-GATE**; code SHA **`048925288b849547d6a9ddfab429502ac004705a`**; authorized matrix **33 cases x 5 arms = 165 logical generations**; self-report **off**. Frozen selection/order, answers, thresholds, seed and exclusions were not changed. The preflight recorded broker `OAUTH_READY`, model `gpt-5.5`, protocol `tom-assist-oauth/1.0`; gateway health recorded `pinned_sha_match:true` and structural-preview runtime **`e9fdef81c8a366ebbec07be9772189eea15cb2ac`**.
+
+The controller durably claimed sequence 1 (`D23-ASSUMPTION-01`, `SUB-A`) before invoking the one-shot driver, as designed. The driver checked provider readiness before native import, send claim or completion. The HTTP/1.1/HTTP/1.0 defect above made that check return disconnected, so the binding stop rule fired immediately with **`operational failure or unknown provider outcome; no resend`**. The driver created no observation database, made no explicit provider completion, received no response and made no capture. Thus the exact accounting is: controller logical-call claims **1**, actual provider completion requests/generations **0**, captures **0**, completed observations **0**. No quota-generating exchange was made.
+
+Preserved audit artifacts:
+
+- `validation/runs/wp25-pilot-frozen-v1/run_manifest.json`: SHA-256 **`644b2cf1dd684f3ac46eb498449cc1ecd5783ec07b95a87743132d3dbc0a0b89`**; `completed:false`, `stopped_at_sequence:1`, `logical_calls_claimed:1`, `captures:0`.
+- `validation/runs/wp25-pilot-frozen-v1/claims.jsonl`: one pre-send claim; SHA-256 **`a8ee9bd2baf3dd63ec8e16a7e3cb1fe85ef6a2385fd4090f1b7c4d4ca098ed2c`**.
+- `validation/runs/wp25-pilot-frozen-v1/gateway.log`: zero bytes; SHA-256 **`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`**.
+- Temporary input directory contains only the deterministic sequence-1 input JSON; no SQLite ledger exists. `raw_matrix.jsonl` and `APPENDIX_C.md` do not exist because there are no completed observations to score.
+
+H1/H0/H2/H3 are therefore **unresolved / no pilot outcome**. No numerator, denominator, confidence interval, failure taxonomy, injection result or Appendix-C matrix can honestly be reported from zero completed observations. This is an operational stop record, not evidence for or against any frozen hypothesis and not a G-gate verdict.
+
+**ESCALATE WP25-1:** the original run identity is non-resumable because its output directory and pre-send claim now exist; the frozen stop rule says preserve partial traces and never silently repeat. The transport correction is verified, but another live attempt requires orchestrator direction, a new preregistered run identity/version retaining this failed attempt, and renewed explicit generation authorization. Safest default taken: preserve all evidence, make no resend and spend no provider-generation quota.
+
+Protected source evidence: owner `tom_master` remains on `tom-assist/upstream-v1` at **`e9fdef81c8a366ebbec07be9772189eea15cb2ac`**. Status-output / working-diff / staged-diff SHA-256 values remain **`efd935faf8a04042f9f2c8c1e0df5cd7a8f1c98f04c5d881a90868ad156ba809`** / **`86cb4a857e782653e21d24b24b336304b42c4aaade9ea07823ba1797e8bbbdc9`** / **`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`**, matching the recorded baseline. No upstream edit, port 18790 use, preview mutation, golden adjustment, push, merge or branch deletion occurred.
+
+**STOP FOR ORCHESTRATOR AUDIT. WP-25 did not produce a raw matrix or hypothesis outcome. No G-gate verdict is issued or implied.**

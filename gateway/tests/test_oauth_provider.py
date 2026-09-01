@@ -16,6 +16,7 @@ from gateway.tom_gateway import TomGateway
 def broker():
     class Handler(BaseHTTPRequestHandler):
         calls = []
+        request_versions = []
         connected = True
         reply = {
             "text": "Local broker fixture only",
@@ -28,6 +29,7 @@ def broker():
             pass
 
         def do_GET(self):
+            self.request_versions.append(self.request_version)
             self.calls.append((self.path, None, dict(self.headers)))
             self.answer(
                 {
@@ -43,6 +45,7 @@ def broker():
             )
 
         def do_POST(self):
+            self.request_versions.append(self.request_version)
             body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             self.calls.append((self.path, body, dict(self.headers)))
             self.answer(self.reply)
@@ -90,6 +93,7 @@ def test_status_never_generates_or_exposes_auth_fields(broker):
     assert status["capabilities"] == CAPABILITIES
     assert status["streaming"] is False
     assert [path for path, _, _ in handler.calls] == ["/status"]
+    assert handler.request_versions == ["HTTP/1.0"]
     serialized = json.dumps(status)
     assert "access_token" not in serialized
     assert "refresh_token" not in serialized
@@ -109,6 +113,7 @@ def test_explicit_completion_uses_only_broker_and_no_auth_header(broker):
         "complete": True,
     }
     assert [path for path, _, _ in handler.calls] == ["/status", "/complete"]
+    assert handler.request_versions == ["HTTP/1.0", "HTTP/1.0"]
     assert handler.calls[-1][1] == {
         "explicit_send": True,
         "prompt": "exact visible prompt",
