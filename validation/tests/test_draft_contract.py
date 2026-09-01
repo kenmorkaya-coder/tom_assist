@@ -70,5 +70,27 @@ class DraftContractTests(unittest.TestCase):
         request["packet_injected"] = False
         self.assertTrue(score(request)["packet_policy_match"])
 
+    def test_v2_draft_compares_citation_lists_as_multisets_only(self):
+        expected = {
+            "action_id": "act",
+            "rejected_action_ids": ["reject-1", "reject-2"],
+            "cited_state_ids": ["state-a", "state-b", "state-b"],
+            "historical_state_ids": ["old-a", "old-b"],
+            "relationships": [{"from": "a", "relation": "depends_on", "to": "b"}],
+            "proposed_mutations": [],
+            "authority": "ledger_only",
+        }
+        answer = copy.deepcopy(expected)
+        answer["cited_state_ids"] = ["state-b", "state-a", "state-b"]
+        answer["historical_state_ids"] = ["old-b", "old-a"]
+        request = {"oracle_version": "typed-action-oracle/2", "arm": "SUB-D", "expected_answer": expected, "answer": answer}
+        self.assertTrue(score(request)["action_consistent"])
+        answer["cited_state_ids"] = ["state-a", "state-b"]
+        self.assertFalse(score(request)["field_matches"]["cited_state_ids"])
+        answer = copy.deepcopy(expected)
+        answer["rejected_action_ids"].reverse()
+        request["answer"] = answer
+        self.assertFalse(score(request)["field_matches"]["rejected_action_ids"])
+
 
 if __name__ == "__main__": unittest.main()

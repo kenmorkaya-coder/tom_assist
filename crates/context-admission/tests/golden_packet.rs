@@ -165,7 +165,7 @@ fn golden_packet_renderer_manifest_and_digest_are_byte_stable() {
     assert_eq!(first.packet.excluded.len(), 2);
     assert_eq!(
         first.packet.packet_digest,
-        "sha256:d601e32f29e48c70c10030209e0bd89706a8f43175b051a860e36aa5a7c78601"
+        "sha256:261d19c73d8aaaf4ed6c83fd65a28e1a739649794ec8b7cfcb89128c2eb266c9"
     );
     assert!(first.composer_text.ends_with(
         "[CURRENT_USER_REQUEST]\nWhat should I implement next?\nKeep the answer concise."

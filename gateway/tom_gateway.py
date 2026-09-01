@@ -534,15 +534,21 @@ class ProjectRuntime:
                 self.rgm = FrontRowMemory(self.library, self.settings["front_row_capacity"])
                 self.rgm.restore(prior_rgm.serialize())
                 self.rgm.state = copy.deepcopy(prior_rgm.state)
-                raw = hashlib.sha256(text.encode("utf-8")).digest()
-                axes = [1.0 + raw[index] for index in range(3)]
-                semantic_target = tuple(value / sum(axes) for value in axes)
-                self.engine.state.tick = before_tick + 1
-                # Existing commit load preserved; no new Box-2 translator.
-                metrics = self.engine.step(
-                    wind_vec=(semantic_target[0] - semantic_target[2], semantic_target[1] - semantic_target[2]),
-                    nourishment=min(1.0, max(0.05, len(text) / 2000.0)),
-                    semantic_target=semantic_target)
+                # Owner-ratified canonical path at pinned e9fdef81c:
+                # sicd_msr_load_application.py:164-215. The product supplies the
+                # real 17-channel text signature and the upstream application
+                # owns every step parameter, including semantic_routing_basis.
+                from agency.mechanics.sicd_msr_load_application import (
+                    apply_msr_load_to_sicd_engine,
+                )
+                load_signature = project_text(text)[0]
+                application = apply_msr_load_to_sicd_engine(
+                    self.engine,
+                    load_signature,
+                    source="tom_assist_committed_exchange",
+                )
+                if not application.applied:
+                    raise ValueError(f"canonical commit drive refused load: {application.reason}")
                 stored_id = self.rgm.write(record)
                 if stored_id == "deferred":
                     raise ValueError("committed exchange RGM admission refused")
@@ -581,11 +587,12 @@ class ProjectRuntime:
                     "engine_tick_before": before_tick, "engine_tick_after": int(self.engine.state.tick),
                     "rgm_current_tick": int(self.rgm.state.current_tick),
                     "branch_count": len(self.engine.state.branches), "anchor_id": stored_id,
-                    "K_total": float(getattr(metrics, "K_total", 0.0) or 0.0), "runtime_error_code": None,
+                    "K_total": float(application.kappa_total_after or 0.0), "runtime_error_code": None,
                     "seed_profile": self.creation_metadata.get("seed_profile"),
                     "seed_checkpoint_digest": self.creation_metadata.get("initial_checkpoint_digest"),
                     "prior_checkpoint_digest": prior_digest, "checkpoint_digest": checkpoint_digest,
                     "commit_dynamics": list(COMMIT_DYNAMICS), "taught": taught, "teach_reason": teach_reason,
+                    "commit_drive": application.as_dict(),
                     "activated_branch_ids": branch_ids, "admitted_anchor_ids": anchor_ids,
                     "readmitted_anchor_ids": readmitted_ids, "packet_digest": packet_digest,
                 }

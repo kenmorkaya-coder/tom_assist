@@ -287,7 +287,7 @@ fn create_project(
             &request.id,
             &request.name,
             &request.retention_profile,
-            "context-policy/1.1",
+            "context-policy/1.2",
             "desktop-user",
             &format!("project-create:{}", request.id),
             &request.created_at,
@@ -543,7 +543,7 @@ fn seed_demo_store(store: &mut Store) -> Result<Project, Box<dyn std::error::Err
             .unwrap_or("state-focused"),
         project_row["policy_profile"]
             .as_str()
-            .unwrap_or("context-policy/1.1"),
+            .unwrap_or("context-policy/1.2"),
         "demo-seeder",
         "demo-project-create",
         "2026-08-10T00:00:00Z",

@@ -111,7 +111,7 @@ def run(input_path: Path, output_dir: Path, clock: str | None = None) -> tuple[P
     manifest = {
         "label": "NOT-A-GATE", "harness_version": "validation-harness/1.0", "code_sha": git_sha(),
         "provider_version": "fixture-provider/1.0", "adapter_version": "chatgpt-visible-dom/1.0",
-        "state_policy": "context-policy/1.1", "packet_renderer_version": "authoritative-state/1.0",
+        "state_policy": "context-policy/1.2", "packet_renderer_version": "authoritative-state/1.1",
         "exact_arms": [arm.value for arm in ARMS], "input": str(input_path.relative_to(ROOT)),
         "input_digest": digest_file(input_path), "event_trace": event_trace.name,
         "packet_trace": packet_trace.name, "result_summary": {"cases": len(load_histories(input_path)), "observations": len(observations), "gate_verdicts": 0},

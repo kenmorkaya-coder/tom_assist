@@ -42,6 +42,12 @@ pub fn canonical_sha256<T: Serialize>(value: &T) -> Result<String, serde_json::E
     Ok(format!("sha256:{}", hex::encode(Sha256::digest(bytes))))
 }
 
+/// SHA-256 over bytes exactly as supplied. Use this for labels that promise a
+/// raw payload hash rather than the canonical-JSON hash used by protocol IDs.
+pub fn raw_sha256(data: &[u8]) -> String {
+    format!("sha256:{}", hex::encode(Sha256::digest(data)))
+}
+
 pub fn packet_digest(mut input: PacketDigestInput<'_>) -> Result<String, serde_json::Error> {
     input.activated_branch_ids.sort_unstable();
     input.activated_branch_ids.dedup();
@@ -64,6 +70,15 @@ mod tests {
             String::from_utf8(canonical_json(&value).unwrap()).unwrap(),
             r#"{"a":[3,2,1],"z":{"a":1,"b":2}}"#
         );
+    }
+
+    #[test]
+    fn raw_hash_does_not_add_json_string_quotes() {
+        assert_eq!(
+            raw_sha256("Δ\n".as_bytes()),
+            format!("sha256:{}", hex::encode(Sha256::digest("Δ\n".as_bytes())))
+        );
+        assert_ne!(raw_sha256(b"plain"), canonical_sha256(&"plain").unwrap());
     }
 
     #[test]

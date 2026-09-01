@@ -2,6 +2,7 @@
 import json
 import unittest
 import uuid
+from argparse import Namespace
 
 from validation.production_runner import (
     AUTHORIZED_GENERATIONS,
@@ -12,6 +13,9 @@ from validation.production_runner import (
     packet_telemetry,
     pilot_selection,
     verify_freeze,
+    cluster_bootstrap,
+    oracle_result,
+    run,
 )
 
 
@@ -46,6 +50,11 @@ class ProductionRunnerContractTests(unittest.TestCase):
         self.assertTrue(floor)
         self.assertEqual({row["project_id"] for row in first["objects"]}, {first["project_id"]})
         self.assertEqual({row["workstream_id"] for row in first["objects"]}, {first["workstream_id"]})
+        self.assertEqual(len(first["history"]), len(case["history"]))
+        self.assertEqual(
+            {turn["turn_id"] for turn in first["history"]},
+            {mapping[turn["turn_id"]] for turn in case["history"]},
+        )
 
     def test_no_rot_floor_is_allowed_but_optional_content_is_gratuitous(self):
         result = {"arm": "SUB-D", "packet_text": "packet", "packet": {
@@ -58,6 +67,38 @@ class ProductionRunnerContractTests(unittest.TestCase):
         self.assertTrue(measured["gratuitous_packet_injected"])
         result["packet"]["sections"][0]["items"].pop()
         self.assertFalse(packet_telemetry(result, {"floor"}, "no_rot")["gratuitous_packet_injected"])
+
+    def test_cluster_bootstrap_retains_the_sub_d_side_of_every_pair(self):
+        rows = []
+        for family in sorted({case["focus_family"] for case in self.selected}):
+            for domain in ("domain-a", "domain-b"):
+                test_id = f"{family}:{domain}"
+                for arm, exact in (("SUB-D", True), ("SUB-A", False)):
+                    rows.append({
+                        "test_id": test_id,
+                        "family": family,
+                        "domain": domain,
+                        "mode": "truncation",
+                        "arm": arm,
+                        "oracle": {"action_consistent": exact},
+                    })
+        result = cluster_bootstrap(rows, "SUB-A")
+        self.assertEqual(result["valid_replicates"], 10_000)
+        self.assertEqual(result["invalid_replicates"], 0)
+        self.assertEqual(result["ci95"], [1.0, 1.0])
+
+    def test_future_runner_uses_v2_multiset_citation_comparison(self):
+        expected = self.answers[self.selected[0]["test_id"]]
+        answer = json.loads(json.dumps(expected["expected_answer"]))
+        answer["cited_state_ids"].reverse()
+        answer["historical_state_ids"].reverse()
+        scored = oracle_result(expected, "SUB-D", json.dumps(answer), {}, "truncation")
+        self.assertEqual(scored["oracle_version"], "typed-action-oracle/2")
+        self.assertTrue(scored["action_consistent"])
+
+    def test_v3_live_path_is_blocked_until_owner_freezes_v2(self):
+        with self.assertRaisesRegex(ValueError, "DRAFT-PENDING-OWNER-FREEZE"):
+            run(Namespace())
 
 
 if __name__ == "__main__":

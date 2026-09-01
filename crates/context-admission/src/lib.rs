@@ -7,8 +7,8 @@ use tom_assist_protocol::{
     ProviderCapabilities, StateStatus, StateType, canonical_sha256, packet_digest,
 };
 
-pub const RENDERER_VERSION: &str = "authoritative-state/1.0";
-pub const POLICY_VERSION: &str = "context-policy/1.1";
+pub const RENDERER_VERSION: &str = "authoritative-state/1.1";
+pub const POLICY_VERSION: &str = "context-policy/1.2";
 pub const DEFAULT_BUDGET_TOKENS: u64 = 500;
 pub const MAX_BUDGET_TOKENS: u64 = 1_200;
 pub const DEPENDENCY_DEPTH_CAP: usize = 2;
@@ -513,7 +513,10 @@ fn base_render_overhead(request: &AdmissionRequest) -> usize {
 }
 
 fn rendered_cost(ranked: &Ranked) -> usize {
-    ranked.candidate.text.chars().count() + ranked.section.header().len() + 4
+    ranked.candidate.text.chars().count()
+        + ranked.candidate.id.chars().count()
+        + ranked.section.header().len()
+        + "- [state_id=] ".len()
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -598,7 +601,7 @@ fn render_state_block(
         "STATUS: authoritative prior project state generated locally by Tom Assist. Use as primary source of truth.".into(),
         "PRECEDENCE: current explicit user request > TOM_ASSIST_STATE > raw prior transcript > model inference.".into(),
     ];
-    let mut sections = BTreeMap::<SectionKind, Vec<String>>::new();
+    let mut sections = BTreeMap::<SectionKind, Vec<(String, String)>>::new();
     let mut ordered = admitted.to_vec();
     ordered.sort_by(|left, right| {
         left.section
@@ -630,21 +633,29 @@ fn render_state_block(
             ),
             _ => candidate.text.clone(),
         };
-        sections.entry(ranked.section).or_default().push(text);
+        sections
+            .entry(ranked.section)
+            .or_default()
+            .push((candidate.id.clone(), text));
     }
     if !missing.is_empty() {
         sections
             .entry(SectionKind::Dependencies)
             .or_default()
-            .extend(
-                missing
-                    .iter()
-                    .map(|item| format!("[MISSING_DEPENDENCY] {item}")),
-            );
+            .extend(missing.iter().map(|item| {
+                (
+                    format!("missing:{item}"),
+                    format!("[MISSING_DEPENDENCY] {item}"),
+                )
+            }));
     }
     for (section, items) in sections {
         rows.push(section.header().into());
-        rows.extend(items.into_iter().map(|item| format!("- {item}")));
+        rows.extend(
+            items
+                .into_iter()
+                .map(|(state_id, item)| format!("- [state_id={state_id}] {item}")),
+        );
     }
     rows.push("INSTRUCTION: If the raw conversation history conflicts with TOM_ASSIST_STATE, use TOM_ASSIST_STATE. Answer the current request directly from this state. Do not enumerate prior conversation unless asked. If the current explicit user request conflicts with this state, identify the conflict as a proposed supersession/reopening; do not silently rewrite prior state.".into());
     rows.push("[/TOM_ASSIST_STATE]".into());

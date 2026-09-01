@@ -185,7 +185,7 @@ export interface ContinuityPacket {
   tom_checkpoint_digest: string;
   draft_hash: string;
   policy_version: string;
-  renderer_version: "authoritative-state/1.0";
+  renderer_version: "authoritative-state/1.1";
   provider_capabilities: ProviderCapabilities;
   tom_activation_id: string;
   sections: {

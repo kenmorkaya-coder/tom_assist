@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import json
 import sys
+from collections import Counter
 
 
 def score(request: dict) -> dict:
-    if request.get("oracle_version") == "typed-action-oracle/1":
+    if request.get("oracle_version") in {"typed-action-oracle/1", "typed-action-oracle/2"}:
         return score_action(request)
     haystack = f"{request['context']}\n{request['probe']}".casefold()
     required = [str(item).casefold() for item in request.get("required_terms", [])]
@@ -44,14 +45,32 @@ def score_action(request: dict) -> dict:
         try: answer = json.loads(answer)
         except (json.JSONDecodeError, TypeError): answer = None
     shape = isinstance(answer, dict) and set(answer) == keys
-    fields = {key: bool(shape and answer[key] == expected[key]) for key in sorted(keys)}
+    version = request.get("oracle_version")
+    multiset_fields = {"cited_state_ids", "historical_state_ids"} if version == "typed-action-oracle/2" else set()
+
+    def field_equal(key: str, left: object, right: object) -> bool:
+        if key not in multiset_fields:
+            return left == right
+        return isinstance(left, list) and isinstance(right, list) and Counter(left) == Counter(right)
+
+    def answer_equal(left: object, right: object) -> bool:
+        return bool(
+            isinstance(left, dict)
+            and isinstance(right, dict)
+            and set(left) == keys
+            and set(right) == keys
+            and all(field_equal(key, left[key], right[key]) for key in keys)
+        )
+
+    fields = {key: bool(shape and field_equal(key, answer[key], expected[key])) for key in sorted(keys)}
     action_consistent = shape and all(fields.values())
     mismatch = request.get("acceptable_mismatch_answer")
-    explicit_mismatch = bool(shape and request.get("arm") == "SUB-E" and mismatch is not None and answer == mismatch)
+    explicit_mismatch = bool(shape and request.get("arm") == "SUB-E" and mismatch is not None and answer_equal(answer, mismatch))
     packet_policy = None
     if isinstance(request.get("expected_packet_injected"), bool) and isinstance(request.get("packet_injected"), bool):
         packet_policy = request["packet_injected"] == request["expected_packet_injected"]
-    return {"oracle_version":"typed-action-oracle/1", "label":"FROZEN-WP25-V1",
+    return {"oracle_version":version,
+            "label":"DRAFT-PENDING-OWNER-FREEZE-WP29-V2" if version == "typed-action-oracle/2" else "FROZEN-WP25-V1",
             "answer_shape_valid":shape, "field_matches":fields,
             "action_consistent":action_consistent, "explicit_mismatch":explicit_mismatch,
             "packet_policy_match":packet_policy,

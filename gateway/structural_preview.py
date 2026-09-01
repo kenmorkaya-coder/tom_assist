@@ -1,7 +1,7 @@
 """Product fusion/trace adapter; e9fdef81c upstream arithmetic is canonical."""
 from __future__ import annotations
 
-POLICY_VERSION = "context-policy/1.1"
+POLICY_VERSION = "context-policy/1.2"
 W_LEAF = 0.6  # Review 4 calibration prior, not a product efficacy claim.
 RRF_K = 60
 
@@ -27,26 +27,32 @@ def project_text(text: str):
 
 
 def select_cohort(branches, signature, k: int = 16):
-    """Delegate scoring; sort input IDs to retain the product's stable tie rule."""
-    from agency.mechanics.preview_readout import (
-        select_activated_branches_readonly, loading_aware_8d_score,
-        project_load_signature_to_channel_separated_basis,
-    )
+    """Rank branches in the same canonical 8D basis used by commit drive."""
+    from agency.mechanics.leaf_vectors import LEAF_VEC_DIM, cosine_similarity
     from agency.mechanics.semantic_metrics import stiffness_proxy
+    from agency.mechanics.sicd_msr_routing_basis import (
+        project_load_signature_to_routing_basis,
+    )
     rows = dict(sorted((str(bid), branch) for bid, branch in branches.items()))
-    projection = project_load_signature_to_channel_separated_basis(signature)
-    cohort = select_activated_branches_readonly(rows, list(projection.raw_8d[:3]), k)
+    query = project_load_signature_to_routing_basis(signature).vector_8d
+    scored = []
+    for bid, branch in rows.items():
+        sem_vec = getattr(branch, "sem_vec", None)
+        if sem_vec is None or len(sem_vec) != LEAF_VEC_DIM:
+            continue
+        scored.append((bid, sem_vec, cosine_similarity(query, sem_vec)))
+    # IDs were sorted above, so Python's stable sort gives a deterministic ID
+    # tie-break without changing the pinned cosine arithmetic.
+    cohort = sorted(scored, key=lambda row: -row[2])[:k]
     trace = []
     for bid, _, score in cohort:
         branch = rows[bid]
         stiffness = stiffness_proxy(branch)
         usage = int(getattr(branch, "usage_count", 0))
         trace.append({"branch_id": bid,
-                      # Decompose the canonical result; do not reimplement its gate.
-                      "alignment_gate": score * (1 + usage) / stiffness,
+                      "routing_basis_cosine": score,
                       "stiffness": stiffness, "usage_count": usage,
-                      "selection_score": score,
-                      "loading_aware_score": loading_aware_8d_score(branch, signature)})
+                      "selection_score": score})
     return cohort, trace
 
 

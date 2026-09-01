@@ -1,4 +1,4 @@
-{"kind":"project","id":"10000000-0000-4000-8000-000000000001","name":"Local Release Console","retention_profile":"state-focused","policy_profile":"context-policy/1.1"}
+{"kind":"project","id":"10000000-0000-4000-8000-000000000001","name":"Local Release Console","retention_profile":"state-focused","policy_profile":"context-policy/1.2"}
 {"kind":"state","id":"20000000-0000-4000-8000-000000000001","type":"OBJECTIVE","title":"Release objective","text":"Deliver a local desktop and browser workflow that preserves explicit engineering state.","binding":"hard","evidence_ids":["20000000-0000-4000-8000-000000000014"]}
 {"kind":"state","id":"20000000-0000-4000-8000-000000000002","type":"CONCEPT","title":"Packet lineage","text":"Every response evaluation is bound to the exact outgoing packet and state version.","binding":"soft","evidence_ids":[]}
 {"kind":"state","id":"20000000-0000-4000-8000-000000000003","type":"CONCEPT","title":"Authority boundary","text":"Visible provider output is evidence and candidate material, never authoritative project state.","binding":"hard","evidence_ids":[]}

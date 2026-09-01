@@ -38,6 +38,23 @@ def test_exchange_teaches_rotates_reseats_exactly_once_and_survives_restart(tmp_
     assert restarted.serialized_state_bytes() == state
 
 
+def test_commit_drive_is_the_pinned_17_channel_routing_application(tmp_path):
+    runtime = TomGateway(tmp_path).project("canonical-drive")
+    text = "First inspect the beam dependency, then preserve the rejected cloud path."
+    from agency.mechanics.sicd_msr_load_application import project_msr_load_to_sicd_step
+    from gateway.structural_preview import project_text
+
+    signature = project_text(text)[0]
+    expected = project_msr_load_to_sicd_step(signature).as_dict()
+    result = runtime.commit_turn("user", text, "canonical-17d")
+
+    assert result["commit_drive"]["source"] == "tom_assist_committed_exchange"
+    assert result["commit_drive"]["applied"] is True
+    assert result["commit_drive"]["plan"] == expected
+    assert tuple(runtime.engine.state.last_semantic_routing_basis_8d) == tuple(expected["routing_basis_8d"])
+    assert result["engine_tick_after"] == result["engine_tick_before"] + 1
+
+
 def test_conflict_dismissal_skips_teaching_only_when_configured(tmp_path, monkeypatch):
     runtime = TomGateway(tmp_path).project("conflict")
     runtime.update_settings({"teach_on_conflict": False})

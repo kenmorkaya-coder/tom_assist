@@ -1,4 +1,4 @@
-//! One-shot WP-25 observation driver.
+//! Corrected WP-29 observation driver (retained binary name for packaging compatibility).
 //!
 //! The Python run controller owns the frozen selection, call journal and
 //! reporting. This binary owns the native ledger import and the real
@@ -7,8 +7,8 @@
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::path::PathBuf;
-use tom_assist_persistence::Store;
-use tom_assist_protocol::{StateEdge, StateObject, canonical_sha256};
+use tom_assist_persistence::{Store, TurnRecord};
+use tom_assist_protocol::{StateEdge, StateObject, canonical_sha256, raw_sha256};
 use tom_assist_tom_adapter::GatewayClient;
 use tom_assistd::{
     AssistService, EvaluateTurnRequest, PrepareTurnRequest, SendTurnRequest,
@@ -26,6 +26,7 @@ struct DriverInput {
     user_turn_id: String,
     response_turn_id: String,
     created_at: String,
+    history: Vec<AuthoredTurn>,
     visible_history: String,
     summary: String,
     current_state: String,
@@ -33,6 +34,14 @@ struct DriverInput {
     probe: String,
     objects: Vec<StateObject>,
     edges: Vec<StateEdge>,
+}
+
+#[derive(Debug, Deserialize)]
+struct AuthoredTurn {
+    turn_id: String,
+    session_id: String,
+    role: String,
+    text: String,
 }
 
 fn required_arg(args: &mut impl Iterator<Item = String>, name: &str) -> Result<PathBuf, String> {
@@ -45,16 +54,68 @@ fn required_arg(args: &mut impl Iterator<Item = String>, name: &str) -> Result<P
         .ok_or_else(|| format!("missing value for {name}"))
 }
 
-fn import_case(store: &mut Store, input: &DriverInput) -> Result<(), Box<dyn std::error::Error>> {
+fn import_case(
+    store: &mut Store,
+    input: &DriverInput,
+    gateway: &GatewayClient,
+) -> Result<(usize, usize), Box<dyn std::error::Error>> {
     store.create_project(
         &input.project_id,
         &input.test_id,
         "disposable-validation",
-        "context-policy/1.1",
-        "wp25-owner-freeze",
+        "context-policy/1.2",
+        "wp29-draft-pending-owner-freeze",
         &format!("{}:create", input.exchange_id),
         &input.created_at,
     )?;
+    let mut assistant_teaches = 0;
+    for (index, turn) in input.history.iter().enumerate() {
+        if !matches!(turn.role.as_str(), "user" | "assistant") {
+            return Err(format!("unsupported authored history role {}", turn.role).into());
+        }
+        let committed = gateway.commit_exchange(json!({
+            "project_id": input.project_id,
+            "role": turn.role,
+            "text": turn.text,
+            "idempotency_key": format!("{}:history:{}", input.exchange_id, index + 1),
+        }))?;
+        let tick_before = committed["engine_tick_before"].as_u64();
+        let tick_after = committed["engine_tick_after"].as_u64();
+        if committed["commit_dynamics"]
+            != json!([
+                "step",
+                "rgm_write",
+                "leaf_vec_teach",
+                "usage_rotation",
+                "front_row_reseat"
+            ])
+            || tick_before
+                .zip(tick_after)
+                .is_none_or(|(before, after)| after != before + 1)
+        {
+            return Err("authored history did not traverse the real five-dynamics path".into());
+        }
+        if turn.role == "assistant" {
+            if committed["taught"] != true {
+                return Err("authored assistant history turn did not teach".into());
+            }
+            assistant_teaches += 1;
+        }
+        store.record_turn(&TurnRecord {
+            id: turn.turn_id.clone(),
+            session_id: turn.session_id.clone(),
+            project_id: input.project_id.clone(),
+            workstream_id: input.workstream_id.clone(),
+            role: turn.role.clone(),
+            ordinal: (index + 1) as u64,
+            normalized_text: turn.text.clone(),
+            content_hash: canonical_sha256(&turn.text)?,
+            packet_digest: "battery-history-import/1".into(),
+            completeness: "complete".into(),
+            captured_at: input.created_at.clone(),
+            provider_timestamp: None,
+        })?;
+    }
     let len = input.objects.len();
     if len < 3 {
         return Err("native import requires three nonempty stages".into());
@@ -72,7 +133,7 @@ fn import_case(store: &mut Store, input: &DriverInput) -> Result<(), Box<dyn std
             objects,
             edges,
             index as u64,
-            "wp25-native-importer",
+            "wp29-native-importer",
             &format!("{}:import:{}", input.exchange_id, index + 1),
             &input.created_at,
         )?;
@@ -84,7 +145,7 @@ fn import_case(store: &mut Store, input: &DriverInput) -> Result<(), Box<dyn std
     {
         return Err("native state import did not reproduce the frozen case".into());
     }
-    Ok(())
+    Ok((input.history.len(), assistant_teaches))
 }
 
 fn baseline_context(input: &DriverInput) -> Result<String, String> {
@@ -163,7 +224,7 @@ fn run() -> Result<Value, Box<dyn std::error::Error>> {
         .ok()
         .is_some_and(|value| value != "0")
     {
-        return Err("WP-25 requires provider self-report off".into());
+        return Err("WP-29 pilot v3 requires provider self-report off".into());
     }
     let mut args = std::env::args().skip(1);
     let input_path = required_arg(&mut args, "--input")?;
@@ -191,7 +252,9 @@ fn run() -> Result<Value, Box<dyn std::error::Error>> {
     }
 
     let mut store = Store::open(&database)?;
-    import_case(&mut store, &input)?;
+    // This phase has no ProviderAdapter and therefore cannot generate. Only
+    // after every authored turn has traversed commit do we prepare the probe.
+    let (history_commits, history_assistant_teaches) = import_case(&mut store, &input, &gateway)?;
     drop(store);
     let prepared = prepare(&input, &database, &gateway)?;
     let prompt = provider_prompt(&input, &prepared.packet_text);
@@ -247,9 +310,9 @@ fn run() -> Result<Value, Box<dyn std::error::Error>> {
         "packet": prepared.packet,
         "packet_text": prepared.packet_text,
         "prompt": prompt,
-        "prompt_hash": canonical_sha256(&prompt)?,
+        "prompt_hash": raw_sha256(prompt.as_bytes()),
         "response_text": response_text,
-        "response_hash": canonical_sha256(&response_text)?,
+        "response_hash": raw_sha256(response_text.as_bytes()),
         "capture_count": captures,
         "evaluation": evaluation,
         "provider": {
@@ -259,6 +322,9 @@ fn run() -> Result<Value, Box<dyn std::error::Error>> {
         },
         "gateway_protocol": health["protocol"],
         "self_report_enabled": false,
+        "history_commits": history_commits,
+        "history_assistant_teaches": history_assistant_teaches,
+        "history_import_provider_calls": 0,
         "logical_provider_calls": 1
     }))
 }

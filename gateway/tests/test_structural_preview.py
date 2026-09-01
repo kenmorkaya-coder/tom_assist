@@ -6,13 +6,22 @@ from gateway.tom_gateway import TomGateway
 def test_geometry_is_exactly_the_canonical_upstream_readout(tmp_path):
     gateway = TomGateway(tmp_path)
     runtime = gateway.project("geometry")
-    from agency.mechanics.preview_readout import select_activated_branches_readonly, loading_aware_8d_score
-    signature, projection, angle = project_text("first then after the construction stage")
+    from agency.mechanics.leaf_vectors import cosine_similarity
+    from agency.mechanics.sicd_msr_routing_basis import project_load_signature_to_routing_basis
+    signature, _, _ = project_text("first then after the construction stage")
     cohort, trace = select_cohort(runtime.engine.state.branches, signature)
-    reference = select_activated_branches_readonly(dict(sorted(runtime.engine.state.branches.items())), list(projection.raw_8d[:3]))
-    assert cohort == reference  # No post-conversion tolerance: upstream is canonical.
+    query = project_load_signature_to_routing_basis(signature).vector_8d
+    reference = sorted(
+        ((bid, branch.sem_vec, cosine_similarity(query, branch.sem_vec))
+         for bid, branch in sorted(runtime.engine.state.branches.items())
+         if branch.sem_vec is not None and len(branch.sem_vec) == 8),
+        key=lambda row: -row[2],
+    )[:16]
+    assert cohort == reference
     for row in trace:
-        assert row["loading_aware_score"] == loading_aware_8d_score(runtime.engine.state.branches[row["branch_id"]], signature)
+        branch = runtime.engine.state.branches[row["branch_id"]]
+        assert row["routing_basis_cosine"] == cosine_similarity(query, branch.sem_vec)
+        assert row["selection_score"] == row["routing_basis_cosine"]
 
 
 def test_structural_channel_can_reverse_lexical_rank(tmp_path):

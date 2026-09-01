@@ -1,0 +1,19 @@
+{
+  "case_selection": "unchanged-wp25-prereg-frozen/1-33-cases",
+  "freeze_sha256": null,
+  "generations": 165,
+  "hypothesis_slots": [
+    "H1",
+    "H0",
+    "H2",
+    "H3"
+  ],
+  "margins": "unchanged-wp25-prereg-frozen/1",
+  "oracle": "typed-action-oracle/2",
+  "owner_frozen": false,
+  "provider_self_report": "off",
+  "runs": [],
+  "seed": 1729,
+  "status": "DRAFT-PENDING-OWNER-FREEZE",
+  "version": "wp29-prereg-draft/2"
+}

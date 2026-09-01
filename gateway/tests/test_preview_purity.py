@@ -58,7 +58,7 @@ def test_one_hundred_mixed_previews_are_byte_pure(tmp_path: Path, monkeypatch) -
         assert result["activation_id"].startswith("sha256:")
         assert len(result["activated_branch_ids"]) == 16
         assert any(row["structural_rank"] is not None for row in result["candidate_trace"])
-        assert result["policy_version"] == "context-policy/1.1"
+        assert result["policy_version"] == "context-policy/1.2"
 
     after_tree, after_rgm = runtime.serialized_state_bytes()
     assert after_tree == before_tree

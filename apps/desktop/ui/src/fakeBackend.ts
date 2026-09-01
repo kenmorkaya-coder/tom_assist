@@ -141,7 +141,7 @@ export class FakeDesktopBackend implements DesktopBackend {
       state_version: 0,
       state_digest: "sha256:empty",
       retention_profile: "state-focused",
-      policy_profile: "context-policy/1.1",
+      policy_profile: "context-policy/1.2",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

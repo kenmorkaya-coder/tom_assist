@@ -3,7 +3,7 @@
 mod digest;
 mod model;
 
-pub use digest::{PacketDigestInput, canonical_json, canonical_sha256, packet_digest};
+pub use digest::{PacketDigestInput, canonical_json, canonical_sha256, packet_digest, raw_sha256};
 pub use model::*;
 
 pub const PROTOCOL_VERSION: &str = "tom-assist/1.0";

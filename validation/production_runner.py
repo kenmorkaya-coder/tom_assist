@@ -32,6 +32,7 @@ ARMS = ("SUB-A", "SUB-B", "SUB-C", "SUB-D", "SUB-E")
 FREEZE_VERSION = "wp25-prereg-frozen/1"
 FREEZE_RECORD = BATTERY / "FROZEN_V1.md"
 MANIFEST = BATTERY / "manifest.json"
+V2_DRAFT_MANIFEST = ROOT / "validation/batteries/wp29-v2-draft/manifest.json"
 NAMESPACE = uuid.UUID("3ed820e0-f06b-5e51-85b7-7a94864c9d6a")
 AUTHORIZED_GENERATIONS = 165
 BOOTSTRAP_SEED = 1729
@@ -185,6 +186,15 @@ def native_case(case: dict, expected: dict, arm: str) -> tuple[dict, dict, dict[
         "user_turn_id": f"{exchange_id}:user",
         "response_turn_id": f"{exchange_id}:assistant",
         "created_at": AT,
+        "history": [
+            {
+                "turn_id": mapping[row["turn_id"]],
+                "session_id": mapping[row["session_id"]],
+                "role": row["role"],
+                "text": text_replace(row["text"], mapping),
+            }
+            for row in case["history"]
+        ],
         "visible_history": visible_history,
         "summary": text_replace(case["summary"], mapping),
         "current_state": text_replace(case["current_state"], mapping),
@@ -228,7 +238,7 @@ def packet_telemetry(result: dict, floor_ids: set[str], mode: str) -> dict:
 
 def oracle_result(expected: dict, arm: str, response: str, telemetry: dict, mode: str) -> dict:
     request = {
-        "oracle_version": "typed-action-oracle/1",
+        "oracle_version": "typed-action-oracle/2",
         "case_id": expected["test_id"],
         "arm": arm,
         "expected_answer": expected["expected_answer"],
@@ -264,7 +274,7 @@ def failure_taxonomy(case: dict, scored: dict) -> list[str]:
     if not fields["rejected_action_ids"]:
         failures.append("enumeration/format failure")
     if not fields["cited_state_ids"]:
-        failures.append("capture/lineage mismatch")
+        failures.append("citation-list inequality")
     if not fields["historical_state_ids"]:
         failures.append("supersession/history loss")
     if not fields["relationships"]:
@@ -378,7 +388,9 @@ def cluster_bootstrap(rows: list[dict], baseline: str) -> dict:
     long_rows = [row for row in rows if row["mode"] != "no_rot" and row["arm"] in {"SUB-D", baseline}]
     domains = sorted({row["domain"] for row in long_rows})
     lookup = {(row["test_id"], row["arm"]): int(row["oracle"]["action_consistent"]) for row in long_rows}
-    cases = {row["test_id"]: row for row in long_rows}
+    # One metadata row per case. Selecting SUB-D explicitly prevents the
+    # baseline row from overwriting its paired SUB-D row in this dictionary.
+    cases = {row["test_id"]: row for row in long_rows if row["arm"] == "SUB-D"}
     rng = random.Random(BOOTSTRAP_SEED)
     estimates, invalid = [], 0
     for _ in range(BOOTSTRAP_REPLICATES):
@@ -519,8 +531,11 @@ def report(rows: list[dict], manifest: dict, hypotheses: dict) -> str:
 
 
 def run(args: argparse.Namespace) -> int:
-    if os.environ.get("TOM_ASSIST_WP25_LIVE") != "1" or args.authorized_generations != AUTHORIZED_GENERATIONS:
-        raise ValueError("explicit WP-25 live authorization and exact 165-generation budget required")
+    v2_registration = json.loads(V2_DRAFT_MANIFEST.read_text())
+    if v2_registration.get("owner_frozen") is not True:
+        raise ValueError("DRAFT-PENDING-OWNER-FREEZE: pilot v3 cannot run")
+    if os.environ.get("TOM_ASSIST_WP29_V3_LIVE") != "1" or args.authorized_generations != AUTHORIZED_GENERATIONS:
+        raise ValueError("explicit WP-29 pilot-v3 authorization and exact 165-generation budget required")
     if os.environ.get("TOM_ASSIST_PROVIDER_SELF_REPORT") not in {None, "", "0"}:
         raise ValueError("provider self-report must be off")
     cases, answers = all_cases()
@@ -549,10 +564,12 @@ def run(args: argparse.Namespace) -> int:
     )
     rows: list[dict] = []
     run_manifest = {
-        "run_id": "wp25-pilot-frozen-v1",
+        "run_id": "wp29-pilot-v3",
         "label": "PILOT-NOT-A-GATE",
-        "freeze_version": FREEZE_VERSION,
-        "freeze_sha256": manifest["freeze"]["freeze_sha256"],
+        "freeze_version": v2_registration["version"],
+        "freeze_sha256": v2_registration["freeze_sha256"],
+        "corpus_freeze_version": FREEZE_VERSION,
+        "corpus_freeze_sha256": manifest["freeze"]["freeze_sha256"],
         "code_sha": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
         "corpus_manifest_sha256": sha256_file(MANIFEST),
         "driver_sha256": sha256_file(args.driver),
@@ -564,9 +581,9 @@ def run(args: argparse.Namespace) -> int:
         "provider_context_limit": "product 48000 characters; provider token limit unavailable",
         "adapter": "gateway/oauth-provider + tom-assist-oauth/1.0 broker",
         "structural_preview_pin": subprocess.check_output(["git", "-C", str(args.tom_master), "rev-parse", "HEAD"], text=True).strip(),
-        "state_policy": "context-policy/1.1",
-        "renderer": "authoritative-state/1.0",
-        "oracle": "typed-action-oracle/1",
+        "state_policy": "context-policy/1.2",
+        "renderer": "authoritative-state/1.1",
+        "oracle": "typed-action-oracle/2",
         "bootstrap_seed": BOOTSTRAP_SEED,
         "bootstrap_replicates": BOOTSTRAP_REPLICATES,
         "self_report": "off",
@@ -644,6 +661,9 @@ def run(args: argparse.Namespace) -> int:
                 "new_failure_mode": False,
                 "logical_provider_calls": result["logical_provider_calls"],
                 "self_report_enabled": result["self_report_enabled"],
+                "history_commits": result["history_commits"],
+                "history_assistant_teaches": result["history_assistant_teaches"],
+                "history_import_provider_calls": result["history_import_provider_calls"],
             }
             append_jsonl(output / "raw_matrix.jsonl", row)
             append_jsonl(output / "oracle_trace.jsonl", {"sequence": sequence, "test_id": case["test_id"], "arm": arm, "result": scored})

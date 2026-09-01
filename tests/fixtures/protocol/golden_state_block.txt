@@ -2,22 +2,22 @@
 STATUS: authoritative prior project state generated locally by Tom Assist. Use as primary source of truth.
 PRECEDENCE: current explicit user request > TOM_ASSIST_STATE > raw prior transcript > model inference.
 ACTIVE_OBJECTIVE
-- Ship a local-first continuity assistant.
+- [state_id=objective-1] Ship a local-first continuity assistant.
 LOAD_BEARING_CONCEPTS
-- Packet lineage binds a response to admitted state.
+- [state_id=concept-1] Packet lineage binds a response to admitted state.
 BINDING_CONSTRAINTS
-- Never upload project state.
+- [state_id=constraint-1] Never upload project state.
 HELD_DECISIONS
-- Use SQLite WAL for the event store.
+- [state_id=decision-1] Use SQLite WAL for the event store.
 REJECTED_OR_SUPERSEDED - DO NOT REVIVE WITHOUT EXPLICIT RECONSIDERATION
-- Do not use cloud sync. - reconsider only if the owner approves an encrypted sync design
+- [state_id=rejected-1] Do not use cloud sync. - reconsider only if the owner approves an encrypted sync design
 COMPLETED_WORK - DO NOT REPROPOSE AS OPEN
-- Protocol schemas are frozen; next boundary is transaction wiring.
+- [state_id=completed-1] Protocol schemas are frozen; next boundary is transaction wiring.
 UNRESOLVED_DEPENDENCIES
-- Native-host installation must be completed before browser use.
+- [state_id=dependency-1] Native-host installation must be completed before browser use.
 EVIDENCE_BOUNDARY
-- Local runtime inspection confirms the UDS boundary. - provenance: docs/spec/runtime_inspection_findings.md
+- [state_id=evidence-1] Local runtime inspection confirms the UDS boundary. - provenance: docs/spec/runtime_inspection_findings.md
 RETRIEVED_ANCHORS
-- [turn-12] The owner requested an inspectable visible state block.
+- [state_id=anchor-1] [turn-12] The owner requested an inspectable visible state block.
 INSTRUCTION: If the raw conversation history conflicts with TOM_ASSIST_STATE, use TOM_ASSIST_STATE. Answer the current request directly from this state. Do not enumerate prior conversation unless asked. If the current explicit user request conflicts with this state, identify the conflict as a proposed supersession/reopening; do not silently rewrite prior state.
 [/TOM_ASSIST_STATE]
