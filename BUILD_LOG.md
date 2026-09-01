@@ -944,3 +944,51 @@ Evidence is preserved at `validation/runs/wp29-pilot-v3/`: `raw_matrix.jsonl` SH
 Protection proof: pinned linked upstream remains clean at **`e9fdef81c8a366ebbec07be9772189eea15cb2ac`**. Owner `tom_master` remains on `tom-assist/upstream-v1` at the same SHA; its status-output / working-diff / staged-diff SHA-256 values remain **`efd935faf8a04042f9f2c8c1e0df5cd7a8f1c98f04c5d881a90868ad156ba809`** / **`86cb4a857e782653e21d24b24b336304b42c4aaade9ea07823ba1797e8bbbdc9`** / **`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`**. No upstream file, owner checkout, credential, earlier frozen result, golden or remote was modified. Preview purity remains unchanged.
 
 **STOP FOR ORCHESTRATOR AUDIT. Pilot v3 is permanently stopped at observation 6 under the frozen rule. No G-gate verdict is issued or implied. A further live run would require a new identity and renewed owner authorization.**
+
+## WP-29 pilot v4 supplement — pre-registration v3 freeze and complete pilot [DONE]
+
+Authority and retained baseline: `ORCHESTRATOR_REVIEW_12.md` accepts the permanent pilot-v3 stop, approves exactly five pre-registration changes and grants one fresh 165-observation pilot-v4 authorization. Frozen v2 remains retained and byte-identical: `validation/production_runner.py` SHA-256 **`17477a82aff9236168b175301a28361f6fcb5a0d000ec001486a06d8b2e36576`**, v2 `PREREGISTRATION.md` **`c0add32c150fcee48e0f582ce3246c46982da3bf7567b866122266451317061d`**, and v2 `manifest.json` **`9e4d753b7d84072a71bc0e90588be6be4b3fffb457eebff304ac137ae22d365a`**. No v2 run identity or artifact was reopened.
+
+Versioning and freeze mechanics:
+
+1. Draft commit **`ffc7e336f6b1fee0a83c491d7675dea6834576ba`** (`test(wp-29): draft preregistration v3 runner`) adds a versioned amendment and `validation/production_runner_v4.py`; it does not alter the frozen v2 runner. The machine verifier identifies exactly **5** scientific changes: per-observation `unknown_outcome` with no resend and whole-case exclusion; permanent invalidation on the ninth unknown; H1 interpretability at at least 30/33 five-arm-complete cases; a 600-second observation timeout with wall time on every disposition; and byte inheritance of all remaining frozen-v2 choices. No sixth change was made.
+2. Freeze commit **`5ac4849d029da8d29240d33936644e8c944b2387`** (`test(wp-29): freeze preregistration v3`) records `owner_frozen:true`, status `FROZEN-WP29-V3`, version `wp29-prereg-frozen/3`, accepted code SHA `ffc7e336f6b1fee0a83c491d7675dea6834576ba`, and exact file hashes. Canonical v3 freeze identity: **`sha256:a02192b0f04646d2d2a740783fbabb98fc87cc842f2c2e97b2c176c8d35940cd`**; inherited v2 freeze identity: **`sha256:38f5f606be0a364d01dc7dc6fbb16bde36ba710be7db24969f2023aac043f220`**.
+3. `production_runner_v4.py` SHA-256 is **`37cf49d798ad1710b5e3662a07291416c139e07ded436123ddd0d3e7ae94ed79`**. The frozen amendment, freeze record and manifest hashes are **`5ea78edcf967d5b85b416b2f642ed53286c120ebd373dce6664ab9f2190335bc`**, **`f8536f7e5c863e20d798730db5caa91606603480ec2e5b63822ba10bdcba7416`**, and **`ec0f86271c12d78095fac495543e029e391f2c60d7f4176ea5ef44812d6e27b4`**, respectively.
+
+### Substrate-engagement telemetry (leads outcome reporting)
+
+All **165/165** rows were fully engaged. The runner recorded **15,345/15,345** authored history turns with exact five-dynamics receipts, canonical 17-channel applications and 8D routing-basis applications; aggregate tick advance was **15,345** and all **165/165** checkpoints changed. It recorded **5,720/5,720** assistant history turns with `taught:true`. Native history import made **0 provider calls**. This is execution telemetry establishing that the corrected substrate was exercised; it is not efficacy evidence and is not a G-gate verdict.
+
+### Live execution, dispositions and timing
+
+Pilot v4 ran once under fresh `TOM_ASSIST_WP29_V4_LIVE=1`, with `TOM_ASSIST_PROVIDER_SELF_REPORT=0`, against the Tom Assist-owned OAuth broker on a private Unix socket. Secret-free preflight reported connected / `OAUTH_READY`, provider `tom-assist/openai-oauth`, model `gpt-5.5`, credential owner `tom-assist-keychain`. The child broker was stopped after completion. No TCP listener or port 18790 was used.
+
+Accounting is **165 authorized logical calls, 165 captured responses, 165 dispositions, 0 unknown outcomes, 0 resends, 33/33 complete cases, 0 excluded cases**. Therefore the >8 unknown stop never fired and the frozen >=30 complete-case interpretation bound was met. Every row records wall time: total **26,900.464179 s**, minimum **25.176463 s**, median **202.930279 s**, p95 **260.5111068 s**, maximum **272.679774 s**. Observation 6, which had exceeded pilot v3's old 240-second boundary, completed once in **257.813286 s** under the frozen v3 600-second rule; it was not retried.
+
+### Full Appendix-C matrix and frozen H-slot resolution
+
+The complete 165-row Appendix-C matrix is preserved at `validation/runs/wp29-pilot-v4/APPENDIX_C.md`; the same machine rows are in `raw_matrix.jsonl`. Frozen resolutions are:
+
+| Hypothesis | Frozen resolution |
+|---|---|
+| H1 | **DOES_NOT_HOLD** — complete matrix, but SUB-D is not >=0.80 in every family, neither required paired margin holds, and neither required positive CI excludes zero |
+| H0 | **HOLDS** — at least one frozen primary H1 component does not hold |
+| H2 | **NOT_TRIGGERED_REQUIRES_H1** — reported components: H2.1 no-rot rate proximity true but zero-gratuitous false; H2.2 true; H2.3 false; H2.4 null under the frozen trigger logic |
+| H3 | **NOT_OBSERVED** — no frozen new-failure-mode row was emitted |
+
+Macro exact-action rates on the 22 long cases per arm are SUB-A **0/22 (0.0000)**, SUB-B **2/22 (0.0909)**, SUB-C **1/22 (0.0455)**, SUB-D **0/22 (0.0000)** and SUB-E **0/22 (0.0000)**. Paired differences are SUB-D minus SUB-A **0.0000** and SUB-D minus SUB-B **-0.0909**. The domain-cluster bootstrap used the frozen seed 1729 and 10,000 replicates; valid/invalid counts are 2,591/7,409 for each comparison, with SUB-D-vs-A CI **[0.0, 0.0]** and SUB-D-vs-B CI **[-0.1818181818, 0.0]**. Exact per-family, slice and domain tables, the failure taxonomy, every disposition, prompt/response SHA and wall time are in the Appendix rather than summarized away.
+
+Permanent evidence hashes and counts:
+
+- `raw_matrix.jsonl`: **165 rows**, SHA-256 **`d52ce7317acc7d69bce0cfc1df6f43ec7c007e6c490defe0bcb0fc2662a0b824`**.
+- `claims.jsonl`: **165 rows**, SHA-256 **`b5fca279cd98bb5e4284012b229b145bbd93e1c2aed78315b5ad4d52b19b3d83`**.
+- `oracle_trace.jsonl`: **165 rows**, SHA-256 **`60d1ffafaf0fdb14d27da0add80abe8f62de6cdbf9e94603125aee871572e1fe`**.
+- `unknown_outcomes.jsonl`: **0 rows**, SHA-256 **`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`**.
+- `APPENDIX_C.md`: **710 lines including the full raw matrix**, SHA-256 **`a8258910fae4d91845bf549d94abfd7f51d7aedca7bbca54e5486b17f45b2e9d`**.
+- `run_manifest.json`: SHA-256 **`ef39b7ddff51e1e3133d5d311b13bec166111faa30b663e1d4ef68242a58e236`**; it binds the matrix/claim/oracle/unknown/Appendix hashes, run identity, freeze identities, ordered observations, substrate totals, timing policy and resolved H slots.
+
+Verification: `python -m validation.production_runner_v4 check` -> **33 cases, 165 observations, 11 answer files byte-checked, 5 v3 delta changes, provider_calls=0**. Validation tests -> **21 passed in 0.98 s**. `git diff --check` -> clean. The private native audit store is retained at `/private/tmp/tom-assist-wp29-v4.hQuean/`; the product evidence directory is approximately 3.0 MiB and contains the complete audit matrix/logs.
+
+Protection proof: the pinned linked upstream remains clean at **`e9fdef81c8a366ebbec07be9772189eea15cb2ac`**. Owner `tom_master` remains at the same SHA with status-output / working-diff / staged-diff SHA-256 values unchanged at **`efd935faf8a04042f9f2c8c1e0df5cd7a8f1c98f04c5d881a90868ad156ba809`** / **`86cb4a857e782653e21d24b24b336304b42c4aaade9ea07823ba1797e8bbbdc9`** / **`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`**. No protected upstream file, owner checkout, credential, earlier frozen result, golden or remote was modified. Preview purity and the five-dynamics order remain unchanged.
+
+**STOP FOR ORCHESTRATOR AUDIT. Pilot v4 is complete with the full raw Appendix-C matrix and all frozen H slots resolved above. This is a pilot outcome only; no G-gate verdict is issued or implied.**
