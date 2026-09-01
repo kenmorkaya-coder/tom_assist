@@ -31,16 +31,23 @@
       "id": 5
     }
   ],
-  "code_sha": null,
-  "files_sha256": {},
-  "freeze_sha256": null,
-  "frozen_at": null,
+  "code_sha": "ffc7e336f6b1fee0a83c491d7675dea6834576ba",
+  "files_sha256": {
+    "ORCHESTRATOR_REVIEW_12.md": "sha256:d42af60423835b3d7c5bdbae8324822a82668cd1cc3b60dc64231caaa2dbb098",
+    "validation/batteries/wp29-v2-draft/manifest.json": "sha256:9e4d753b7d84072a71bc0e90588be6be4b3fffb457eebff304ac137ae22d365a",
+    "validation/batteries/wp29-v3-draft/FROZEN_V3.md": "sha256:f8536f7e5c863e20d798730db5caa91606603480ec2e5b63822ba10bdcba7416",
+    "validation/batteries/wp29-v3-draft/PREREGISTRATION.md": "sha256:5ea78edcf967d5b85b416b2f642ed53286c120ebd373dce6664ab9f2190335bc",
+    "validation/production_runner.py": "sha256:17477a82aff9236168b175301a28361f6fcb5a0d000ec001486a06d8b2e36576",
+    "validation/production_runner_v4.py": "sha256:37cf49d798ad1710b5e3662a07291416c139e07ded436123ddd0d3e7ae94ed79"
+  },
+  "freeze_sha256": "sha256:a02192b0f04646d2d2a740783fbabb98fc87cc842f2c2e97b2c176c8d35940cd",
+  "frozen_at": "2026-09-01 Australia/Sydney",
   "generations": 165,
-  "owner_frozen": false,
+  "owner_frozen": true,
   "owner_review": "ORCHESTRATOR_REVIEW_12.md",
   "provider_self_report": "off",
   "runs": [],
   "seed": 1729,
-  "status": "DRAFT-PENDING-OWNER-FREEZE",
-  "version": "wp29-prereg-draft/3"
+  "status": "FROZEN-WP29-V3",
+  "version": "wp29-prereg-frozen/3"
 }

@@ -107,11 +107,11 @@ class ProductionRunnerContractTests(unittest.TestCase):
         self.assertEqual(scored["oracle_version"], "typed-action-oracle/2")
         self.assertTrue(scored["action_consistent"])
 
-    def test_v4_draft_and_live_path_require_freeze_then_fresh_authorization(self):
+    def test_v4_frozen_path_requires_fresh_explicit_authorization(self):
         registration = json.loads(V3_DRAFT_MANIFEST.read_text())
-        verify_v3_delta(registration, require_frozen=False)
+        verify_v3_delta(registration, require_frozen=True)
         with patch.dict("os.environ", {}, clear=True):
-            with self.assertRaisesRegex(ValueError, "owner freeze is not active"):
+            with self.assertRaisesRegex(ValueError, "explicit WP-29 pilot-v4 authorization"):
                 run(Namespace(authorized_generations=165))
 
     def test_v3_delta_is_exactly_the_five_owner_approved_changes(self):
