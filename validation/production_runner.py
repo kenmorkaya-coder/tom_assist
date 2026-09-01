@@ -361,6 +361,20 @@ def verify_freeze(manifest: dict, cases: list[dict]) -> None:
         raise ValueError("freeze SHA mismatch")
 
 
+def verify_v2_freeze(registration: dict) -> None:
+    if registration.get("owner_frozen") is not True or registration.get("status") != "FROZEN-WP29-V2":
+        raise ValueError("WP-29 v2 owner freeze is not active")
+    if registration.get("version") != "wp29-prereg-frozen/2":
+        raise ValueError("WP-29 v2 freeze version mismatch")
+    payload = copy.deepcopy(registration)
+    expected_sha = payload.pop("freeze_sha256")
+    if sha256_bytes(canonical(payload).encode()) != expected_sha:
+        raise ValueError("WP-29 v2 freeze SHA mismatch")
+    for relative, expected in registration.get("files_sha256", {}).items():
+        if sha256_file(ROOT / relative) != expected:
+            raise ValueError(f"WP-29 v2 frozen file changed: {relative}")
+
+
 def wilson(numerator: int, denominator: int) -> tuple[float | None, float | None]:
     if denominator == 0:
         return None, None
@@ -427,6 +441,35 @@ def rates(rows: list[dict], field: str = "action_consistent") -> dict:
     for row in rows:
         groups[row["arm"]].append(int(row["oracle"][field]))
     return {arm: {"numerator": sum(groups[arm]), "denominator": len(groups[arm]), "rate": sum(groups[arm]) / len(groups[arm]) if groups[arm] else None} for arm in ARMS}
+
+
+def substrate_engagement(rows: list[dict]) -> dict:
+    telemetry = [row["substrate_engagement"] for row in rows]
+    complete = [
+        item["history_turns"] == item["five_dynamics_receipts"]
+        == item["canonical_17_channel_applications"]
+        == item["routing_basis_8d_applications"]
+        == item["tick_delta"]
+        and item["assistant_turns"] == item["assistant_teaches"]
+        and item["checkpoint_changed"] is True
+        and item["provider_calls_during_import"] == 0
+        for item in telemetry
+    ]
+    return {
+        "label": "EXECUTION-TELEMETRY-NOT-EFFICACY",
+        "rows_observed": len(telemetry),
+        "rows_fully_engaged": sum(complete),
+        "all_rows_fully_engaged": bool(telemetry) and all(complete),
+        "history_turns": sum(item["history_turns"] for item in telemetry),
+        "five_dynamics_receipts": sum(item["five_dynamics_receipts"] for item in telemetry),
+        "canonical_17_channel_applications": sum(item["canonical_17_channel_applications"] for item in telemetry),
+        "routing_basis_8d_applications": sum(item["routing_basis_8d_applications"] for item in telemetry),
+        "assistant_turns": sum(item["assistant_turns"] for item in telemetry),
+        "assistant_teaches": sum(item["assistant_teaches"] for item in telemetry),
+        "tick_delta": sum(item["tick_delta"] for item in telemetry),
+        "checkpoint_changed_rows": sum(item["checkpoint_changed"] is True for item in telemetry),
+        "history_import_provider_calls": sum(item["provider_calls_during_import"] for item in telemetry),
+    }
 
 
 def resolve_hypotheses(rows: list[dict], complete: bool) -> dict:
@@ -498,6 +541,9 @@ def report(rows: list[dict], manifest: dict, hypotheses: dict) -> str:
         "# WP-25 Appendix C — frozen 33-case production pilot", "",
         "> PILOT OUTCOME ONLY. This report issues no specification G-gate verdict.", "",
         "## Run identity", "", "```json", json.dumps({key: manifest[key] for key in ("run_id", "freeze_sha256", "code_sha", "logical_calls_claimed", "captures", "completed")}, indent=2, sort_keys=True), "```", "",
+        "## Substrate engagement", "",
+        "> Execution telemetry only: this establishes that the corrected ToM substrate was exercised; it is not an efficacy or G-gate verdict.", "",
+        "```json", json.dumps(manifest["substrate_engagement"], indent=2, sort_keys=True), "```", "",
         "## Frozen-hypothesis resolution", "",
         f"- **H1:** {hypotheses['H1']['outcome']}",
         f"- **H0:** {hypotheses['H0']['outcome']}",
@@ -534,6 +580,7 @@ def run(args: argparse.Namespace) -> int:
     v2_registration = json.loads(V2_DRAFT_MANIFEST.read_text())
     if v2_registration.get("owner_frozen") is not True:
         raise ValueError("DRAFT-PENDING-OWNER-FREEZE: pilot v3 cannot run")
+    verify_v2_freeze(v2_registration)
     if os.environ.get("TOM_ASSIST_WP29_V3_LIVE") != "1" or args.authorized_generations != AUTHORIZED_GENERATIONS:
         raise ValueError("explicit WP-29 pilot-v3 authorization and exact 165-generation budget required")
     if os.environ.get("TOM_ASSIST_PROVIDER_SELF_REPORT") not in {None, "", "0"}:
@@ -591,6 +638,7 @@ def run(args: argparse.Namespace) -> int:
         "logical_calls_claimed": 0,
         "captures": 0,
         "completed": False,
+        "substrate_engagement": substrate_engagement([]),
         "stop_reason": None,
         "ordered_observations": [{"sequence": sequence, "test_id": case["test_id"], "arm": arm, "exchange_id": native_uuid(case["test_id"], f"exchange:{arm}")} for sequence, case, arm in order],
     }
@@ -661,13 +709,12 @@ def run(args: argparse.Namespace) -> int:
                 "new_failure_mode": False,
                 "logical_provider_calls": result["logical_provider_calls"],
                 "self_report_enabled": result["self_report_enabled"],
-                "history_commits": result["history_commits"],
-                "history_assistant_teaches": result["history_assistant_teaches"],
-                "history_import_provider_calls": result["history_import_provider_calls"],
+                "substrate_engagement": result["substrate_engagement"],
             }
             append_jsonl(output / "raw_matrix.jsonl", row)
             append_jsonl(output / "oracle_trace.jsonl", {"sequence": sequence, "test_id": case["test_id"], "arm": arm, "result": scored})
             rows.append(row)
+            run_manifest["substrate_engagement"] = substrate_engagement(rows)
             run_manifest["captures"] += result["capture_count"]
             run_manifest["last_completed_sequence"] = sequence
             atomic_json(output / "run_manifest.json", run_manifest)

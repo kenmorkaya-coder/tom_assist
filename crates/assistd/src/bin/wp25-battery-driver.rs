@@ -58,7 +58,7 @@ fn import_case(
     store: &mut Store,
     input: &DriverInput,
     gateway: &GatewayClient,
-) -> Result<(usize, usize), Box<dyn std::error::Error>> {
+) -> Result<Value, Box<dyn std::error::Error>> {
     store.create_project(
         &input.project_id,
         &input.test_id,
@@ -69,6 +69,13 @@ fn import_case(
         &input.created_at,
     )?;
     let mut assistant_teaches = 0;
+    let mut assistant_turns = 0;
+    let mut canonical_load_applications = 0;
+    let mut routing_basis_8d_applications = 0;
+    let mut first_tick_before = None;
+    let mut last_tick_after = None;
+    let mut first_checkpoint_before = None;
+    let mut last_checkpoint_after = None;
     for (index, turn) in input.history.iter().enumerate() {
         if !matches!(turn.role.as_str(), "user" | "assistant") {
             return Err(format!("unsupported authored history role {}", turn.role).into());
@@ -81,6 +88,14 @@ fn import_case(
         }))?;
         let tick_before = committed["engine_tick_before"].as_u64();
         let tick_after = committed["engine_tick_after"].as_u64();
+        first_tick_before.get_or_insert(tick_before.ok_or("history receipt lacks tick-before")?);
+        last_tick_after = tick_after;
+        if first_checkpoint_before.is_none() {
+            first_checkpoint_before = committed["prior_checkpoint_digest"]
+                .as_str()
+                .map(str::to_owned);
+        }
+        last_checkpoint_after = committed["checkpoint_digest"].as_str().map(str::to_owned);
         if committed["commit_dynamics"]
             != json!([
                 "step",
@@ -95,7 +110,24 @@ fn import_case(
         {
             return Err("authored history did not traverse the real five-dynamics path".into());
         }
+        let drive = &committed["commit_drive"];
+        if drive["applied"] != true
+            || drive["plan"]["load_signature_17"]
+                .as_object()
+                .is_none_or(|values| values.len() != 17)
+        {
+            return Err("authored history did not use the canonical 17-channel application".into());
+        }
+        canonical_load_applications += 1;
+        if drive["plan"]["routing_basis_8d"]
+            .as_array()
+            .is_none_or(|values| values.len() != 8)
+        {
+            return Err("authored history did not apply the canonical 8D routing basis".into());
+        }
+        routing_basis_8d_applications += 1;
         if turn.role == "assistant" {
+            assistant_turns += 1;
             if committed["taught"] != true {
                 return Err("authored assistant history turn did not teach".into());
             }
@@ -145,7 +177,26 @@ fn import_case(
     {
         return Err("native state import did not reproduce the frozen case".into());
     }
-    Ok((input.history.len(), assistant_teaches))
+    let tick_before = first_tick_before.ok_or("authored history is empty")?;
+    let tick_after = last_tick_after.ok_or("authored history is empty")?;
+    let checkpoint_before =
+        first_checkpoint_before.ok_or("history receipt lacks prior checkpoint")?;
+    let checkpoint_after = last_checkpoint_after.ok_or("history receipt lacks checkpoint")?;
+    Ok(json!({
+        "history_turns": input.history.len(),
+        "five_dynamics_receipts": input.history.len(),
+        "assistant_turns": assistant_turns,
+        "assistant_teaches": assistant_teaches,
+        "canonical_17_channel_applications": canonical_load_applications,
+        "routing_basis_8d_applications": routing_basis_8d_applications,
+        "tick_before": tick_before,
+        "tick_after": tick_after,
+        "tick_delta": tick_after - tick_before,
+        "checkpoint_before": checkpoint_before,
+        "checkpoint_after": checkpoint_after,
+        "checkpoint_changed": checkpoint_before != checkpoint_after,
+        "provider_calls_during_import": 0,
+    }))
 }
 
 fn baseline_context(input: &DriverInput) -> Result<String, String> {
@@ -254,7 +305,7 @@ fn run() -> Result<Value, Box<dyn std::error::Error>> {
     let mut store = Store::open(&database)?;
     // This phase has no ProviderAdapter and therefore cannot generate. Only
     // after every authored turn has traversed commit do we prepare the probe.
-    let (history_commits, history_assistant_teaches) = import_case(&mut store, &input, &gateway)?;
+    let substrate_engagement = import_case(&mut store, &input, &gateway)?;
     drop(store);
     let prepared = prepare(&input, &database, &gateway)?;
     let prompt = provider_prompt(&input, &prepared.packet_text);
@@ -322,9 +373,7 @@ fn run() -> Result<Value, Box<dyn std::error::Error>> {
         },
         "gateway_protocol": health["protocol"],
         "self_report_enabled": false,
-        "history_commits": history_commits,
-        "history_assistant_teaches": history_assistant_teaches,
-        "history_import_provider_calls": 0,
+        "substrate_engagement": substrate_engagement,
         "logical_provider_calls": 1
     }))
 }

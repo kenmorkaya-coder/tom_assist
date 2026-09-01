@@ -16,6 +16,7 @@ from validation.production_runner import (
     cluster_bootstrap,
     oracle_result,
     run,
+    substrate_engagement,
 )
 
 
@@ -99,6 +100,24 @@ class ProductionRunnerContractTests(unittest.TestCase):
     def test_v3_live_path_is_blocked_until_owner_freezes_v2(self):
         with self.assertRaisesRegex(ValueError, "DRAFT-PENDING-OWNER-FREEZE"):
             run(Namespace())
+
+    def test_substrate_engagement_requires_every_native_tripwire(self):
+        telemetry = {
+            "history_turns": 4,
+            "five_dynamics_receipts": 4,
+            "canonical_17_channel_applications": 4,
+            "routing_basis_8d_applications": 4,
+            "assistant_turns": 2,
+            "assistant_teaches": 2,
+            "tick_delta": 4,
+            "checkpoint_changed": True,
+            "provider_calls_during_import": 0,
+        }
+        result = substrate_engagement([{"substrate_engagement": telemetry}])
+        self.assertTrue(result["all_rows_fully_engaged"])
+        self.assertEqual(result["rows_fully_engaged"], 1)
+        telemetry = dict(telemetry, assistant_teaches=1)
+        self.assertFalse(substrate_engagement([{"substrate_engagement": telemetry}])["all_rows_fully_engaged"])
 
 
 if __name__ == "__main__":
