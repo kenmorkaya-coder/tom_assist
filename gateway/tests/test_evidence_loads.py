@@ -551,6 +551,8 @@ def test_authoritative_gateway_binds_preview_to_commit_and_restart(tmp_path):
         tmp_path, structure_mode="authoritative", structure_provider=provider
     )
     runtime = gateway.project("evidence-load")
+    assert type(runtime.engine).__module__ == "agency.mechanics.sicd_engine"
+    assert len(runtime.engine.state.branches) == 10_000
     before = runtime.serialized_state_bytes()
     before_library = runtime.library.db.execute(
         "SELECT COUNT(*) FROM structural_commits"
@@ -572,6 +574,7 @@ def test_authoritative_gateway_binds_preview_to_commit_and_restart(tmp_path):
     )
     assert result["structural_load"]["mode"] == "authoritative"
     assert result["structural_load"]["causal_relation_count"] == 1
+    assert result["commit_drive"]["branch_count_before"] == 10_000
     assert result["commit_drive"]["plan"]["load_signature_17"] == preview["load_signature"]
     assert len(result["commit_drive"]["plan"]["driver_vec"]) == 3
     assert any(value > 0.0 for value in result["commit_drive"]["plan"]["driver_vec"])

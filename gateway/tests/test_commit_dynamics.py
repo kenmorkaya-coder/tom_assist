@@ -46,13 +46,35 @@ def test_commit_drive_is_the_pinned_17_channel_routing_application(tmp_path):
 
     signature = project_text(text)[0]
     expected = project_msr_load_to_sicd_step(signature).as_dict()
+
+    assert type(runtime.engine).__module__ == "agency.mechanics.sicd_engine"
+    assert type(runtime.engine).__name__ == "TreeGrowthEngine"
+    assert len(runtime.engine.state.branches) == 10_000
     result = runtime.commit_turn("user", text, "canonical-17d")
 
     assert result["commit_drive"]["source"] == "tom_assist_committed_exchange"
     assert result["commit_drive"]["applied"] is True
+    assert result["commit_drive"]["branch_count_before"] == 10_000
+    assert len(result["commit_drive"]["plan"]["load_signature_17"]) == 17
+    assert len(result["commit_drive"]["plan"]["routing_basis_8d"]) == 8
     assert result["commit_drive"]["plan"] == expected
     assert tuple(runtime.engine.state.last_semantic_routing_basis_8d) == tuple(expected["routing_basis_8d"])
     assert result["engine_tick_after"] == result["engine_tick_before"] + 1
+
+
+def test_missing_native_10k_lineage_fails_closed_before_reopening_project(tmp_path):
+    gateway = TomGateway(tmp_path)
+    runtime = gateway.project("legacy-tree")
+    before = runtime.serialized_state_bytes()
+    runtime._creation_metadata_path.unlink()
+
+    with pytest.raises(
+        ValueError,
+        match="verified Python msr_8d_native_10k tree lineage",
+    ):
+        TomGateway(tmp_path).project("legacy-tree")
+
+    assert runtime.serialized_state_bytes() == before
 
 
 def test_conflict_dismissal_skips_teaching_only_when_configured(tmp_path, monkeypatch):

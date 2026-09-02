@@ -239,6 +239,7 @@ class ProjectRuntime:
                 self._checkpoint_digest = self._persist_current_artifacts()
             self.creation_metadata = self._load_creation_metadata()
             self._restore_serialized_fields()
+        self._assert_native_10k_tree_lineage()
         # Legacy short anchors can be migrated losslessly. Never pretend a
         # truncated summary is the durable twin of unavailable original content.
         for record in self.rgm.state.anchors.values():
@@ -294,6 +295,32 @@ class ProjectRuntime:
             "kappa_decay_source": KAPPA_DECAY_SOURCE,
             "initial_checkpoint_digest": initial_checkpoint_digest,
         }
+
+    def _assert_native_10k_tree_lineage(self) -> None:
+        """Fail closed before any 17D projection can reach a non-native tree."""
+        expected = {
+            "seed_profile": SEED_PROFILE,
+            "seed_artifact_sha256": SEED_ARTIFACT_SHA256,
+            "seed_tick": SEED_TICK,
+            "seed_branch_count": SEED_BRANCH_COUNT,
+        }
+        mismatches = {
+            key: self.creation_metadata.get(key)
+            for key, value in expected.items()
+            if self.creation_metadata.get(key) != value
+        }
+        initial_digest = self.creation_metadata.get("initial_checkpoint_digest")
+        engine_type = type(self.engine)
+        if (
+            mismatches
+            or not isinstance(initial_digest, str)
+            or not initial_digest.startswith("sha256:")
+            or engine_type.__module__ != "agency.mechanics.sicd_engine"
+            or engine_type.__name__ != "TreeGrowthEngine"
+        ):
+            raise ValueError(
+                "17D operation requires verified Python msr_8d_native_10k tree lineage"
+            )
 
     def _load_creation_metadata(self) -> dict[str, Any]:
         if not self._creation_metadata_path.exists():
