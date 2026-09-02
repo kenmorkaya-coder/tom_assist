@@ -1148,3 +1148,39 @@ Regression evidence: the canonical commit test now proves **10,000 Python branch
 Claim boundary correction: WP-31/WP-32 calibration measured passage splitting, strict structural extraction, causal direction, history compilation, and 17D construction. It did **not** measure whole-tree reasoning efficacy merely because the resulting shape is compatible with the production tree. Production wiring and lineage are now directly guarded; efficacy remains unclaimed. No G-gate verdict is issued or implied.
 
 Protection proof: owner `tom_master` remains at **`e9fdef81c8a366ebbec07be9772189eea15cb2ac`**. Its status-output / working-diff / staged-diff SHA-256 values remain **`efd935faf8a04042f9f2c8c1e0df5cd7a8f1c98f04c5d881a90868ad156ba809`** / **`86cb4a857e782653e21d24b24b336304b42c4aaade9ea07823ba1797e8bbbdc9`** / **`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`**, unchanged from the established baseline. No upstream repository, credential, remote, frozen calibration row or golden was modified. Preview purity is unchanged.
+
+## WP-33 — Parser boundary hardening and local calibration v3 [COMPLETED; NOT READY]
+
+Authority and branch: the owner authorized the recommended next step after WP-32. Work is on `codex/wp-33-parser-calibration-v3` from native-tree guard commit **`c9f0b2c678385e0bb19ebdcb8d54388e5d1a42f2`**. The parser correction was committed first as **`9c2323d`** (`fix(wp-33): harden multivector parser boundary`). The frozen v3 corpus and scoring rules were then committed before inference as **`981f5a614a50902585828ef885a00ccc5fb6dce5`** (`test(wp-33): preregister parser calibration v3`).
+
+Implementation boundary: the local fallback can now close only still-open terminal containers, quote a bare identifier without changing its value, accept Python-style quoted strings, and retain the existing Gemma-string/key/boolean/trailing-comma repairs. Strict candidate validation still follows every repair. Valid model-supplied start/end offsets may restore only their redundant source quote. Overlapping chunks merge same-label/same-kind entities only when their evidence covers the same source occurrence (or punctuation-equivalent overlapping evidence); direction, kind, modality and negation remain exact before relation deduplication. The prompt explicitly separates `controls` from causality, keeps negated orientations in their stated kind, and requires every coordinated relationship once. Parser/analysis versions advance to 1.2; numeric 17D compiler arithmetic remains **`tom-assist-evidence-load17/1.1`** unchanged. Focused parser/evidence/history checks passed **39/39** before freeze.
+
+Pre-registration: **94 cases** were fixed—80 retained WP-32 cases plus 14 additions (4 parser-boundary, 6 multi-relation and 4 long/overlap). HD-05 has the sole declared retained amendment: deterministic persistence is exactly four matching suffix turns divided by six, so its bound is exactly **2/3** rather than the known-wrong minimum 1.0. Case digest is **`sha256:eeff2aaff7f10c62cac88ab997d3697715212565281d262c52099ca7ddcddb13`** and pre-registration digest is **`sha256:3517a20c3d0f520541ea4bd69b5870fcf180c520c964557c1b5f6e0b352c7c28`**. The nine WP-32 thresholds were retained unchanged. Pre-registration checks passed **31/31**.
+
+Local execution used exact MiniLM revision **`1110a243fdf4706b3f48f1d95db1a4f5529b4d41`** and Gemma revision **`0d77464eeb233a2da68ebf9d7dc4edaac7db956d`**, deterministic local sampling and source order. Accounting is **94 cases, 113 logical passage attempts, 123 exact local chunk-model attempts, 99 successful chunk calls, 24 fail-closed cases, 0 retries and 0 provider/OAuth calls**. Total case wall time was **1073.095446 s** (median **9.596332 s**, maximum **50.161721 s**). Feeling Wheel use remained forced off. The resource-tracker shutdown warning did not change a row or receipt.
+
+Frozen result:
+
+| Criterion | Observed | Required | Met |
+|---|---:|---:|---|
+| Strict observation rate | 0.744681 (70/94) | >=0.90 | no |
+| Minimum family observation rate | 0.400000 | >=0.75 | no |
+| End-to-end relation recall | 0.666667 (78/117) | >=0.90 | no |
+| Reversed expected relations | 0 | 0 | yes |
+| Unexpected relation rate | 0.060241 (5/83) | <=0.05 | no |
+| End-to-end signal recall | 0.708333 (17/24) | >=0.80 | no |
+| Multi-relation exact rate | 0.437500 (7/16) | >=0.80 | no |
+| History cases satisfying every bound | 1.000000 (8/8) | >=0.875 | yes |
+| Valid 17D shapes among accepted analyses | 1.000000 (70/70) | 1.00 | yes |
+
+Therefore `ready_for_shadow_review` is **false** and the parser remains inactive. Retained strict parsing regressed from **67/80 in v2 to 63/80 in v3**. The zero-generation taxonomy resolves the frozen summary's generic wrapper labels as: 17 invalid structured values, 1 malformed container type, 1 missing/extra schema field, 2 unknown relation endpoints, 1 unsupported entity kind and 2 unsupported relation vocabularies. No raw generated text was retained, so another guessed syntax repair is not justified. The overlap and history corrections worked, but ordinary paraphrases and dense coordinated structures remain too fragile.
+
+Historical freeze correction: the final regression exposed that the WP-29 verifier compared today's legitimately evolved working files with an old accepted code snapshot. Commit **`cca9eac`** (`fix(wp-33): verify historical freezes from recorded commits`) now hashes versioned sources from the freeze's recorded Git commit, while later-added immutable freeze records retain exact working-file verification. No frozen manifest, result, score or hash was changed. Focused freeze tests passed **10/10**.
+
+Evidence at `validation/runs/wp33-local-calibration-v3/` is approximately **220 KiB**. Frozen hashes: `observations.jsonl` **`f348c7b239ef3152d75cce785443f04f9c394e2cfe896c5cfe6f2345599bf746`**, `pair_metrics.jsonl` **`04121b0fe3067055dee3e7cdbe9c2bd23fedc069d8ce2613ad7545df4ee8e0f8`**, `summary.json` **`de0a971036cbbb7157051b40e16016984a9e6423cd042559aa69684d7b4fb23c`**, `REPORT.md` **`aed690e7da66c59784e2c190b55eb32bd4d240d92a824df29be4f9a522548c49`**, and `run_manifest.json` **`4e6ab844a7922872e97a56d323a1d3c59e0043bbf4f59572c5cfdabb47578862`**. Zero-generation review hashes: `DIAGNOSTIC.json` **`051a147d7f63ee94fd00a0b57844adada5af23ab9b0c2b83ac7ec70b1f0b46f5`**, `OWNER_REVIEW.md` **`8a7b35811833b06508de32c37288cff7ebb42099006a0f7fe6bf6d775b145f87`**, and `diagnostic_manifest.json` **`e67dc7453bd203c86cd0f2b0a57363ba0d9fe3f4b54c2eb88f2b13779d3bcdd0`**.
+
+Regression and housekeeping: combined gateway/validation regression passed **117/117 in 149.39 s**; schema validation reports **10 fixtures, 43 core methods, source-id/1.1: 3 valid / 5 invalid**; Python compilation and `git diff --check` pass. The exact **14 GiB** Gemma cache and **2.2 GiB** final test basetemp were deleted. Only compact evidence remains. Preview purity is unchanged and no preview calls `rgm.read_memory`, `ToMClient.process` or `engine.step`.
+
+Protection proof: owner `tom_master` remains at **`e9fdef81c8a366ebbec07be9772189eea15cb2ac`**. Its status-output / working-diff / staged-diff SHA-256 values remain **`efd935faf8a04042f9f2c8c1e0df5cd7a8f1c98f04c5d881a90868ad156ba809`** / **`86cb4a857e782653e21d24b24b336304b42c4aaade9ea07823ba1797e8bbbdc9`** / **`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`**. No upstream checkout, credential, remote, prior frozen result or golden was modified.
+
+**STOP FOR OWNER AUDIT. Do not enable shadow mode or run a v4 calibration from this result. The next robust change should replace fragile whole-passage free-form tool emission with a more constrained staged or grammar-bound extraction design before any newly pre-registered run. This is not a whole-tree efficacy result, and no G-gate verdict is issued or implied.**

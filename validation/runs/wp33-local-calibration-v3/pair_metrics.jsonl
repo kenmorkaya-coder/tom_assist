@@ -1,0 +1,5 @@
+{"case_ids":["PP-01A","PP-01B"],"pair_id":"PP-01","status":"unavailable_parser_error"}
+{"case_ids":["PP-02A","PP-02B"],"pair_id":"PP-02","status":"unavailable_parser_error"}
+{"case_ids":["PP-03A","PP-03B"],"pair_id":"PP-03","status":"unavailable_parser_error"}
+{"case_ids":["PP-04A","PP-04B"],"pair_id":"PP-04","status":"unavailable_parser_error"}
+{"case_ids":["PP-05A","PP-05B"],"directed_graph_equal":true,"left_to_right_rank":1,"load_l1_distance":0.0,"pair_id":"PP-05","right_to_left_rank":1,"semantic_similarity":{"best_chunk_score":0.9325244005601744,"best_left_chunk_index":0,"best_right_chunk_index":0,"left_coverage":0.9325244005601744,"pair_count":1,"query_relevance_score":0.9325244005601744,"right_coverage":0.9325244005601744,"symmetric_score":0.9325244005601744},"status":"observed"}
