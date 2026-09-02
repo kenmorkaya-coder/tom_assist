@@ -6,6 +6,7 @@ import pytest
 
 from validation.calibration.wp31_cases import expanded_cases as wp31_expanded_cases
 from validation.calibration.wp32_cases import expanded_cases
+from validation.calibration.wp32_diagnostics import _precise_error
 from validation.calibration.wp32_runner import (
     READINESS_THRESHOLDS,
     _history_checks,
@@ -88,3 +89,16 @@ def test_wp32_runner_has_no_provider_or_preview_mutation_surface():
     ):
         assert forbidden not in source
     assert '"provider_calls": 0' in source
+
+
+def test_wp32_posthoc_error_taxonomy_is_specific_without_generation():
+    assert _precise_error("RuntimeError: JSONDecodeError: bad") == "invalid_tool_json"
+    assert _precise_error("ValueError: entity has no exact evidence quote") == (
+        "missing_evidence_quote"
+    )
+    assert _precise_error("ValueError: unsupported entity kind: rule") == (
+        "unsupported_entity_kind"
+    )
+    assert _precise_error("ValueError: tool call has unbalanced braces") == (
+        "unbalanced_tool_call"
+    )
