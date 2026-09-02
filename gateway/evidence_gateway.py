@@ -23,16 +23,21 @@ import gateway.tom_gateway as base
 from gateway.permanent_library import content_hash
 from gateway.structural_analysis import (
     COMPILER_VERSION,
+    DISALLOWED_ZERO_KINDS,
     EMBEDDING_VERSION,
+    LOAD_EVIDENCE_POLICY,
     STRICT_POSITIVE_LOAD_POLICY,
     build_analysis,
+    evidenced_load_policy_result,
     rank_structural_history,
+    require_evidenced_load,
     require_strictly_positive_load,
+    strictly_positive_load_policy_result,
     validate_frozen_analysis,
 )
 
 
-EVIDENCE_GATEWAY_VERSION = "tom-gateway-evidence/1.1"
+EVIDENCE_GATEWAY_VERSION = "tom-gateway-evidence/1.2"
 
 
 class EvidenceProjectRuntime(base.ProjectRuntime):
@@ -65,6 +70,7 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
             checkpoint_digest,
         )
         if self.structure_mode == "authoritative":
+            require_evidenced_load(analysis)
             require_strictly_positive_load(
                 analysis["load_signature"],
                 name="authoritative 17-channel load",
@@ -154,6 +160,10 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
                 "load_signature": signature.as_dict(),
                 "structural_load_mode": self.structure_mode,
                 "structural_analysis": analysis,
+                "load_evidence_policy_result": evidenced_load_policy_result(analysis),
+                "strict_positive_load_policy_result": (
+                    strictly_positive_load_policy_result(analysis["load_signature"])
+                ),
                 "shadow_structural_retrieval": structural_rows,
                 "policy_version": base.POLICY_VERSION,
                 "checkpoint_digest": checkpoint_digest,
@@ -214,6 +224,7 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
             )
             if self.structure_mode == "authoritative":
                 from agency.mechanics.sicd_msr_load import LoadSignature
+                require_evidenced_load(analysis)
                 require_strictly_positive_load(
                     analysis["load_signature"],
                     name="authoritative 17-channel load",
@@ -356,6 +367,16 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
                         "analysis_digest": analysis["analysis_digest"],
                         "candidate_digest": analysis["candidate_digest"],
                         "load_signature": applied_signature.as_dict(),
+                        "candidate_load_signature": analysis["load_signature"],
+                        "channel_records": analysis["channel_records"],
+                        "load_evidence_policy_result": evidenced_load_policy_result(
+                            analysis
+                        ),
+                        "strict_positive_load_policy_result": (
+                            strictly_positive_load_policy_result(
+                                analysis["load_signature"]
+                            )
+                        ),
                         "orientation_count": len(analysis["candidate"]["orientations"]),
                         "causal_relation_count": len(analysis["candidate"]["causal_relations"]),
                         "history_metrics": analysis["history_metrics"],
@@ -440,6 +461,9 @@ class EvidenceTomGateway(base.TomGateway):
             **super().capabilities(),
             "structural_load_mode": self.structure_mode,
             "structural_load_compiler_version": COMPILER_VERSION,
+            "load_evidence_policy": LOAD_EVIDENCE_POLICY,
+            "authoritative_requires_all_17_channels_evidenced": True,
+            "authoritative_disallowed_zero_kinds": sorted(DISALLOWED_ZERO_KINDS),
             "strict_positive_load_policy": STRICT_POSITIVE_LOAD_POLICY,
             "authoritative_requires_all_17_channels_positive": True,
             "semantic_embedding_version": EMBEDDING_VERSION,

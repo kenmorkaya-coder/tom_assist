@@ -22,10 +22,11 @@ from gateway.semantic_chunks import (
 
 
 CANDIDATE_VERSION = "tom-assist-structural-candidate/1.0"
-ANALYSIS_VERSION = "tom-assist-structural-analysis/1.2"
-COMPILER_VERSION = "tom-assist-evidence-load17/1.1"
+ANALYSIS_VERSION = "tom-assist-structural-analysis/1.3"
+COMPILER_VERSION = "tom-assist-evidence-load17/1.2"
 SUPPORTED_COMPILER_VERSIONS = {
     "tom-assist-evidence-load17/1.0",
+    "tom-assist-evidence-load17/1.1",
     COMPILER_VERSION,
 }
 PARSER_VERSION = "gemma-native-tool-structural-candidate/1.2"
@@ -71,7 +72,60 @@ DYNAMIC_CHANNELS = (
     "volatility", "novelty", "recurrence", "decay",
 )
 CHANNELS = STATIC_CHANNELS + DYNAMIC_CHANNELS
+LOAD_EVIDENCE_POLICY = "tom-assist-evidenced-load17/1.0"
 STRICT_POSITIVE_LOAD_POLICY = "tom-assist-strict-positive-load17/1.0"
+ALLOWED_ZERO_KINDS = {
+    "absent_evidence",
+    "empty_history",
+    "no_match_in_window",
+    "no_change",
+    "streak_broken",
+    "fresh_match",
+    "rate_unchanged",
+    "exact_recurrence",
+}
+DISALLOWED_ZERO_KINDS = {"clamped_negative"}
+CHANNEL_DERIVATIONS = {
+    "S_entity": "saturate(entity_weight, 3.0)",
+    "S_dependency": "saturate(dependency_weight, 2.0)",
+    "S_topology": "saturate(topology_weight + 0.25 * entity_weight, 3.0)",
+    "L_rule": "saturate(rule_weight, 2.0)",
+    "L_contradiction": "saturate(contradiction_weight, 1.5)",
+    "L_inference": "saturate(inference_weight, 2.0)",
+    "T_sequence": "saturate(sequence_weight, 2.0)",
+    "T_memory": (
+        "clamp(1 - (1 - saturate(memory_weight, 1.5)) * "
+        "(1 - 0.65 * recurrence))"
+    ),
+    "T_future": "saturate(future_weight, 1.5)",
+    "threat_amplitude": "saturate(threat_weight, 1.5)",
+    "frequency": (
+        "near_count / bounded_history_count if bounded_history_count else 0.0"
+    ),
+    "persistence": (
+        "suffix_count / min(6, bounded_history_count) "
+        "if bounded_history_count else 0.0"
+    ),
+    "burstiness": "clamp(recent_rate - earlier_rate)",
+    "volatility": (
+        "clamp(0.65 * static_distance_from_previous + "
+        "0.35 * saturate(change_evidence, 1.5))"
+    ),
+    "novelty": "1.0 - max_similarity if bounded_history_count else 1.0",
+    "recurrence": "max_similarity if bounded_history_count else 0.0",
+    "decay": (
+        "1.0 if turns_since_match is None else "
+        "clamp(turns_since_match / HISTORY_WINDOW)"
+    ),
+}
+CHANNEL_REASON_TEMPLATES = {
+    channel: (
+        "{channel} = {value}: {derivation}; inputs={inputs}; "
+        "support_count={support_count}; confidence={confidence}; "
+        "zero_kind={zero_kind}."
+    )
+    for channel in CHANNELS
+}
 
 
 def _canonical_json(value: Any) -> bytes:
@@ -113,6 +167,23 @@ def _finite_unit(value: Any, name: str) -> float:
     return result
 
 
+def render_channel_reason(record: Mapping[str, Any]) -> str:
+    """Render display-only text from canonical record fields."""
+    channel = str(record["channel"])
+    template = CHANNEL_REASON_TEMPLATES.get(channel)
+    if template is None:
+        raise ValueError(f"unknown channel reason template: {channel}")
+    return template.format(
+        channel=channel,
+        value=_canonical_json(record["value"]).decode("utf-8"),
+        derivation=record["derivation"],
+        inputs=_canonical_json(record["inputs"]).decode("utf-8"),
+        support_count=len(record["support"]),
+        confidence=_canonical_json(record["confidence"]).decode("utf-8"),
+        zero_kind=record["zero_kind"] or "none",
+    )
+
+
 def require_strictly_positive_load(
     payload: Any,
     *,
@@ -137,6 +208,204 @@ def require_strictly_positive_load(
             f"zero_channels={zero_channels}; no synthetic floor is permitted"
         )
     return values
+
+
+def strictly_positive_load_policy_result(payload: Any) -> dict[str, Any]:
+    try:
+        require_strictly_positive_load(payload)
+        return {
+            "policy": STRICT_POSITIVE_LOAD_POLICY,
+            "passes": True,
+            "failures": [],
+        }
+    except ValueError as error:
+        return {
+            "policy": STRICT_POSITIVE_LOAD_POLICY,
+            "passes": False,
+            "failures": [str(error)],
+        }
+
+
+def _validate_record_scalar(value: Any, name: str) -> None:
+    if value is None:
+        return
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise ValueError(f"{name} must be a finite number or null")
+    if not math.isfinite(float(value)):
+        raise ValueError(f"{name} must be finite")
+
+
+def _finite_positive(value: Any, name: str) -> float:
+    _validate_record_scalar(value, name)
+    if value is None or float(value) <= 0.0:
+        raise ValueError(f"{name} must be positive")
+    return float(value)
+
+
+def _validate_support_item(value: Any, name: str) -> None:
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{name} must be an object")
+    kind = value.get("kind")
+    if kind == "span":
+        fields = {
+            "kind", "chunk", "path", "start", "end", "quote", "weight",
+            "confidence",
+        }
+        if set(value) != fields:
+            raise ValueError(f"{name} span fields mismatch")
+        if (
+            type(value["chunk"]) is not int
+            or type(value["start"]) is not int
+            or type(value["end"]) is not int
+            or value["chunk"] < 0
+            or value["start"] < 0
+            or value["end"] <= value["start"]
+            or not isinstance(value["path"], str)
+            or not value["path"]
+            or not isinstance(value["quote"], str)
+            or not value["quote"]
+        ):
+            raise ValueError(f"{name} span values are invalid")
+        _finite_positive(value["weight"], f"{name}.weight")
+        _finite_unit(value["confidence"], f"{name}.confidence")
+        return
+    if kind == "history":
+        fields = {"kind", "commit_key", "combined_similarity", "near"}
+        with_distance = fields | {"static_distance_from_previous"}
+        if frozenset(value) not in {frozenset(fields), frozenset(with_distance)}:
+            raise ValueError(f"{name} history fields mismatch")
+        if not isinstance(value["commit_key"], str) or not value["commit_key"]:
+            raise ValueError(f"{name}.commit_key is required")
+        _finite_unit(value["combined_similarity"], f"{name}.combined_similarity")
+        if type(value["near"]) is not bool:
+            raise ValueError(f"{name}.near must be boolean")
+        if "static_distance_from_previous" in value:
+            _finite_unit(
+                value["static_distance_from_previous"],
+                f"{name}.static_distance_from_previous",
+            )
+        return
+    if kind == "history_window":
+        fields = {"kind", "bounded_count", "window", "near_threshold"}
+        if set(value) != fields:
+            raise ValueError(f"{name} history_window fields mismatch")
+        if (
+            type(value["bounded_count"]) is not int
+            or type(value["window"]) is not int
+            or not 0 <= value["bounded_count"] <= value["window"]
+            or value["window"] != HISTORY_WINDOW
+        ):
+            raise ValueError(f"{name} history_window values are invalid")
+        _finite_unit(value["near_threshold"], f"{name}.near_threshold")
+        return
+    raise ValueError(f"{name}.kind is unsupported")
+
+
+def require_evidenced_load(analysis: Any) -> dict[str, float]:
+    """Validate the 17 records without weakening the separate non-zero gate."""
+    if not isinstance(analysis, Mapping):
+        raise ValueError(f"{LOAD_EVIDENCE_POLICY} failed: analysis is not an object")
+    try:
+        load = _require_object(
+            analysis.get("load_signature"), "load_signature", set(CHANNELS)
+        )
+        values = {
+            channel: _finite_unit(load[channel], f"load_signature.{channel}")
+            for channel in CHANNELS
+        }
+    except ValueError as error:
+        raise ValueError(f"{LOAD_EVIDENCE_POLICY} failed: {error}") from None
+    records = analysis.get("channel_records")
+    if not isinstance(records, list) or len(records) != len(CHANNELS):
+        raise ValueError(
+            f"{LOAD_EVIDENCE_POLICY} failed: channel_records must contain 17 items"
+        )
+    record_fields = {
+        "channel", "value", "derivation", "inputs", "support", "confidence",
+        "zero_kind", "reason",
+    }
+    failures: list[str] = []
+    for index, channel in enumerate(CHANNELS):
+        record = records[index]
+        problems: list[str] = []
+        if not isinstance(record, Mapping) or set(record) != record_fields:
+            failures.append(f"{channel}(zero_kind=unknown): record fields mismatch")
+            continue
+        if record["channel"] != channel:
+            problems.append(f"channel/order is {record['channel']!r}")
+        try:
+            value = _finite_unit(record["value"], f"channel_records[{index}].value")
+        except ValueError as error:
+            problems.append(str(error))
+            value = None
+        if value is not None and value != values[channel]:
+            problems.append("value differs from load_signature")
+        if record["derivation"] != CHANNEL_DERIVATIONS[channel]:
+            problems.append("derivation differs from fixed formula")
+        inputs = record["inputs"]
+        if not isinstance(inputs, Mapping) or not inputs:
+            problems.append("inputs must be a nonempty object")
+        else:
+            try:
+                for key, input_value in inputs.items():
+                    if not isinstance(key, str) or not key:
+                        raise ValueError("input keys must be nonempty strings")
+                    _validate_record_scalar(
+                        input_value, f"channel_records[{index}].inputs.{key}"
+                    )
+            except ValueError as error:
+                problems.append(str(error))
+        support = record["support"]
+        if not isinstance(support, list):
+            problems.append("support must be an array")
+        else:
+            try:
+                for support_index, item in enumerate(support):
+                    _validate_support_item(
+                        item, f"channel_records[{index}].support[{support_index}]"
+                    )
+            except ValueError as error:
+                problems.append(str(error))
+        try:
+            _finite_unit(record["confidence"], f"channel_records[{index}].confidence")
+        except ValueError as error:
+            problems.append(str(error))
+        zero_kind = record["zero_kind"]
+        if value is not None and value > 0.0:
+            if not support:
+                problems.append("positive value has no support")
+            if zero_kind is not None:
+                problems.append("positive value has a zero_kind")
+        elif value == 0.0:
+            if zero_kind not in ALLOWED_ZERO_KINDS | DISALLOWED_ZERO_KINDS:
+                problems.append("zero has no classified zero_kind")
+            elif zero_kind in DISALLOWED_ZERO_KINDS:
+                problems.append("zero_kind is disallowed for authoritative use")
+        try:
+            if record["reason"] != render_channel_reason(record):
+                problems.append("reason does not replay exactly")
+        except (KeyError, TypeError, ValueError) as error:
+            problems.append(f"reason cannot render: {error}")
+        if problems:
+            failures.append(
+                f"{channel}(zero_kind={zero_kind or 'none'}): "
+                + "; ".join(problems)
+            )
+    if failures:
+        raise ValueError(f"{LOAD_EVIDENCE_POLICY} failed: " + " | ".join(failures))
+    return values
+
+
+def evidenced_load_policy_result(analysis: Any) -> dict[str, Any]:
+    try:
+        require_evidenced_load(analysis)
+        return {"policy": LOAD_EVIDENCE_POLICY, "passes": True, "failures": []}
+    except ValueError as error:
+        return {
+            "policy": LOAD_EVIDENCE_POLICY,
+            "passes": False,
+            "failures": [str(error)],
+        }
 
 
 def _validate_span(value: Any, text: str, name: str) -> dict[str, Any]:
@@ -855,6 +1124,41 @@ def _weights(rows: Sequence[Mapping[str, Any]]) -> float:
     return sum(float(row["confidence"]) for row in rows)
 
 
+def _span_supports(
+    chunk_index: int,
+    *groups: tuple[Sequence[tuple[Mapping[str, Any], str]], float],
+) -> list[dict[str, Any]]:
+    """Build deterministic support items and aggregate overlapping contributions."""
+    combined: dict[tuple[Any, ...], dict[str, Any]] = {}
+    for rows, multiplier in groups:
+        for row, path in rows:
+            evidence = row["evidence"]
+            confidence = float(row["confidence"])
+            weight = confidence * float(multiplier)
+            if weight <= 0.0:
+                continue
+            key = (
+                int(chunk_index), path, int(evidence["start"]), int(evidence["end"]),
+                str(evidence["quote"]),
+            )
+            if key not in combined:
+                combined[key] = {
+                    "kind": "span",
+                    "chunk": key[0],
+                    "path": key[1],
+                    "start": key[2],
+                    "end": key[3],
+                    "quote": key[4],
+                    "weight": 0.0,
+                    "confidence": confidence,
+                }
+            combined[key]["weight"] += weight
+            combined[key]["confidence"] = max(
+                combined[key]["confidence"], confidence
+            )
+    return [combined[key] for key in sorted(combined)]
+
+
 def _entity_labels(candidate: Mapping[str, Any]) -> dict[str, str]:
     return {
         row["id"]: re.sub(r"[^a-z0-9]+", " ", row["label"].casefold()).strip()
@@ -908,31 +1212,80 @@ def rank_structural_history(
     return sorted(rows, key=lambda row: (-row["combined_score"], row["record_id"]))
 
 
-def _static_load(candidate: Mapping[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
+def _static_load(
+    candidate: Mapping[str, Any], chunk_index: int
+) -> tuple[dict[str, float], dict[str, Any], dict[str, list[dict[str, Any]]]]:
     entities = candidate["entities"]
     orientations = candidate["orientations"]
     causal = candidate["causal_relations"]
     signals = candidate["signals"]
-    dependency_rows = [
-        row for row in orientations
+    entity_indexed = [
+        (row, f"entities[{index}].evidence")
+        for index, row in enumerate(entities)
+    ]
+    orientation_indexed = [
+        (row, f"orientations[{index}].evidence")
+        for index, row in enumerate(orientations)
+    ]
+    causal_indexed = [
+        (row, f"causal_relations[{index}].evidence")
+        for index, row in enumerate(causal)
+    ]
+    signal_indexed = {
+        name: [
+            (row, f"signals.{name}[{index}].evidence")
+            for index, row in enumerate(signals[name])
+        ]
+        for name in SIGNAL_NAMES
+    }
+    dependency_indexed = [
+        (row, path) for row, path in orientation_indexed
         if row["kind"] in {"depends_on", "controls", "contains", "owns"} and not row["negated"]
     ]
-    directional_rows = [row for row in orientations if not row["negated"]]
-    active_causal = [row for row in causal if not row["negated"]]
-    rule_orientation = [row for row in orientations if row["kind"] == "depends_on"]
-    negative_orientation = [
-        row for row in orientations
+    directional_indexed = [
+        (row, path) for row, path in orientation_indexed if not row["negated"]
+    ]
+    active_causal_indexed = [
+        (row, path) for row, path in causal_indexed if not row["negated"]
+    ]
+    rule_orientation_indexed = [
+        (row, path) for row, path in orientation_indexed
+        if row["kind"] == "depends_on"
+    ]
+    negative_orientation_indexed = [
+        (row, path) for row, path in orientation_indexed
         if row["kind"] in {"opposes", "supersedes"} or row["polarity"] == "negative"
     ]
-    temporal_orientation = [
-        row for row in orientations if row["kind"] in {"precedes", "follows", "supersedes"}
+    temporal_orientation_indexed = [
+        (row, path) for row, path in orientation_indexed
+        if row["kind"] in {"precedes", "follows", "supersedes"}
     ]
-    hypothetical = [
-        row for row in [*orientations, *causal]
+    hypothetical_indexed = [
+        (row, path) for row, path in [*orientation_indexed, *causal_indexed]
         if row["modality"] in {"tentative", "hypothetical", "questioned"}
     ]
-    constraint_entities = [row for row in entities if row["kind"] == "constraint"]
-    outcome_entities = [row for row in entities if row["kind"] in {"outcome", "state"}]
+    constraint_indexed = [
+        (row, path) for row, path in entity_indexed if row["kind"] == "constraint"
+    ]
+    outcome_indexed = [
+        (row, path) for row, path in entity_indexed
+        if row["kind"] in {"outcome", "state"}
+    ]
+    inferred_causal_indexed = [
+        (row, path) for row, path in causal_indexed
+        if row["modality"] == "inferred"
+    ]
+
+    dependency_rows = [row for row, _ in dependency_indexed]
+    directional_rows = [row for row, _ in directional_indexed]
+    active_causal = [row for row, _ in active_causal_indexed]
+    rule_orientation = [row for row, _ in rule_orientation_indexed]
+    negative_orientation = [row for row, _ in negative_orientation_indexed]
+    temporal_orientation = [row for row, _ in temporal_orientation_indexed]
+    hypothetical = [row for row, _ in hypothetical_indexed]
+    constraint_entities = [row for row, _ in constraint_indexed]
+    outcome_entities = [row for row, _ in outcome_indexed]
+    inferred_causal = [row for row, _ in inferred_causal_indexed]
 
     entity_weight = _weights(entities)
     dependency_weight = _weights(dependency_rows) + _weights(active_causal)
@@ -944,7 +1297,7 @@ def _static_load(candidate: Mapping[str, Any]) -> tuple[dict[str, float], dict[s
     )
     inference_weight = (
         _weights(signals["inferences"])
-        + _weights([row for row in causal if row["modality"] == "inferred"])
+        + _weights(inferred_causal)
         + 0.35 * _weights(active_causal)
     )
     sequence_weight = _weights(signals["sequences"]) + _weights(temporal_orientation) + 0.5 * _weights(active_causal)
@@ -969,7 +1322,54 @@ def _static_load(candidate: Mapping[str, Any]) -> tuple[dict[str, float], dict[s
         "future_weight": future_weight,
         "directed_graph": directed_graph_fingerprint(candidate),
     }
-    return values, evidence
+    supports = {
+        "S_entity": _span_supports(chunk_index, (entity_indexed, 1.0)),
+        "S_dependency": _span_supports(
+            chunk_index, (dependency_indexed, 1.0), (active_causal_indexed, 1.0)
+        ),
+        "S_topology": _span_supports(
+            chunk_index,
+            (directional_indexed, 1.0),
+            (active_causal_indexed, 1.0),
+            (entity_indexed, 0.25),
+        ),
+        "L_rule": _span_supports(
+            chunk_index,
+            (signal_indexed["rules"], 1.0),
+            (constraint_indexed, 1.0),
+            (rule_orientation_indexed, 0.5),
+        ),
+        "L_contradiction": _span_supports(
+            chunk_index,
+            (signal_indexed["contradictions"], 1.0),
+            (signal_indexed["rejections"], 1.0),
+            (negative_orientation_indexed, 0.7),
+        ),
+        "L_inference": _span_supports(
+            chunk_index,
+            (signal_indexed["inferences"], 1.0),
+            (inferred_causal_indexed, 1.0),
+            (active_causal_indexed, 0.35),
+        ),
+        "T_sequence": _span_supports(
+            chunk_index,
+            (signal_indexed["sequences"], 1.0),
+            (temporal_orientation_indexed, 1.0),
+            (active_causal_indexed, 0.5),
+        ),
+        "T_memory": _span_supports(
+            chunk_index,
+            (signal_indexed["memory_references"], 1.0),
+            (signal_indexed["completions"], 0.4),
+        ),
+        "T_future": _span_supports(
+            chunk_index,
+            (signal_indexed["future_references"], 1.0),
+            (hypothetical_indexed, 0.5),
+            (outcome_indexed, 0.25),
+        ),
+    }
+    return values, evidence, supports
 
 
 def compile_load(
@@ -981,10 +1381,14 @@ def compile_load(
     """Compile validated evidence and committed history into canonical channels."""
     per_chunk_static = []
     per_chunk_evidence = []
+    per_chunk_supports = []
     for item in chunk_candidates:
-        values, evidence = _static_load(item["candidate"])
+        values, evidence, supports = _static_load(
+            item["candidate"], int(item["chunk_index"])
+        )
         per_chunk_static.append(values)
         per_chunk_evidence.append(evidence)
+        per_chunk_supports.append(supports)
     if not per_chunk_static:
         raise ValueError("structural analysis has no chunk candidates")
     # Neutral extra passage chunks cannot inflate a channel. Each channel
@@ -992,6 +1396,17 @@ def compile_load(
     static = {
         name: max(row[name] for row in per_chunk_static)
         for name in STATIC_CHANNELS
+    }
+    static_winners = {
+        name: next(
+            index for index, row in enumerate(per_chunk_static)
+            if row[name] == static[name]
+        )
+        for name in STATIC_CHANNELS
+    }
+    selected_chunk_ids = {
+        name: int(chunk_candidates[index]["chunk_index"])
+        for name, index in static_winners.items()
     }
     channel_evidence = {
         "aggregation": "per_channel_max_across_bounded_chunks",
@@ -1015,6 +1430,7 @@ def compile_load(
     combined = [0.8 * semantic + 0.2 * graph for semantic, graph in zip(similarities, graph_scores)]
     max_similarity = max(combined, default=0.0)
     near = [value >= NEAR_SEMANTIC_THRESHOLD for value in combined]
+    near_count = sum(near)
     frequency = sum(near) / len(near) if near else 0.0
     suffix = 0
     for matched in reversed(near):
@@ -1026,7 +1442,8 @@ def compile_load(
     earlier = near[:-4]
     recent_rate = sum(recent) / len(recent) if recent else 0.0
     earlier_rate = sum(earlier) / len(earlier) if earlier else 0.0
-    burstiness = _clamp(recent_rate - earlier_rate)
+    signed_rate_change = recent_rate - earlier_rate
+    burstiness = _clamp(signed_rate_change)
     turns_since_match = None
     for offset, matched in enumerate(reversed(near)):
         if matched:
@@ -1045,29 +1462,73 @@ def compile_load(
         ) / math.sqrt(len(STATIC_CHANNELS))
     else:
         distance = 0.0
-    change_evidence = max(
-        _weights(item["candidate"]["signals"]["contradictions"])
-        + _weights(item["candidate"]["signals"]["rejections"])
-        + _weights([
-            row for row in item["candidate"]["orientations"]
+    change_rows: list[tuple[float, list[dict[str, Any]]]] = []
+    threat_rows: list[tuple[float, list[dict[str, Any]]]] = []
+    for item in chunk_candidates:
+        chunk_index = int(item["chunk_index"])
+        local = item["candidate"]
+        contradictions = [
+            (row, f"signals.contradictions[{index}].evidence")
+            for index, row in enumerate(local["signals"]["contradictions"])
+        ]
+        rejections = [
+            (row, f"signals.rejections[{index}].evidence")
+            for index, row in enumerate(local["signals"]["rejections"])
+        ]
+        supersedes = [
+            (row, f"orientations[{index}].evidence")
+            for index, row in enumerate(local["orientations"])
             if row["kind"] == "supersedes"
-        ])
-        for item in chunk_candidates
-    )
-    volatility = _clamp(0.65 * distance + 0.35 * _saturate(change_evidence, 1.5))
-    threat_weight = max(
-        _weights(item["candidate"]["signals"]["contradictions"])
-        + _weights(item["candidate"]["signals"]["rejections"])
-        + 0.6 * _weights([
-            row for row in item["candidate"]["orientations"]
+        ]
+        negative_orientations = [
+            (row, f"orientations[{index}].evidence")
+            for index, row in enumerate(local["orientations"])
             if row["kind"] in {"opposes", "supersedes"}
             or row["polarity"] == "negative"
-        ])
-        + 0.7 * _weights([
-            row for row in item["candidate"]["causal_relations"]
+        ]
+        prevents = [
+            (row, f"causal_relations[{index}].evidence")
+            for index, row in enumerate(local["causal_relations"])
             if row["kind"] == "prevents" and not row["negated"]
-        ])
-        for item in chunk_candidates
+        ]
+        change_total = (
+            _weights([row for row, _ in contradictions])
+            + _weights([row for row, _ in rejections])
+            + _weights([row for row, _ in supersedes])
+        )
+        change_rows.append((
+            change_total,
+            _span_supports(
+                chunk_index,
+                (contradictions, 1.0),
+                (rejections, 1.0),
+                (supersedes, 1.0),
+            ),
+        ))
+        threat_total = (
+            _weights([row for row, _ in contradictions])
+            + _weights([row for row, _ in rejections])
+            + 0.6 * _weights([row for row, _ in negative_orientations])
+            + 0.7 * _weights([row for row, _ in prevents])
+        )
+        threat_rows.append((
+            threat_total,
+            _span_supports(
+                chunk_index,
+                (contradictions, 1.0),
+                (rejections, 1.0),
+                (negative_orientations, 0.6),
+                (prevents, 0.7),
+            ),
+        ))
+    change_evidence = max(row[0] for row in change_rows)
+    change_winner = next(
+        index for index, row in enumerate(change_rows) if row[0] == change_evidence
+    )
+    volatility = _clamp(0.65 * distance + 0.35 * _saturate(change_evidence, 1.5))
+    threat_weight = max(row[0] for row in threat_rows)
+    threat_winner = next(
+        index for index, row in enumerate(threat_rows) if row[0] == threat_weight
     )
     threat = _saturate(threat_weight, 1.5)
 
@@ -1085,18 +1546,209 @@ def compile_load(
         "recurrence": recurrence,
         "decay": decay,
     }
+    load = {name: 0.0 if value == 0.0 else value for name, value in load.items()}
     if set(load) != set(CHANNELS) or not all(math.isfinite(value) and 0.0 <= value <= 1.0 for value in load.values()):
         raise ValueError("compiler produced an invalid 17-channel load")
+
+    history_support = []
+    for index, (row, score, matched) in enumerate(zip(bounded_history, combined, near)):
+        commit_key = row.get("commit_key") or row.get("record_id")
+        if not isinstance(commit_key, str) or not commit_key:
+            raise ValueError(
+                f"committed structural history item {index} lacks commit_key"
+            )
+        history_support.append({
+            "kind": "history",
+            "commit_key": commit_key,
+            "combined_similarity": float(score),
+            "near": bool(matched),
+        })
+    history_window_support = {
+        "kind": "history_window",
+        "bounded_count": len(bounded_history),
+        "window": HISTORY_WINDOW,
+        "near_threshold": NEAR_SEMANTIC_THRESHOLD,
+    }
+    dynamic_support = [*history_support, history_window_support]
+    volatility_support = [history_window_support]
+    if history_support:
+        previous_support = dict(history_support[-1])
+        previous_support["static_distance_from_previous"] = float(distance)
+        volatility_support.insert(0, previous_support)
+    volatility_support.extend(change_rows[change_winner][1])
+
+    static_support = {
+        name: list(per_chunk_supports[static_winners[name]][name])
+        for name in STATIC_CHANNELS
+    }
+    simple_static_inputs = {
+        "S_entity": ("entity_weight", 3.0),
+        "S_dependency": ("dependency_weight", 2.0),
+        "L_rule": ("rule_weight", 2.0),
+        "L_contradiction": ("contradiction_weight", 1.5),
+        "L_inference": ("inference_weight", 2.0),
+        "T_sequence": ("sequence_weight", 2.0),
+        "T_future": ("future_weight", 1.5),
+    }
+    channel_inputs: dict[str, dict[str, Any]] = {}
+    for channel, (weight_name, scale) in simple_static_inputs.items():
+        winner = static_winners[channel]
+        channel_inputs[channel] = {
+            weight_name: per_chunk_evidence[winner][weight_name],
+            "scale": scale,
+            "selected_chunk": selected_chunk_ids[channel],
+        }
+    topology_winner = static_winners["S_topology"]
+    channel_inputs["S_topology"] = {
+        "topology_weight": per_chunk_evidence[topology_winner]["topology_weight"],
+        "entity_weight": per_chunk_evidence[topology_winner]["entity_weight"],
+        "entity_multiplier": 0.25,
+        "scale": 3.0,
+        "selected_chunk": selected_chunk_ids["S_topology"],
+    }
+    memory_winner = static_winners["T_memory"]
+    channel_inputs["T_memory"] = {
+        "memory_weight": per_chunk_evidence[memory_winner]["memory_weight"],
+        "static_value": per_chunk_static[memory_winner]["T_memory"],
+        "recurrence": recurrence,
+        "recurrence_multiplier": 0.65,
+        "selected_chunk": selected_chunk_ids["T_memory"],
+    }
+    channel_inputs.update({
+        "threat_amplitude": {
+            "threat_weight": threat_weight,
+            "scale": 1.5,
+            "selected_chunk": int(chunk_candidates[threat_winner]["chunk_index"]),
+        },
+        "frequency": {
+            "near_count": near_count,
+            "bounded_history_count": len(bounded_history),
+        },
+        "persistence": {
+            "suffix_count": suffix,
+            "denominator": min(6, len(near)),
+            "near_count": near_count,
+            "bounded_history_count": len(bounded_history),
+        },
+        "burstiness": {
+            "recent_rate": recent_rate,
+            "earlier_rate": earlier_rate,
+            "signed_rate_change": signed_rate_change,
+            "bounded_history_count": len(bounded_history),
+        },
+        "volatility": {
+            "static_distance_from_previous": distance,
+            "change_evidence": change_evidence,
+            "saturated_change_evidence": _saturate(change_evidence, 1.5),
+            "distance_multiplier": 0.65,
+            "change_multiplier": 0.35,
+            "bounded_history_count": len(bounded_history),
+        },
+        "novelty": {
+            "max_similarity": max_similarity,
+            "bounded_history_count": len(bounded_history),
+        },
+        "recurrence": {
+            "max_similarity": max_similarity,
+            "bounded_history_count": len(bounded_history),
+        },
+        "decay": {
+            "turns_since_match": turns_since_match,
+            "history_window": HISTORY_WINDOW,
+            "bounded_history_count": len(bounded_history),
+        },
+    })
+    channel_support = {
+        **static_support,
+        "T_memory": [*static_support["T_memory"], *dynamic_support],
+        "threat_amplitude": list(threat_rows[threat_winner][1]),
+        "frequency": list(dynamic_support),
+        "persistence": list(dynamic_support),
+        "burstiness": list(dynamic_support),
+        "volatility": volatility_support,
+        "novelty": list(dynamic_support),
+        "recurrence": list(dynamic_support),
+        "decay": list(dynamic_support),
+    }
+
+    def classify_zero(channel: str) -> str | None:
+        if load[channel] > 0.0:
+            return None
+        if channel in STATIC_CHANNELS or channel == "threat_amplitude":
+            return "absent_evidence"
+        if channel == "frequency":
+            if not bounded_history:
+                return "empty_history"
+            if near_count == 0:
+                return "no_match_in_window"
+        elif channel == "persistence":
+            if not bounded_history:
+                return "empty_history"
+            if near_count == 0:
+                return "no_match_in_window"
+            if suffix == 0:
+                return "streak_broken"
+        elif channel == "burstiness":
+            if not bounded_history:
+                return "empty_history"
+            if signed_rate_change < 0.0:
+                return "clamped_negative"
+            if signed_rate_change == 0.0:
+                return "rate_unchanged"
+        elif channel == "volatility":
+            if not bounded_history and change_evidence == 0.0:
+                return "empty_history"
+            if bounded_history and distance == 0.0 and change_evidence == 0.0:
+                return "no_change"
+        elif channel == "novelty" and max_similarity == 1.0:
+            return "exact_recurrence"
+        elif channel == "recurrence":
+            if not bounded_history:
+                return "empty_history"
+            if max_similarity == 0.0:
+                return "no_match_in_window"
+        elif channel == "decay" and turns_since_match == 0:
+            return "fresh_match"
+        raise ValueError(f"compiler produced an unclassified zero for {channel}")
+
+    candidate_confidence = float(candidate["confidence"])
+    channel_records = []
+    for channel in CHANNELS:
+        support = channel_support[channel]
+        if channel in STATIC_CHANNELS or channel == "threat_amplitude":
+            span_confidences = [
+                item["confidence"] for item in support if item["kind"] == "span"
+            ]
+            confidence = (
+                max(span_confidences) if span_confidences else candidate_confidence
+            )
+        else:
+            confidence = 1.0 if not bounded_history else candidate_confidence
+        record = {
+            "channel": channel,
+            "value": float(load[channel]),
+            "derivation": CHANNEL_DERIVATIONS[channel],
+            "inputs": channel_inputs[channel],
+            "support": support,
+            "confidence": float(confidence),
+            "zero_kind": classify_zero(channel),
+        }
+        record["reason"] = render_channel_reason(record)
+        channel_records.append(record)
     return {
         "load_signature": {name: float(load[name]) for name in CHANNELS},
         "static_load": {name: float(static[name]) for name in STATIC_CHANNELS},
+        "channel_records": channel_records,
         "channel_evidence": channel_evidence,
         "history_metrics": {
             "history_count": len(history), "bounded_history_count": len(bounded_history),
             "semantic_similarities": similarities, "directed_graph_similarities": graph_scores,
             "semantic_chunk_matches": semantic_matches,
             "combined_similarities": combined, "near_threshold": NEAR_SEMANTIC_THRESHOLD,
-            "near_count": sum(near), "turns_since_near_match": turns_since_match,
+            "near_count": near_count, "turns_since_near_match": turns_since_match,
+            "recent_rate": recent_rate, "earlier_rate": earlier_rate,
+            "signed_rate_change": signed_rate_change,
+            "change_evidence": change_evidence,
             "static_distance_from_previous": distance,
         },
     }
@@ -1138,8 +1790,8 @@ def validate_frozen_analysis(
     fields = {
         "analysis_version", "compiler_version", "source_text_sha256",
         "prior_checkpoint_digest", "candidate_digest", "candidate", "chunk_candidates",
-        "parser_model", "semantic_profile", "load_signature", "static_load", "channel_evidence",
-        "history_metrics", "analysis_digest",
+        "parser_model", "semantic_profile", "load_signature", "static_load",
+        "channel_records", "channel_evidence", "history_metrics", "analysis_digest",
     }
     row = _require_object(payload, "structural_analysis", fields)
     if row["analysis_version"] != ANALYSIS_VERSION or row["compiler_version"] != COMPILER_VERSION:

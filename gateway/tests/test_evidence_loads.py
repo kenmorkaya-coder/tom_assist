@@ -8,7 +8,12 @@ import sqlite3
 import pytest
 
 from gateway.structural_analysis import (
+    ALLOWED_ZERO_KINDS,
     CANDIDATE_VERSION,
+    CHANNELS,
+    CHANNEL_DERIVATIONS,
+    DISALLOWED_ZERO_KINDS,
+    LOAD_EVIDENCE_POLICY,
     PARSER_VERSION,
     bind_candidate_metadata,
     build_analysis,
@@ -17,8 +22,11 @@ from gateway.structural_analysis import (
     candidate_tool_schema,
     directed_graph_fingerprint,
     directed_graph_similarity,
+    evidenced_load_policy_result,
     rank_structural_history,
     project_candidate_fields,
+    render_channel_reason,
+    require_evidenced_load,
     require_strictly_positive_load,
     text_digest,
     validate_candidate,
@@ -33,6 +41,76 @@ from gateway.semantic_chunks import (
 from gateway.evidence_gateway import EvidenceProjectRuntime, EvidenceTomGateway as TomGateway
 from gateway.runtime_archive import export_snapshot, validate_snapshot
 from gateway.structure_provider import isolated_worker_environment
+
+
+_STATIC_ZERO_KINDS = {
+    "S_entity": None,
+    "S_dependency": None,
+    "S_topology": None,
+    "L_rule": "absent_evidence",
+    "L_contradiction": "absent_evidence",
+    "L_inference": None,
+    "T_sequence": None,
+    "T_memory": "absent_evidence",
+    "T_future": None,
+    "threat_amplitude": "absent_evidence",
+}
+EXPECTED_ZERO_KINDS = {
+    "case_1_first": {
+        **_STATIC_ZERO_KINDS,
+        "frequency": "empty_history",
+        "persistence": "empty_history",
+        "burstiness": "empty_history",
+        "volatility": "empty_history",
+        "novelty": None,
+        "recurrence": "empty_history",
+        "decay": None,
+    },
+    "case_2_repeat": {
+        **_STATIC_ZERO_KINDS,
+        "T_memory": None,
+        "frequency": None,
+        "persistence": None,
+        "burstiness": None,
+        "volatility": "no_change",
+        "novelty": "exact_recurrence",
+        "recurrence": None,
+        "decay": "fresh_match",
+    },
+    "case_3_reversal": {
+        **_STATIC_ZERO_KINDS,
+        "frequency": "no_match_in_window",
+        "persistence": "no_match_in_window",
+        "burstiness": "rate_unchanged",
+        # Existing arithmetic stores recurrence-blended T_memory in static_load.
+        "volatility": None,
+        "novelty": None,
+        "recurrence": "no_match_in_window",
+        "decay": None,
+    },
+    "case_4_return": {
+        **_STATIC_ZERO_KINDS,
+        "T_memory": None,
+        "frequency": None,
+        "persistence": "streak_broken",
+        "burstiness": None,
+        "volatility": "no_change",
+        "novelty": "exact_recurrence",
+        "recurrence": None,
+        "decay": None,
+    },
+    "case_5_declining": {
+        **_STATIC_ZERO_KINDS,
+        "T_memory": None,
+        "frequency": None,
+        "persistence": "streak_broken",
+        "burstiness": "clamped_negative",
+        "volatility": "no_change",
+        "novelty": "exact_recurrence",
+        "recurrence": None,
+        "decay": None,
+    },
+}
 
 
 def _span(text: str, quote: str, occurrence: int = 0):
@@ -141,6 +219,35 @@ def _parser():
         "version": PARSER_VERSION,
         "model": "local/gemma-fixture",
         "revision": "fixture-revision",
+    }
+
+
+def _analysis(text: str, axis: int, history, checkpoint: str):
+    cause, effect = ("B", "A") if text == "B causes A." else ("A", "B")
+    return build_analysis(
+        text,
+        _chunk_candidates(_candidate(text, cause=cause, effect=effect)),
+        _profile(text, axis),
+        _parser(),
+        history,
+        checkpoint,
+    )
+
+
+def _history_item(record_id: str, analysis):
+    return {
+        "record_id": record_id,
+        "commit_key": record_id,
+        "candidate": analysis["candidate"],
+        "semantic_profile": analysis["semantic_profile"],
+        "static_load": analysis["static_load"],
+    }
+
+
+def _zero_kind_table(analysis):
+    return {
+        record["channel"]: record["zero_kind"]
+        for record in analysis["channel_records"]
     }
 
 
@@ -502,6 +609,104 @@ def test_tool_schema_leaves_trusted_metadata_and_empty_signal_keys_to_product():
     assert "required" not in parameters["properties"]["signals"]
 
 
+def test_channel_record_shape_identity_support_and_reason_replay():
+    analysis = _analysis("A causes B.", 0, [], "checkpoint-record-shape")
+    records = analysis["channel_records"]
+    assert len(records) == 17
+    assert [record["channel"] for record in records] == list(CHANNELS)
+    for record in records:
+        channel = record["channel"]
+        assert record["value"] == analysis["load_signature"][channel]
+        assert record["derivation"] == CHANNEL_DERIVATIONS[channel]
+        assert record["reason"] == render_channel_reason(record)
+        assert 0.0 <= record["confidence"] <= 1.0
+        if record["value"] > 0.0:
+            assert record["support"]
+            assert record["zero_kind"] is None
+        else:
+            assert record["zero_kind"] in (
+                ALLOWED_ZERO_KINDS | DISALLOWED_ZERO_KINDS
+            )
+    assert require_evidenced_load(analysis) == analysis["load_signature"]
+
+
+def test_five_predeclared_zero_kind_sequences_and_history_arithmetic():
+    forward_1 = _analysis("A causes B.", 0, [], "case-1")
+    history_a = [_history_item("turn-a1", forward_1)]
+    forward_2 = _analysis("A causes B.", 0, history_a, "case-2")
+    history_aa = [*history_a, _history_item("turn-a2", forward_2)]
+    reversal = _analysis("B causes A.", 1, history_aa, "case-3")
+
+    reverse_first = _analysis("B causes A.", 1, [], "case-4-reverse")
+    history_ab = [
+        _history_item("turn-a", forward_1),
+        _history_item("turn-b", reverse_first),
+    ]
+    returned = _analysis("A causes B.", 0, history_ab, "case-4")
+
+    declining_history = [
+        _history_item("turn-a1", forward_1),
+        _history_item("turn-a2", forward_2),
+        *[
+            _history_item(f"turn-b{index}", reverse_first)
+            for index in range(1, 5)
+        ],
+    ]
+    declining = _analysis("A causes B.", 0, declining_history, "case-5")
+
+    cases = {
+        "case_1_first": forward_1,
+        "case_2_repeat": forward_2,
+        "case_3_reversal": reversal,
+        "case_4_return": returned,
+        "case_5_declining": declining,
+    }
+    assert all(set(table) == set(CHANNELS) for table in EXPECTED_ZERO_KINDS.values())
+    for name, analysis in cases.items():
+        assert _zero_kind_table(analysis) == EXPECTED_ZERO_KINDS[name]
+
+    assert reversal["history_metrics"]["combined_similarities"] == [0.0, 0.0]
+    assert reversal["history_metrics"]["near_count"] == 0
+    assert reversal["load_signature"]["recurrence"] == 0.0
+    assert reversal["history_metrics"]["static_distance_from_previous"] > 0.0
+    assert returned["history_metrics"]["combined_similarities"] == [1.0, 0.0]
+    assert returned["load_signature"]["frequency"] == 0.5
+    assert declining["history_metrics"]["recent_rate"] == 0.0
+    assert declining["history_metrics"]["earlier_rate"] == 1.0
+    assert declining["history_metrics"]["signed_rate_change"] == -1.0
+    assert evidenced_load_policy_result(declining)["passes"] is False
+    with pytest.raises(
+        ValueError,
+        match=rf"{LOAD_EVIDENCE_POLICY} failed:.*burstiness.*clamped_negative",
+    ):
+        require_evidenced_load(declining)
+
+
+def test_positive_volatility_lists_history_and_all_change_spans():
+    first = _analysis("A causes B.", 0, [], "volatility-0")
+    history = [_history_item("turn-a", first)]
+    text = "A prevents B."
+    changed = build_analysis(
+        text,
+        _chunk_candidates(_candidate(text, kind="prevents", contradiction=True)),
+        _profile(text, 2),
+        _parser(),
+        history,
+        "volatility-1",
+    )
+    record = next(
+        item for item in changed["channel_records"] if item["channel"] == "volatility"
+    )
+    assert record["value"] > 0.0
+    history_items = [item for item in record["support"] if item["kind"] == "history"]
+    span_items = [item for item in record["support"] if item["kind"] == "span"]
+    assert len(history_items) == 1
+    assert "static_distance_from_previous" in history_items[0]
+    assert [item["path"] for item in span_items] == [
+        "signals.contradictions[0].evidence"
+    ]
+
+
 def test_history_dynamics_are_distinct_and_replay_exactly():
     text = "A causes B."
     first = build_analysis(
@@ -532,6 +737,10 @@ def test_history_dynamics_are_distinct_and_replay_exactly():
     assert validate_frozen_analysis(repeated, text, history, "checkpoint-1") == repeated
     tampered = deepcopy(repeated)
     tampered["load_signature"]["frequency"] = 0.25
+    with pytest.raises(ValueError, match="does not replay exactly"):
+        validate_frozen_analysis(tampered, text, history, "checkpoint-1")
+    tampered = deepcopy(repeated)
+    tampered["channel_records"][0]["reason"] = "hand-edited"
     with pytest.raises(ValueError, match="does not replay exactly"):
         validate_frozen_analysis(tampered, text, history, "checkpoint-1")
 
@@ -612,6 +821,8 @@ def test_shadow_gateway_binds_preview_to_commit_and_restart(tmp_path):
         for value in preview["structural_analysis"]["load_signature"].values()
     )
     assert preview["structural_analysis"]["parser_model"] == _parser()
+    assert preview["load_evidence_policy_result"]["passes"] is True
+    assert preview["strict_positive_load_policy_result"]["passes"] is False
     result = runtime.commit_turn(
         "user", "A causes B.", "turn-1",
         activated_branch_ids=preview["activated_branch_ids"],
@@ -619,6 +830,14 @@ def test_shadow_gateway_binds_preview_to_commit_and_restart(tmp_path):
     )
     assert result["structural_load"]["mode"] == "shadow"
     assert result["structural_load"]["causal_relation_count"] == 1
+    assert result["structural_load"]["channel_records"] == (
+        preview["structural_analysis"]["channel_records"]
+    )
+    assert result["structural_load"]["candidate_load_signature"] == (
+        preview["structural_analysis"]["load_signature"]
+    )
+    assert result["structural_load"]["load_evidence_policy_result"]["passes"] is True
+    assert result["structural_load"]["strict_positive_load_policy_result"]["passes"] is False
     assert result["commit_drive"]["branch_count_before"] == 10_000
     assert result["commit_drive"]["plan"]["load_signature_17"] == preview["load_signature"]
     assert len(result["commit_drive"]["plan"]["driver_vec"]) == 3
@@ -634,6 +853,7 @@ def test_shadow_gateway_binds_preview_to_commit_and_restart(tmp_path):
             "SELECT analysis_json FROM structural_commits WHERE commit_key='turn-1'"
         ).fetchone()[0])
     assert archived == preview["structural_analysis"]
+    assert archived["channel_records"] == preview["structural_analysis"]["channel_records"]
 
     restarted = TomGateway(
         tmp_path, structure_mode="shadow", structure_provider=provider
@@ -683,6 +903,9 @@ def test_authoritative_build_rejects_zero_17d_before_tree_or_library_mutation(tm
         "tom-assist-strict-positive-load17/1.0"
     )
     assert capabilities["authoritative_requires_all_17_channels_positive"] is True
+    assert capabilities["load_evidence_policy"] == LOAD_EVIDENCE_POLICY
+    assert capabilities["authoritative_requires_all_17_channels_evidenced"] is True
+    assert capabilities["authoritative_disallowed_zero_kinds"] == ["clamped_negative"]
     runtime = gateway.project("telemetry")
     assert __import__("os").environ["TOM_FEELING_WHEEL_ENABLED"] == "0"
     before = runtime.serialized_state_bytes()
@@ -721,6 +944,82 @@ def test_authoritative_build_rejects_zero_17d_before_tree_or_library_mutation(tm
     assert runtime.library.db.execute(
         "SELECT COUNT(*) FROM structural_commits"
     ).fetchone()[0] == before_library
+
+
+def test_declining_rate_fails_evidence_then_strict_authority_but_shadow_commits(
+    tmp_path,
+):
+    provider = _Provider()
+    shadow = TomGateway(
+        tmp_path, structure_mode="shadow", structure_provider=provider
+    ).project("declining-rate")
+    sequence = [
+        "A causes B.",
+        "A causes B.",
+        "B causes A.",
+        "B causes A.",
+        "B causes A.",
+        "B causes A.",
+    ]
+    for index, text in enumerate(sequence):
+        preview = shadow.preview_rank(text, 10, 2000)
+        shadow.commit_turn(
+            "user",
+            text,
+            f"history-{index}",
+            structural_analysis=preview["structural_analysis"],
+        )
+
+    authoritative = TomGateway(
+        tmp_path, structure_mode="authoritative", structure_provider=provider
+    ).project("declining-rate")
+    before = authoritative.serialized_state_bytes()
+    before_tick = authoritative.engine.state.tick
+    before_library = authoritative.library.db.execute(
+        "SELECT COUNT(*) FROM structural_commits"
+    ).fetchone()[0]
+    with pytest.raises(
+        ValueError,
+        match=rf"{LOAD_EVIDENCE_POLICY} failed:.*burstiness.*clamped_negative",
+    ):
+        authoritative.preview_rank("A causes B.", 10, 2000)
+
+    proposed = provider.analyze("A causes B.")
+    analysis = build_analysis(
+        "A causes B.",
+        proposed["chunk_candidates"],
+        proposed["semantic_profile"],
+        proposed["parser_model"],
+        authoritative._active_structural_history(),
+        authoritative._current_checkpoint_digest(),
+    )
+    with pytest.raises(
+        ValueError,
+        match=rf"{LOAD_EVIDENCE_POLICY} failed:.*burstiness.*clamped_negative",
+    ):
+        authoritative.commit_turn(
+            "user",
+            "A causes B.",
+            "direct-declining-bypass",
+            structural_analysis=analysis,
+        )
+    assert authoritative.serialized_state_bytes() == before
+    assert authoritative.engine.state.tick == before_tick
+    assert authoritative.library.db.execute(
+        "SELECT COUNT(*) FROM structural_commits"
+    ).fetchone()[0] == before_library
+
+    preview = shadow.preview_rank("A causes B.", 10, 2000)
+    assert preview["load_evidence_policy_result"]["passes"] is False
+    assert preview["strict_positive_load_policy_result"]["passes"] is False
+    result = shadow.commit_turn(
+        "user",
+        "A causes B.",
+        "shadow-declining",
+        structural_analysis=preview["structural_analysis"],
+    )
+    assert result["structural_load"]["load_evidence_policy_result"]["passes"] is False
+    assert result["structural_load"]["strict_positive_load_policy_result"]["passes"] is False
 
 
 def test_structure_path_contains_no_emotion_lexicon_import():

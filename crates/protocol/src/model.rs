@@ -179,6 +179,12 @@ pub struct TomCapabilities {
     #[serde(default)]
     pub structural_load_compiler_version: String,
     #[serde(default)]
+    pub load_evidence_policy: String,
+    #[serde(default)]
+    pub authoritative_requires_all_17_channels_evidenced: bool,
+    #[serde(default)]
+    pub authoritative_disallowed_zero_kinds: Vec<String>,
+    #[serde(default)]
     pub strict_positive_load_policy: String,
     #[serde(default)]
     pub authoritative_requires_all_17_channels_positive: bool,
