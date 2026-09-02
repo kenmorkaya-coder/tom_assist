@@ -71,6 +71,7 @@ DYNAMIC_CHANNELS = (
     "volatility", "novelty", "recurrence", "decay",
 )
 CHANNELS = STATIC_CHANNELS + DYNAMIC_CHANNELS
+STRICT_POSITIVE_LOAD_POLICY = "tom-assist-strict-positive-load17/1.0"
 
 
 def _canonical_json(value: Any) -> bytes:
@@ -110,6 +111,32 @@ def _finite_unit(value: Any, name: str) -> float:
     if not math.isfinite(result) or not 0.0 <= result <= 1.0:
         raise ValueError(f"{name} must be finite and in [0,1]")
     return result
+
+
+def require_strictly_positive_load(
+    payload: Any,
+    *,
+    name: str = "17-channel load",
+) -> dict[str, float]:
+    """Fail closed unless every canonical load channel is finite and positive.
+
+    This is an application-safety check, not a numerical repair.  In
+    particular, it never replaces a zero with an epsilon or another inferred
+    value.  The caller receives the zero-channel names so the construction
+    policy can be corrected from evidence.
+    """
+    row = _require_object(payload, name, set(CHANNELS))
+    values = {
+        channel: _finite_unit(row[channel], f"{name}.{channel}")
+        for channel in CHANNELS
+    }
+    zero_channels = [channel for channel in CHANNELS if values[channel] == 0.0]
+    if zero_channels:
+        raise ValueError(
+            f"{name} cannot reach the 10K tree: "
+            f"zero_channels={zero_channels}; no synthetic floor is permitted"
+        )
+    return values
 
 
 def _validate_span(value: Any, text: str, name: str) -> dict[str, Any]:

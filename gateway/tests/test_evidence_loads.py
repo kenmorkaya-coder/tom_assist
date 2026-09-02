@@ -19,6 +19,7 @@ from gateway.structural_analysis import (
     directed_graph_similarity,
     rank_structural_history,
     project_candidate_fields,
+    require_strictly_positive_load,
     text_digest,
     validate_candidate,
     validate_frozen_analysis,
@@ -586,10 +587,10 @@ def test_structural_evidence_activates_dimensions_without_keyword_wheel():
     assert load["frequency"] != load["recurrence"] or load["frequency"] == 0.0
 
 
-def test_authoritative_gateway_binds_preview_to_commit_and_restart(tmp_path):
+def test_shadow_gateway_binds_preview_to_commit_and_restart(tmp_path):
     provider = _Provider()
     gateway = TomGateway(
-        tmp_path, structure_mode="authoritative", structure_provider=provider
+        tmp_path, structure_mode="shadow", structure_provider=provider
     )
     runtime = gateway.project("evidence-load")
     assert type(runtime.engine).__module__ == "agency.mechanics.sicd_engine"
@@ -605,15 +606,18 @@ def test_authoritative_gateway_binds_preview_to_commit_and_restart(tmp_path):
     assert runtime.library.db.execute(
         "SELECT COUNT(*) FROM structural_commits"
     ).fetchone()[0] == before_library
-    assert preview["structural_load_mode"] == "authoritative"
-    assert preview["structural_analysis"]["load_signature"] == preview["load_signature"]
+    assert preview["structural_load_mode"] == "shadow"
+    assert any(
+        value == 0.0
+        for value in preview["structural_analysis"]["load_signature"].values()
+    )
     assert preview["structural_analysis"]["parser_model"] == _parser()
     result = runtime.commit_turn(
         "user", "A causes B.", "turn-1",
         activated_branch_ids=preview["activated_branch_ids"],
         structural_analysis=preview["structural_analysis"],
     )
-    assert result["structural_load"]["mode"] == "authoritative"
+    assert result["structural_load"]["mode"] == "shadow"
     assert result["structural_load"]["causal_relation_count"] == 1
     assert result["commit_drive"]["branch_count_before"] == 10_000
     assert result["commit_drive"]["plan"]["load_signature_17"] == preview["load_signature"]
@@ -632,7 +636,7 @@ def test_authoritative_gateway_binds_preview_to_commit_and_restart(tmp_path):
     assert archived == preview["structural_analysis"]
 
     restarted = TomGateway(
-        tmp_path, structure_mode="authoritative", structure_provider=provider
+        tmp_path, structure_mode="shadow", structure_provider=provider
     ).project("evidence-load")
     second = restarted.preview_rank("A causes B.", 10, 2000)
     assert second["structural_analysis"]["history_metrics"]["history_count"] == 1
@@ -650,25 +654,73 @@ def test_authoritative_gateway_binds_preview_to_commit_and_restart(tmp_path):
         restarted.commit_turn("user", "A causes B.", "turn-stale", structural_analysis=stale)
 
 
-def test_canonical_commit_reports_17d_tsp_and_routing_values(tmp_path):
+def test_strict_positive_load_guard_names_zeros_and_never_invents_a_floor():
+    all_positive = {channel: 0.25 for channel in (
+        "S_entity", "S_dependency", "S_topology", "L_rule",
+        "L_contradiction", "L_inference", "T_sequence", "T_memory", "T_future",
+        "threat_amplitude", "frequency", "persistence", "burstiness",
+        "volatility", "novelty", "recurrence", "decay",
+    )}
+    assert require_strictly_positive_load(all_positive) == all_positive
+    all_positive["T_memory"] = 0.0
+    all_positive["recurrence"] = -0.0
+    with pytest.raises(
+        ValueError,
+        match=r"zero_channels=\['T_memory', 'recurrence'\].*no synthetic floor",
+    ):
+        require_strictly_positive_load(all_positive)
+    assert all_positive["T_memory"] == 0.0
+    assert all_positive["recurrence"] == 0.0
+
+
+def test_authoritative_build_rejects_zero_17d_before_tree_or_library_mutation(tmp_path):
     provider = _Provider()
-    runtime = TomGateway(
+    gateway = TomGateway(
         tmp_path, structure_mode="authoritative", structure_provider=provider
-    ).project("telemetry")
-    assert __import__("os").environ["TOM_FEELING_WHEEL_ENABLED"] == "0"
-    preview = runtime.preview_rank("A prevents B.", 10, 2000)
-    result = runtime.commit_turn(
-        "user", "A prevents B.", "turn-1",
-        activated_branch_ids=preview["activated_branch_ids"],
-        structural_analysis=preview["structural_analysis"],
     )
-    plan = result["commit_drive"]["plan"]
-    assert len(plan["load_signature_17"]) == 17
-    assert all(value > 0.0 for value in plan["driver_vec"]), "T/S/P must all be evidenced"
-    assert len(plan["semantic_target"]) == 3
-    assert len(plan["routing_basis_8d"]) == 8
-    assert plan["routing_basis_confidence"] > 0.0
-    assert plan["wind_magnitude"] > 0.0
+    capabilities = gateway.capabilities()
+    assert capabilities["strict_positive_load_policy"] == (
+        "tom-assist-strict-positive-load17/1.0"
+    )
+    assert capabilities["authoritative_requires_all_17_channels_positive"] is True
+    runtime = gateway.project("telemetry")
+    assert __import__("os").environ["TOM_FEELING_WHEEL_ENABLED"] == "0"
+    before = runtime.serialized_state_bytes()
+    before_tick = runtime.engine.state.tick
+    before_library = runtime.library.db.execute(
+        "SELECT COUNT(*) FROM structural_commits"
+    ).fetchone()[0]
+    with pytest.raises(
+        ValueError,
+        match=r"authoritative 17-channel load cannot reach the 10K tree: "
+        r"zero_channels=.*no synthetic floor",
+    ):
+        runtime.preview_rank("A prevents B.", 10, 2000)
+    proposed = provider.analyze("A prevents B.")
+    analysis = build_analysis(
+        "A prevents B.",
+        proposed["chunk_candidates"],
+        proposed["semantic_profile"],
+        proposed["parser_model"],
+        [],
+        runtime._current_checkpoint_digest(),
+    )
+    with pytest.raises(
+        ValueError,
+        match=r"authoritative 17-channel load cannot reach the 10K tree: "
+        r"zero_channels=.*no synthetic floor",
+    ):
+        runtime.commit_turn(
+            "user",
+            "A prevents B.",
+            "direct-bypass-attempt",
+            structural_analysis=analysis,
+        )
+    assert runtime.serialized_state_bytes() == before
+    assert runtime.engine.state.tick == before_tick
+    assert runtime.library.db.execute(
+        "SELECT COUNT(*) FROM structural_commits"
+    ).fetchone()[0] == before_library
 
 
 def test_structure_path_contains_no_emotion_lexicon_import():

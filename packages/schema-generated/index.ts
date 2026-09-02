@@ -102,6 +102,8 @@ export interface TomCapabilities {
   teach_on_conflict: boolean;
   structural_load_mode: "legacy" | "shadow" | "authoritative";
   structural_load_compiler_version: "tom-assist-evidence-load17/1.1";
+  strict_positive_load_policy: "tom-assist-strict-positive-load17/1.0";
+  authoritative_requires_all_17_channels_positive: true;
   semantic_embedding_version: "minilm-l6-v2/384d-multivector/2.0";
   local_gemma_candidate_required: boolean;
   model_generated_load_values: false;

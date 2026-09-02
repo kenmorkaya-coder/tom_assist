@@ -24,13 +24,15 @@ from gateway.permanent_library import content_hash
 from gateway.structural_analysis import (
     COMPILER_VERSION,
     EMBEDDING_VERSION,
+    STRICT_POSITIVE_LOAD_POLICY,
     build_analysis,
     rank_structural_history,
+    require_strictly_positive_load,
     validate_frozen_analysis,
 )
 
 
-EVIDENCE_GATEWAY_VERSION = "tom-gateway-evidence/1.0"
+EVIDENCE_GATEWAY_VERSION = "tom-gateway-evidence/1.1"
 
 
 class EvidenceProjectRuntime(base.ProjectRuntime):
@@ -54,7 +56,7 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
         if self.structure_provider is None:
             raise ValueError("local structural provider is unavailable")
         proposed = self.structure_provider.analyze(text)
-        return build_analysis(
+        analysis = build_analysis(
             text,
             proposed.get("chunk_candidates"),
             proposed.get("semantic_profile"),
@@ -62,6 +64,12 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
             self._active_structural_history(),
             checkpoint_digest,
         )
+        if self.structure_mode == "authoritative":
+            require_strictly_positive_load(
+                analysis["load_signature"],
+                name="authoritative 17-channel load",
+            )
+        return analysis
 
     def memory_diagnostics(self, after=0):
         result = super().memory_diagnostics(after)
@@ -206,6 +214,10 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
             )
             if self.structure_mode == "authoritative":
                 from agency.mechanics.sicd_msr_load import LoadSignature
+                require_strictly_positive_load(
+                    analysis["load_signature"],
+                    name="authoritative 17-channel load",
+                )
                 applied_signature = LoadSignature.from_mapping(
                     analysis["load_signature"], strict=True
                 )
@@ -428,6 +440,8 @@ class EvidenceTomGateway(base.TomGateway):
             **super().capabilities(),
             "structural_load_mode": self.structure_mode,
             "structural_load_compiler_version": COMPILER_VERSION,
+            "strict_positive_load_policy": STRICT_POSITIVE_LOAD_POLICY,
+            "authoritative_requires_all_17_channels_positive": True,
             "semantic_embedding_version": EMBEDDING_VERSION,
             "local_gemma_candidate_required": self.structure_mode != "legacy",
             "model_generated_load_values": False,
