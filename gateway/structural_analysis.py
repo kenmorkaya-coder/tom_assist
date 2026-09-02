@@ -28,7 +28,11 @@ SUPPORTED_COMPILER_VERSIONS = {
     "tom-assist-evidence-load17/1.0",
     COMPILER_VERSION,
 }
-PARSER_VERSION = "gemma-native-tool-structural-candidate/1.0"
+PARSER_VERSION = "gemma-native-tool-structural-candidate/1.1"
+SUPPORTED_PARSER_VERSIONS = {
+    "gemma-native-tool-structural-candidate/1.0",
+    PARSER_VERSION,
+}
 NEAR_SEMANTIC_THRESHOLD = 0.70
 HISTORY_WINDOW = 12
 MAX_MERGED_ENTITIES = 2048
@@ -327,6 +331,66 @@ def canonicalize_candidate_ids(payload: Any) -> Any:
     return candidate
 
 
+def project_candidate_fields(payload: Any) -> Any:
+    """Drop model-only presentation fields without changing any semantic value.
+
+    The runtime validator remains strict after this projection. Missing required
+    facts still fail, while harmless annotations such as ``source_text`` or an
+    endpoint label cannot poison an otherwise complete structured call.
+    """
+    if not isinstance(payload, Mapping):
+        return payload
+    candidate_fields = {
+        "schema_version", "source_text_sha256", "entities", "orientations",
+        "causal_relations", "signals", "unknown_fields", "confidence",
+    }
+    entity_fields = {"id", "label", "kind", "evidence", "confidence"}
+    orientation_fields = {
+        "id", "source_entity_id", "target_entity_id", "kind", "polarity",
+        "modality", "negated", "evidence", "confidence",
+    }
+    causal_fields = {
+        "id", "cause_entity_id", "effect_entity_id", "kind", "modality",
+        "negated", "evidence", "confidence",
+    }
+    fact_fields = {"evidence", "confidence"}
+    span_fields = {"start", "end", "quote"}
+
+    def project_object(value: Any, fields: set[str]) -> Any:
+        if not isinstance(value, Mapping):
+            return value
+        return {key: deepcopy(value[key]) for key in fields if key in value}
+
+    candidate = project_object(payload, candidate_fields)
+    entities = candidate.get("entities")
+    if isinstance(entities, list):
+        candidate["entities"] = [project_object(value, entity_fields) for value in entities]
+        for entity in candidate["entities"]:
+            if isinstance(entity, dict) and "evidence" in entity:
+                entity["evidence"] = project_object(entity["evidence"], span_fields)
+    for name, fields in (("orientations", orientation_fields), ("causal_relations", causal_fields)):
+        relations = candidate.get(name)
+        if isinstance(relations, list):
+            candidate[name] = [project_object(value, fields) for value in relations]
+            for relation in candidate[name]:
+                if isinstance(relation, dict) and "evidence" in relation:
+                    relation["evidence"] = project_object(relation["evidence"], span_fields)
+    signals = candidate.get("signals")
+    if isinstance(signals, Mapping):
+        candidate["signals"] = {
+            name: deepcopy(signals[name]) for name in SIGNAL_NAMES if name in signals
+        }
+        for values in candidate["signals"].values():
+            if isinstance(values, list):
+                for index, value in enumerate(values):
+                    values[index] = project_object(value, fact_fields)
+                    if isinstance(values[index], dict) and "evidence" in values[index]:
+                        values[index]["evidence"] = project_object(
+                            values[index]["evidence"], span_fields
+                        )
+    return candidate
+
+
 def bind_candidate_metadata(payload: Any, source_text: str) -> Any:
     """Bind trusted envelope metadata and empty containers, never facts."""
     if not isinstance(payload, Mapping):
@@ -344,12 +408,37 @@ def bind_candidate_metadata(payload: Any, source_text: str) -> Any:
 
 
 def canonicalize_candidate_spans(payload: Any, source_text: str) -> Any:
-    """Repair only uniquely locatable model quotes; never infer missing text."""
+    """Bind model evidence to exact source spans without inventing a fact.
+
+    A valid model offset wins. Otherwise an exact quote may be rebound to its
+    sole occurrence, the unique occurrence nearest the model's proposed start,
+    or the sole occurrence inside a relation span that references the entity.
+    An entity with a missing quote may use its own label only when that label is
+    present in the source. Ties and absent text continue to fail closed.
+    """
     if not isinstance(payload, Mapping):
         return payload
     candidate = deepcopy(dict(payload))
 
-    def bind(span: Any, name: str) -> None:
+    def locations_for(quote: str) -> list[tuple[int, int]]:
+        return [
+            (match.start(), match.end())
+            for match in re.finditer(re.escape(quote), source_text)
+        ]
+
+    def casefold_locations_for(value: str) -> list[tuple[int, int]]:
+        return [
+            (match.start(), match.end())
+            for match in re.finditer(re.escape(value), source_text, flags=re.IGNORECASE)
+        ]
+
+    def bind(
+        span: Any,
+        name: str,
+        *,
+        fallback_label: str | None = None,
+        anchors: Sequence[tuple[int, int]] = (),
+    ) -> None:
         if not isinstance(span, Mapping):
             return
         quote = span.get("quote")
@@ -363,20 +452,63 @@ def canonicalize_candidate_spans(payload: Any, source_text: str) -> Any:
         ):
             return
         if not isinstance(quote, str) or not quote:
+            if isinstance(fallback_label, str) and fallback_label.strip():
+                label_locations = casefold_locations_for(fallback_label.strip())
+                if label_locations:
+                    quote = source_text[label_locations[0][0]:label_locations[0][1]]
+                    span["quote"] = quote
+                else:
+                    quote = None
+        if not isinstance(quote, str) or not quote:
             raise ValueError(f"{name} has no exact evidence quote")
-        locations = [match.start() for match in re.finditer(re.escape(quote), source_text)]
-        if len(locations) != 1:
+        locations = locations_for(quote)
+        if not locations and isinstance(fallback_label, str) and quote.casefold() == fallback_label.strip().casefold():
+            locations = casefold_locations_for(fallback_label.strip())
+            if locations:
+                quote = source_text[locations[0][0]:locations[0][1]]
+                span["quote"] = quote
+        selected: tuple[int, int] | None = None
+        if len(locations) == 1:
+            selected = locations[0]
+        elif locations:
+            if type(start) is int:
+                distances = [abs(item[0] - start) for item in locations]
+                nearest = min(distances)
+                candidates = [
+                    item for item, distance in zip(locations, distances)
+                    if distance == nearest
+                ]
+                if len(candidates) == 1:
+                    selected = candidates[0]
+            if selected is None and anchors:
+                anchored = [
+                    item for item in locations
+                    if any(anchor_start <= item[0] and item[1] <= anchor_end
+                           for anchor_start, anchor_end in anchors)
+                ]
+                if len(anchored) == 1:
+                    selected = anchored[0]
+        if selected is None:
             raise ValueError(f"{name} evidence quote is missing or ambiguous")
-        span["start"] = locations[0]
-        span["end"] = locations[0] + len(quote)
+        span["start"], span["end"] = selected
 
-    for index, entity in enumerate(candidate.get("entities", [])):
-        if isinstance(entity, Mapping):
-            bind(entity.get("evidence"), f"entities[{index}]")
+    entity_anchors: dict[str, list[tuple[int, int]]] = {}
     for name in ("orientations", "causal_relations"):
         for index, relation in enumerate(candidate.get(name, [])):
             if isinstance(relation, Mapping):
                 bind(relation.get("evidence"), f"{name}[{index}]")
+                evidence = relation.get("evidence")
+                if isinstance(evidence, Mapping):
+                    anchor = (int(evidence["start"]), int(evidence["end"]))
+                    endpoint_names = (
+                        ("source_entity_id", "target_entity_id")
+                        if name == "orientations"
+                        else ("cause_entity_id", "effect_entity_id")
+                    )
+                    for endpoint_name in endpoint_names:
+                        endpoint = relation.get(endpoint_name)
+                        if isinstance(endpoint, str):
+                            entity_anchors.setdefault(endpoint, []).append(anchor)
     signals = candidate.get("signals")
     if isinstance(signals, Mapping):
         for signal_name in SIGNAL_NAMES:
@@ -386,6 +518,14 @@ def canonicalize_candidate_spans(payload: Any, source_text: str) -> Any:
                         fact.get("evidence"),
                         f"signals.{signal_name}[{index}]",
                     )
+    for index, entity in enumerate(candidate.get("entities", [])):
+        if isinstance(entity, Mapping):
+            bind(
+                entity.get("evidence"),
+                f"entities[{index}]",
+                fallback_label=entity.get("label"),
+                anchors=entity_anchors.get(str(entity.get("id")), ()),
+            )
     return candidate
 
 
@@ -610,7 +750,7 @@ def merge_chunk_candidates(
 
 def validate_parser_model(payload: Any) -> dict[str, str]:
     row = _require_object(payload, "parser_model", {"version", "model", "revision"})
-    if row["version"] != PARSER_VERSION:
+    if row["version"] not in SUPPORTED_PARSER_VERSIONS:
         raise ValueError("parser model version is not supported")
     values = {}
     for name in ("model", "revision"):
@@ -618,7 +758,7 @@ def validate_parser_model(payload: Any) -> dict[str, str]:
         if not isinstance(value, str) or not value.strip() or len(value) > 256:
             raise ValueError(f"parser_model.{name} must contain 1..256 characters")
         values[name] = value.strip()
-    return {"version": PARSER_VERSION, **values}
+    return {"version": row["version"], **values}
 
 
 def _clamp(value: float) -> float:
@@ -954,8 +1094,6 @@ def candidate_tool_schema() -> dict[str, Any]:
     parameters = {
         "type": "object", "additionalProperties": False,
         "properties": {
-            "schema_version": {"type": "string", "enum": [CANDIDATE_VERSION]},
-            "source_text_sha256": {"type": "string"},
             "entities": {
                 "type": "array", "maxItems": 64,
                 "items": {
@@ -1006,7 +1144,6 @@ def candidate_tool_schema() -> dict[str, Any]:
                 "type": "object", "additionalProperties": False,
                 "properties": {name: {"type": "array", "maxItems": 32, "items": evidence_fact}
                                for name in SIGNAL_NAMES},
-                "required": list(SIGNAL_NAMES),
             },
             "unknown_fields": {
                 "type": "array", "uniqueItems": True,
@@ -1014,8 +1151,8 @@ def candidate_tool_schema() -> dict[str, Any]:
             },
             "confidence": {"type": "number", "minimum": 0, "maximum": 1},
         },
-        "required": ["schema_version", "source_text_sha256", "entities", "orientations",
-                     "causal_relations", "signals", "unknown_fields", "confidence"],
+        "required": ["entities", "orientations", "causal_relations", "signals",
+                     "unknown_fields", "confidence"],
     }
     return {
         "type": "function",
@@ -1031,7 +1168,12 @@ def build_gemma_prompt(source_text: str) -> str:
     return f"""You are a local structure parser. Do not answer the user.
 
 Fill record_structural_candidate exactly once from SOURCE_TEXT. Use exact character
-offsets and exact quoted substrings. Preserve who or what points toward whom.
+offsets and exact non-empty quoted substrings. If a word repeats, quote enough
+surrounding source text to make the evidence unique, while entity labels remain
+short. Never output SOURCE_TEXT itself, schema_version, source_text_sha256,
+endpoint labels/references, explanations, or any field not shown by the tool.
+Omit empty keys inside signals; the product supplies empty signal containers.
+Preserve who or what points toward whom.
 Internal IDs should be lower-case identifiers; they will be normalized after the
 tool call and carry no semantic meaning.
 Orientation source_entity_id -> target_entity_id means the source bears the named
@@ -1045,7 +1187,19 @@ in causal_relations; do not duplicate them as orientations. For "A prevents B",
 record causal A -> B with kind prevents and leave orientations empty unless the
 text separately states a non-causal orientation.
 Do not infer causation from correlation, proximity, or sequence alone. Mark
-negation and modality. Use unknown_fields when evidence is absent or ambiguous.
+negation and modality. Record every explicit structural signal using these fixed
+meanings:
+- rules: an obligation, prohibition, permission, or stated operating rule;
+- contradictions: two claims in the text that cannot both hold;
+- inferences: an explicitly stated conclusion drawn from evidence;
+- sequences: an explicit ordering such as first/then/before/after;
+- memory_references: explicit reference to earlier recorded or remembered state;
+- future_references: an explicit future time, plan, prediction, or intended action;
+- completions: work or a decision explicitly stated as finished;
+- rejections: a path, proposal, claim, or decision explicitly rejected.
+One evidence span may support a relationship and a signal. Do not turn an
+inference cue into causal_relations unless the text itself states causation.
+Use unknown_fields when evidence is absent or ambiguous.
 Do not invent entities, relations, confidence, history, emotion labels, or load
 numbers. Return no prose and no additional fields.
 

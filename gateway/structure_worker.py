@@ -67,7 +67,10 @@ class GemmaChild:
             raise RuntimeError("Gemma child protocol mismatch")
         if "error" in result:
             raise RuntimeError(str(result["error"]))
-        return result["candidate"]
+        return {
+            "candidate": result["candidate"],
+            "boundary_telemetry": result.get("boundary_telemetry", {}),
+        }
 
     def close(self) -> None:
         if self.process.stdin is not None:
@@ -96,6 +99,13 @@ def main() -> int:
     try:
         for raw in sys.stdin:
             request_id = "unknown"
+            worker_telemetry: dict[str, Any] = {
+                "planned_chunks": 0,
+                "attempted_chunks": 0,
+                "successful_chunks": 0,
+                "failed_chunk_index": None,
+                "chunks": [],
+            }
             try:
                 request = json.loads(raw)
                 if set(request) != {"protocol", "request_id", "source_text"}:
@@ -110,6 +120,7 @@ def main() -> int:
                     source_text, add_special_tokens=False, return_offsets_mapping=True,
                 )
                 plan = build_token_chunks(source_text, offset_payload["offset_mapping"])
+                worker_telemetry["planned_chunks"] = len(plan)
                 chunk_texts = [source_text[item["start"]:item["end"]] for item in plan]
                 vectors: list[list[float]] = []
                 for batch_start in range(0, len(chunk_texts), 16):
@@ -143,10 +154,19 @@ def main() -> int:
                 )
                 chunk_candidates = []
                 for chunk_index, chunk_text in enumerate(chunk_texts):
+                    worker_telemetry["attempted_chunks"] += 1
+                    worker_telemetry["failed_chunk_index"] = chunk_index
+                    gemma_result = gemma.analyze(f"{request_id}:{chunk_index}", chunk_text)
                     candidate = validate_candidate(
-                        gemma.analyze(f"{request_id}:{chunk_index}", chunk_text),
+                        gemma_result["candidate"],
                         chunk_text,
                     )
+                    worker_telemetry["successful_chunks"] += 1
+                    worker_telemetry["failed_chunk_index"] = None
+                    worker_telemetry["chunks"].append({
+                        "chunk_index": chunk_index,
+                        **gemma_result["boundary_telemetry"],
+                    })
                     chunk_candidates.append({
                         "chunk_index": chunk_index,
                         "candidate": candidate,
@@ -160,11 +180,13 @@ def main() -> int:
                         "model": "local/gemma-instruct-tool-parser",
                         "revision": args.gemma_model.resolve().name,
                     },
+                    "worker_telemetry": worker_telemetry,
                 }
             except Exception as error:
                 response = {
                     "protocol": WORKER_PROTOCOL, "request_id": request_id,
                     "error": f"{type(error).__name__}: {str(error)[:400]}",
+                    "worker_telemetry": worker_telemetry,
                 }
             print(json.dumps(response, ensure_ascii=False, separators=(",", ":")), flush=True)
     finally:

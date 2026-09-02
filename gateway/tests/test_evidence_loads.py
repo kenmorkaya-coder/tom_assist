@@ -14,9 +14,11 @@ from gateway.structural_analysis import (
     build_analysis,
     canonicalize_candidate_ids,
     canonicalize_candidate_spans,
+    candidate_tool_schema,
     directed_graph_fingerprint,
     directed_graph_similarity,
     rank_structural_history,
+    project_candidate_fields,
     text_digest,
     validate_candidate,
     validate_frozen_analysis,
@@ -392,7 +394,7 @@ def test_trusted_worker_binds_only_candidate_envelope_metadata():
     assert validate_candidate(bound, text)["causal_relations"]
 
 
-def test_unique_quote_offsets_are_repaired_but_ambiguous_quotes_fail():
+def test_quote_offsets_use_unique_or_nearest_model_intent_but_ties_fail():
     text = "A causes B."
     candidate = _candidate(text)
     candidate["entities"][1]["evidence"]["start"] = 0
@@ -403,8 +405,59 @@ def test_unique_quote_offsets_are_repaired_but_ambiguous_quotes_fail():
     repeated = "A causes B. A remains."
     ambiguous = _candidate(repeated)
     ambiguous["entities"][0]["evidence"] = {"start": 99, "end": 100, "quote": "A"}
+    rebound = canonicalize_candidate_spans(ambiguous, repeated)
+    assert rebound["entities"][0]["evidence"] == _span(repeated, "A", 1)
+
+    tied = _candidate("A A causes B.")
+    tied["entities"][0]["evidence"] = {"start": 1, "end": 2, "quote": "A"}
     with pytest.raises(ValueError, match="missing or ambiguous"):
-        canonicalize_candidate_spans(ambiguous, repeated)
+        canonicalize_candidate_spans(tied, "A A causes B.")
+
+
+def test_missing_entity_quote_uses_only_its_exact_source_label():
+    text = "A does not prevent B."
+    candidate = _candidate(text, cause="A", effect="B", kind="prevents", negated=True)
+    candidate["entities"][0]["label"] = "a"
+    candidate["entities"][0]["evidence"] = {"start": 0, "end": 0, "quote": ""}
+    repaired = canonicalize_candidate_spans(candidate, text)
+    assert repaired["entities"][0]["evidence"] == _span(text, "A")
+    candidate["entities"][0]["label"] = "invented entity"
+    with pytest.raises(ValueError, match="no exact evidence quote"):
+        canonicalize_candidate_spans(candidate, text)
+
+
+def test_model_only_extra_fields_are_projected_but_required_facts_stay_strict():
+    text = "A supports B."
+    candidate = _candidate(text)
+    candidate["causal_relations"] = []
+    candidate["orientations"] = [{
+        "id": "relation_1",
+        "source_entity_id": "entity_a",
+        "target_entity_id": "entity_b",
+        "target_entity_id_label": "B",
+        "kind": "supports",
+        "polarity": "positive",
+        "modality": "asserted",
+        "negated": False,
+        "evidence": {**_span(text, text), "explanation": "not canonical"},
+        "confidence": 1.0,
+    }]
+    candidate["source_text"] = text
+    projected = project_candidate_fields(candidate)
+    assert "source_text" not in projected
+    assert "target_entity_id_label" not in projected["orientations"][0]
+    assert "explanation" not in projected["orientations"][0]["evidence"]
+    assert validate_candidate(projected, text)["orientations"]
+    del projected["orientations"][0]["target_entity_id"]
+    with pytest.raises(ValueError, match="missing=.*target_entity_id"):
+        validate_candidate(projected, text)
+
+
+def test_tool_schema_leaves_trusted_metadata_and_empty_signal_keys_to_product():
+    parameters = candidate_tool_schema()["function"]["parameters"]
+    assert "schema_version" not in parameters["properties"]
+    assert "source_text_sha256" not in parameters["properties"]
+    assert "required" not in parameters["properties"]["signals"]
 
 
 def test_history_dynamics_are_distinct_and_replay_exactly():
@@ -458,6 +511,23 @@ def test_history_dynamics_are_distinct_and_replay_exactly():
     assert mixed["load_signature"]["frequency"] != mixed["load_signature"]["recurrence"]
     assert mixed["load_signature"]["persistence"] == 0.0
     assert mixed["load_signature"]["decay"] > 0.0
+
+
+def test_existing_parser_v1_analysis_still_replays_after_boundary_upgrade():
+    text = "A causes B."
+    parser = {
+        "version": "gemma-native-tool-structural-candidate/1.0",
+        "model": "local/gemma-fixture",
+        "revision": "fixture-revision",
+    }
+    analysis = build_analysis(
+        text, _chunk_candidates(_candidate(text)), _profile(text), parser, [],
+        "checkpoint-parser-v1",
+    )
+    assert analysis["parser_model"] == parser
+    assert validate_frozen_analysis(
+        analysis, text, [], "checkpoint-parser-v1"
+    ) == analysis
 
 
 def test_structural_evidence_activates_dimensions_without_keyword_wheel():

@@ -64,6 +64,15 @@ The versioned replacement for prose-to-load keyword counting is available in
    metadata and missing empty signal containers; it never supplies a semantic
    fact, relationship, quote, direction or confidence on Gemma's behalf.
 
+The parser boundary is versioned independently. Version 1.1 omits product-owned
+metadata and empty signal keys from the model's tool schema, projects away only
+unknown presentation fields, and can deterministically reparse malformed Gemma-4
+container syntax. Evidence may be rebound only to source text already quoted by
+the model, the entity's own source-present label, or the uniquely nearest/anchored
+occurrence. Missing semantic fields and ambiguous ties still fail closed. Worker
+telemetry reports planned, attempted and successful window calls plus the exact
+failed window; it contains no prompts, vectors or credentials.
+
 The gateway validates every quoted span and endpoint. Product-owned,
 deterministic code calculates all 17 channels. Static channels use the strongest
 bounded-window evidence rather than sums, so adding neutral chunks cannot

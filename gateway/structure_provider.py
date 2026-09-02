@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 
-WORKER_PROTOCOL = "tom-assist-structure-worker/1.0"
+WORKER_PROTOCOL = "tom-assist-structure-worker/1.1"
 _SAFE_ENVIRONMENT_NAMES = {
     "PATH", "HOME", "TMPDIR", "TEMP", "TMP", "LANG", "LC_ALL", "LC_CTYPE",
     "DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH", "TOKENIZERS_PARALLELISM",
@@ -39,7 +39,9 @@ def isolated_worker_environment() -> dict[str, str]:
 
 
 class StructureProviderError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, telemetry: Any = None) -> None:
+        super().__init__(message)
+        self.telemetry = telemetry
 
 
 class StructureWorkerClient:
@@ -142,16 +144,24 @@ class StructureWorkerClient:
             if response.get("request_id") != request_id:
                 raise StructureProviderError("local structure worker response ID mismatch")
             if "error" in response:
-                raise StructureProviderError(str(response["error"])[:500])
+                if set(response) != {
+                    "protocol", "request_id", "error", "worker_telemetry",
+                }:
+                    raise StructureProviderError("local structure worker error shape mismatch")
+                raise StructureProviderError(
+                    str(response["error"])[:500],
+                    telemetry=response["worker_telemetry"],
+                )
             if set(response) != {
                 "protocol", "request_id", "chunk_candidates", "semantic_profile",
-                "parser_model",
+                "parser_model", "worker_telemetry",
             }:
                 raise StructureProviderError("local structure worker response shape mismatch")
             return {
                 "chunk_candidates": response["chunk_candidates"],
                 "semantic_profile": response["semantic_profile"],
                 "parser_model": response["parser_model"],
+                "worker_telemetry": response["worker_telemetry"],
             }
 
     def close(self) -> None:

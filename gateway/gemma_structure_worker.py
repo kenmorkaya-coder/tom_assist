@@ -7,6 +7,7 @@ import contextlib
 import json
 import os
 import random
+import re
 import sys
 from pathlib import Path
 
@@ -19,9 +20,100 @@ from gateway.structural_analysis import (  # noqa: E402
     canonicalize_candidate_ids,
     canonicalize_candidate_spans,
     candidate_tool_schema,
+    project_candidate_fields,
     validate_candidate,
 )
 from gateway.structure_provider import WORKER_PROTOCOL  # noqa: E402
+
+
+_CALL_START = re.compile(r"call:([A-Za-z_][A-Za-z0-9_]*)\s*\{")
+
+
+def _balanced_call_object(text: str, opening: int) -> str:
+    depth = 0
+    index = opening
+    standard_string = False
+    gemma_string = False
+    escaped = False
+    while index < len(text):
+        if text.startswith('<|"|>', index):
+            gemma_string = not gemma_string
+            index += 5
+            continue
+        character = text[index]
+        if gemma_string:
+            index += 1
+            continue
+        if standard_string:
+            if escaped:
+                escaped = False
+            elif character == "\\":
+                escaped = True
+            elif character == '"':
+                standard_string = False
+            index += 1
+            continue
+        if character == '"':
+            standard_string = True
+        elif character == "{":
+            depth += 1
+        elif character == "}":
+            depth -= 1
+            if depth == 0:
+                return text[opening:index + 1]
+        index += 1
+    raise ValueError("Gemma tool call has unbalanced braces")
+
+
+def _gemma4_arguments(value: str) -> dict:
+    strings: list[str] = []
+
+    def capture(match: re.Match[str]) -> str:
+        strings.append(match.group(1))
+        return f'"__TOM_STRING_{len(strings) - 1}__"'
+
+    converted = re.sub(r'<\|"\|>(.*?)<\|"\|>', capture, value, flags=re.DOTALL)
+    converted = re.sub(
+        r"(?<=[{,])\s*([A-Za-z_][A-Za-z0-9_]*)\s*:",
+        lambda match: f'"{match.group(1)}":',
+        converted,
+    )
+    converted = re.sub(r",\s*([}\]])", r"\1", converted)
+    converted = re.sub(r"\bTrue\b", "true", converted)
+    converted = re.sub(r"\bFalse\b", "false", converted)
+    converted = re.sub(r"\bNone\b", "null", converted)
+    parsed = json.loads(converted)
+    if not isinstance(parsed, dict):
+        raise ValueError("Gemma tool arguments must be an object")
+
+    def restore(item):
+        if isinstance(item, str):
+            match = re.fullmatch(r"__TOM_STRING_(\d+)__", item)
+            return strings[int(match.group(1))] if match else item
+        if isinstance(item, list):
+            return [restore(child) for child in item]
+        if isinstance(item, dict):
+            return {key: restore(child) for key, child in item.items()}
+        return item
+
+    return restore(parsed)
+
+
+def parse_generated_tool_call(generated: str, native_parser) -> tuple[dict, str]:
+    """Use the native parser first, then a deterministic syntax-only fallback."""
+    try:
+        call = native_parser(generated)
+        return call, "native"
+    except (json.JSONDecodeError, ValueError):
+        starts = list(_CALL_START.finditer(generated))
+        if len(starts) != 1:
+            raise ValueError("Gemma must emit exactly one recognizable tool call") from None
+        match = starts[0]
+        opening = generated.find("{", match.start())
+        return {
+            "name": match.group(1),
+            "arguments": _gemma4_arguments(_balanced_call_object(generated, opening)),
+        }, "deterministic_gemma4_reparse"
 
 
 def main() -> int:
@@ -61,17 +153,19 @@ def main() -> int:
                     model, tokenizer, prompt=formatted, max_tokens=2048,
                     sampler=sampler, verbose=False,
                 )
-            call = tokenizer.tool_parser(generated)
+            call, parse_mode = parse_generated_tool_call(generated, tokenizer.tool_parser)
             if isinstance(call, list):
                 if len(call) != 1:
                     raise ValueError("Gemma must call the structure tool exactly once")
                 call = call[0]
             if not isinstance(call, dict) or call.get("name") != "record_structural_candidate":
                 raise ValueError("Gemma called the wrong structure tool")
+            arguments = call.get("arguments")
+            projected = project_candidate_fields(arguments)
             candidate = validate_candidate(
                 canonicalize_candidate_spans(
                     canonicalize_candidate_ids(
-                        bind_candidate_metadata(call.get("arguments"), source_text)
+                        bind_candidate_metadata(projected, source_text)
                     ),
                     source_text,
                 ),
@@ -80,6 +174,10 @@ def main() -> int:
             response = {
                 "protocol": WORKER_PROTOCOL, "request_id": request_id,
                 "candidate": candidate,
+                "boundary_telemetry": {
+                    "tool_parse_mode": parse_mode,
+                    "schema_projection_applied": projected != arguments,
+                },
             }
         except Exception as error:
             response = {
