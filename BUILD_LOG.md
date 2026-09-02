@@ -1185,7 +1185,7 @@ Protection proof: owner `tom_master` remains at **`e9fdef81c8a366ebbec07be977218
 
 **STOP FOR OWNER AUDIT. Do not enable shadow mode or run a v4 calibration from this result. The next robust change should replace fragile whole-passage free-form tool emission with a more constrained staged or grammar-bound extraction design before any newly pre-registered run. This is not a whole-tree efficacy result, and no G-gate verdict is issued or implied.**
 
-## WP-34 — GPT structured-parser comparison [STOPPED; V2 AWAITS FRESH AUTHORIZATION]
+## WP-34 — GPT structured-parser comparison [COMPLETED; GPT DID NOT WIN FROZEN COMPARISON; AUDIT HOLD]
 
 Authority and implementation: the owner authorized trying GPT as the parser suggested after WP-33. Work is on `codex/wp-34-gpt-parser-comparison` at implementation/pre-registration commit **`1deb471db7a4ecdbecf3bd7c72dc23aa6b9b599b`**. Tom Assist's own OAuth broker now has a candidate-only strict structured-output endpoint. It is not exposed from any preview route and requires an exact explicit-send boolean. The provider returns typed entities, directed orientation/causal relations, signals and exact source quotes; it cannot return offsets or load values. Tom Assist resolves quotes to exact source spans, validates endpoints/direction/negation/evidence, then uses the existing deterministic multi-vector 17-channel compiler. GPT parser version `gpt-structured-quote-parser/1.0` is accepted for replay but remains inactive.
 
@@ -1197,4 +1197,36 @@ Zero-generation diagnosis and correction: read-only inspection of the pinned pro
 
 Offline evidence: OAuth broker **11 passed**; GPT parser/evidence/diagnostic subset **27 passed**; offline OAuth Unix-socket boundary **8 passed**. The tests prove explicit-send enforcement, no credential/header exposure across the gateway boundary, strict response-format validation, deterministic quote-to-offset binding, absence of provider offset/load fields, and no unsupported OAuth token-limit field. Feeling Wheel remained disabled and unused. No TCP listener or port 18790 was used. No upstream repository, owner checkout, credential, golden, prior calibration result or 10K tree artifact was modified.
 
-**STOP FOR OWNER AUDIT/AUTHORIZATION. V1 produced no parser result. V2 is corrected and pre-registered but must not run until the owner freshly authorizes 97 new GPT-5.5 generations. The parser remains inactive, and no G-gate verdict is issued or implied.**
+V1 stopped without a parser result. The owner subsequently gave fresh explicit authorization for exactly 97 new GPT-5.5 generations under the unchanged V2 lock.
+
+### V2 live comparison supplement
+
+Execution used Tom Assist's Keychain-owned OAuth broker over a private Unix socket. Secret-free readiness was `OAUTH_READY`, provider `tom-assist/openai-oauth`, model `gpt-5.5`, credential owner `tom-assist-keychain`. The Feeling Wheel was forced off. The broker child was stopped immediately after the run and its socket was removed. No TCP listener or port 18790 was used.
+
+Accounting is **97/97 explicit provider generations, 0 retries, 77 source-valid structured candidates, 20 fail-closed chunk candidates, 94 scored cases, 0 tree steps**. All 20 chunk failures were `ambiguous_evidence_quote`: the provider's strict JSON shape was accepted, but at least one quoted entity span was missing from or non-unique in the exact source chunk. Exact-duplicate caching preserved the frozen **113 logical passages, 124 logical chunk slots, 88 unique passages and 97 unique semantic chunks**. Provider wall time totalled **680.623131 s** (minimum **2.983814 s**, median **6.069373 s**, maximum **19.355770 s**). Raw provider responses were not retained.
+
+Frozen comparison result:
+
+| Metric | GPT-5.5 | Gemma v3 | GPT minus Gemma |
+|---|---:|---:|---:|
+| Strict observation rate | 0.797872 (75/94) | 0.744681 (70/94) | +0.053191 |
+| Minimum family observation rate | 0.375000 | 0.400000 | -0.025000 |
+| End-to-end relation recall | 0.649573 (76/117) | 0.666667 (78/117) | -0.017094 |
+| Reversed expected relations | 0 | 0 | 0 |
+| Unexpected relation rate | 0.216495 (21/97) | 0.060241 (5/83) | +0.156254 |
+| End-to-end signal recall | 0.791667 (19/24) | 0.708333 (17/24) | +0.083333 |
+| Multi-relation exact rate | 0.250000 (4/16) | 0.437500 (7/16) | -0.187500 |
+| History case rate | 1.000000 (8/8) | 1.000000 (8/8) | 0 |
+| Valid 17D load shapes | 1.000000 (75/75) | 1.000000 (70/70) | 0 |
+
+Therefore the pre-registered `core_improvement` result is **false**, `safety_non_regression` is **false**, and `gpt_better_on_preregistered_rule` is **false**. GPT improved strict observation and signal recall, preserved causal direction with zero reversals, and produced valid 17-channel shapes for every accepted case. It nevertheless lost relation recall and multi-relation exactness, and its unexpected-relation rate was materially worse. The lowest GPT family was multi-relation at **6/16 observed (0.375)**. This result does not justify replacing Gemma or activating the GPT parser.
+
+The model supplied only typed facts and exact evidence quotes. Tom Assist resolved source offsets and deterministically compiled the 17-channel loads; no provider-supplied offset or load value was accepted. The run did not call the Python 10K tree or advance any project state. `parser_active` remains **false**.
+
+Compact evidence at `validation/runs/wp34-gpt-parser-comparison-v2/` is **349,084 bytes** including the manifest. Hashes are: `provider_attempts.jsonl` **`8ee724f8985e287266e50df6733af3a5ecadeaf80b4ef7f46d8eb9e87e09abb3`**, `observations.jsonl` **`f377611bf1d73a8d6e37305e5718b38360a3d783038ddbb8e0bdbd779bbb0479`**, `pair_metrics.jsonl` **`932155ee98a3bd7782bda1d3d7b3f3af1bebfdafba2d5c95835b04a365f3ff4e`**, `summary.json` **`72448f436948adebef5163fa912e0a166edbb442edab372a14810876466519ac`**, `REPORT.md` **`8fe7aeab8e5891377ea7f79e7add27a2ec27f056bcaab348c5a98beac5d31b55`**, and `run_manifest.json` **`d394cf15817fcfc491ca2a2d050561e01eaf24932307d7df6adf5db389f31312`**. The manifest binds code SHA **`95c4f2a1c32e6844652bd31736dc2ef2b54adfce`**, V2 pre-registration SHA-256 **`86ce930cac59b8f1fd821550e11a154c47e40452d4bb2ced1f3282b1a0970cbc`**, unchanged case digest **`eeff2aaff7f10c62cac88ab997d3697715212565281d262c52099ca7ddcddb13`**, unchanged response-format digest **`63001cf4ff74ca064b4e9043547cb2b1bdc31814d7b4aea71b45909bfcc24eb6`**, and exact MiniLM revision **`1110a243fdf4706b3f48f1d95db1a4f5529b4d41`**.
+
+Verification: zero-generation pre-registration check reports **94 cases, 113 passages, 124 logical chunk slots, 97 expected provider calls and provider_calls=0**. Full Python gateway/validation regression passed **120/120 in 153.43 s**. Rust workspace regression passed **62 tests with 2 intentional opt-in live-test ignores**. Schema validation passed **10 fixtures, 43 core methods, source-id/1.1 with 3 valid and 5 invalid cases**. `cargo fmt --all -- --check`, `git diff --check`, and the production preview-purity static scan passed.
+
+Protection proof: owner `tom_master` remains on `tom-assist/upstream-v1` at **`e9fdef81c8a366ebbec07be9772189eea15cb2ac`**. Its checkout contains extensive owner work that predates/is independent of this package; WP-34 only inspected it read-only and changed none of it. No `tom_master`, `tom_master17D`, `tom_sicd_gemma`, credential, remote, prior frozen result, golden or 10K tree artifact was modified.
+
+**STOP FOR OWNER AUDIT. GPT-5.5 completed the locked comparison but did not satisfy the frozen superiority rule. Both GPT and Gemma remain inactive; this is a parser engineering comparison, not a whole-tree efficacy result. No G-gate verdict is issued or implied.**
