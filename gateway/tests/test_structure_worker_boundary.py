@@ -39,6 +39,22 @@ def test_native_tool_parser_is_preferred_and_multiple_fallback_calls_fail():
         )
 
 
+def test_syntax_fallback_quotes_bare_values_accepts_single_quotes_and_closes_containers():
+    generated = """call:record_structural_candidate{
+      entities:[{id:alpha, label:'Alpha'}],
+      unknown_fields:[], confidence:1.0"""
+    call, mode = parse_generated_tool_call(generated, _native_failure)
+    assert mode == "deterministic_gemma4_reparse"
+    assert call == {
+        "name": "record_structural_candidate",
+        "arguments": {
+            "entities": [{"id": "alpha", "label": "Alpha"}],
+            "unknown_fields": [],
+            "confidence": 1.0,
+        },
+    }
+
+
 def test_worker_protocol_and_errors_carry_exact_attempt_telemetry():
     assert WORKER_PROTOCOL == "tom-assist-structure-worker/1.1"
     telemetry = {

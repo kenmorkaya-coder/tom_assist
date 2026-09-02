@@ -22,13 +22,13 @@ from gateway.semantic_chunks import (
 
 
 CANDIDATE_VERSION = "tom-assist-structural-candidate/1.0"
-ANALYSIS_VERSION = "tom-assist-structural-analysis/1.1"
+ANALYSIS_VERSION = "tom-assist-structural-analysis/1.2"
 COMPILER_VERSION = "tom-assist-evidence-load17/1.1"
 SUPPORTED_COMPILER_VERSIONS = {
     "tom-assist-evidence-load17/1.0",
     COMPILER_VERSION,
 }
-PARSER_VERSION = "gemma-native-tool-structural-candidate/1.1"
+PARSER_VERSION = "gemma-native-tool-structural-candidate/1.2"
 SUPPORTED_PARSER_VERSIONS = {
     "gemma-native-tool-structural-candidate/1.0",
     PARSER_VERSION,
@@ -451,6 +451,16 @@ def canonicalize_candidate_spans(payload: Any, source_text: str) -> Any:
             and source_text[start:end] == quote
         ):
             return
+        if (
+            (quote is None or quote == "")
+            and type(start) is int
+            and type(end) is int
+            and 0 <= start < end <= len(source_text)
+        ):
+            # The offsets are already model-supplied evidence. Restoring their
+            # redundant quote from immutable source text adds no semantic fact.
+            span["quote"] = source_text[start:end]
+            return
         if not isinstance(quote, str) or not quote:
             if isinstance(fallback_label, str) and fallback_label.strip():
                 label_locations = casefold_locations_for(fallback_label.strip())
@@ -564,7 +574,7 @@ def merge_chunk_candidates(
 
     normalized_chunks = []
     entities: list[dict[str, Any]] = []
-    entity_keys: dict[tuple[Any, ...], str] = {}
+    entity_indices: dict[tuple[str, str], list[int]] = {}
     orientations: list[dict[str, Any]] = []
     causal_relations: list[dict[str, Any]] = []
     orientation_indices: dict[tuple[Any, ...], list[int]] = {}
@@ -597,16 +607,47 @@ def merge_chunk_candidates(
             ),
         ):
             evidence = _rebase_span(entity["evidence"], start)
-            key = (
-                entity["label"].casefold(), entity["kind"], evidence["start"],
-                evidence["end"], evidence["quote"],
+            label_key = re.sub(
+                r"\s+", " ", str(entity["label"]).casefold()
+            ).strip()
+            key = (label_key, entity["kind"])
+            label_occurrences = {
+                (match.start(), match.end())
+                for match in re.finditer(
+                    re.escape(str(entity["label"])), source_text, flags=re.IGNORECASE
+                )
+                if evidence["start"] <= match.start()
+                and match.end() <= evidence["end"]
+            }
+            matching_index = None
+            for index in entity_indices.get(key, []):
+                existing_evidence = entities[index]["evidence"]
+                existing_occurrences = {
+                    (match.start(), match.end())
+                    for match in re.finditer(
+                        re.escape(str(entities[index]["label"])),
+                        source_text,
+                        flags=re.IGNORECASE,
+                    )
+                    if existing_evidence["start"] <= match.start()
+                    and match.end() <= existing_evidence["end"]
+                }
+                if label_occurrences & existing_occurrences:
+                    matching_index = index
+                    break
+                if _equivalent_overlap_evidence(existing_evidence, evidence):
+                    matching_index = index
+                    break
+            global_id = (
+                entities[matching_index]["id"]
+                if matching_index is not None
+                else None
             )
-            global_id = entity_keys.get(key)
             if global_id is None:
                 if len(entities) >= MAX_MERGED_ENTITIES:
                     raise ValueError("merged candidate exceeds the entity limit")
                 global_id = f"entity_{len(entities) + 1:04d}"
-                entity_keys[key] = global_id
+                entity_indices.setdefault(key, []).append(len(entities))
                 entities.append({
                     "id": global_id,
                     "label": entity["label"],
@@ -615,7 +656,19 @@ def merge_chunk_candidates(
                     "confidence": entity["confidence"],
                 })
             else:
-                existing = next(row for row in entities if row["id"] == global_id)
+                existing = entities[matching_index]
+                normalized_label = re.sub(
+                    r"[^a-z0-9]+", " ", str(entity["label"]).casefold()
+                ).strip()
+                normalized_quote = re.sub(
+                    r"[^a-z0-9]+", " ", str(evidence["quote"]).casefold()
+                ).strip()
+                existing_quote = re.sub(
+                    r"[^a-z0-9]+", " ",
+                    str(existing["evidence"]["quote"]).casefold(),
+                ).strip()
+                if normalized_quote == normalized_label and existing_quote != normalized_label:
+                    existing["evidence"] = evidence
                 existing["confidence"] = max(
                     float(existing["confidence"]), float(entity["confidence"])
                 )
@@ -1199,9 +1252,14 @@ meanings:
 - rejections: a path, proposal, claim, or decision explicitly rejected.
 One evidence span may support a relationship and a signal. Do not turn an
 inference cue into causal_relations unless the text itself states causation.
+Record every separately stated relationship exactly once, including every item
+in a coordinated list. `controls` is only an orientation; never also `causes`.
+A negated orientation keeps its stated kind with negated=true: for example,
+"A does not support B" is `supports` with negated=true, not `opposes`.
 Use unknown_fields when evidence is absent or ambiguous.
 Do not invent entities, relations, confidence, history, emotion labels, or load
-numbers. Return no prose and no additional fields.
+numbers. Keep every string JSON-compatible and close every list and object.
+Return no prose and no additional fields.
 
 SOURCE_TEXT_SHA256: {text_digest(source_text)}
 SOURCE_TEXT:

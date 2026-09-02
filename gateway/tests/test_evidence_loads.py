@@ -262,6 +262,33 @@ def test_overlap_deduplicates_punctuation_only_relation_boundaries():
     }
 
 
+def test_overlap_merges_same_entity_when_one_window_quotes_the_whole_clause():
+    text = "Opening. A enables B. Closing."
+    relation_start = text.index("A enables B")
+    relation_end = relation_start + len("A enables B.")
+    spans = [(0, relation_end), (relation_start, len(text))]
+    profile = _multi_profile(text, spans, [0, 1])
+    candidates = []
+    for index, (start, end) in enumerate(spans):
+        local = text[start:end]
+        candidate = _candidate(local, kind="enables")
+        candidate["causal_relations"][0]["evidence"] = _span(
+            local, "A enables B." if index == 0 else "A enables B"
+        )
+        if index == 0:
+            for entity in candidate["entities"]:
+                entity["evidence"] = _span(local, "A enables B.")
+        candidates.append({"chunk_index": index, "candidate": candidate})
+    analysis = build_analysis(
+        text, candidates, profile, _parser(), [], "checkpoint-entity-granularity"
+    )
+    assert len(analysis["candidate"]["entities"]) == 2
+    assert len(analysis["candidate"]["causal_relations"]) == 1
+    assert [row["evidence"]["quote"] for row in analysis["candidate"]["entities"]] == [
+        "A", "B"
+    ]
+
+
 def test_multivector_retrieval_finds_relevant_tail_chunk_without_centroid_collapse():
     query_text = "tail query"
     query = _profile(query_text, 5)
@@ -424,6 +451,20 @@ def test_missing_entity_quote_uses_only_its_exact_source_label():
     candidate["entities"][0]["label"] = "invented entity"
     with pytest.raises(ValueError, match="no exact evidence quote"):
         canonicalize_candidate_spans(candidate, text)
+
+
+def test_missing_quote_is_restored_only_from_valid_model_offsets():
+    text = "Alpha causes Beta."
+    candidate = _candidate(text, cause="Alpha", effect="Beta")
+    relation_span = candidate["causal_relations"][0]["evidence"]
+    del relation_span["quote"]
+    repaired = canonicalize_candidate_spans(candidate, text)
+    assert repaired["causal_relations"][0]["evidence"] == _span(text, text)
+
+    unsafe = _candidate(text, cause="Alpha", effect="Beta")
+    unsafe["causal_relations"][0]["evidence"] = {"start": -1, "end": 99}
+    with pytest.raises(ValueError, match="no exact evidence quote"):
+        canonicalize_candidate_spans(unsafe, text)
 
 
 def test_model_only_extra_fields_are_projected_but_required_facts_stay_strict():

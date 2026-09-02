@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import contextlib
 import json
 import os
@@ -30,7 +31,7 @@ _CALL_START = re.compile(r"call:([A-Za-z_][A-Za-z0-9_]*)\s*\{")
 
 
 def _balanced_call_object(text: str, opening: int) -> str:
-    depth = 0
+    stack: list[str] = []
     index = opening
     standard_string = False
     gemma_string = False
@@ -55,14 +56,24 @@ def _balanced_call_object(text: str, opening: int) -> str:
             continue
         if character == '"':
             standard_string = True
-        elif character == "{":
-            depth += 1
-        elif character == "}":
-            depth -= 1
-            if depth == 0:
+        elif character in "{[":
+            stack.append(character)
+        elif character in "}]":
+            expected = "{" if character == "}" else "["
+            if not stack or stack[-1] != expected:
+                raise ValueError("Gemma tool call has mismatched containers")
+            stack.pop()
+            if not stack:
                 return text[opening:index + 1]
         index += 1
-    raise ValueError("Gemma tool call has unbalanced braces")
+    if standard_string or gemma_string:
+        raise ValueError("Gemma tool call has an unterminated string")
+    if not stack:
+        raise ValueError("Gemma tool call has no complete object")
+    # Closing only open syntax cannot invent a semantic field or value. The
+    # strict candidate validator still checks that the complete shape exists.
+    closers = "".join("}" if value == "{" else "]" for value in reversed(stack))
+    return text[opening:] + closers
 
 
 def _gemma4_arguments(value: str) -> dict:
@@ -82,7 +93,25 @@ def _gemma4_arguments(value: str) -> dict:
     converted = re.sub(r"\bTrue\b", "true", converted)
     converted = re.sub(r"\bFalse\b", "false", converted)
     converted = re.sub(r"\bNone\b", "null", converted)
-    parsed = json.loads(converted)
+    converted = re.sub(
+        r"(:\s*)([A-Za-z_][A-Za-z0-9_-]*)(?=\s*[,}\]])",
+        lambda match: match.group(1) + (
+            match.group(2)
+            if match.group(2) in {"true", "false", "null"}
+            else json.dumps(match.group(2))
+        ),
+        converted,
+    )
+    try:
+        parsed = json.loads(converted)
+    except json.JSONDecodeError:
+        python_literal = re.sub(r"\btrue\b", "True", converted)
+        python_literal = re.sub(r"\bfalse\b", "False", python_literal)
+        python_literal = re.sub(r"\bnull\b", "None", python_literal)
+        try:
+            parsed = ast.literal_eval(python_literal)
+        except (SyntaxError, ValueError):
+            raise ValueError("Gemma fallback contains an invalid structured value") from None
     if not isinstance(parsed, dict):
         raise ValueError("Gemma tool arguments must be an object")
 
@@ -150,7 +179,7 @@ def main() -> int:
             )
             with contextlib.redirect_stdout(sys.stderr):
                 generated = generate(
-                    model, tokenizer, prompt=formatted, max_tokens=2048,
+                    model, tokenizer, prompt=formatted, max_tokens=3072,
                     sampler=sampler, verbose=False,
                 )
             call, parse_mode = parse_generated_tool_call(generated, tokenizer.tool_parser)
