@@ -121,6 +121,37 @@ def test_explicit_completion_uses_only_broker_and_no_auth_header(broker):
     assert all("Authorization" not in headers for _, _, headers in handler.calls)
 
 
+def test_structured_completion_requires_explicit_send_and_forwards_schema(broker):
+    provider, handler = broker
+    response_format = {
+        "type": "json_schema",
+        "name": "test_shape",
+        "strict": True,
+        "schema": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {"ok": {"type": "boolean"}},
+            "required": ["ok"],
+        },
+    }
+    with pytest.raises(ProviderFailure, match="EXPLICIT_SEND_REQUIRED"):
+        provider.complete_structured("parse", response_format)
+    assert handler.calls == []
+    result = provider.complete_structured(
+        "parse exact visible source", response_format, explicit_send=True
+    )
+    assert result["complete"] is True
+    assert [path for path, _, _ in handler.calls] == [
+        "/status", "/structured-complete"
+    ]
+    assert handler.calls[-1][1] == {
+        "explicit_send": True,
+        "prompt": "parse exact visible source",
+        "response_format": response_format,
+    }
+    assert all("Authorization" not in headers for _, _, headers in handler.calls)
+
+
 def test_broker_errors_and_busy_never_retry(broker):
     provider, handler = broker
     provider.slot.acquire()

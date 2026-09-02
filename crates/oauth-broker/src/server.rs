@@ -27,6 +27,14 @@ struct CompletionRequest {
     prompt: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct StructuredCompletionRequest {
+    explicit_send: bool,
+    prompt: String,
+    response_format: Value,
+}
+
 #[derive(Debug, Serialize)]
 struct ErrorBody<'a> {
     ok: bool,
@@ -85,6 +93,23 @@ impl BrokerClient {
             "POST",
             "/complete",
             Some(&json!({"explicit_send":true,"prompt":prompt})),
+            Duration::from_secs(200),
+        )
+    }
+
+    pub fn complete_structured(
+        &self,
+        prompt: &str,
+        response_format: &Value,
+    ) -> Result<ProviderReply> {
+        self.request(
+            "POST",
+            "/structured-complete",
+            Some(&json!({
+                "explicit_send":true,
+                "prompt":prompt,
+                "response_format":response_format,
+            })),
             Duration::from_secs(200),
         )
     }
@@ -207,7 +232,8 @@ fn handle_connection(broker: &Broker, mut stream: UnixStream) -> Result<()> {
                 "EXPLICIT_USER_ACTION_REQUIRED"
                 | "EXPLICIT_SEND_REQUIRED"
                 | "BROKER_REQUEST_INVALID"
-                | "PROVIDER_PROMPT_INVALID" => 400,
+                | "PROVIDER_PROMPT_INVALID"
+                | "PROVIDER_RESPONSE_FORMAT_INVALID" => 400,
                 _ => 503,
             };
             write_error(&mut stream, status, error.code());
@@ -320,6 +346,16 @@ fn route(broker: &Broker, request: &Request) -> Result<Value> {
             serde_json::to_value(broker.complete(&completion.prompt)?)
                 .map_err(|_| BrokerError::new("BROKER_RESPONSE_INVALID"))
         }
+        ("POST", "/structured-complete") => {
+            let completion: StructuredCompletionRequest = parse_body(&request.body)?;
+            if !completion.explicit_send {
+                return Err(BrokerError::new("EXPLICIT_SEND_REQUIRED"));
+            }
+            serde_json::to_value(
+                broker.complete_structured(&completion.prompt, &completion.response_format)?,
+            )
+            .map_err(|_| BrokerError::new("BROKER_RESPONSE_INVALID"))
+        }
         _ => Err(BrokerError::new("BROKER_ROUTE_NOT_FOUND")),
     }
 }
@@ -380,6 +416,7 @@ fn known_error_code(code: Option<&str>) -> &'static str {
         Some("OAUTH_REFRESH_FAILED") => "OAUTH_REFRESH_FAILED",
         Some("PROVIDER_REQUEST_FAILED") => "PROVIDER_REQUEST_FAILED",
         Some("PROVIDER_RESPONSE_INVALID") => "PROVIDER_RESPONSE_INVALID",
+        Some("PROVIDER_RESPONSE_FORMAT_INVALID") => "PROVIDER_RESPONSE_FORMAT_INVALID",
         Some("PROVIDER_EMPTY_OR_OVERSIZE_RESPONSE") => "PROVIDER_EMPTY_OR_OVERSIZE_RESPONSE",
         _ => "BROKER_REQUEST_FAILED",
     }
@@ -419,6 +456,21 @@ mod tests {
         let text = String::from_utf8(response).unwrap();
         assert!(text.contains("EXPLICIT_SEND_REQUIRED"));
         assert!(!text.contains("secret prompt marker"));
+    }
+
+    #[test]
+    fn structured_completion_also_requires_explicit_send() {
+        let body = br#"{"explicit_send":false,"prompt":"secret parser source","response_format":{"type":"json_schema","name":"x","strict":true,"schema":{}}}"#;
+        let request = format!(
+            "POST /structured-complete HTTP/1.0\r\nContent-Length: {}\r\n\r\n",
+            body.len()
+        );
+        let mut bytes = request.into_bytes();
+        bytes.extend_from_slice(body);
+        let response = exchange(&bytes);
+        let text = String::from_utf8(response).unwrap();
+        assert!(text.contains("EXPLICIT_SEND_REQUIRED"));
+        assert!(!text.contains("secret parser source"));
     }
 
     #[test]

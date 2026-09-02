@@ -29,9 +29,11 @@ SUPPORTED_COMPILER_VERSIONS = {
     COMPILER_VERSION,
 }
 PARSER_VERSION = "gemma-native-tool-structural-candidate/1.2"
+GPT_PARSER_VERSION = "gpt-structured-quote-parser/1.0"
 SUPPORTED_PARSER_VERSIONS = {
     "gemma-native-tool-structural-candidate/1.0",
     PARSER_VERSION,
+    GPT_PARSER_VERSION,
 }
 NEAR_SEMANTIC_THRESHOLD = 0.70
 HISTORY_WINDOW = 12
@@ -1215,6 +1217,160 @@ def candidate_tool_schema() -> dict[str, Any]:
             "parameters": parameters,
         },
     }
+
+
+def quote_candidate_response_format() -> dict[str, Any]:
+    """Strict provider schema whose evidence contains quotes, never offsets.
+
+    The provider identifies source-backed structure.  Tom Assist subsequently
+    resolves every quote against the immutable source text and computes the
+    canonical offsets before the existing candidate validator can accept it.
+    """
+    span = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {"quote": {"type": "string", "minLength": 1}},
+        "required": ["quote"],
+    }
+    evidence_fact = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "evidence": span,
+            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        },
+        "required": ["evidence", "confidence"],
+    }
+    candidate = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "entities": {
+                "type": "array",
+                "maxItems": 64,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "id": {"type": "string"},
+                        "label": {"type": "string"},
+                        "kind": {"type": "string", "enum": sorted(ENTITY_KINDS)},
+                        "evidence": span,
+                        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                    },
+                    "required": ["id", "label", "kind", "evidence", "confidence"],
+                },
+            },
+            "orientations": {
+                "type": "array",
+                "maxItems": 64,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "id": {"type": "string"},
+                        "source_entity_id": {"type": "string"},
+                        "target_entity_id": {"type": "string"},
+                        "kind": {"type": "string", "enum": sorted(ORIENTATION_KINDS)},
+                        "polarity": {"type": "string", "enum": sorted(POLARITIES)},
+                        "modality": {"type": "string", "enum": sorted(MODALITIES)},
+                        "negated": {"type": "boolean"},
+                        "evidence": span,
+                        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                    },
+                    "required": [
+                        "id", "source_entity_id", "target_entity_id", "kind",
+                        "polarity", "modality", "negated", "evidence", "confidence",
+                    ],
+                },
+            },
+            "causal_relations": {
+                "type": "array",
+                "maxItems": 64,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "properties": {
+                        "id": {"type": "string"},
+                        "cause_entity_id": {"type": "string"},
+                        "effect_entity_id": {"type": "string"},
+                        "kind": {"type": "string", "enum": sorted(CAUSAL_KINDS)},
+                        "modality": {"type": "string", "enum": sorted(MODALITIES)},
+                        "negated": {"type": "boolean"},
+                        "evidence": span,
+                        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+                    },
+                    "required": [
+                        "id", "cause_entity_id", "effect_entity_id", "kind",
+                        "modality", "negated", "evidence", "confidence",
+                    ],
+                },
+            },
+            "signals": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    name: {"type": "array", "maxItems": 32, "items": evidence_fact}
+                    for name in SIGNAL_NAMES
+                },
+                "required": list(SIGNAL_NAMES),
+            },
+            "unknown_fields": {
+                "type": "array",
+                "items": {"type": "string", "enum": sorted(UNKNOWN_FIELDS)},
+            },
+            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        },
+        "required": [
+            "entities", "orientations", "causal_relations", "signals",
+            "unknown_fields", "confidence",
+        ],
+    }
+    return {
+        "type": "json_schema",
+        "name": "tom_assist_structural_candidate_v1",
+        "strict": True,
+        "schema": candidate,
+    }
+
+
+def build_gpt_quote_prompt(source_text: str) -> str:
+    """Build the visible, source-bound prompt for the GPT parser candidate."""
+    return f"""Parse structure from SOURCE_TEXT. Do not answer or advise the user.
+
+Return only the schema-defined object. Every evidence.quote must be a non-empty,
+exact, case-sensitive substring copied from SOURCE_TEXT. Do not calculate or
+return character offsets; Tom Assist binds quotes to offsets deterministically.
+When a word repeats, quote enough surrounding source text to identify the correct
+occurrence. Keep entity labels short. Internal IDs have no semantic meaning but
+every relation endpoint must name an entity in this response.
+
+Preserve direction exactly. Orientation source_entity_id -> target_entity_id
+means the source bears that orientation toward the target. Causality always means
+cause_entity_id -> effect_entity_id. "A enables B" maps A -> B. "B requires A"
+also maps A -> B because A is required for B. Explicit causal verbs belong only
+in causal_relations. `controls` is only an orientation and must not also become
+`causes`. Do not infer causation from correlation, proximity, or sequence.
+
+Mark negation and modality. "A does not support B" remains `supports` with
+negated=true, not `opposes`. Record every separately stated relationship exactly
+once, including all members of coordinated lists. Use the fixed signal meanings:
+- rules: obligation, prohibition, permission, or stated operating rule;
+- contradictions: claims in this text that cannot both hold;
+- inferences: an explicitly stated conclusion drawn from evidence;
+- sequences: explicit ordering such as first/then/before/after;
+- memory_references: explicit reference to earlier recorded or remembered state;
+- future_references: explicit future time, plan, prediction, or intended action;
+- completions: work or a decision explicitly stated as finished;
+- rejections: a path, proposal, claim, or decision explicitly rejected.
+
+Use empty arrays when a signal is absent. Confidence is evidence clarity in
+[0,1], not a load value. Do not output emotion labels, load numbers,
+explanations, source hashes, or text not supported by SOURCE_TEXT.
+
+SOURCE_TEXT:
+{source_text}
+"""
 
 
 def build_gemma_prompt(source_text: str) -> str:
