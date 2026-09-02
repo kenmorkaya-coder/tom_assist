@@ -81,8 +81,9 @@ def verify_v3_delta(registration: dict, require_frozen: bool) -> None:
         expected_sha = payload.pop("freeze_sha256")
         if base.sha256_bytes(base.canonical(payload).encode()) != expected_sha:
             raise ValueError("WP-29 v3 freeze SHA mismatch")
+        code_sha = registration.get("code_sha")
         for relative, expected in registration.get("files_sha256", {}).items():
-            if base.sha256_file(ROOT / relative) != expected:
+            if base.sha256_frozen_source(code_sha, relative) != expected:
                 raise ValueError(f"WP-29 v3 frozen file changed: {relative}")
     elif registration.get("owner_frozen") is not False or registration.get("status") != "DRAFT-PENDING-OWNER-FREEZE":
         raise ValueError("WP-29 v3 draft mechanics are inconsistent")
