@@ -56,8 +56,9 @@ The versioned replacement for prose-to-load keyword counting is available in
    query window with every stored window; the passage centroid is telemetry,
    never the only retrieval signal;
 2. local Gemma fills one `structural-candidate/1.0` native tool call per window.
-   Window-local spans are rebound to original passage offsets, and exact overlap
-   duplicates are merged deterministically. Candidates contain entities,
+   Window-local spans are rebound to original passage offsets. The same directed
+   relation with overlapping equivalent evidence is merged deterministically,
+   including punctuation-only quote-boundary differences. Candidates contain entities,
    directed orientations, cause-to-effect relations, modality, negation and
    typed signals, but no 17D values. Product code supplies only trusted envelope
    metadata and missing empty signal containers; it never supplies a semantic

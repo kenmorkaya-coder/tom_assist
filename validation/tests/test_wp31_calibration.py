@@ -5,6 +5,7 @@ from copy import deepcopy
 from gateway.structural_analysis import CANDIDATE_VERSION, text_digest
 from validation.calibration.wp31_cases import expanded_cases
 from validation.calibration.wp31_runner import (
+    _error_code,
     cases_digest,
     score_candidate,
     validate_case_contract,
@@ -84,3 +85,19 @@ def test_wp31_runner_has_no_provider_or_preview_mutation_surface():
     ):
         assert forbidden not in source
     assert '"provider_calls": 0' in source
+
+
+def test_wp31_error_taxonomy_unwraps_worker_failures():
+    assert _error_code("StructureProviderError: RuntimeError: JSONDecodeError: bad") == (
+        "invalid_tool_json"
+    )
+    assert _error_code("ValueError: entities[0] has no exact evidence quote") == (
+        "missing_evidence_quote"
+    )
+    assert _error_code("ValueError: evidence quote is missing or ambiguous") == (
+        "ambiguous_evidence_quote"
+    )
+    assert _error_code("ValueError: No function provided.") == "missing_tool_call"
+    assert _error_code("ValueError: fields mismatch: extra=['label']") == (
+        "extra_schema_field"
+    )

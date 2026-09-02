@@ -236,6 +236,30 @@ def test_overlap_candidates_rebase_and_deduplicate_exact_causal_evidence():
     assert directed_graph_fingerprint(analysis["candidate"])[0][2:4] == ["a", "b"]
 
 
+def test_overlap_deduplicates_punctuation_only_relation_boundaries():
+    text = "Opening. A enables B. Closing."
+    relation_start = text.index("A enables B")
+    relation_end = relation_start + len("A enables B.")
+    spans = [(0, relation_end), (relation_start, len(text))]
+    profile = _multi_profile(text, spans, [0, 1])
+    candidates = []
+    for index, (start, end) in enumerate(spans):
+        local = text[start:end]
+        candidate = _candidate(local, kind="enables")
+        quote = "A enables B." if index == 0 else "A enables B"
+        candidate["causal_relations"][0]["evidence"] = _span(local, quote)
+        candidates.append({"chunk_index": index, "candidate": candidate})
+    analysis = build_analysis(
+        text, candidates, profile, _parser(), [], "checkpoint-punctuation-overlap"
+    )
+    assert len(analysis["candidate"]["causal_relations"]) == 1
+    assert analysis["candidate"]["causal_relations"][0]["evidence"] == {
+        "start": relation_start,
+        "end": relation_end,
+        "quote": "A enables B.",
+    }
+
+
 def test_multivector_retrieval_finds_relevant_tail_chunk_without_centroid_collapse():
     query_text = "tail query"
     query = _profile(query_text, 5)

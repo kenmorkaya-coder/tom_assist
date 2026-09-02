@@ -246,6 +246,16 @@ def _artifact(path: Path) -> dict[str, Any]:
 
 
 def _error_code(message: str) -> str:
+    if "JSONDecodeError" in message:
+        return "invalid_tool_json"
+    if "No function provided" in message:
+        return "missing_tool_call"
+    if "evidence quote is missing or ambiguous" in message:
+        return "ambiguous_evidence_quote"
+    if "has no exact evidence quote" in message:
+        return "missing_evidence_quote"
+    if "fields mismatch" in message and "extra=" in message:
+        return "extra_schema_field"
     prefix = message.split(":", 1)[0]
     return normalize(prefix).replace(" ", "_") or "unknown"
 

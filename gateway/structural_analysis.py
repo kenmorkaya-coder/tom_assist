@@ -397,6 +397,19 @@ def _rebase_span(span: Mapping[str, Any], offset: int) -> dict[str, Any]:
     }
 
 
+def _equivalent_overlap_evidence(
+    left: Mapping[str, Any], right: Mapping[str, Any]
+) -> bool:
+    """Match the same overlapping quote despite punctuation-only boundaries."""
+    if max(int(left["start"]), int(right["start"])) >= min(
+        int(left["end"]), int(right["end"])
+    ):
+        return False
+    left_text = re.sub(r"[^a-z0-9]+", " ", str(left["quote"]).casefold()).strip()
+    right_text = re.sub(r"[^a-z0-9]+", " ", str(right["quote"]).casefold()).strip()
+    return bool(left_text) and left_text == right_text
+
+
 def merge_chunk_candidates(
     source_text: str,
     semantic_profile: Mapping[str, Any],
@@ -414,8 +427,8 @@ def merge_chunk_candidates(
     entity_keys: dict[tuple[Any, ...], str] = {}
     orientations: list[dict[str, Any]] = []
     causal_relations: list[dict[str, Any]] = []
-    orientation_keys: set[tuple[Any, ...]] = set()
-    causal_keys: set[tuple[Any, ...]] = set()
+    orientation_indices: dict[tuple[Any, ...], list[int]] = {}
+    causal_indices: dict[tuple[Any, ...], list[int]] = {}
     signals: dict[str, list[dict[str, Any]]] = {name: [] for name in SIGNAL_NAMES}
     signal_keys: dict[str, dict[tuple[Any, ...], int]] = {
         name: {} for name in SIGNAL_NAMES
@@ -477,14 +490,30 @@ def merge_chunk_candidates(
             target = local_entity_ids[relation["target_entity_id"]]
             key = (
                 source, target, relation["kind"], relation["polarity"],
-                relation["modality"], relation["negated"], evidence["start"],
-                evidence["end"], evidence["quote"],
+                relation["modality"], relation["negated"],
             )
-            if key in orientation_keys:
+            duplicate = next(
+                (
+                    index for index in orientation_indices.get(key, [])
+                    if _equivalent_overlap_evidence(
+                        orientations[index]["evidence"], evidence
+                    )
+                ),
+                None,
+            )
+            if duplicate is not None:
+                existing = orientations[duplicate]
+                if evidence["end"] - evidence["start"] > (
+                    existing["evidence"]["end"] - existing["evidence"]["start"]
+                ):
+                    existing["evidence"] = evidence
+                existing["confidence"] = max(
+                    float(existing["confidence"]), float(relation["confidence"])
+                )
                 continue
             if len(orientations) >= MAX_MERGED_RELATIONS:
                 raise ValueError("merged candidate exceeds the orientation limit")
-            orientation_keys.add(key)
+            orientation_indices.setdefault(key, []).append(len(orientations))
             orientations.append({
                 "id": f"orientation_{len(orientations) + 1:04d}",
                 "source_entity_id": source,
@@ -506,14 +535,30 @@ def merge_chunk_candidates(
             effect = local_entity_ids[relation["effect_entity_id"]]
             key = (
                 cause, effect, relation["kind"], relation["modality"],
-                relation["negated"], evidence["start"], evidence["end"],
-                evidence["quote"],
+                relation["negated"],
             )
-            if key in causal_keys:
+            duplicate = next(
+                (
+                    index for index in causal_indices.get(key, [])
+                    if _equivalent_overlap_evidence(
+                        causal_relations[index]["evidence"], evidence
+                    )
+                ),
+                None,
+            )
+            if duplicate is not None:
+                existing = causal_relations[duplicate]
+                if evidence["end"] - evidence["start"] > (
+                    existing["evidence"]["end"] - existing["evidence"]["start"]
+                ):
+                    existing["evidence"] = evidence
+                existing["confidence"] = max(
+                    float(existing["confidence"]), float(relation["confidence"])
+                )
                 continue
             if len(causal_relations) >= MAX_MERGED_RELATIONS:
                 raise ValueError("merged candidate exceeds the causal-relation limit")
-            causal_keys.add(key)
+            causal_indices.setdefault(key, []).append(len(causal_relations))
             causal_relations.append({
                 "id": f"causal_{len(causal_relations) + 1:04d}",
                 "cause_entity_id": cause,
