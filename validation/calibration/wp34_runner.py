@@ -46,11 +46,11 @@ from validation.calibration.wp33_runner import (
 )
 
 
-RUN_VERSION = "tom-assist-wp34-gpt-parser-comparison/1.0"
-RUN_ID = "wp34-gpt-parser-comparison-v1"
+RUN_VERSION = "tom-assist-wp34-gpt-parser-comparison/2.0"
+RUN_ID = "wp34-gpt-parser-comparison-v2"
 LABEL = "LIVE-PARSER-COMPARISON-NOT-A-GATE"
 ROOT = Path(__file__).resolve().parents[2]
-PREREGISTRATION = Path(__file__).with_name("WP34_PREREGISTRATION.md")
+PREREGISTRATION = Path(__file__).with_name("WP34_PREREGISTRATION_V2.md")
 CASES_SOURCE = Path(__file__).with_name("wp33_cases.py")
 BASELINE = ROOT / "validation/runs/wp33-local-calibration-v3/summary.json"
 BASELINE_SHA256 = "sha256:de0a971036cbbb7157051b40e16016984a9e6423cd042559aa69684d7b4fb23c"

@@ -271,21 +271,7 @@ impl Broker {
             .expect("credential mutex poisoned")
             .clone()
             .ok_or_else(|| BrokerError::new("OAUTH_NOT_CONNECTED"))?;
-        let mut payload = json!({
-            "model":self.config.model,
-            "input":[{"role":"user","content":prompt}],
-            "instructions":"You are a helpful assistant.",
-            "store":false,
-            "stream":true
-        });
-        if let Some(format) = response_format {
-            payload["instructions"] = Value::String(
-                "Extract only source-backed structure and return the required schema. Do not answer the user."
-                    .into(),
-            );
-            payload["max_output_tokens"] = Value::from(8192_u64);
-            payload["text"] = json!({"format":format});
-        }
+        let payload = provider_payload(&self.config.model, prompt, response_format);
         let response = self
             .client
             .post(&self.config.responses_endpoint)
@@ -400,6 +386,27 @@ impl Broker {
             .map_err(|_| BrokerError::new("OAUTH_JWKS_INVALID"))?;
         validate_id_token_with_jwks(token, expected_nonce, &self.config.client_id, &jwks)
     }
+}
+
+fn provider_payload(model: &str, prompt: &str, response_format: Option<&Value>) -> Value {
+    let mut payload = json!({
+        "model":model,
+        "input":[{"role":"user","content":prompt}],
+        "instructions":"You are a helpful assistant.",
+        "store":false,
+        "stream":true
+    });
+    if let Some(format) = response_format {
+        payload["instructions"] = Value::String(
+            "Extract only source-backed structure and return the required schema. Do not answer the user."
+                .into(),
+        );
+        // The ChatGPT OAuth Codex proxy accepts Responses text.format but
+        // rejects max_output_tokens. Keep output bounding at parse_sse and the
+        // owner-only broker response limit instead.
+        payload["text"] = json!({"format":format});
+    }
+    payload
 }
 
 fn validate_response_format(value: &Value) -> Result<()> {
@@ -854,5 +861,17 @@ mod tests {
                 "PROVIDER_RESPONSE_FORMAT_INVALID"
             );
         }
+    }
+
+    #[test]
+    fn oauth_structured_payload_uses_text_format_without_unsupported_token_limit() {
+        let format = json!({
+            "type":"json_schema","name":"x","strict":true,"schema":{}
+        });
+        let payload = provider_payload("gpt-5.5", "source", Some(&format));
+        assert_eq!(payload.pointer("/text/format"), Some(&format));
+        assert!(payload.get("max_output_tokens").is_none());
+        assert_eq!(payload.get("stream"), Some(&Value::Bool(true)));
+        assert_eq!(payload.get("store"), Some(&Value::Bool(false)));
     }
 }
