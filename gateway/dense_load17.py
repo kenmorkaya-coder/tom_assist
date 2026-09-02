@@ -17,13 +17,17 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from gateway.semantic_chunks import EMBEDDING_DIMENSION, validate_semantic_profile
-from gateway.structural_analysis import CHANNELS, digest, text_digest
+from gateway.structural_analysis import CHANNELS, digest, text_digest, validate_candidate
 
 
-DENSE_LOAD_VERSION = "tom-assist-dense-semantic-load17/0.1-shadow"
+DENSE_LOAD_VERSION = "tom-assist-dense-semantic-load17/0.2-shadow"
 ANCHOR_BANK_SCHEMA = "tom-assist-dense-load17-anchor-bank/1.0"
 ANCHOR_BANK_PATH = Path(__file__).with_name("data") / "dense_load17_anchor_bank_v1.json"
 DRIVERS = ("threat_load", "sustenance_potential", "procreation_potential")
+HISTORY_EVIDENCE_CHANNELS = frozenset({
+    "frequency", "persistence", "burstiness", "volatility", "novelty",
+    "recurrence", "decay",
+})
 
 
 def _finite_unit(value: Any, name: str) -> float:
@@ -222,7 +226,9 @@ def _semantic_measurements(
     return measurements
 
 
-def _history_features(analysis: Mapping[str, Any]) -> dict[str, float | None]:
+def _history_features(
+    analysis: Mapping[str, Any],
+) -> tuple[dict[str, float | None], dict[str, Any]]:
     metrics = analysis.get("history_metrics", {})
     similarities = metrics.get("combined_similarities", [])
     if not isinstance(similarities, list):
@@ -230,16 +236,29 @@ def _history_features(analysis: Mapping[str, Any]) -> dict[str, float | None]:
     sims = [_finite_unit(value, f"combined_similarities[{index}]")
             for index, value in enumerate(similarities)]
     features: dict[str, float | None] = {name: None for name in CHANNELS}
+    details: dict[str, Any] = {
+        "similarities": sims,
+        "frequency_mean": None,
+        "recurrence_max": None,
+        "persistence_soft_recent_run": None,
+        "burstiness_signed": None,
+        "burstiness_magnitude": None,
+        "history_centroid_similarity": None,
+        "novelty_centroid_distance": None,
+        "classification_confidence_change": None,
+    }
     if sims:
         features["frequency"] = sum(sims) / len(sims)
+        details["frequency_mean"] = features["frequency"]
         running = 1.0
         persistence_total = 0.0
         for value in reversed(sims[-6:]):
             running *= value
             persistence_total += running
         features["persistence"] = persistence_total / min(6, len(sims))
-        features["novelty"] = 1.0 - max(sims)
+        details["persistence_soft_recent_run"] = features["persistence"]
         features["recurrence"] = max(sims)
+        details["recurrence_max"] = features["recurrence"]
         features["volatility"] = max(
             1.0 - sims[-1],
             _finite_unit(metrics.get("static_distance_from_previous", 0.0),
@@ -252,13 +271,24 @@ def _history_features(analysis: Mapping[str, Any]) -> dict[str, float | None]:
         recent = sims[split:]
         signed = (sum(recent) / len(recent)) - (sum(earlier) / len(earlier))
         features["burstiness"] = abs(signed)
+        details["burstiness_signed"] = signed
+        details["burstiness_magnitude"] = features["burstiness"]
+    centroid_similarity = analysis.get("history_centroid_similarity")
+    if centroid_similarity is not None:
+        centroid = _finite_unit(
+            centroid_similarity, "history centroid similarity"
+        )
+        features["novelty"] = 1.0 - centroid
+        details["history_centroid_similarity"] = centroid
+        details["novelty_centroid_distance"] = features["novelty"]
     current_confidence = analysis.get("current_classification_confidence")
     previous_confidence = analysis.get("previous_classification_confidence")
     if current_confidence is not None and previous_confidence is not None:
         current = _finite_unit(current_confidence, "current classification confidence")
         previous = _finite_unit(previous_confidence, "previous classification confidence")
         features["decay"] = max(0.0, current - previous)
-    return features
+        details["classification_confidence_change"] = current - previous
+    return features, details
 
 
 def _structural_values(analysis: Mapping[str, Any]) -> dict[str, float]:
@@ -268,12 +298,150 @@ def _structural_values(analysis: Mapping[str, Any]) -> dict[str, float]:
     return {name: _finite_unit(load[name], f"load_signature.{name}") for name in CHANNELS}
 
 
-def _driver_values(analysis: Mapping[str, Any]) -> dict[str, float]:
-    values = analysis.get("driver_evidence", {})
-    if not isinstance(values, Mapping) or not set(values).issubset(DRIVERS):
-        raise ValueError("driver evidence fields mismatch")
-    return {name: _finite_unit(values.get(name, 0.0), f"driver_evidence.{name}")
-            for name in DRIVERS}
+def _driver_support(path: str, row: Mapping[str, Any]) -> dict[str, Any]:
+    evidence = row["evidence"]
+    return {
+        "path": path,
+        "start": int(evidence["start"]),
+        "end": int(evidence["end"]),
+        "quote": str(evidence["quote"]),
+        "confidence": float(row["confidence"]),
+    }
+
+
+def derive_driver_evidence(
+    source_text: str,
+    candidate_payload: Any,
+) -> dict[str, dict[str, Any]]:
+    """Compile T/S/P from validated, exact quote-bound candidate facts."""
+    candidate = validate_candidate(candidate_payload, source_text)
+    support: dict[str, list[dict[str, Any]]] = {name: [] for name in DRIVERS}
+    signal_routes = {
+        "contradictions": "threat_load",
+        "rejections": "threat_load",
+        "completions": "sustenance_potential",
+        "memory_references": "sustenance_potential",
+        "future_references": "procreation_potential",
+        "inferences": "procreation_potential",
+    }
+    for signal_name, driver in signal_routes.items():
+        for index, row in enumerate(candidate["signals"][signal_name]):
+            support[driver].append(
+                _driver_support(f"signals.{signal_name}[{index}].evidence", row)
+            )
+    for index, row in enumerate(candidate["orientations"]):
+        if row["negated"]:
+            continue
+        if row["polarity"] == "negative" or row["kind"] == "opposes":
+            support["threat_load"].append(
+                _driver_support(f"orientations[{index}].evidence", row)
+            )
+        if row["polarity"] == "positive" and row["kind"] in {
+            "supports", "contains", "owns",
+        }:
+            support["sustenance_potential"].append(
+                _driver_support(f"orientations[{index}].evidence", row)
+            )
+    for index, row in enumerate(candidate["causal_relations"]):
+        if row["negated"]:
+            continue
+        if row["kind"] == "prevents":
+            support["threat_load"].append(
+                _driver_support(f"causal_relations[{index}].evidence", row)
+            )
+        if row["modality"] in {"inferred", "tentative", "hypothetical"}:
+            support["procreation_potential"].append(
+                _driver_support(f"causal_relations[{index}].evidence", row)
+            )
+    return {
+        name: {
+            "value": max((row["confidence"] for row in support[name]), default=0.0),
+            "support": sorted(support[name], key=lambda row: row["path"]),
+        }
+        for name in DRIVERS
+    }
+
+
+def _driver_values(
+    source_text: str,
+    analysis: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    if "driver_evidence" in analysis:
+        raise ValueError(
+            "numeric driver_evidence overrides are not accepted; provide a validated candidate"
+        )
+    candidate = analysis.get("candidate")
+    if candidate is None:
+        return {name: {"value": 0.0, "support": []} for name in DRIVERS}
+    return derive_driver_evidence(source_text, candidate)
+
+
+def _structural_corroboration(
+    source_text: str,
+    structural: Mapping[str, float],
+    analysis: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    records = analysis.get("channel_records", [])
+    if not isinstance(records, list):
+        raise ValueError("source channel records must be an array")
+    by_channel = {
+        row.get("channel"): row
+        for row in records
+        if isinstance(row, Mapping) and isinstance(row.get("channel"), str)
+    }
+    profile = analysis.get("semantic_profile", {})
+    profile_chunks = profile.get("chunks", []) if isinstance(profile, Mapping) else []
+    chunk_starts = {
+        item.get("index"): item.get("start")
+        for item in profile_chunks
+        if isinstance(item, Mapping)
+        and type(item.get("index")) is int
+        and type(item.get("start")) is int
+    }
+    result = {}
+    for channel in ("L_contradiction", "L_inference"):
+        row = by_channel.get(channel, {})
+        raw_support = row.get("support", []) if isinstance(row, Mapping) else []
+        if not isinstance(raw_support, list):
+            raise ValueError(f"source channel record {channel} support must be an array")
+        spans = []
+        for index, item in enumerate(raw_support):
+            if not isinstance(item, Mapping) or item.get("kind") != "span":
+                continue
+            start, end, quote = item.get("start"), item.get("end"), item.get("quote")
+            chunk_index = item.get("chunk")
+            offset = chunk_starts.get(chunk_index, 0)
+            global_start = offset + start if type(start) is int else start
+            global_end = offset + end if type(end) is int else end
+            if (
+                type(start) is not int or type(end) is not int
+                or not isinstance(quote, str)
+                or not 0 <= global_start < global_end <= len(source_text)
+                or source_text[global_start:global_end] != quote
+            ):
+                raise ValueError(
+                    f"source channel record {channel} support[{index}] is not exact"
+                )
+            spans.append({
+                "path": str(item.get("path", "")),
+                "chunk_index": chunk_index if type(chunk_index) is int else None,
+                "local_start": start,
+                "local_end": end,
+                "start": global_start,
+                "end": global_end,
+                "quote": quote,
+                "confidence": _finite_unit(
+                    item.get("confidence"),
+                    f"source channel record {channel} support[{index}].confidence",
+                ),
+            })
+        result[channel] = {
+            "required_for_future_authority": True,
+            "structural_value": structural[channel],
+            "quoted_support": spans,
+            "present": structural[channel] > 0.0 and bool(spans),
+        }
+    return result
 
 
 def compile_dense_shadow_load(
@@ -289,13 +457,17 @@ def compile_dense_shadow_load(
     if profile["revision"] != bank["embedding_revision"]:
         raise ValueError("semantic profile revision does not match dense anchor bank")
     structural = _structural_values(source_analysis)
-    history = _history_features(source_analysis)
+    history, history_details = _history_features(source_analysis)
     semantic = _semantic_measurements(source_text, profile, bank, "channels")
     channel_records = []
     load_signature: dict[str, float] = {}
     for name in CHANNELS:
         history_value = history[name]
-        evidence_value = history_value if history_value is not None else structural[name]
+        evidence_value = (
+            history_value
+            if name in HISTORY_EVIDENCE_CHANNELS
+            else structural[name]
+        )
         final = _combine(semantic[name]["value"], evidence_value)
         _positive_unit(final, f"dense load.{name}")
         load_signature[name] = final
@@ -304,6 +476,7 @@ def compile_dense_shadow_load(
             "semantic": semantic[name],
             "structural_evidence": structural[name],
             "history_feature": history_value,
+            "history_feature_details": history_details,
             "combined_evidence": evidence_value,
             "value": final,
             "derivation": (
@@ -314,17 +487,20 @@ def compile_dense_shadow_load(
         })
 
     driver_semantic = _semantic_measurements(source_text, profile, bank, "drivers")
-    driver_evidence = _driver_values(source_analysis)
+    driver_evidence = _driver_values(source_text, source_analysis)
     driver_records = []
     drivers: dict[str, float] = {}
     for name in DRIVERS:
-        final = _combine(driver_semantic[name]["value"], driver_evidence[name])
+        final = _combine(
+            driver_semantic[name]["value"], driver_evidence[name]["value"]
+        )
         _positive_unit(final, f"dense driver.{name}")
         drivers[name] = final
         driver_records.append({
             "driver": name,
             "semantic": driver_semantic[name],
-            "direct_evidence": driver_evidence[name],
+            "direct_evidence": driver_evidence[name]["value"],
+            "direct_support": driver_evidence[name]["support"],
             "value": final,
             "derivation": (
                 "semantic=exp(-beta*(1-positive_cosine))*"
@@ -333,7 +509,12 @@ def compile_dense_shadow_load(
             ),
         })
 
-    graph = source_analysis.get("directed_graph", [])
+    graph = source_analysis.get("directed_graph")
+    if graph is None:
+        channel_evidence = source_analysis.get("channel_evidence", {})
+        graph = channel_evidence.get("directed_graph", []) if isinstance(
+            channel_evidence, Mapping
+        ) else []
     if not isinstance(graph, list):
         raise ValueError("directed graph fingerprint must be an array")
     result = {
@@ -348,6 +529,9 @@ def compile_dense_shadow_load(
         "driver_loads": drivers,
         "channel_records": channel_records,
         "driver_records": driver_records,
+        "structural_corroboration": _structural_corroboration(
+            source_text, structural, source_analysis
+        ),
         "directed_graph": graph,
         "directed_graph_digest": digest(graph),
     }

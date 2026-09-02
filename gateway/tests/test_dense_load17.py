@@ -8,12 +8,14 @@ import pytest
 
 from gateway.dense_load17 import (
     ANCHOR_BANK_PATH,
+    HISTORY_EVIDENCE_CHANNELS,
     compile_dense_shadow_load,
+    derive_driver_evidence,
     load_anchor_bank,
     validate_dense_shadow_load,
 )
 from gateway.semantic_chunks import build_semantic_profile
-from gateway.structural_analysis import CHANNELS
+from gateway.structural_analysis import CANDIDATE_VERSION, CHANNELS, SIGNAL_NAMES, text_digest
 
 
 def _canonical_json(value):
@@ -42,7 +44,6 @@ def _fixture():
         },
         "current_classification_confidence": None,
         "previous_classification_confidence": None,
-        "driver_evidence": {},
         "directed_graph": [["approval", "requires", "release"]],
     }
     return text, profile, analysis
@@ -75,6 +76,19 @@ def test_dense_shadow_is_positive_provenanced_and_replays_exactly():
     assert validate_dense_shadow_load(result, text, profile, analysis) == result
 
 
+def test_missing_history_never_falls_through_to_legacy_dynamic_defaults():
+    text, profile, analysis = _fixture()
+    analysis["load_signature"]["novelty"] = 1.0
+    analysis["load_signature"]["decay"] = 1.0
+    result = compile_dense_shadow_load(text, profile, analysis)
+    records = {row["channel"]: row for row in result["channel_records"]}
+
+    for channel in HISTORY_EVIDENCE_CHANNELS:
+        assert records[channel]["combined_evidence"] is None
+        assert records[channel]["value"] == records[channel]["semantic"]["value"]
+        assert records[channel]["value"] < 1.0
+
+
 def test_dense_shadow_tamper_and_direction_change_fail_or_change_digest():
     text, profile, analysis = _fixture()
     result = compile_dense_shadow_load(text, profile, analysis)
@@ -105,6 +119,78 @@ def test_history_features_are_continuous_and_declining_burst_is_not_clamped():
     assert records["volatility"]["history_feature"] == pytest.approx(0.82)
     assert records["decay"]["history_feature"] == pytest.approx(0.5)
     assert all(record["value"] > 0.0 for record in records.values())
+
+
+def test_driver_evidence_is_compiled_from_exact_candidate_quotes_and_cannot_be_overridden():
+    text, profile, analysis = _fixture()
+    text = "The report rejects the unsafe path and records that the repair is complete."
+
+    def span(quote):
+        start = text.index(quote)
+        return {"start": start, "end": start + len(quote), "quote": quote}
+
+    signals = {name: [] for name in SIGNAL_NAMES}
+    signals["rejections"] = [{
+        "evidence": span("rejects the unsafe path"), "confidence": 0.91,
+    }]
+    signals["completions"] = [{
+        "evidence": span("repair is complete"), "confidence": 0.86,
+    }]
+    candidate = {
+        "schema_version": CANDIDATE_VERSION,
+        "source_text_sha256": text_digest(text),
+        "entities": [],
+        "orientations": [],
+        "causal_relations": [],
+        "signals": signals,
+        "unknown_fields": [],
+        "confidence": 1.0,
+    }
+    direct = derive_driver_evidence(text, candidate)
+    assert direct["threat_load"]["value"] == 0.91
+    assert direct["sustenance_potential"]["value"] == 0.86
+    assert direct["procreation_potential"] == {"value": 0.0, "support": []}
+    assert direct["threat_load"]["support"][0]["quote"] == "rejects the unsafe path"
+
+    analysis["candidate"] = candidate
+    analysis["load_signature"] = {name: 0.0 for name in CHANNELS}
+    bank = load_anchor_bank()
+    vector = list(bank["drivers"]["threat_load"][0]["vector"])
+    profile = build_semantic_profile(
+        text,
+        [{"start": 0, "end": len(text), "values": vector}],
+        model=bank["embedding_model"], revision=bank["embedding_revision"],
+    )
+    result = compile_dense_shadow_load(text, profile, analysis)
+    records = {row["driver"]: row for row in result["driver_records"]}
+    assert records["threat_load"]["direct_evidence"] == 0.91
+    assert len(records["threat_load"]["direct_support"]) == 1
+
+    analysis["driver_evidence"] = {"threat_load": 1.0}
+    with pytest.raises(ValueError, match="numeric driver_evidence overrides are not accepted"):
+        compile_dense_shadow_load(text, profile, analysis)
+
+
+def test_contradiction_and_inference_corroboration_requires_exact_structural_span():
+    text, profile, analysis = _fixture()
+    quote = "deterministic semantic fixture"
+    start = text.index(quote)
+    analysis["load_signature"]["L_inference"] = 0.7
+    analysis["channel_records"] = [{
+        "channel": "L_inference",
+        "support": [{
+            "kind": "span", "path": "signals.inferences[0].evidence",
+            "start": start, "end": start + len(quote), "quote": quote,
+            "confidence": 0.9,
+        }],
+    }]
+    result = compile_dense_shadow_load(text, profile, analysis)
+    assert result["structural_corroboration"]["L_inference"]["present"] is True
+    assert result["structural_corroboration"]["L_contradiction"]["present"] is False
+
+    analysis["channel_records"][0]["support"][0]["quote"] = "wrong"
+    with pytest.raises(ValueError, match="is not exact"):
+        compile_dense_shadow_load(text, profile, analysis)
 
 
 def test_module_is_not_a_preview_or_runtime_mutation_path():
