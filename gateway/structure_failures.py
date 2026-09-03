@@ -7,7 +7,7 @@ import re
 from typing import Any, Mapping
 
 
-FAILURE_TAXONOMY_VERSION = "tom-assist-structure-failures/1.0"
+FAILURE_TAXONOMY_VERSION = "tom-assist-structure-failures/1.1"
 MAX_FAILURE_DETAIL_CHARACTERS = 240
 UNCLASSIFIED = "unclassified"
 
@@ -43,7 +43,7 @@ FAILURE_DEFINITIONS = (
     FailureDefinition("request.shape", "worker_request", r"request shape mismatch", "worker request shape mismatch", "structure_worker.request"),
     FailureDefinition("request.protocol", "worker_request", r"protocol mismatch", "worker protocol mismatch", "structure_worker.request"),
     FailureDefinition("source.invalid", "worker_request", r"source text must contain 1\.\.48000 characters", "source text must contain 1..48000 characters", "structure_worker.request"),
-    FailureDefinition("glossary.invalid", "worker_request", r"project glossary|glossary term|glossary source|glossary content", "project glossary fields mismatch", "project_glossary.validate_glossary"),
+    FailureDefinition("glossary.invalid", "worker_request", r"declared glossary|document glossary|project glossary|glossary term|glossary source|glossary content", "project glossary fields mismatch", "project_glossary.validate_glossary"),
     FailureDefinition("chunk.source_required", "chunk_plan", r"source text is required for chunking", "source text is required for chunking", "semantic_chunks.build_token_chunks"),
     FailureDefinition("chunk.source_limit", "chunk_plan", r"source text exceeds .* characters", "source text exceeds 48000 characters", "semantic_chunks.build_token_chunks"),
     FailureDefinition("chunk.window", "chunk_plan", r"max_tokens must be", "max_tokens must be in [8,256]", "semantic_chunks.build_token_chunks"),
@@ -141,15 +141,18 @@ FAILURE_DEFINITIONS = (
     FailureDefinition("semantic.validate_offset_type", "merge", r"semantic chunk offsets must be integers", "semantic chunk offsets must be integers", "semantic_chunks.validate_semantic_profile"),
     FailureDefinition("semantic.validate_offset_range", "merge", r"semantic chunk offsets are invalid", "semantic chunk offsets are invalid", "semantic_chunks.validate_semantic_profile"),
     FailureDefinition("semantic.validate_span_binding", "merge", r"semantic chunk is not bound to its source span", "semantic chunk is not bound to its source span", "semantic_chunks.validate_semantic_profile"),
+    FailureDefinition("semantic.validate_rebuild", "merge", r"semantic profile rebuild failed", "semantic profile rebuild failed", "semantic_chunks.validate_semantic_profile"),
+    FailureDefinition("semantic.validate_passage_vector", "merge", r"semantic passage vector is invalid", "semantic passage vector is invalid", "semantic_chunks.validate_semantic_profile"),
     FailureDefinition("semantic.validate_replay", "merge", r"semantic passage vector does not replay exactly", "semantic passage vector does not replay exactly", "semantic_chunks.validate_semantic_profile"),
     FailureDefinition("merge.profile_chunks", "merge", r"semantic profile has no chunks", "semantic profile has no chunks", "structural_analysis.merge_chunk_candidates"),
     FailureDefinition("merge.candidate_count", "merge", r"one structural candidate is required", "one structural candidate is required per semantic chunk", "structural_analysis.merge_chunk_candidates"),
     FailureDefinition("merge.candidate_shape", "merge", r"chunk candidate .* fields mismatch", "chunk candidate 0 fields mismatch", "structural_analysis.merge_chunk_candidates"),
     FailureDefinition("merge.chunk_index", "merge", r"chunk candidate indices must be contiguous", "chunk candidate indices must be contiguous", "structural_analysis.merge_chunk_candidates"),
+    FailureDefinition("merge.candidate_validation", "merge", r"chunk candidate .* validation failed", "chunk candidate 0 validation failed", "structural_analysis.merge_chunk_candidates"),
     FailureDefinition("merge.entity_limit", "merge", r"merged candidate exceeds the entity limit", "merged candidate exceeds the entity limit", "structural_analysis.merge_chunk_candidates"),
     FailureDefinition("merge.orientation_limit", "merge", r"merged candidate exceeds the orientation limit", "merged candidate exceeds the orientation limit", "structural_analysis.merge_chunk_candidates"),
     FailureDefinition("merge.causal_limit", "merge", r"merged candidate exceeds the causal-relation limit", "merged candidate exceeds the causal-relation limit", "structural_analysis.merge_chunk_candidates"),
-    FailureDefinition("merge.signal_limit", "merge", r"merged candidate exceeds .* limit", "merged candidate exceeds threat limit", "structural_analysis.merge_chunk_candidates"),
+    FailureDefinition("merge.signal_limit", "merge", r"merged candidate exceeds (?:rules|contradictions|inferences|sequences|memory_references|future_references|completions|rejections) limit", "merged candidate exceeds rules limit", "structural_analysis.merge_chunk_candidates"),
     FailureDefinition("parser_model.shape", "analysis", r"parser_model fields mismatch", "parser_model fields mismatch", "structural_analysis.validate_parser_model"),
     FailureDefinition("parser_model.version", "analysis", r"parser model version is not supported", "parser model version is not supported", "structural_analysis.validate_parser_model"),
     FailureDefinition("parser_model.value", "analysis", r"parser_model\..* must contain", "parser_model.model must contain 1..256 characters", "structural_analysis.validate_parser_model"),

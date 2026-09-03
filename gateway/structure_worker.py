@@ -229,7 +229,12 @@ def main() -> int:
             }
             stage = "worker_request"
             try:
-                request = json.loads(raw)
+                try:
+                    request = json.loads(raw)
+                except json.JSONDecodeError as error:
+                    raise ClassifiedStructureError(record_for_code(
+                        "request.json", f"{type(error).__name__}: {error}",
+                    )) from None
                 if not isinstance(request, dict) or set(request) not in (
                     {"protocol", "request_id", "source_text"},
                     {"protocol", "request_id", "source_text", "glossary"},

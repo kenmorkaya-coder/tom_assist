@@ -901,7 +901,12 @@ def merge_chunk_candidates(
             raise ValueError("chunk candidate indices must be contiguous")
         start, end = int(chunk["start"]), int(chunk["end"])
         local_text = source_text[start:end]
-        candidate = validate_candidate(item["candidate"], local_text)
+        try:
+            candidate = validate_candidate(item["candidate"], local_text)
+        except ValueError as error:
+            raise ValueError(
+                f"chunk candidate {chunk_index} validation failed: {error}"
+            ) from None
         normalized_chunks.append({"chunk_index": chunk_index, "candidate": candidate})
         confidences.append(float(candidate["confidence"]))
         unknown_fields.update(candidate["unknown_fields"])

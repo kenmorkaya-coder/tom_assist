@@ -187,12 +187,13 @@ def main() -> int:
                 if "glossary" in request else None
             )
             stage = "model_invocation"
-            prompt = build_gemma_prompt(source_text, glossary)
-            formatted = tokenizer.apply_chat_template(
-                [{"role": "user", "content": prompt}], tools=[tool],
-                add_generation_prompt=True, tokenize=False, enable_thinking=False,
-            )
             try:
+                prompt = build_gemma_prompt(source_text, glossary)
+                formatted = tokenizer.apply_chat_template(
+                    [{"role": "user", "content": prompt}], tools=[tool],
+                    add_generation_prompt=True, tokenize=False,
+                    enable_thinking=False,
+                )
                 with contextlib.redirect_stdout(sys.stderr):
                     generated = generate(
                         model, tokenizer, prompt=formatted, max_tokens=3072,

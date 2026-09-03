@@ -233,10 +233,16 @@ def validate_semantic_profile(payload: Any, source_text: str) -> dict[str, Any]:
         if item["text_sha256"] != _text_digest(source_text[start:end]):
             raise ValueError("semantic chunk is not bound to its source span")
         chunks.append({"start": start, "end": end, "values": item["values"]})
-    rebuilt = build_semantic_profile(
-        source_text, chunks, model=payload["model"], revision=payload["revision"]
-    )
-    supplied_passage = _unit_vector(payload["passage_vector"], "passage vector")
+    try:
+        rebuilt = build_semantic_profile(
+            source_text, chunks, model=payload["model"], revision=payload["revision"]
+        )
+    except ValueError as error:
+        raise ValueError(f"semantic profile rebuild failed: {error}") from None
+    try:
+        supplied_passage = _unit_vector(payload["passage_vector"], "passage vector")
+    except ValueError as error:
+        raise ValueError(f"semantic passage vector is invalid: {error}") from None
     if rebuilt["passage_vector"] != supplied_passage:
         raise ValueError("semantic passage vector does not replay exactly")
     return rebuilt

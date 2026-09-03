@@ -105,7 +105,7 @@ correctness measures.
 
 ## Failure taxonomy reporting
 
-Use `tom-assist-structure-failures/1.0`. Each failure record contains its
+Use `tom-assist-structure-failures/1.1`. Each failure record contains its
 stable category, a detail bounded to 240 characters while preserving both ends,
 zero-based chunk index and one-based attempt ordinal. Report every chunk
 outcome, per-passage category counts, per-arm category counts and whole-run
