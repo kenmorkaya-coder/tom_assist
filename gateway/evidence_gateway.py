@@ -21,6 +21,12 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import gateway.tom_gateway as base
 from gateway.permanent_library import content_hash
+from gateway.shadow_retrieval import (
+    build_shadow_comparison,
+    dense_channel_with_unscored_tail,
+    fuse_ranked_channels,
+    structural_channel,
+)
 from gateway.structural_analysis import (
     COMPILER_VERSION,
     DISALLOWED_ZERO_KINDS,
@@ -108,18 +114,37 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
             lexical = self.rgm.vector_store.query(
                 user_text, k=max(1, len(self.rgm.state.anchors))
             )
+            structural_history = self._active_structural_history()
             structural_rows = rank_structural_history(
                 analysis["candidate"], analysis["semantic_profile"],
-                self._active_structural_history(),
+                structural_history,
             )
             candidates = lexical
+            semantic_ranking = None
             if self.structure_mode == "authoritative":
-                dense = {row["record_id"]: row for row in structural_rows}
-                candidates = [
-                    (record_id, dense[record_id]["combined_score"] if record_id in dense else score)
-                    for record_id, score in lexical
-                ]
-            fused = base.fuse_anchors(self.rgm.state.anchors, candidates, cohort)
+                semantic_ranking = dense_channel_with_unscored_tail(
+                    self.rgm.state.anchors, lexical, structural_rows
+                )
+                authoritative_structural = structural_channel(
+                    self.rgm.state.anchors, cohort
+                )
+                fused = fuse_ranked_channels(
+                    semantic_ranking["ranking"], authoritative_structural
+                )
+            else:
+                fused = base.fuse_anchors(self.rgm.state.anchors, candidates, cohort)
+            shadow_comparison = None
+            if self.structure_mode == "shadow":
+                shadow_comparison = build_shadow_comparison(
+                    branches=self.engine.state.branches,
+                    records=self.rgm.state.anchors,
+                    lexical=lexical,
+                    current_cohort=cohort,
+                    current_fused=fused,
+                    evidence_load_signature=analysis["load_signature"],
+                    structural_history=structural_history,
+                    structural_rows=structural_rows,
+                )
             ranked: list[dict[str, Any]] = []
             used_chars = 0
             for scores in fused:
@@ -150,7 +175,7 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
                 "checkpoint_digest": checkpoint_digest,
                 "structural_analysis_digest": analysis["analysis_digest"],
             })
-            return {
+            result = {
                 "activation_id": activation_id,
                 "triggers": [asdict(trigger) for trigger in triggers],
                 "ranked_anchors": ranked,
@@ -168,6 +193,11 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
                 "policy_version": base.POLICY_VERSION,
                 "checkpoint_digest": checkpoint_digest,
             }
+            if semantic_ranking is not None:
+                result["structural_semantic_ranking"] = semantic_ranking
+            if shadow_comparison is not None:
+                result["shadow_retrieval_comparison"] = shadow_comparison
+            return result
 
     def commit_turn(
         self,

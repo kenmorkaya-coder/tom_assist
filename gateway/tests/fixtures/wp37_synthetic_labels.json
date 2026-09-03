@@ -1,0 +1,9 @@
+{
+  "schema_version": "tom-assist-wp37-external-relevance-labels/1.0",
+  "label": "PLUMBING-ONLY-SYNTHETIC-NOT-EVIDENCE",
+  "provenance": "unit-test arithmetic fixture; not a corpus judgement",
+  "queries": [
+    {"query_id": "SYN-1", "relevant_ids": ["b"]},
+    {"query_id": "SYN-2", "relevant_ids": ["d"]}
+  ]
+}
