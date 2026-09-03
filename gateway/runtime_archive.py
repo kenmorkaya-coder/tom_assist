@@ -78,8 +78,18 @@ def validate_snapshot(gateway, root):
         objects = {(kind, name) for kind, name in db.execute("SELECT type,name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'")}
         legacy_objects = {("table", "library_records"), ("table", "runtime_head"), ("table", "demotions"), ("index", "library_content_hash")}
         structural_objects = legacy_objects | {("table", "structural_commits")}
-        current_objects = structural_objects | {("table", "retrieval_outcomes")}
-        if objects not in (legacy_objects, structural_objects, current_objects):
+        outcome_objects = structural_objects | {("table", "retrieval_outcomes")}
+        document_objects = {
+            ("table", "documents"), ("table", "document_chunks"),
+        }
+        accepted_objects = {
+            frozenset(legacy_objects),
+            frozenset(structural_objects),
+            frozenset(outcome_objects),
+            frozenset(structural_objects | document_objects),
+            frozenset(outcome_objects | document_objects),
+        }
+        if frozenset(objects) not in accepted_objects:
             raise ValueError("unrecognized library schema objects")
         originals = {}
         original_texts = {}
@@ -160,6 +170,66 @@ def validate_snapshot(gateway, root):
                     or tick != receipt.get("engine_tick_after")
                 ):
                     raise ValueError("invalid retrieval-outcome provenance")
+        if ("table", "documents") in objects:
+            from gateway.document_ingestion import (
+                ALLOWED_DOCUMENT_MEDIA_TYPES,
+                DOCUMENT_CHUNKING_VERSION,
+                DOCUMENT_EMBEDDING_VERSION,
+                MAX_DOCUMENT_CHUNKS,
+                MAX_DOCUMENT_SOURCE_CHARS,
+                decode_vector_f32,
+            )
+            documents = {}
+            for row in db.execute(
+                "SELECT document_id,display_name,content_sha256,content,byte_length,"
+                "media_type,chunking_version,embedding_version,ingested_tick,tombstoned_at "
+                "FROM documents ORDER BY document_id"
+            ):
+                (
+                    document_id, display_name, content_digest, content, byte_length,
+                    media_type, chunking_version, embedding_version, ingested_tick,
+                    tombstoned_at,
+                ) = row
+                if (
+                    document_id != "document-" + content_digest[:32]
+                    or hashlib.sha256(content.encode("utf-8")).hexdigest() != content_digest
+                    or byte_length != len(content.encode("utf-8"))
+                    or not display_name or len(content) > MAX_DOCUMENT_SOURCE_CHARS
+                    or media_type not in ALLOWED_DOCUMENT_MEDIA_TYPES
+                    or chunking_version != DOCUMENT_CHUNKING_VERSION
+                    or embedding_version != DOCUMENT_EMBEDDING_VERSION
+                    or type(ingested_tick) is not int
+                    or tombstoned_at is not None and not isinstance(tombstoned_at, str)
+                ):
+                    raise ValueError("invalid document provenance")
+                documents[document_id] = content
+            grouped = {document_id: [] for document_id in documents}
+            for row in db.execute(
+                "SELECT document_id,chunk_index,start,end,text_sha256,passage_vector,"
+                "analysis_digest,load_signature_json FROM document_chunks "
+                "ORDER BY document_id,chunk_index"
+            ):
+                document_id, index, start, end, text_digest, vector, analysis, load = row
+                content = documents.get(document_id)
+                if (
+                    content is None or index != len(grouped[document_id])
+                    or not 0 <= start < end <= len(content)
+                    or hashlib.sha256(content[start:end].encode("utf-8")).hexdigest() != text_digest
+                    or analysis is not None or load is not None
+                ):
+                    raise ValueError("invalid document-chunk provenance")
+                decode_vector_f32(vector)
+                grouped[document_id].append((start, end))
+            for document_id, spans in grouped.items():
+                if (
+                    not 1 <= len(spans) <= MAX_DOCUMENT_CHUNKS
+                    or spans[0][0] != 0 or spans[-1][1] != len(documents[document_id])
+                    or any(
+                        start >= spans[index - 1][1] or end <= spans[index - 1][1]
+                        for index, (start, end) in enumerate(spans[1:], 1)
+                    )
+                ):
+                    raise ValueError("document chunks do not overlap and cover their source")
         for folder in (root / "checkpoints").glob("*"):
             expected_files = {"tree_state.json", "rgm_state.json", "commit_state.json", "metadata.json"}
             if {p.name for p in folder.iterdir()} != expected_files:

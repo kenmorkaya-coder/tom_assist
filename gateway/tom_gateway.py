@@ -57,6 +57,12 @@ LOGGER = logging.getLogger("tom_assist.gateway")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from gateway.structural_preview import POLICY_VERSION, project_text, select_cohort, fuse_anchors
 from gateway.permanent_library import PermanentLibrary, content_hash
+from gateway.document_ingestion import (
+    DOCUMENT_CHUNKING_VERSION,
+    DOCUMENT_EMBEDDING_VERSION,
+    MAX_DOCUMENT_CHUNKS,
+    MAX_DOCUMENT_SOURCE_CHARS,
+)
 
 COMMIT_DYNAMICS = ["step", "rgm_write", "leaf_vec_teach", "usage_rotation", "front_row_reseat"]
 DEFAULT_SETTINGS = {"front_row_capacity": 4096, "teach_on_conflict": True}
@@ -185,6 +191,7 @@ class ProjectRuntime:
         state_dir: Path,
         runtime_sha: str,
         seed: SeedConfiguration,
+        document_embedding_provider=None,
     ) -> None:
         self.project_id = _safe_project_id(project_id)
         self.state_dir = state_dir.resolve()
@@ -192,6 +199,7 @@ class ProjectRuntime:
         os.chmod(self.state_dir, 0o700)
         self.runtime_sha = runtime_sha
         self.seed = seed
+        self.document_embedding_provider = document_embedding_provider
         self.lock = threading.RLock()
         self._idempotency_path = self.state_dir / "turn_idempotency.json"
         self.library = PermanentLibrary(self.state_dir / "library.sqlite3")
@@ -396,6 +404,121 @@ class ProjectRuntime:
                     "library_count": self.library.db.execute("SELECT COUNT(*) FROM library_records").fetchone()[0],
                     "demotion_count": self.library.db.execute("SELECT COUNT(*) FROM demotions").fetchone()[0],
                     "demotions": events, "next_event_id": events[-1]["event_id"] if events else after}
+
+    def ingest_document(self, display_name, content, media_type):
+        """Store explicitly supplied text inventory without touching runtime state."""
+        from gateway.document_ingestion import (
+            DOCUMENT_CHUNKING_VERSION,
+            DOCUMENT_EMBEDDING_VERSION,
+            DocumentEmbeddingWorkerClient,
+            validate_document_input,
+            validate_embedding_result,
+        )
+
+        display_name, content, media_type, byte_length = validate_document_input(
+            display_name, content, media_type
+        )
+        digest = content_hash(content)
+        document_id = "document-" + digest[:32]
+        with self.lock:
+            existing = self.library.document(document_id)
+            if existing is not None:
+                if existing["content_sha256"] != digest or existing["content"] != content:
+                    raise ValueError("document content identity conflict")
+                return self._public_document(existing, duplicate=True)
+            provider = self.document_embedding_provider
+            if provider is None:
+                provider = DocumentEmbeddingWorkerClient.from_environment()
+                self.document_embedding_provider = provider
+            embedded = validate_embedding_result(content, provider.embed_document(content))
+            chunks = []
+            for row in embedded["chunks"]:
+                chunk_text = content[row["start"]:row["end"]]
+                chunks.append({
+                    "index": row["index"],
+                    "start": row["start"],
+                    "end": row["end"],
+                    "text_sha256": content_hash(chunk_text),
+                    "passage_vector": row["vector_f32_le_base64"],
+                })
+            document = {
+                "document_id": document_id,
+                "display_name": display_name,
+                "content_sha256": digest,
+                "content": content,
+                "byte_length": byte_length,
+                "media_type": media_type,
+                "chunking_version": DOCUMENT_CHUNKING_VERSION,
+                "embedding_version": DOCUMENT_EMBEDDING_VERSION,
+                "ingested_tick": int(self.engine.state.tick),
+                "tombstoned_at": None,
+            }
+            self.library.db.execute("BEGIN IMMEDIATE")
+            try:
+                retained = self.library.retain_document(document, chunks)
+                self.library.db.execute("COMMIT")
+            except BaseException:
+                if self.library.db.in_transaction:
+                    self.library.db.execute("ROLLBACK")
+                raise
+            return self._public_document(retained, duplicate=False)
+
+    @staticmethod
+    def _public_document(document, *, duplicate=None):
+        chunks = [
+            {
+                key: row[key]
+                for key in ("chunk_index", "start", "end", "text_sha256")
+            }
+            for row in document.get("chunks", [])
+        ]
+        public = {
+            key: document[key]
+            for key in (
+                "document_id", "display_name", "content_sha256", "content",
+                "byte_length", "media_type", "chunking_version", "embedding_version",
+                "ingested_tick", "tombstoned_at",
+            )
+        }
+        public["chunks"] = chunks
+        public["chunk_count"] = len(chunks)
+        if duplicate is not None:
+            public["duplicate"] = duplicate
+        return public
+
+    def list_documents(self, include_withdrawn=False):
+        with self.lock:
+            result = []
+            for row in self.library.documents(include_withdrawn=bool(include_withdrawn)):
+                count = self.library.db.execute(
+                    "SELECT COUNT(*) FROM document_chunks WHERE document_id=?",
+                    (row["document_id"],),
+                ).fetchone()[0]
+                result.append({**row, "chunk_count": count})
+            return result
+
+    def get_document(self, document_id):
+        with self.lock:
+            document = self.library.document(str(document_id))
+            if document is None:
+                raise ValueError("document does not exist")
+            return self._public_document(document)
+
+    def withdraw_document(self, document_id, tombstoned_at):
+        if not isinstance(tombstoned_at, str) or not tombstoned_at.strip():
+            raise ValueError("document withdrawal timestamp is required")
+        with self.lock:
+            self.library.db.execute("BEGIN IMMEDIATE")
+            try:
+                document = self.library.withdraw_document(
+                    str(document_id), tombstoned_at.strip()
+                )
+                self.library.db.execute("COMMIT")
+            except BaseException:
+                if self.library.db.in_transaction:
+                    self.library.db.execute("ROLLBACK")
+                raise
+            return self._public_document(document)
 
     def _artifact_payload(self, tree_bytes: bytes, rgm_bytes: bytes) -> dict[str, Any]:
         return {
@@ -705,9 +828,11 @@ class TomGateway:
         *,
         seed_artifact: Path | None = None,
         mechanics_profile: Path | None = None,
+        document_embedding_provider=None,
     ) -> None:
         self.data_dir = data_dir.expanduser().resolve()
         self.tom_master = tom_master.expanduser().resolve()
+        self.document_embedding_provider = document_embedding_provider
         sys.dont_write_bytecode = True  # Imports must not write caches in frozen upstream.
         self.data_dir.mkdir(parents=True, exist_ok=True)
         os.chmod(self.data_dir, 0o700)
@@ -774,6 +899,7 @@ class TomGateway:
                     self.data_dir / "projects" / project_id / "tom",
                     self.runtime_sha,
                     self.seed,
+                    self.document_embedding_provider,
                 )
                 self._projects[project_id] = runtime
             return runtime
@@ -804,6 +930,13 @@ class TomGateway:
             "kappa_decay_source": KAPPA_DECAY_SOURCE,
             "preview_channels": ["lexical", "structural_geometry"],
             "commit_dynamics": list(COMMIT_DYNAMICS),
+            "supports_documents": True,
+            "document_chunking_version": DOCUMENT_CHUNKING_VERSION,
+            "document_embedding_version": DOCUMENT_EMBEDDING_VERSION,
+            "document_max_source_chars": MAX_DOCUMENT_SOURCE_CHARS,
+            "document_max_chunks": MAX_DOCUMENT_CHUNKS,
+            "document_structural_parsing": False,
+            "document_packet_admission": False,
             **DEFAULT_SETTINGS,
         }
 
@@ -851,6 +984,27 @@ class TomGateway:
                     conflict_dismissed=payload.get("conflict_dismissed", False),
                     packet_digest=payload.get("packet_digest"),
                     retrieval_trace=payload.get("retrieval_trace") or [])
+            if method == "POST" and path == "/document/ingest":
+                if payload.get("explicit_user_action") is not True:
+                    raise ValueError("document ingestion requires an explicit user action")
+                return 200, self.project(payload.get("project_id")).ingest_document(
+                    payload.get("display_name"), payload.get("content"),
+                    payload.get("media_type"),
+                )
+            if method == "POST" and path == "/document/list":
+                return 200, {"documents": self.project(
+                    payload.get("project_id")
+                ).list_documents(payload.get("include_withdrawn", False))}
+            if method == "POST" and path == "/document/get":
+                return 200, self.project(payload.get("project_id")).get_document(
+                    payload.get("document_id")
+                )
+            if method == "POST" and path == "/document/withdraw":
+                if payload.get("explicit_user_action") is not True:
+                    raise ValueError("document withdrawal requires an explicit user action")
+                return 200, self.project(payload.get("project_id")).withdraw_document(
+                    payload.get("document_id"), payload.get("tombstoned_at")
+                )
             if method == "POST" and path == "/project/settings":
                 runtime = self.project(payload.get("project_id"))
                 return 200, runtime.update_settings(payload.get("settings") or {})

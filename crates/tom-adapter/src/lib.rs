@@ -195,6 +195,29 @@ impl GatewayClient {
             Some(json!({"project_id":project_id,"after_event_id":after_event_id})),
         )
     }
+    pub fn ingest_document(&self, payload: Value) -> Result<Value> {
+        self.request("POST", "/document/ingest", Some(payload))
+    }
+    pub fn list_documents(&self, project_id: &str, include_withdrawn: bool) -> Result<Value> {
+        self.request(
+            "POST",
+            "/document/list",
+            Some(json!({
+                "project_id": project_id,
+                "include_withdrawn": include_withdrawn,
+            })),
+        )
+    }
+    pub fn get_document(&self, project_id: &str, document_id: &str) -> Result<Value> {
+        self.request(
+            "POST",
+            "/document/get",
+            Some(json!({"project_id":project_id,"document_id":document_id})),
+        )
+    }
+    pub fn withdraw_document(&self, payload: Value) -> Result<Value> {
+        self.request("POST", "/document/withdraw", Some(payload))
+    }
     pub fn restore_checkpoint(&self, project_id: &str, checkpoint_id: &str) -> Result<Value> {
         self.request(
             "POST",

@@ -55,8 +55,11 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
         seed: base.SeedConfiguration,
         structure_mode: str,
         structure_provider: Any | None,
+        document_embedding_provider=None,
     ) -> None:
-        super().__init__(project_id, state_dir, runtime_sha, seed)
+        super().__init__(
+            project_id, state_dir, runtime_sha, seed, document_embedding_provider
+        )
         self.structure_mode = structure_mode
         self.structure_provider = structure_provider
 
@@ -144,6 +147,8 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
                     evidence_load_signature=analysis["load_signature"],
                     structural_history=structural_history,
                     structural_rows=structural_rows,
+                    document_chunks=self.library.document_chunks(active_only=True),
+                    query_semantic_profile=analysis["semantic_profile"],
                 )
             ranked: list[dict[str, Any]] = []
             used_chars = 0
@@ -465,12 +470,14 @@ class EvidenceTomGateway(base.TomGateway):
         mechanics_profile: Path | None = None,
         structure_mode: str | None = None,
         structure_provider: Any | None = None,
+        document_embedding_provider=None,
     ) -> None:
         super().__init__(
             data_dir,
             tom_master,
             seed_artifact=seed_artifact,
             mechanics_profile=mechanics_profile,
+            document_embedding_provider=document_embedding_provider,
         )
         self.structure_mode = str(
             structure_mode if structure_mode is not None
@@ -487,6 +494,7 @@ class EvidenceTomGateway(base.TomGateway):
         return EvidenceProjectRuntime(
             project_id, state_dir, self.runtime_sha, self.seed,
             self.structure_mode, self.structure_provider,
+            self.document_embedding_provider,
         )
 
     def project(self, project_id: Any) -> EvidenceProjectRuntime:

@@ -122,6 +122,14 @@ pub enum Method {
     SelfReportSend,
     #[serde(rename = "conversation.self_report.label")]
     SelfReportLabel,
+    #[serde(rename = "document.ingest")]
+    DocumentIngest,
+    #[serde(rename = "document.list")]
+    DocumentList,
+    #[serde(rename = "document.get")]
+    DocumentGet,
+    #[serde(rename = "document.withdraw")]
+    DocumentWithdraw,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -196,6 +204,44 @@ pub struct TomCapabilities {
     pub model_generated_load_values: bool,
     #[serde(default)]
     pub feeling_wheel_used: bool,
+    #[serde(default)]
+    pub supports_documents: bool,
+    #[serde(default)]
+    pub document_chunking_version: String,
+    #[serde(default)]
+    pub document_embedding_version: String,
+    #[serde(default)]
+    pub document_max_source_chars: u64,
+    #[serde(default)]
+    pub document_max_chunks: u64,
+    #[serde(default)]
+    pub document_structural_parsing: bool,
+    #[serde(default)]
+    pub document_packet_admission: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DocumentChunk {
+    pub chunk_index: u64,
+    pub start: u64,
+    pub end: u64,
+    pub text_sha256: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProjectDocument {
+    pub document_id: String,
+    pub display_name: String,
+    pub content_sha256: String,
+    pub content: String,
+    pub byte_length: u64,
+    pub media_type: String,
+    pub chunking_version: String,
+    pub embedding_version: String,
+    pub ingested_tick: u64,
+    pub tombstoned_at: Option<String>,
+    pub chunk_count: u64,
+    pub chunks: Vec<DocumentChunk>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

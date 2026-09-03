@@ -37,6 +37,8 @@ def build_token_chunks(
     max_tokens: int = MAX_CHUNK_TOKENS,
     overlap_tokens: int = OVERLAP_TOKENS,
     min_boundary_tokens: int = MIN_BOUNDARY_TOKENS,
+    max_source_chars: int = MAX_SOURCE_CHARS,
+    max_chunks: int = MAX_CHUNKS,
 ) -> list[dict[str, int]]:
     """Plan overlapping chunks, preferring sentence/paragraph boundaries.
 
@@ -46,8 +48,8 @@ def build_token_chunks(
     """
     if not isinstance(source_text, str) or not source_text.strip():
         raise ValueError("source text is required for chunking")
-    if len(source_text) > MAX_SOURCE_CHARS:
-        raise ValueError(f"source text exceeds {MAX_SOURCE_CHARS} characters")
+    if len(source_text) > max_source_chars:
+        raise ValueError(f"source text exceeds {max_source_chars} characters")
     if not (8 <= max_tokens <= 256):
         raise ValueError("max_tokens must be in [8,256]")
     if not (0 < overlap_tokens < max_tokens // 2):
@@ -95,8 +97,8 @@ def build_token_chunks(
             "start": char_start,
             "end": char_end,
         })
-        if len(chunks) > MAX_CHUNKS:
-            raise ValueError(f"source requires more than {MAX_CHUNKS} chunks")
+        if len(chunks) > max_chunks:
+            raise ValueError(f"source requires more than {max_chunks} chunks")
         if token_end == len(offsets):
             break
         token_start = max(token_start + 1, token_end - overlap_tokens)

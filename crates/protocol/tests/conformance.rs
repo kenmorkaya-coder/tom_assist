@@ -1,8 +1,8 @@
 use serde::{Serialize, de::DeserializeOwned};
 use serde_json::Value;
 use tom_assist_protocol::{
-    ContinuityPacket, Envelope, Intervention, ProtocolError, ProviderCapabilities, StateEdge,
-    StateMutationCandidate, StateObject, StructuralCandidate, TomCapabilities,
+    ContinuityPacket, Envelope, Intervention, ProjectDocument, ProtocolError, ProviderCapabilities,
+    StateEdge, StateMutationCandidate, StateObject, StructuralCandidate, TomCapabilities,
 };
 
 fn round_trip<T>(value: &Value)
@@ -30,6 +30,7 @@ fn shared_examples_round_trip_through_handwritten_rust_types() {
     round_trip::<StructuralCandidate>(&fixture["structural_candidate"]);
     round_trip::<Intervention>(&fixture["intervention"]);
     round_trip::<ProtocolError>(&fixture["error"]);
+    round_trip::<ProjectDocument>(&fixture["document"]);
 }
 
 #[test]

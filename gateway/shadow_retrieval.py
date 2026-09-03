@@ -11,6 +11,8 @@ import statistics
 from typing import Any, Mapping, Sequence
 
 from gateway.structural_preview import RRF_K, W_LEAF, select_cohort
+from gateway.document_ingestion import decode_vector_f32
+from gateway.semantic_chunks import profile_similarity
 
 
 COMPARISON_VERSION = "tom-assist-shadow-retrieval/1.0"
@@ -273,6 +275,8 @@ def build_shadow_comparison(
     evidence_load_signature: Mapping[str, Any],
     structural_history: Sequence[Mapping[str, Any]],
     structural_rows: Sequence[Mapping[str, Any]],
+    document_chunks: Sequence[Mapping[str, Any]] = (),
+    query_semantic_profile: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     evidence_signature, address_8d = evidence_address(evidence_load_signature)
     proposed_cohort, proposed_branch_trace = select_cohort(branches, evidence_signature)
@@ -287,6 +291,9 @@ def build_shadow_comparison(
     proposed_ids = [str(row[0]) for row in proposed_cohort]
     overlap = len(set(current_ids) & set(proposed_ids))
     union = set(current_ids) | set(proposed_ids)
+    document_report = rank_document_chunks(
+        structural_rows, document_chunks, query_semantic_profile,
+    )
     return {
         "version": COMPARISON_VERSION,
         "serving_result_unchanged": True,
@@ -316,6 +323,78 @@ def build_shadow_comparison(
         },
         "anchor_evidence": evidence_report,
         "rank_divergence": rank_divergence(current_fused, proposed_fused),
+        "document_chunk_dense_channel": document_report,
+    }
+
+
+def rank_document_chunks(
+    structural_rows: Sequence[Mapping[str, Any]],
+    document_chunks: Sequence[Mapping[str, Any]],
+    query_profile: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Rank inactive document chunks only in the dense semantic score space."""
+    anchors = [
+        {
+            "kind": "anchor",
+            "id": str(row["record_id"]),
+            "score": float(row["dense_semantic_score"]),
+        }
+        for row in structural_rows
+    ]
+    documents = []
+    if query_profile is not None:
+        for row in document_chunks:
+            vector = decode_vector_f32(row["passage_vector"])
+            score = profile_similarity(
+                query_profile,
+                {"chunks": [{"values": vector}]},
+            )["query_relevance_score"]
+            documents.append({
+                "kind": "document_chunk",
+                "id": f'{row["document_id"]}:chunk:{row["chunk_index"]}',
+                "document_id": str(row["document_id"]),
+                "display_name": str(row["display_name"]),
+                "chunk_index": int(row["chunk_index"]),
+                "start": int(row["start"]),
+                "end": int(row["end"]),
+                "text_sha256": str(row["text_sha256"]),
+                "score": float(score),
+                "score_space": "dense_multivector_query_to_document_chunk",
+            })
+    combined = sorted(
+        [*anchors, *documents], key=lambda row: (-row["score"], row["kind"], row["id"])
+    )
+    rank_by_key = {
+        (row["kind"], row["id"]): rank for rank, row in enumerate(combined, 1)
+    }
+    anchor_ranks = [
+        rank_by_key[("anchor", row["id"])] for row in anchors
+    ]
+    ranked_documents = []
+    for row in sorted(
+        documents,
+        key=lambda item: rank_by_key[("document_chunk", item["id"])],
+    ):
+        rank = rank_by_key[("document_chunk", row["id"])]
+        ranked_documents.append({
+            **{key: value for key, value in row.items() if key != "kind"},
+            "dense_rank_with_anchors": rank,
+            "anchors_ranked_below": sum(anchor_rank > rank for anchor_rank in anchor_ranks),
+            "packet_eligible": False,
+            "structural_signature": None,
+        })
+    return {
+        "document_chunk_count": len(ranked_documents),
+        "anchor_dense_count": len(anchors),
+        "chunks_that_would_displace_an_anchor": sum(
+            row["anchors_ranked_below"] > 0 for row in ranked_documents
+        ),
+        "document_anchor_displacement_pairs": sum(
+            row["anchors_ranked_below"] for row in ranked_documents
+        ),
+        "ranking": ranked_documents,
+        "packet_admission_enabled": False,
+        "structural_channel_enabled": False,
     }
 
 

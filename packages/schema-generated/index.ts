@@ -12,6 +12,7 @@ export type TomAssistProtocol =
   | ContinuityPacket
   | StateMutationCandidate
   | StructuralCandidate
+  | ProjectDocument
   | Intervention
   | ProtocolError;
 export type Method =
@@ -57,7 +58,11 @@ export type Method =
   | "conversation.evaluate"
   | "conversation.self_report.prepare"
   | "conversation.self_report.send"
-  | "conversation.self_report.label";
+  | "conversation.self_report.label"
+  | "document.ingest"
+  | "document.list"
+  | "document.get"
+  | "document.withdraw";
 /**
  * Source-turn identifier contract source-id/1.1. Legacy UUIDs remain valid; provider conversation turns may append the recorded user or assistant role.
  */
@@ -111,6 +116,13 @@ export interface TomCapabilities {
   local_gemma_candidate_required: boolean;
   model_generated_load_values: false;
   feeling_wheel_used: false;
+  supports_documents: true;
+  document_chunking_version: "minilm-document-token-sentence-max192-overlap32/1.0";
+  document_embedding_version: "minilm-l6-v2/384d-multivector/2.0";
+  document_max_source_chars: 400000;
+  document_max_chunks: 4096;
+  document_structural_parsing: false;
+  document_packet_admission: false;
   /**
    * @minItems 2
    * @maxItems 2
@@ -326,6 +338,44 @@ export interface Span {
   start: number;
   end: number;
   quote: string;
+}
+export interface ProjectDocument {
+  document_id: string;
+  display_name: string;
+  content_sha256: string;
+  content: string;
+  byte_length: number;
+  media_type:
+    | "text/plain"
+    | "text/markdown"
+    | "text/x-markdown"
+    | "text/html"
+    | "text/xml"
+    | "application/xml"
+    | "application/json";
+  chunking_version: "minilm-document-token-sentence-max192-overlap32/1.0";
+  embedding_version: "minilm-l6-v2/384d-multivector/2.0";
+  ingested_tick: number;
+  tombstoned_at: string | null;
+  chunk_count: number;
+  /**
+   * @minItems 1
+   * @maxItems 4096
+   */
+  chunks: [
+    {
+      chunk_index: number;
+      start: number;
+      end: number;
+      text_sha256: string;
+    },
+    ...{
+      chunk_index: number;
+      start: number;
+      end: number;
+      text_sha256: string;
+    }[]
+  ];
 }
 export interface Intervention {
   id: string;

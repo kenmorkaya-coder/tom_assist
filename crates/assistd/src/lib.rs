@@ -28,9 +28,9 @@ use tom_assist_persistence::{
     ContextRunRecord, ResponseEvaluationRecord, Store, StoreError, TurnRecord,
 };
 use tom_assist_protocol::{
-    ContinuityPacket, Envelope, ExcludedItem, InterventionCode, Method, PacketDigestInput,
-    PacketSection, ProviderCapabilities, StateMutationCandidate, StateObject, canonical_sha256,
-    packet_digest,
+    ActorType, ContinuityPacket, Envelope, ExcludedItem, InterventionCode, Method,
+    PacketDigestInput, PacketSection, ProviderCapabilities, StateMutationCandidate, StateObject,
+    canonical_sha256, packet_digest,
 };
 use tom_assist_tom_adapter::GatewayClient;
 
@@ -859,6 +859,10 @@ impl AssistService {
             | Method::SelfReportPrepare
             | Method::SelfReportSend
             | Method::SelfReportLabel => self.dispatch_conversation(envelope),
+            Method::DocumentIngest
+            | Method::DocumentList
+            | Method::DocumentGet
+            | Method::DocumentWithdraw => self.dispatch_document(envelope),
             Method::CapabilitiesGet => Ok(json!({
                 "protocol": SERVICE_PROTOCOL_VERSION,
                 "service_version": SERVICE_VERSION,
@@ -903,6 +907,71 @@ impl AssistService {
                 )?)?)
             }
             method => Err(ServiceError::UnsupportedMethod(format!("{method:?}"))),
+        }
+    }
+
+    fn dispatch_document(&self, envelope: Envelope) -> Result<Value> {
+        let project_id = envelope.project_id.ok_or(ServiceError::MissingProject)?;
+        {
+            let store = self.store.lock().expect("store poisoned");
+            if store.project(&project_id)?.is_none() {
+                return Err(StoreError::ProjectNotFound(project_id).into());
+            }
+        }
+        let gateway = self.gateway.as_ref().ok_or_else(|| {
+            ServiceError::Invalid(
+                "TOM_RUNTIME_UNAVAILABLE: document service requires gateway".into(),
+            )
+        })?;
+        let mut payload = envelope.payload;
+        payload["project_id"] = json!(project_id);
+        match envelope.method {
+            Method::DocumentIngest => {
+                if payload.get("explicit_user_action") != Some(&Value::Bool(true))
+                    || !matches!(
+                        envelope.actor.actor_type,
+                        ActorType::User | ActorType::Desktop | ActorType::Extension
+                    )
+                {
+                    return Err(ServiceError::Invalid(
+                        "document ingestion requires an explicit user action".into(),
+                    ));
+                }
+                gateway.ingest_document(payload).map_err(|error| {
+                    ServiceError::Invalid(format!("document ingestion failed: {error}"))
+                })
+            }
+            Method::DocumentList => gateway
+                .list_documents(
+                    &project_id,
+                    payload["include_withdrawn"].as_bool().unwrap_or(false),
+                )
+                .map_err(|error| ServiceError::Invalid(format!("document list failed: {error}"))),
+            Method::DocumentGet => gateway
+                .get_document(
+                    &project_id,
+                    payload["document_id"]
+                        .as_str()
+                        .ok_or_else(|| ServiceError::Invalid("document_id required".into()))?,
+                )
+                .map_err(|error| ServiceError::Invalid(format!("document get failed: {error}"))),
+            Method::DocumentWithdraw => {
+                if payload.get("explicit_user_action") != Some(&Value::Bool(true))
+                    || !matches!(
+                        envelope.actor.actor_type,
+                        ActorType::User | ActorType::Desktop | ActorType::Extension
+                    )
+                {
+                    return Err(ServiceError::Invalid(
+                        "document withdrawal requires an explicit user action".into(),
+                    ));
+                }
+                payload["tombstoned_at"] = json!(envelope.sent_at);
+                gateway.withdraw_document(payload).map_err(|error| {
+                    ServiceError::Invalid(format!("document withdrawal failed: {error}"))
+                })
+            }
+            _ => unreachable!("document dispatcher received a non-document method"),
         }
     }
 }

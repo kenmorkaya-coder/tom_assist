@@ -59,7 +59,28 @@
     "semantic_embedding_version": "minilm-l6-v2/384d-multivector/2.0",
     "local_gemma_candidate_required": false,
     "model_generated_load_values": false,
-    "feeling_wheel_used": false
+    "feeling_wheel_used": false,
+    "supports_documents": true,
+    "document_chunking_version": "minilm-document-token-sentence-max192-overlap32/1.0",
+    "document_embedding_version": "minilm-l6-v2/384d-multivector/2.0",
+    "document_max_source_chars": 400000,
+    "document_max_chunks": 4096,
+    "document_structural_parsing": false,
+    "document_packet_admission": false
+  },
+  "document": {
+    "document_id": "document-0123456789abcdef0123456789abcdef",
+    "display_name": "Design notes.md",
+    "content_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "content": "The east brace controls drift.",
+    "byte_length": 30,
+    "media_type": "text/markdown",
+    "chunking_version": "minilm-document-token-sentence-max192-overlap32/1.0",
+    "embedding_version": "minilm-l6-v2/384d-multivector/2.0",
+    "ingested_tick": 4707,
+    "tombstoned_at": null,
+    "chunk_count": 1,
+    "chunks": [{"chunk_index": 0, "start": 0, "end": 30, "text_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}]
   },
   "state_object": {
     "id": "10000000-0000-4000-8000-000000000001",

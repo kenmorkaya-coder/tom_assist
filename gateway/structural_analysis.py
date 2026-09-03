@@ -11,6 +11,7 @@ import hashlib
 import json
 import math
 import re
+import statistics
 from copy import deepcopy
 from typing import Any, Mapping, Sequence
 
@@ -22,7 +23,7 @@ from gateway.semantic_chunks import (
 
 
 CANDIDATE_VERSION = "tom-assist-structural-candidate/1.0"
-ANALYSIS_VERSION = "tom-assist-structural-analysis/1.3"
+ANALYSIS_VERSION = "tom-assist-structural-analysis/1.4"
 COMPILER_VERSION = "tom-assist-evidence-load17/1.2"
 SUPPORTED_COMPILER_VERSIONS = {
     "tom-assist-evidence-load17/1.0",
@@ -41,6 +42,7 @@ HISTORY_WINDOW = 12
 MAX_MERGED_ENTITIES = 2048
 MAX_MERGED_RELATIONS = 4096
 MAX_MERGED_SIGNALS = 4096
+SATURATION_EPSILON = 1e-9
 
 ENTITY_KINDS = {
     "actor", "object", "concept", "decision", "constraint", "event",
@@ -1408,8 +1410,21 @@ def compile_load(
         name: int(chunk_candidates[index]["chunk_index"])
         for name, index in static_winners.items()
     }
+    saturation_observations = {}
+    for name in STATIC_CHANNELS:
+        values = [float(row[name]) for row in per_chunk_static]
+        winner = float(static[name])
+        saturation_observations[name] = {
+            "within_epsilon_of_max": sum(
+                winner - value <= SATURATION_EPSILON for value in values
+            ),
+            "max_minus_median": winner - float(statistics.median(values)),
+            "chunk_count": len(values),
+        }
     channel_evidence = {
         "aggregation": "per_channel_max_across_bounded_chunks",
+        "saturation_epsilon": SATURATION_EPSILON,
+        "saturation_observations": saturation_observations,
         "chunk_static_loads": per_chunk_static,
         "chunk_evidence": per_chunk_evidence,
         "directed_graph": directed_graph_fingerprint(candidate),
@@ -1531,6 +1546,14 @@ def compile_load(
         index for index, row in enumerate(threat_rows) if row[0] == threat_weight
     )
     threat = _saturate(threat_weight, 1.5)
+    threat_values = [_saturate(row[0], 1.5) for row in threat_rows]
+    saturation_observations["threat_amplitude"] = {
+        "within_epsilon_of_max": sum(
+            threat - value <= SATURATION_EPSILON for value in threat_values
+        ),
+        "max_minus_median": threat - float(statistics.median(threat_values)),
+        "chunk_count": len(threat_values),
+    }
 
     # Explicit memory evidence and actual semantic recurrence both contribute;
     # neither is allowed to stand in for the other.

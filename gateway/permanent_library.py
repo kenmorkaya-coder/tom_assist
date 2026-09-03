@@ -50,6 +50,27 @@ class PermanentLibrary:
                 conflict_dismissed INTEGER NOT NULL CHECK(conflict_dismissed IN (0,1)),
                 tick INTEGER NOT NULL CHECK(tick >= 0),
                 PRIMARY KEY(commit_key, record_id));
+            CREATE TABLE IF NOT EXISTS documents(
+                document_id TEXT PRIMARY KEY,
+                display_name TEXT NOT NULL,
+                content_sha256 TEXT NOT NULL UNIQUE,
+                content TEXT NOT NULL,
+                byte_length INTEGER NOT NULL CHECK(byte_length > 0),
+                media_type TEXT NOT NULL,
+                chunking_version TEXT NOT NULL,
+                embedding_version TEXT NOT NULL,
+                ingested_tick INTEGER NOT NULL CHECK(ingested_tick >= 0),
+                tombstoned_at TEXT);
+            CREATE TABLE IF NOT EXISTS document_chunks(
+                document_id TEXT NOT NULL,
+                chunk_index INTEGER NOT NULL CHECK(chunk_index >= 0),
+                start INTEGER NOT NULL CHECK(start >= 0),
+                end INTEGER NOT NULL CHECK(end > start),
+                text_sha256 TEXT NOT NULL,
+                passage_vector TEXT NOT NULL,
+                analysis_digest TEXT,
+                load_signature_json TEXT,
+                PRIMARY KEY(document_id, chunk_index));
         """)
 
     def retain(self, record, encoded):
@@ -236,6 +257,105 @@ class PermanentLibrary:
             "structural_similarity", "conflict_dismissed", "tick",
         )
         return [dict(zip(names, row)) for row in self.db.execute(query, parameters)]
+
+    def document(self, document_id, *, include_chunks=True):
+        row = self.db.execute(
+            "SELECT document_id,display_name,content_sha256,content,byte_length,"
+            "media_type,chunking_version,embedding_version,ingested_tick,tombstoned_at "
+            "FROM documents WHERE document_id=?", (document_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        names = (
+            "document_id", "display_name", "content_sha256", "content", "byte_length",
+            "media_type", "chunking_version", "embedding_version", "ingested_tick",
+            "tombstoned_at",
+        )
+        result = dict(zip(names, row))
+        if include_chunks:
+            result["chunks"] = self.document_chunks(document_id=document_id)
+        return result
+
+    def documents(self, *, include_withdrawn=False):
+        query = (
+            "SELECT document_id,display_name,content_sha256,byte_length,media_type,"
+            "chunking_version,embedding_version,ingested_tick,tombstoned_at "
+            "FROM documents"
+        )
+        if not include_withdrawn:
+            query += " WHERE tombstoned_at IS NULL"
+        query += " ORDER BY ingested_tick,document_id"
+        names = (
+            "document_id", "display_name", "content_sha256", "byte_length",
+            "media_type", "chunking_version", "embedding_version", "ingested_tick",
+            "tombstoned_at",
+        )
+        return [dict(zip(names, row)) for row in self.db.execute(query)]
+
+    def retain_document(self, document, chunks):
+        existing = self.document(document["document_id"])
+        if existing is not None:
+            comparable = {key: existing[key] for key in document}
+            if comparable != document:
+                raise ValueError("document idempotency conflict")
+            return existing
+        self.db.execute(
+            "INSERT INTO documents VALUES(?,?,?,?,?,?,?,?,?,?)",
+            tuple(document[key] for key in (
+                "document_id", "display_name", "content_sha256", "content",
+                "byte_length", "media_type", "chunking_version", "embedding_version",
+                "ingested_tick", "tombstoned_at",
+            )),
+        )
+        for chunk in chunks:
+            self.db.execute(
+                "INSERT INTO document_chunks VALUES(?,?,?,?,?,?,?,?)",
+                (
+                    document["document_id"], chunk["index"], chunk["start"], chunk["end"],
+                    chunk["text_sha256"], chunk["passage_vector"], None, None,
+                ),
+            )
+        return self.document(document["document_id"])
+
+    def withdraw_document(self, document_id, tombstoned_at):
+        existing = self.document(document_id)
+        if existing is None:
+            raise ValueError("document does not exist")
+        if existing["tombstoned_at"] is None:
+            self.db.execute(
+                "UPDATE documents SET tombstoned_at=? WHERE document_id=?",
+                (tombstoned_at, document_id),
+            )
+        return self.document(document_id)
+
+    def document_chunks(self, *, document_id=None, active_only=False):
+        query = (
+            "SELECT c.document_id,c.chunk_index,c.start,c.end,c.text_sha256,"
+            "c.passage_vector,c.analysis_digest,c.load_signature_json,d.display_name,"
+            "d.content,d.tombstoned_at FROM document_chunks c "
+            "JOIN documents d ON d.document_id=c.document_id"
+        )
+        clauses = []
+        parameters = []
+        if document_id is not None:
+            clauses.append("c.document_id=?")
+            parameters.append(document_id)
+        if active_only:
+            clauses.append("d.tombstoned_at IS NULL")
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        query += " ORDER BY c.document_id,c.chunk_index"
+        result = []
+        for row in self.db.execute(query, parameters):
+            item = {
+                "document_id": row[0], "chunk_index": row[1],
+                "start": row[2], "end": row[3], "text_sha256": row[4],
+                "passage_vector": row[5], "analysis_digest": row[6],
+                "load_signature_json": row[7], "display_name": row[8],
+                "text": row[9][row[2]:row[3]], "tombstoned_at": row[10],
+            }
+            result.append(item)
+        return result
 
 
 def _optional_positive_int(value, name):

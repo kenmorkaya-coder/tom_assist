@@ -160,6 +160,10 @@ async fn chat_request(
             | Method::SelfReportPrepare
             | Method::SelfReportSend
             | Method::SelfReportLabel
+            | Method::DocumentIngest
+            | Method::DocumentList
+            | Method::DocumentGet
+            | Method::DocumentWithdraw
     ) {
         return Err("unsupported chat operation".into());
     }
