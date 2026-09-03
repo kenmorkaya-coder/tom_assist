@@ -245,6 +245,39 @@ def _arm_summary(rows: list[dict[str, Any]], arm: str) -> dict[str, Any]:
     }
 
 
+def _pair_diagnostic(
+    case: Mapping[str, Any],
+    results: Mapping[str, Mapping[str, Any]],
+    candidates: Mapping[str, Mapping[str, Any] | None],
+) -> dict[str, Any]:
+    left, right = candidates["glossary_off"], candidates["glossary_on"]
+    if left is not None and right is not None:
+        left_atoms, right_atoms = _candidate_atoms(left), _candidate_atoms(right)
+        change_size = sum((left_atoms - right_atoms).values()) + sum(
+            (right_atoms - left_atoms).values()
+        )
+        changed = results["glossary_off"]["candidate_sha256"] != results[
+            "glossary_on"
+        ]["candidate_sha256"]
+        graph_agrees = results["glossary_off"]["directed_graph_sha256"] == results[
+            "glossary_on"
+        ]["directed_graph_sha256"]
+    else:
+        change_size = None
+        changed = None
+        graph_agrees = None
+    term_present = any(
+        term.casefold() in case["source_text"].casefold()
+        for term in case["glossary"]["terms"]
+    )
+    return {
+        "sequence": case["sequence"], "test_id": case["test_id"],
+        "family": case["family"], "changed": changed,
+        "change_size": change_size, "directed_graph_agrees": graph_agrees,
+        "glossary_term_present_in_source": term_present,
+    }
+
+
 def run(native: Path, output: Path) -> dict[str, Any]:
     if output.exists():
         raise ValueError(f"output already exists: {output}")
@@ -274,43 +307,12 @@ def run(native: Path, output: Path) -> dict[str, Any]:
                 observations.append(row)
                 results[arm] = row
                 candidates[arm] = candidate
-            left, right = candidates["glossary_off"], candidates["glossary_on"]
-            if left is not None and right is not None:
-                left_atoms, right_atoms = _candidate_atoms(left), _candidate_atoms(right)
-                change_size = sum((left_atoms - right_atoms).values()) + sum(
-                    (right_atoms - left_atoms).values()
-                )
-                changed = results["glossary_off"]["candidate_sha256"] != results[
-                    "glossary_on"
-                ]["candidate_sha256"]
-                graph_agrees = results["glossary_off"]["directed_graph_sha256"] == results[
-                    "glossary_on"
-                ]["directed_graph_sha256"]
-            else:
-                change_size = None
-                changed = (
-                    results["glossary_off"]["status"],
-                    results["glossary_off"]["error_type"],
-                ) != (
-                    results["glossary_on"]["status"],
-                    results["glossary_on"]["error_type"],
-                )
-                graph_agrees = None
-            term_present = any(
-                term.casefold() in case["source_text"].casefold()
-                for term in case["glossary"]["terms"]
-            )
-            pairs.append({
-                "sequence": case["sequence"], "test_id": case["test_id"],
-                "family": case["family"], "changed": changed,
-                "change_size": change_size, "directed_graph_agrees": graph_agrees,
-                "glossary_term_present_in_source": term_present,
-            })
+            pairs.append(_pair_diagnostic(case, results, candidates))
     finally:
         client.close()
 
     comparable = [row for row in pairs if row["directed_graph_agrees"] is not None]
-    changed = [row for row in pairs if row["changed"]]
+    changed = [row for row in pairs if row["changed"] is True]
     summary = {
         "label": "PAIRED-LABEL-FREE-DIAGNOSTIC-NOT-ACCURACY-NOT-A-GATE",
         "run_id": RUN_ID,

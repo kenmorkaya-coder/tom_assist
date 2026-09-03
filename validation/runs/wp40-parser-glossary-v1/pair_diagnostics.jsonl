@@ -1,0 +1,11 @@
+{"change_size":null,"changed":null,"directed_graph_agrees":null,"family":"ASSUMPTION","glossary_term_present_in_source":false,"sequence":1,"test_id":"D23-ASSUMPTION-01"}
+{"change_size":null,"changed":null,"directed_graph_agrees":null,"family":"COMPLETED_WORK","glossary_term_present_in_source":false,"sequence":18,"test_id":"D23-COMPLETED_WORK-01"}
+{"change_size":19,"changed":true,"directed_graph_agrees":true,"family":"CONCEPT","glossary_term_present_in_source":true,"sequence":35,"test_id":"D23-CONCEPT-01"}
+{"change_size":null,"changed":null,"directed_graph_agrees":null,"family":"CONSTRAINT","glossary_term_present_in_source":true,"sequence":47,"test_id":"D23-CONSTRAINT-01"}
+{"change_size":null,"changed":null,"directed_graph_agrees":null,"family":"DECISION","glossary_term_present_in_source":true,"sequence":64,"test_id":"D23-DECISION-01"}
+{"change_size":null,"changed":null,"directed_graph_agrees":null,"family":"EVIDENCE","glossary_term_present_in_source":true,"sequence":76,"test_id":"D23-EVIDENCE-01"}
+{"change_size":null,"changed":null,"directed_graph_agrees":null,"family":"OBJECTIVE","glossary_term_present_in_source":true,"sequence":93,"test_id":"D23-OBJECTIVE-01"}
+{"change_size":null,"changed":null,"directed_graph_agrees":null,"family":"REJECTED_PATH","glossary_term_present_in_source":true,"sequence":110,"test_id":"D23-REJECTED_PATH-01"}
+{"change_size":null,"changed":null,"directed_graph_agrees":null,"family":"SUPERSESSION","glossary_term_present_in_source":true,"sequence":122,"test_id":"D23-SUPERSESSION-01"}
+{"change_size":null,"changed":null,"directed_graph_agrees":null,"family":"UNRESOLVED_DEPENDENCY","glossary_term_present_in_source":false,"sequence":139,"test_id":"D23-UNRESOLVED_DEPENDENCY-01"}
+{"change_size":null,"changed":null,"directed_graph_agrees":null,"family":"WORKSTREAM","glossary_term_present_in_source":false,"sequence":151,"test_id":"D23-WORKSTREAM-01"}
