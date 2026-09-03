@@ -506,8 +506,12 @@ def validate_candidate(
         if source not in entity_ids or target not in entity_ids or source == target:
             raise ValueError(f"orientation {relation_id} has invalid directed endpoints")
         kind, polarity, modality = str(item["kind"]), str(item["polarity"]), str(item["modality"])
-        if kind not in ORIENTATION_KINDS or polarity not in POLARITIES or modality not in MODALITIES:
-            raise ValueError(f"orientation {relation_id} has unsupported vocabulary")
+        if kind not in ORIENTATION_KINDS:
+            raise ValueError(f"orientation {relation_id} has unsupported kind")
+        if polarity not in POLARITIES:
+            raise ValueError(f"orientation {relation_id} has unsupported polarity")
+        if modality not in MODALITIES:
+            raise ValueError(f"orientation {relation_id} has unsupported modality")
         if type(item["negated"]) is not bool:
             raise ValueError(f"orientation {relation_id} negated must be boolean")
         orientations.append({
@@ -538,8 +542,10 @@ def validate_candidate(
         if cause not in entity_ids or effect not in entity_ids or cause == effect:
             raise ValueError(f"causal relation {relation_id} has invalid cause-to-effect endpoints")
         kind, modality = str(item["kind"]), str(item["modality"])
-        if kind not in CAUSAL_KINDS or modality not in MODALITIES:
-            raise ValueError(f"causal relation {relation_id} has unsupported vocabulary")
+        if kind not in CAUSAL_KINDS:
+            raise ValueError(f"causal relation {relation_id} has unsupported kind")
+        if modality not in MODALITIES:
+            raise ValueError(f"causal relation {relation_id} has unsupported modality")
         if type(item["negated"]) is not bool:
             raise ValueError(f"causal relation {relation_id} negated must be boolean")
         causal.append({

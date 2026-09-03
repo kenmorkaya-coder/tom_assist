@@ -14,8 +14,14 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from gateway.structure_failures import (
+    classify_failure,
+    record_for_code,
+    validate_failure_record,
+    validate_worker_telemetry,
+)
 
-WORKER_PROTOCOL = "tom-assist-structure-worker/1.2"
+WORKER_PROTOCOL = "tom-assist-structure-worker/1.3"
 _SAFE_ENVIRONMENT_NAMES = {
     "PATH", "HOME", "TMPDIR", "TEMP", "TMP", "LANG", "LC_ALL", "LC_CTYPE",
     "DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH", "TOKENIZERS_PARALLELISM",
@@ -39,9 +45,21 @@ def isolated_worker_environment() -> dict[str, str]:
 
 
 class StructureProviderError(RuntimeError):
-    def __init__(self, message: str, *, telemetry: Any = None) -> None:
+    def __init__(
+        self, message: str, *, telemetry: Any = None, failure: Any = None,
+    ) -> None:
         super().__init__(message)
         self.telemetry = telemetry
+        self.failure = (
+            validate_failure_record(failure) if failure is not None else None
+        )
+
+
+def _provider_error(code: str, detail: str, *, telemetry: Any = None):
+    failure = record_for_code(code, detail)
+    return StructureProviderError(
+        failure["detail"], telemetry=telemetry, failure=failure,
+    )
 
 
 class StructureWorkerClient:
@@ -64,23 +82,25 @@ class StructureWorkerClient:
         values = {key: os.environ.get(name, "") for key, name in names.items()}
         missing = [names[key] for key, value in values.items() if not value]
         if missing:
-            raise StructureProviderError(
-                "local structure worker is not configured: " + ", ".join(sorted(missing))
+            detail = "local structure worker is not configured: " + ", ".join(sorted(missing))
+            raise _provider_error(
+                "config.missing", detail,
             )
         for key, value in values.items():
             path = Path(value).expanduser()
             if not path.is_absolute() or not path.exists():
-                raise StructureProviderError(f"{names[key]} must be an existing absolute path")
+                detail = f"{names[key]} must be an existing absolute path"
+                raise _provider_error("dependency.missing", detail)
         script = Path(__file__).with_name("structure_worker.py").resolve()
         try:
             timeout = float(os.environ.get("TOM_ASSIST_STRUCTURE_TIMEOUT_SECONDS", "600"))
         except ValueError:
-            raise StructureProviderError(
-                "TOM_ASSIST_STRUCTURE_TIMEOUT_SECONDS must be numeric"
+            raise _provider_error(
+                "timeout.invalid", "TOM_ASSIST_STRUCTURE_TIMEOUT_SECONDS must be numeric",
             ) from None
         if not 30.0 <= timeout <= 1800.0:
-            raise StructureProviderError(
-                "TOM_ASSIST_STRUCTURE_TIMEOUT_SECONDS must be in [30,1800]"
+            raise _provider_error(
+                "timeout.invalid", "TOM_ASSIST_STRUCTURE_TIMEOUT_SECONDS must be in [30,1800]",
             )
         return cls([
             str(Path(values["structure_python"]).resolve()), str(script),
@@ -92,16 +112,21 @@ class StructureWorkerClient:
     def _start(self) -> subprocess.Popen[str]:
         if self._process is not None and self._process.poll() is None:
             return self._process
-        self._process = subprocess.Popen(
-            self.command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=None,
-            text=True,
-            encoding="utf-8",
-            bufsize=1,
-            env=isolated_worker_environment(),
-        )
+        try:
+            self._process = subprocess.Popen(
+                self.command,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=None,
+                text=True,
+                encoding="utf-8",
+                bufsize=1,
+                env=isolated_worker_environment(),
+            )
+        except OSError as error:
+            raise _provider_error(
+                "worker.spawn", f"unable to start local structure worker: {error}",
+            ) from None
         return self._process
 
     def analyze(
@@ -109,7 +134,13 @@ class StructureWorkerClient:
     ) -> dict[str, Any]:
         if glossary is not None:
             from gateway.project_glossary import validate_glossary
-            glossary = validate_glossary(glossary)
+            try:
+                glossary = validate_glossary(glossary)
+            except ValueError as error:
+                failure = classify_failure(error, stage="worker_request")
+                raise StructureProviderError(
+                    failure["detail"], failure=failure,
+                ) from None
         request_id = str(uuid.uuid4())
         request = {
             "protocol": WORKER_PROTOCOL,
@@ -121,59 +152,106 @@ class StructureWorkerClient:
         with self._lock:
             process = self._start()
             if process.stdin is None or process.stdout is None:
-                raise StructureProviderError("local structure worker has no pipes")
+                raise _provider_error("worker.pipe", "local structure worker has no pipes")
             try:
                 process.stdin.write(json.dumps(request, ensure_ascii=False, separators=(",", ":")) + "\n")
                 process.stdin.flush()
             except (BrokenPipeError, OSError):
                 self.close()
-                raise StructureProviderError("local structure worker stopped before accepting input") from None
+                raise _provider_error(
+                    "worker.write", "local structure worker stopped before accepting input",
+                ) from None
             selector = selectors.DefaultSelector()
             try:
                 selector.register(process.stdout, selectors.EVENT_READ)
                 if not selector.select(self.timeout_seconds):
                     self.close()
-                    raise StructureProviderError("local structure worker timed out")
+                    raise _provider_error(
+                        "worker.timeout", "local structure worker timed out",
+                    )
                 line = process.stdout.readline()
             finally:
                 selector.close()
             if not line:
                 code = process.poll()
                 self.close()
-                raise StructureProviderError(f"local structure worker ended unexpectedly ({code})")
+                raise _provider_error(
+                    "worker.eof", f"local structure worker ended unexpectedly ({code})",
+                )
             try:
                 response = json.loads(line)
             except json.JSONDecodeError:
                 self.close()
-                raise StructureProviderError("local structure worker returned invalid JSON") from None
+                raise _provider_error(
+                    "worker.response_json", "local structure worker returned invalid JSON",
+                ) from None
             if not isinstance(response, dict) or response.get("protocol") != WORKER_PROTOCOL:
-                raise StructureProviderError("local structure worker protocol mismatch")
+                raise _provider_error(
+                    "worker.response_protocol", "local structure worker protocol mismatch",
+                )
             if response.get("request_id") != request_id:
-                raise StructureProviderError("local structure worker response ID mismatch")
+                raise _provider_error(
+                    "worker.response_id", "local structure worker response ID mismatch",
+                )
             if "error" in response:
                 if set(response) != {
                     "protocol", "request_id", "error", "worker_telemetry",
                 }:
-                    raise StructureProviderError("local structure worker error shape mismatch")
+                    raise _provider_error(
+                        "worker.error_shape", "local structure worker error shape mismatch",
+                    )
+                try:
+                    telemetry = validate_worker_telemetry(response["worker_telemetry"])
+                except ValueError as error:
+                    raise _provider_error(
+                        "worker.error_shape",
+                        f"local structure worker error shape mismatch: {error}",
+                    ) from None
+                if not telemetry["failures"]:
+                    raise _provider_error(
+                        "worker.error_shape",
+                        "local structure worker error shape mismatch: missing failure",
+                    )
+                first_failure = telemetry["failures"][0]
                 raise StructureProviderError(
-                    str(response["error"])[:500],
-                    telemetry=response["worker_telemetry"],
+                    str(response["error"]), telemetry=telemetry,
+                    failure=first_failure,
                 )
             if set(response) != {
                 "protocol", "request_id", "chunk_candidates", "semantic_profile",
                 "parser_model", "worker_telemetry",
             }:
-                raise StructureProviderError("local structure worker response shape mismatch")
+                raise _provider_error(
+                    "worker.response_shape", "local structure worker response shape mismatch",
+                )
+            try:
+                telemetry = validate_worker_telemetry(response["worker_telemetry"])
+            except ValueError as error:
+                raise _provider_error(
+                    "worker.response_shape",
+                    f"local structure worker response shape mismatch: {error}",
+                ) from None
+            if telemetry["failures"] or telemetry["attempted_chunks"] != telemetry["planned_chunks"]:
+                raise _provider_error(
+                    "worker.response_shape",
+                    "local structure worker response shape mismatch: incomplete attempts",
+                )
             result = {
                 "chunk_candidates": response["chunk_candidates"],
                 "semantic_profile": response["semantic_profile"],
                 "parser_model": response["parser_model"],
-                "worker_telemetry": response["worker_telemetry"],
+                "worker_telemetry": telemetry,
             }
+            if not isinstance(result["parser_model"], dict):
+                raise _provider_error(
+                    "worker.response_shape", "local structure worker response shape mismatch",
+                )
             observed_hash = result["parser_model"].get("glossary_sha256")
             expected_hash = None if glossary is None else glossary["sha256"]
             if observed_hash != expected_hash:
-                raise StructureProviderError("local structure worker glossary hash mismatch")
+                raise _provider_error(
+                    "glossary.provenance", "local structure worker glossary hash mismatch",
+                )
             return result
 
     def close(self) -> None:

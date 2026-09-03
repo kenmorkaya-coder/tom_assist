@@ -27,6 +27,13 @@ from gateway.structural_analysis import (  # noqa: E402
     validate_candidate,
 )
 from gateway.project_glossary import validate_glossary  # noqa: E402
+from gateway.structure_failures import (  # noqa: E402
+    ClassifiedStructureError,
+    classify_failure,
+    record_for_code,
+    taxonomy_summary,
+    validate_failure_record,
+)
 from gateway.structure_provider import WORKER_PROTOCOL  # noqa: E402
 
 
@@ -75,11 +82,28 @@ class GemmaChild:
         line = self.process.stdout.readline()
         if not line:
             raise RuntimeError(f"Gemma child ended unexpectedly ({self.process.poll()})")
-        result = json.loads(line)
+        try:
+            result = json.loads(line)
+        except json.JSONDecodeError:
+            raise ClassifiedStructureError(record_for_code(
+                "gemma.response_json", "Gemma child returned invalid JSON",
+            )) from None
+        if not isinstance(result, dict):
+            raise RuntimeError("Gemma child response shape mismatch")
         if result.get("protocol") != WORKER_PROTOCOL or result.get("request_id") != request_id:
             raise RuntimeError("Gemma child protocol mismatch")
-        if "error" in result:
-            raise RuntimeError(str(result["error"]))
+        if "failure" in result:
+            if set(result) != {"protocol", "request_id", "failure"}:
+                raise RuntimeError("Gemma child failure shape mismatch")
+            try:
+                failure = validate_failure_record(result["failure"])
+            except ValueError:
+                raise RuntimeError("Gemma child failure shape mismatch") from None
+            raise ClassifiedStructureError(failure)
+        if set(result) != {"protocol", "request_id", "candidate", "boundary_telemetry"}:
+            raise RuntimeError("Gemma child response shape mismatch")
+        if not isinstance(result["boundary_telemetry"], dict):
+            raise RuntimeError("Gemma child response shape mismatch")
         return {
             "candidate": result["candidate"],
             "boundary_telemetry": result.get("boundary_telemetry", {}),
@@ -94,6 +118,86 @@ class GemmaChild:
                 self.process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 self.process.kill()
+
+
+def attempt_all_chunks(
+    gemma: Any,
+    request_id: str,
+    chunk_texts: list[str],
+    glossary: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Observe every planned chunk exactly once; any failure fails the passage."""
+    chunk_candidates = []
+    chunks = []
+    attempts = []
+    failures = []
+    for chunk_index, chunk_text in enumerate(chunk_texts):
+        attempt_ordinal = chunk_index + 1
+        try:
+            try:
+                gemma_result = gemma.analyze(
+                    f"{request_id}:{chunk_index}", chunk_text, glossary,
+                )
+            except Exception as error:
+                raise ClassifiedStructureError(classify_failure(
+                    error,
+                    stage="gemma_transport",
+                    chunk_index=chunk_index,
+                    attempt_ordinal=attempt_ordinal,
+                )) from None
+            try:
+                candidate = validate_candidate(
+                    gemma_result["candidate"],
+                    chunk_text,
+                )
+            except Exception as error:
+                raise ClassifiedStructureError(classify_failure(
+                    error,
+                    stage="candidate_validation",
+                    chunk_index=chunk_index,
+                    attempt_ordinal=attempt_ordinal,
+                )) from None
+        except Exception as error:
+            failure = classify_failure(
+                error,
+                stage="candidate_validation",
+                chunk_index=chunk_index,
+                attempt_ordinal=attempt_ordinal,
+            )
+            failures.append(failure)
+            attempts.append({
+                "chunk_index": chunk_index,
+                "attempt_ordinal": attempt_ordinal,
+                "outcome": "failed",
+                "failure": failure,
+            })
+            continue
+        chunk_detail = {
+            "chunk_index": chunk_index,
+            **gemma_result["boundary_telemetry"],
+        }
+        chunks.append(chunk_detail)
+        attempts.append({
+            "chunk_index": chunk_index,
+            "attempt_ordinal": attempt_ordinal,
+            "outcome": "succeeded",
+            "failure": None,
+        })
+        chunk_candidates.append({
+            "chunk_index": chunk_index,
+            "candidate": candidate,
+        })
+    return {
+        "attempted_chunks": len(attempts),
+        "successful_chunks": len(chunk_candidates),
+        "failed_chunk_index": failures[0]["chunk_index"] if failures else None,
+        "passage_failed": bool(failures),
+        "chunks": chunks,
+        "attempts": attempts,
+        "failures": failures,
+        "taxonomy": taxonomy_summary(failures),
+        "chunk_candidates": chunk_candidates,
+    }
 
 
 def main() -> int:
@@ -117,11 +221,16 @@ def main() -> int:
                 "attempted_chunks": 0,
                 "successful_chunks": 0,
                 "failed_chunk_index": None,
+                "passage_failed": False,
                 "chunks": [],
+                "attempts": [],
+                "failures": [],
+                "taxonomy": taxonomy_summary([]),
             }
+            stage = "worker_request"
             try:
                 request = json.loads(raw)
-                if set(request) not in (
+                if not isinstance(request, dict) or set(request) not in (
                     {"protocol", "request_id", "source_text"},
                     {"protocol", "request_id", "source_text", "glossary"},
                 ):
@@ -136,23 +245,37 @@ def main() -> int:
                 )
                 if not isinstance(source_text, str) or not source_text.strip() or len(source_text) > 48_000:
                     raise ValueError("source text must contain 1..48000 characters")
-                offset_payload = tokenizer(
-                    source_text, add_special_tokens=False, return_offsets_mapping=True,
-                )
+                stage = "chunk_plan"
+                try:
+                    offset_payload = tokenizer(
+                        source_text, add_special_tokens=False, return_offsets_mapping=True,
+                    )
+                except Exception as error:
+                    raise ClassifiedStructureError(record_for_code(
+                        "chunk.tokenizer", f"{type(error).__name__}: {error}",
+                    )) from None
                 plan = build_token_chunks(source_text, offset_payload["offset_mapping"])
                 worker_telemetry["planned_chunks"] = len(plan)
                 chunk_texts = [source_text[item["start"]:item["end"]] for item in plan]
                 vectors: list[list[float]] = []
+                stage = "embedding"
                 for batch_start in range(0, len(chunk_texts), 16):
                     batch = chunk_texts[batch_start:batch_start + 16]
-                    encoded = tokenizer(
-                        batch, padding=True, truncation=False, return_tensors="pt",
-                    )
-                    lengths = encoded["attention_mask"].sum(dim=1).tolist()
-                    if any(int(length) > MAX_CHUNK_TOKENS + 2 for length in lengths):
-                        raise ValueError("a semantic chunk exceeds the MiniLM token window")
-                    with torch.no_grad():
-                        hidden = model(**encoded).last_hidden_state
+                    try:
+                        encoded = tokenizer(
+                            batch, padding=True, truncation=False, return_tensors="pt",
+                        )
+                        lengths = encoded["attention_mask"].sum(dim=1).tolist()
+                        if any(int(length) > MAX_CHUNK_TOKENS + 2 for length in lengths):
+                            raise ValueError("a semantic chunk exceeds the MiniLM token window")
+                        with torch.no_grad():
+                            hidden = model(**encoded).last_hidden_state
+                    except ValueError:
+                        raise
+                    except Exception as error:
+                        raise ClassifiedStructureError(record_for_code(
+                            "embedding.invoke", f"{type(error).__name__}: {error}",
+                        )) from None
                     mask = encoded["attention_mask"].unsqueeze(-1).expand(hidden.size()).float()
                     pooled = (hidden * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1e-9)
                     pooled = torch.nn.functional.normalize(pooled, p=2, dim=1)
@@ -163,6 +286,7 @@ def main() -> int:
                                 f"embedding model returned {len(values)} dimensions"
                             )
                         vectors.append(values)
+                stage = "semantic_profile"
                 semantic_profile = build_semantic_profile(
                     source_text,
                     [
@@ -172,27 +296,22 @@ def main() -> int:
                     model=model_name,
                     revision=revision,
                 )
-                chunk_candidates = []
-                for chunk_index, chunk_text in enumerate(chunk_texts):
-                    worker_telemetry["attempted_chunks"] += 1
-                    worker_telemetry["failed_chunk_index"] = chunk_index
-                    gemma_result = gemma.analyze(
-                        f"{request_id}:{chunk_index}", chunk_text, glossary,
-                    )
-                    candidate = validate_candidate(
-                        gemma_result["candidate"],
-                        chunk_text,
-                    )
-                    worker_telemetry["successful_chunks"] += 1
-                    worker_telemetry["failed_chunk_index"] = None
-                    worker_telemetry["chunks"].append({
-                        "chunk_index": chunk_index,
-                        **gemma_result["boundary_telemetry"],
-                    })
-                    chunk_candidates.append({
-                        "chunk_index": chunk_index,
-                        "candidate": candidate,
-                    })
+                chunk_observation = attempt_all_chunks(
+                    gemma, request_id, chunk_texts, glossary,
+                )
+                chunk_candidates = chunk_observation.pop("chunk_candidates")
+                worker_telemetry.update(chunk_observation)
+                if worker_telemetry["failures"]:
+                    response = {
+                        "protocol": WORKER_PROTOCOL,
+                        "request_id": request_id,
+                        "error": "one or more chunks failed closed",
+                        "worker_telemetry": worker_telemetry,
+                    }
+                    print(json.dumps(
+                        response, ensure_ascii=False, separators=(",", ":")
+                    ), flush=True)
+                    continue
                 response = {
                     "protocol": WORKER_PROTOCOL, "request_id": request_id,
                     "chunk_candidates": chunk_candidates,
@@ -210,9 +329,15 @@ def main() -> int:
                 if glossary is not None:
                     response["parser_model"]["glossary_sha256"] = glossary["sha256"]
             except Exception as error:
+                failure = classify_failure(error, stage=stage)
+                worker_telemetry["failures"].append(failure)
+                worker_telemetry["passage_failed"] = True
+                worker_telemetry["taxonomy"] = taxonomy_summary(
+                    worker_telemetry["failures"]
+                )
                 response = {
                     "protocol": WORKER_PROTOCOL, "request_id": request_id,
-                    "error": f"{type(error).__name__}: {str(error)[:400]}",
+                    "error": "passage preparation failed closed",
                     "worker_telemetry": worker_telemetry,
                 }
             print(json.dumps(response, ensure_ascii=False, separators=(",", ":")), flush=True)

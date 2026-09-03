@@ -17,6 +17,13 @@ from typing import Any, Mapping
 from gateway.project_glossary import build_project_glossary
 from gateway.structural_analysis import digest, directed_graph_fingerprint, merge_chunk_candidates
 from gateway.structure_provider import StructureProviderError, StructureWorkerClient
+from gateway.structure_failures import (
+    ClassifiedStructureError,
+    classify_failure,
+    failures_from_error,
+    record_for_code,
+    taxonomy_summary,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -86,28 +93,42 @@ def load_cases(native: Path) -> list[dict[str, Any]]:
         for sequence, filename, test_id, family, _chunks, input_hash, source_hash in CASES
     ]
     if sha256_bytes(compact(descriptor).encode("utf-8")) != CASES_SHA256:
-        raise ValueError("frozen case descriptor digest mismatch")
+        raise ClassifiedStructureError(record_for_code(
+            "evaluation.case_descriptor", "frozen case descriptor digest mismatch",
+        ))
     cases = []
     for sequence, filename, test_id, family, chunks, input_hash, source_hash in CASES:
         path = native / filename
         if sha256_file(path) != "sha256:" + input_hash:
-            raise ValueError(f"frozen input changed: {filename}")
+            raise ClassifiedStructureError(record_for_code(
+                "evaluation.input_hash", f"frozen input changed: {filename}",
+            ))
         payload = json.loads(path.read_bytes())
         if payload["test_id"] != test_id or payload["arm"] != "SUB-A":
-            raise ValueError(f"frozen identity changed: {filename}")
+            raise ClassifiedStructureError(record_for_code(
+                "evaluation.identity", f"frozen identity changed: {filename}",
+            ))
         source_text = payload["probe"]
         if sha256_bytes(source_text.encode("utf-8")) != "sha256:" + source_hash:
-            raise ValueError(f"frozen source changed: {filename}")
+            raise ClassifiedStructureError(record_for_code(
+                "evaluation.source_hash", f"frozen source changed: {filename}",
+            ))
         json_titles = [
             row["title"] for row in payload["objects"]
             if row["status"] in CURRENT_STATUSES
         ]
         native_titles = _read_native_titles(native, sequence)
         if Counter(json_titles) != Counter(native_titles):
-            raise ValueError(f"native state objects differ from input: {filename}")
+            raise ClassifiedStructureError(record_for_code(
+                "evaluation.native_state",
+                f"native state objects differ from input: {filename}",
+            ))
         glossary = build_project_glossary(native_titles, [])
         if not glossary["terms"]:
-            raise ValueError(f"native project produced an empty glossary: {filename}")
+            raise ClassifiedStructureError(record_for_code(
+                "evaluation.glossary_empty",
+                f"native project produced an empty glossary: {filename}",
+            ))
         cases.append({
             "sequence": sequence,
             "filename": filename,
@@ -121,7 +142,10 @@ def load_cases(native: Path) -> list[dict[str, Any]]:
             "glossary": glossary,
         })
     if sum(case["expected_chunks"] for case in cases) * 2 != MAX_LOCAL_GEMMA_GENERATIONS:
-        raise ValueError("frozen generation budget does not match the case plan")
+        raise ClassifiedStructureError(record_for_code(
+            "evaluation.budget_plan",
+            "frozen generation budget does not match the case plan",
+        ))
     return cases
 
 
@@ -160,28 +184,39 @@ def _observation(
     started = time.monotonic()
     try:
         result = client.analyze(case["source_text"], glossary=glossary)
-        telemetry = result["worker_telemetry"]
-        _chunks, candidate = merge_chunk_candidates(
-            case["source_text"], result["semantic_profile"],
-            result["chunk_candidates"],
-        )
-        status = "observed"
-        error_type = None
     except StructureProviderError as error:
         result = None
         candidate = None
         telemetry = error.telemetry or {}
+        failures = failures_from_error(error)
         status = "fail_closed"
-        error_type = str(error).split(":", 1)[0][:120]
+    else:
+        telemetry = result["worker_telemetry"]
+        try:
+            _chunks, candidate = merge_chunk_candidates(
+                case["source_text"], result["semantic_profile"],
+                result["chunk_candidates"],
+            )
+        except Exception as error:
+            candidate = None
+            failures = [classify_failure(error, stage="merge")]
+            status = "fail_closed"
+        else:
+            failures = []
+            status = "observed"
     elapsed = time.monotonic() - started
     planned = int(telemetry.get("planned_chunks", 0))
     attempted = int(telemetry.get("attempted_chunks", 0))
     if planned == 0 and attempted == 0:
-        raise RuntimeError(
-            f"{case['test_id']} {arm} could not start the persistent local worker"
-        )
+        raise ClassifiedStructureError(record_for_code(
+            "evaluation.worker_start",
+            f"{case['test_id']} {arm} could not start the persistent local worker",
+        ))
     if planned != case["expected_chunks"] or attempted > planned:
-        raise RuntimeError(f"{case['test_id']} {arm} changed its frozen chunk plan")
+        raise ClassifiedStructureError(record_for_code(
+            "evaluation.chunk_plan",
+            f"{case['test_id']} {arm} changed its frozen chunk plan",
+        ))
     row = {
         "sequence": case["sequence"],
         "test_id": case["test_id"],
@@ -191,7 +226,9 @@ def _observation(
         "glossary_sha256": None if glossary is None else glossary["sha256"],
         "glossary_term_count": 0 if glossary is None else glossary["term_count"],
         "status": status,
-        "error_type": error_type,
+        "failure_count": len(failures),
+        "failures": failures,
+        "failure_taxonomy": taxonomy_summary(failures),
         "planned_generations": planned,
         "attempted_generations": attempted,
         "successful_generations": int(telemetry.get("successful_chunks", 0)),
@@ -221,6 +258,9 @@ def _observation(
 def _arm_summary(rows: list[dict[str, Any]], arm: str) -> dict[str, Any]:
     selected = [row for row in rows if row["arm"] == arm]
     observed = [row for row in selected if row["status"] == "observed"]
+    failures = [
+        failure for row in selected for failure in row.get("failures", [])
+    ]
     entities = sum(row["entity_count"] for row in observed)
     weighted_span = sum(
         row["mean_entity_span_length"] * row["entity_count"] for row in observed
@@ -241,6 +281,7 @@ def _arm_summary(rows: list[dict[str, Any]], arm: str) -> dict[str, Any]:
             sum(row["unknown_field_count"] > 0 for row in observed) / len(observed)
             if observed else None
         ),
+        "failure_taxonomy": taxonomy_summary(failures),
         "elapsed_seconds": sum(row["elapsed_seconds"] for row in selected),
     }
 
@@ -280,7 +321,9 @@ def _pair_diagnostic(
 
 def run(native: Path, output: Path) -> dict[str, Any]:
     if output.exists():
-        raise ValueError(f"output already exists: {output}")
+        raise ClassifiedStructureError(record_for_code(
+            "evaluation.output_exists", f"output already exists: {output}",
+        ))
     configured_revisions = {
         "minilm": Path(os.environ.get("TOM_ASSIST_MINILM_MODEL", "")).name,
         "gemma": Path(os.environ.get("TOM_ASSIST_GEMMA_MODEL", "")).name,
@@ -288,7 +331,10 @@ def run(native: Path, output: Path) -> dict[str, Any]:
     if configured_revisions != {
         "minilm": MINILM_REVISION, "gemma": GEMMA_REVISION,
     }:
-        raise ValueError(f"local model revision mismatch: {configured_revisions}")
+        raise ClassifiedStructureError(record_for_code(
+            "evaluation.model_revision",
+            f"local model revision mismatch: {configured_revisions}",
+        ))
     cases = load_cases(native)
     output.mkdir(parents=True)
     observations = []
@@ -303,7 +349,9 @@ def run(native: Path, output: Path) -> dict[str, Any]:
                 row, candidate = _observation(client, case, arm)
                 generations += row["attempted_generations"]
                 if generations > MAX_LOCAL_GEMMA_GENERATIONS:
-                    raise RuntimeError("local Gemma generation budget exceeded")
+                    raise ClassifiedStructureError(record_for_code(
+                        "evaluation.budget", "local Gemma generation budget exceeded",
+                    ))
                 observations.append(row)
                 results[arm] = row
                 candidates[arm] = candidate
@@ -327,6 +375,9 @@ def run(native: Path, output: Path) -> dict[str, Any]:
             arm: _arm_summary(observations, arm)
             for arm in ("glossary_off", "glossary_on")
         },
+        "failure_taxonomy": taxonomy_summary([
+            failure for row in observations for failure in row.get("failures", [])
+        ]),
         "changed_parse_count": len(changed),
         "change_size_distribution": dict(sorted(Counter(
             "not_comparable" if row["change_size"] is None else str(row["change_size"])
@@ -361,6 +412,9 @@ Status: **LABEL-FREE DIAGNOSTIC — NOT ACCURACY — NOT A GATE**
 - Parses changed: **{len(changed)}/{len(pairs)}**.
 - Directed-graph agreement: **{summary['directed_graph_agreement_count']}/{len(comparable)} comparable pairs**.
 - Change-size distribution: `{compact(summary['change_size_distribution'])}`.
+- Failure categories: `{compact(summary['failure_taxonomy']['category_counts'])}`.
+- **Unclassified failures: {summary['failure_taxonomy']['unclassified_count']}**;
+  taxonomy complete: **{str(summary['failure_taxonomy']['taxonomy_complete']).lower()}**.
 
 The two arms have no owner-authored domain relevance or parse labels. These
 results describe whether and how outputs changed; they cannot establish that

@@ -25,6 +25,11 @@ from gateway.structural_analysis import (  # noqa: E402
     validate_candidate,
 )
 from gateway.project_glossary import validate_glossary  # noqa: E402
+from gateway.structure_failures import (  # noqa: E402
+    ClassifiedStructureError,
+    classify_failure,
+    record_for_code,
+)
 from gateway.structure_provider import WORKER_PROTOCOL  # noqa: E402
 
 
@@ -165,9 +170,10 @@ def main() -> int:
     tool = candidate_tool_schema()
     for raw in sys.stdin:
         request_id = "unknown"
+        stage = "worker_request"
         try:
             request = json.loads(raw)
-            if set(request) not in (
+            if not isinstance(request, dict) or set(request) not in (
                 {"protocol", "request_id", "source_text"},
                 {"protocol", "request_id", "source_text", "glossary"},
             ):
@@ -180,16 +186,23 @@ def main() -> int:
                 validate_glossary(request["glossary"])
                 if "glossary" in request else None
             )
+            stage = "model_invocation"
             prompt = build_gemma_prompt(source_text, glossary)
             formatted = tokenizer.apply_chat_template(
                 [{"role": "user", "content": prompt}], tools=[tool],
                 add_generation_prompt=True, tokenize=False, enable_thinking=False,
             )
-            with contextlib.redirect_stdout(sys.stderr):
-                generated = generate(
-                    model, tokenizer, prompt=formatted, max_tokens=3072,
-                    sampler=sampler, verbose=False,
-                )
+            try:
+                with contextlib.redirect_stdout(sys.stderr):
+                    generated = generate(
+                        model, tokenizer, prompt=formatted, max_tokens=3072,
+                        sampler=sampler, verbose=False,
+                    )
+            except Exception as error:
+                raise ClassifiedStructureError(record_for_code(
+                    "model.invoke", f"{type(error).__name__}: {error}",
+                )) from None
+            stage = "tool_parse"
             call, parse_mode = parse_generated_tool_call(generated, tokenizer.tool_parser)
             if isinstance(call, list):
                 if len(call) != 1:
@@ -198,16 +211,18 @@ def main() -> int:
             if not isinstance(call, dict) or call.get("name") != "record_structural_candidate":
                 raise ValueError("Gemma called the wrong structure tool")
             arguments = call.get("arguments")
+            if not isinstance(arguments, dict):
+                raise ValueError("Gemma tool arguments must be an object")
             projected = project_candidate_fields(arguments)
-            candidate = validate_candidate(
-                canonicalize_candidate_spans(
-                    canonicalize_candidate_ids(
-                        bind_candidate_metadata(projected, source_text)
-                    ),
-                    source_text,
+            stage = "candidate_canonicalization"
+            canonical = canonicalize_candidate_spans(
+                canonicalize_candidate_ids(
+                    bind_candidate_metadata(projected, source_text)
                 ),
                 source_text,
             )
+            stage = "candidate_validation"
+            candidate = validate_candidate(canonical, source_text)
             response = {
                 "protocol": WORKER_PROTOCOL, "request_id": request_id,
                 "candidate": candidate,
@@ -219,7 +234,7 @@ def main() -> int:
         except Exception as error:
             response = {
                 "protocol": WORKER_PROTOCOL, "request_id": request_id,
-                "error": f"{type(error).__name__}: {str(error)[:400]}",
+                "failure": classify_failure(error, stage=stage),
             }
         print(json.dumps(response, ensure_ascii=False, separators=(",", ":")), flush=True)
     return 0

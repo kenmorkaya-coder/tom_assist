@@ -1,0 +1,52 @@
+{
+  "schema_version": "tom-assist-parser-labels/1.0",
+  "label": "PLUMBING-ONLY-SYNTHETIC-NOT-EVIDENCE",
+  "corpus_id": "wp41-synthetic-plumbing",
+  "provenance": "two invented sentences for validator plumbing only; not project prose and not evaluation evidence",
+  "passages": [
+    {
+      "passage_id": "SYN-CAUSAL-1",
+      "source_text": "A closed valve causes pressure to rise.",
+      "source_sha256": "sha256:94815026dd7ba189490cf57cb131192e9d632951e3124e196083d8e72353ce41",
+      "expected_candidate": {
+        "schema_version": "tom-assist-structural-candidate/1.0",
+        "source_text_sha256": "sha256:94815026dd7ba189490cf57cb131192e9d632951e3124e196083d8e72353ce41",
+        "entities": [
+          {"id": "closed_valve", "label": "closed valve", "kind": "object", "evidence": {"start": 2, "end": 14, "quote": "closed valve"}, "confidence": 1.0},
+          {"id": "pressure", "label": "pressure", "kind": "state", "evidence": {"start": 22, "end": 30, "quote": "pressure"}, "confidence": 1.0}
+        ],
+        "orientations": [],
+        "causal_relations": [
+          {"id": "causal_1", "cause_entity_id": "closed_valve", "effect_entity_id": "pressure", "kind": "causes", "modality": "asserted", "negated": false, "evidence": {"start": 0, "end": 39, "quote": "A closed valve causes pressure to rise."}, "confidence": 1.0}
+        ],
+        "signals": {"rules": [], "contradictions": [], "inferences": [], "sequences": [], "memory_references": [], "future_references": [], "completions": [], "rejections": []},
+        "unknown_fields": [],
+        "confidence": 1.0
+      },
+      "labeller_note": "Synthetic exact-span causal plumbing case."
+    },
+    {
+      "passage_id": "SYN-RELATIONS-2",
+      "source_text": "The Nova plan supersedes the Atlas plan, and release depends on the Nova plan.",
+      "source_sha256": "sha256:db93ab96cec82e41fa8fcccffbf9b9df8563a63a6a6f6b5c830b90eabe66b6f4",
+      "expected_candidate": {
+        "schema_version": "tom-assist-structural-candidate/1.0",
+        "source_text_sha256": "sha256:db93ab96cec82e41fa8fcccffbf9b9df8563a63a6a6f6b5c830b90eabe66b6f4",
+        "entities": [
+          {"id": "nova_plan", "label": "Nova plan", "kind": "decision", "evidence": {"start": 4, "end": 13, "quote": "Nova plan"}, "confidence": 1.0},
+          {"id": "atlas_plan", "label": "Atlas plan", "kind": "decision", "evidence": {"start": 29, "end": 39, "quote": "Atlas plan"}, "confidence": 1.0},
+          {"id": "release", "label": "release", "kind": "event", "evidence": {"start": 45, "end": 52, "quote": "release"}, "confidence": 1.0}
+        ],
+        "orientations": [
+          {"id": "orientation_1", "source_entity_id": "nova_plan", "target_entity_id": "atlas_plan", "kind": "supersedes", "polarity": "neutral", "modality": "asserted", "negated": false, "evidence": {"start": 0, "end": 39, "quote": "The Nova plan supersedes the Atlas plan"}, "confidence": 1.0},
+          {"id": "orientation_2", "source_entity_id": "release", "target_entity_id": "nova_plan", "kind": "depends_on", "polarity": "neutral", "modality": "asserted", "negated": false, "evidence": {"start": 45, "end": 77, "quote": "release depends on the Nova plan"}, "confidence": 1.0}
+        ],
+        "causal_relations": [],
+        "signals": {"rules": [], "contradictions": [], "inferences": [], "sequences": [], "memory_references": [], "future_references": [], "completions": [], "rejections": []},
+        "unknown_fields": [],
+        "confidence": 1.0
+      },
+      "labeller_note": "Synthetic supersession and dependency plumbing case."
+    }
+  ]
+}
