@@ -6,6 +6,7 @@ No upstream code/files are changed; no physics or plastic recall is called.
 """
 import hashlib
 import json
+import math
 import os
 from pathlib import Path, PurePosixPath
 import re
@@ -76,15 +77,18 @@ def validate_snapshot(gateway, root):
             raise ValueError("library integrity check failed")
         objects = {(kind, name) for kind, name in db.execute("SELECT type,name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'")}
         legacy_objects = {("table", "library_records"), ("table", "runtime_head"), ("table", "demotions"), ("index", "library_content_hash")}
-        current_objects = legacy_objects | {("table", "structural_commits")}
-        if objects not in (legacy_objects, current_objects):
+        structural_objects = legacy_objects | {("table", "structural_commits")}
+        current_objects = structural_objects | {("table", "retrieval_outcomes")}
+        if objects not in (legacy_objects, structural_objects, current_objects):
             raise ValueError("unrecognized library schema objects")
         originals = {}
+        original_texts = {}
         for rid, digest, content, encoded in db.execute("SELECT record_id,content_hash,content,record_json FROM library_records"):
             row = json.loads(encoded)
             if hashlib.sha256(content.encode()).hexdigest() != digest or row["id"] != rid or row["content_hash"] != digest:
                 raise ValueError("permanent library original/hash mismatch")
             originals[rid] = digest
+            original_texts[rid] = content
         heads = db.execute("SELECT tree,rgm,idempotency,settings FROM runtime_head").fetchall()
         if len(heads) != 1:
             raise ValueError("runtime head missing/ambiguous")
@@ -123,6 +127,39 @@ def validate_snapshot(gateway, root):
                     or structural_digest(analysis.get("candidate")) != analysis.get("candidate_digest")
                 ):
                     raise ValueError("invalid structural-commit provenance")
+        if ("table", "retrieval_outcomes") in objects:
+            from gateway.permanent_library import longest_common_substring_chars
+            outcome_rows = db.execute(
+                "SELECT commit_key,record_id,rank,rrf_score,lexical_rank,"
+                "structural_rank,matched_branch_id,verbatim_overlap_chars,"
+                "structural_similarity,conflict_dismissed,tick "
+                "FROM retrieval_outcomes ORDER BY commit_key,rank,record_id"
+            ).fetchall()
+            expected_rank = {}
+            for (
+                commit_key, rid, rank, rrf_score, lexical_rank, structural_rank,
+                matched_branch_id, overlap, structural_similarity,
+                conflict_dismissed, tick,
+            ) in outcome_rows:
+                receipt = keys.get(commit_key)
+                committed_id = receipt.get("anchor_id") if isinstance(receipt, dict) else None
+                expected_rank[commit_key] = expected_rank.get(commit_key, 0) + 1
+                numeric = (rrf_score, structural_similarity)
+                if (
+                    rid not in originals or committed_id not in original_texts
+                    or rank != expected_rank[commit_key]
+                    or any(value is not None and not math.isfinite(value) for value in numeric)
+                    or any(value is not None and (type(value) is not int or value <= 0)
+                           for value in (lexical_rank, structural_rank))
+                    or matched_branch_id is not None and not isinstance(matched_branch_id, str)
+                    or overlap != longest_common_substring_chars(
+                        original_texts[rid], original_texts[committed_id]
+                    )
+                    or conflict_dismissed not in (0, 1)
+                    or type(tick) is not int
+                    or tick != receipt.get("engine_tick_after")
+                ):
+                    raise ValueError("invalid retrieval-outcome provenance")
         for folder in (root / "checkpoints").glob("*"):
             expected_files = {"tree_state.json", "rgm_state.json", "commit_state.json", "metadata.json"}
             if {p.name for p in folder.iterdir()} != expected_files:

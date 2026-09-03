@@ -69,6 +69,9 @@ pub fn commit_captured_exchange(
     {
         payload["structural_analysis"] = analysis.clone();
     }
+    if let Some(retrieval) = trace.get("retrieval").filter(|value| value.is_array()) {
+        payload["retrieval_trace"] = retrieval.clone();
+    }
     let result = gateway
         .commit_exchange(payload)
         .map_err(|error| ServiceError::Invalid(format!("runtime_commit_pending: {error}")))?;

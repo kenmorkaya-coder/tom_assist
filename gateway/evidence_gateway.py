@@ -211,6 +211,7 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
         conflict_dismissed=False,
         packet_digest=None,
         structural_analysis=None,
+        retrieval_trace=(),
     ) -> dict[str, Any]:
         if self.structure_mode == "legacy":
             return super().commit_turn(
@@ -220,6 +221,7 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
                 admitted_anchor_ids=admitted_anchor_ids,
                 conflict_dismissed=conflict_dismissed,
                 packet_digest=packet_digest,
+                retrieval_trace=retrieval_trace,
             )
         from gateway.front_row import FrontRowMemory
         from memory.rgm import MemoryRecord, PolicyOutcome
@@ -230,7 +232,10 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
             if not text or type(conflict_dismissed) is not bool:
                 raise ValueError("nonempty committed text and boolean conflict_dismissed required")
             branch_ids = sorted(set(str(bid) for bid in activated_branch_ids))
-            anchor_ids = sorted(set(str(rid) for rid in admitted_anchor_ids))
+            packet_anchor_ids = [str(rid) for rid in admitted_anchor_ids]
+            if len(packet_anchor_ids) != len(set(packet_anchor_ids)):
+                raise ValueError("admitted anchor ids must be unique and ordered")
+            anchor_ids = sorted(set(packet_anchor_ids))
             for bid in branch_ids:
                 if bid not in self.engine.state.branches:
                     raise ValueError(f"sent packet branch no longer exists: {bid}")
@@ -252,6 +257,13 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
                 self._active_structural_history(),
                 prior_digest,
             )
+            structural_similarities = {
+                row["record_id"]: row["combined_score"]
+                for row in rank_structural_history(
+                    analysis["candidate"], analysis["semantic_profile"],
+                    self._active_structural_history(),
+                )
+            }
             if self.structure_mode == "authoritative":
                 from agency.mechanics.sicd_msr_load import LoadSignature
                 require_evidenced_load(analysis)
@@ -417,6 +429,11 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
                     "packet_digest": packet_digest,
                 }
                 self._idempotency[idempotency_key] = result
+                self.library.retain_retrieval_outcomes(
+                    idempotency_key, packet_anchor_ids, retrieval_trace, stored_text,
+                    conflict_dismissed, int(self.engine.state.tick),
+                    structural_similarities,
+                )
                 self.library.set_head(tree_bytes, rgm_bytes, self._idempotency, self.settings)
                 self.library.db.execute("COMMIT")
             except BaseException:
@@ -524,6 +541,7 @@ class EvidenceTomGateway(base.TomGateway):
                     conflict_dismissed=payload.get("conflict_dismissed", False),
                     packet_digest=payload.get("packet_digest"),
                     structural_analysis=payload.get("structural_analysis"),
+                    retrieval_trace=payload.get("retrieval_trace") or [],
                 )
             except (ValueError, KeyError, FileNotFoundError, json.JSONDecodeError) as error:
                 return 400, {"error": error.__class__.__name__, "message": str(error)}

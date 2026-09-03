@@ -502,7 +502,8 @@ class ProjectRuntime:
 
     def commit_turn(self, role: str, text: str, idempotency_key: str, *,
                     response_text=None, activated_branch_ids=(), admitted_anchor_ids=(),
-                    conflict_dismissed=False, packet_digest=None) -> dict[str, Any]:
+                    conflict_dismissed=False, packet_digest=None,
+                    retrieval_trace=()) -> dict[str, Any]:
         """Atomic quintuple. SQLite head is authoritative; JSON files are projections."""
         from gateway.front_row import FrontRowMemory
         from memory.rgm import MemoryRecord, PolicyOutcome
@@ -513,7 +514,10 @@ class ProjectRuntime:
             if not text or type(conflict_dismissed) is not bool:
                 raise ValueError("nonempty committed text and boolean conflict_dismissed required")
             branch_ids = sorted(set(str(bid) for bid in activated_branch_ids))
-            anchor_ids = sorted(set(str(rid) for rid in admitted_anchor_ids))
+            packet_anchor_ids = [str(rid) for rid in admitted_anchor_ids]
+            if len(packet_anchor_ids) != len(set(packet_anchor_ids)):
+                raise ValueError("admitted anchor ids must be unique and ordered")
+            anchor_ids = sorted(set(packet_anchor_ids))
             for bid in branch_ids:
                 if bid not in self.engine.state.branches:
                     raise ValueError(f"sent packet branch no longer exists: {bid}")
@@ -624,6 +628,10 @@ class ProjectRuntime:
                     "readmitted_anchor_ids": readmitted_ids, "packet_digest": packet_digest,
                 }
                 self._idempotency[idempotency_key] = result
+                self.library.retain_retrieval_outcomes(
+                    idempotency_key, packet_anchor_ids, retrieval_trace, stored_text,
+                    conflict_dismissed, int(self.engine.state.tick),
+                )
                 self.library.set_head(tree_bytes, rgm_bytes, self._idempotency, self.settings)
                 self.library.db.execute("COMMIT")
             except BaseException:
@@ -841,7 +849,8 @@ class TomGateway:
                     activated_branch_ids=payload.get("activated_branch_ids") or [],
                     admitted_anchor_ids=payload.get("admitted_anchor_ids") or [],
                     conflict_dismissed=payload.get("conflict_dismissed", False),
-                    packet_digest=payload.get("packet_digest"))
+                    packet_digest=payload.get("packet_digest"),
+                    retrieval_trace=payload.get("retrieval_trace") or [])
             if method == "POST" and path == "/project/settings":
                 runtime = self.project(payload.get("project_id"))
                 return 200, runtime.update_settings(payload.get("settings") or {})

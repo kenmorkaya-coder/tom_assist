@@ -1,6 +1,7 @@
 """Project-local permanent SQLite shelf and atomic runtime commit journal."""
 import hashlib
 import json
+import math
 import os
 import sqlite3
 
@@ -36,6 +37,19 @@ class PermanentLibrary:
                 analysis_digest TEXT NOT NULL,
                 analysis_json TEXT NOT NULL,
                 tick INTEGER NOT NULL);
+            CREATE TABLE IF NOT EXISTS retrieval_outcomes(
+                commit_key TEXT NOT NULL,
+                record_id TEXT NOT NULL,
+                rank INTEGER NOT NULL CHECK(rank > 0),
+                rrf_score REAL,
+                lexical_rank INTEGER CHECK(lexical_rank IS NULL OR lexical_rank > 0),
+                structural_rank INTEGER CHECK(structural_rank IS NULL OR structural_rank > 0),
+                matched_branch_id TEXT,
+                verbatim_overlap_chars INTEGER NOT NULL CHECK(verbatim_overlap_chars >= 0),
+                structural_similarity REAL,
+                conflict_dismissed INTEGER NOT NULL CHECK(conflict_dismissed IN (0,1)),
+                tick INTEGER NOT NULL CHECK(tick >= 0),
+                PRIMARY KEY(commit_key, record_id));
         """)
 
     def retain(self, record, encoded):
@@ -145,3 +159,139 @@ class PermanentLibrary:
             "SELECT analysis_json FROM structural_commits WHERE commit_key=?", (commit_key,)
         ).fetchone()
         return None if row is None else json.loads(row[0])
+
+    def retain_retrieval_outcomes(
+        self, commit_key, admitted_anchor_ids, retrieval_trace, committed_text,
+        conflict_dismissed, tick, structural_similarities=None,
+    ):
+        """Record packet/response observations inside the caller's transaction."""
+        supplied_ids = [str(value) for value in admitted_anchor_ids]
+        ordered_ids = list(dict.fromkeys(supplied_ids))
+        if len(ordered_ids) != len(supplied_ids):
+            raise ValueError("admitted anchor ids must be unique and ordered")
+        trace_by_id = {}
+        for row in retrieval_trace or ():
+            if not isinstance(row, dict) or not isinstance(row.get("id"), str):
+                raise ValueError("retrieval trace rows require string ids")
+            record_id = row["id"]
+            if record_id in trace_by_id:
+                raise ValueError("retrieval trace contains duplicate anchor ids")
+            trace_by_id[record_id] = row
+        if trace_by_id:
+            missing = [record_id for record_id in ordered_ids if record_id not in trace_by_id]
+            if missing:
+                raise ValueError(f"admitted anchors absent from retrieval trace: {missing}")
+        similarities = structural_similarities or {}
+        for rank, record_id in enumerate(ordered_ids, 1):
+            original = self.get(record_id)
+            if original is None:
+                raise ValueError(f"outcome anchor has no durable twin: {record_id}")
+            trace = trace_by_id.get(record_id, {})
+            rrf_score = _optional_finite_float(trace.get("rrf_score"), "rrf_score")
+            lexical_rank = _optional_positive_int(trace.get("lexical_rank"), "lexical_rank")
+            structural_rank = _optional_positive_int(
+                trace.get("structural_rank"), "structural_rank"
+            )
+            matched_branch_id = trace.get("matched_branch_id")
+            if matched_branch_id is not None and not isinstance(matched_branch_id, str):
+                raise ValueError("matched_branch_id must be a string or null")
+            structural_similarity = _optional_finite_float(
+                similarities.get(record_id), "structural_similarity"
+            )
+            values = (
+                commit_key, record_id, rank, rrf_score, lexical_rank,
+                structural_rank, matched_branch_id,
+                longest_common_substring_chars(original["content"], committed_text),
+                structural_similarity, int(conflict_dismissed), tick,
+            )
+            existing = self.db.execute(
+                "SELECT commit_key,record_id,rank,rrf_score,lexical_rank,"
+                "structural_rank,matched_branch_id,verbatim_overlap_chars,"
+                "structural_similarity,conflict_dismissed,tick "
+                "FROM retrieval_outcomes WHERE commit_key=? AND record_id=?",
+                (commit_key, record_id),
+            ).fetchone()
+            if existing is not None:
+                if existing != values:
+                    raise ValueError("retrieval outcome idempotency conflict")
+                continue
+            self.db.execute(
+                "INSERT INTO retrieval_outcomes VALUES(?,?,?,?,?,?,?,?,?,?,?)", values
+            )
+
+    def retrieval_outcomes(self, commit_key=None):
+        query = (
+            "SELECT commit_key,record_id,rank,rrf_score,lexical_rank,"
+            "structural_rank,matched_branch_id,verbatim_overlap_chars,"
+            "structural_similarity,conflict_dismissed,tick FROM retrieval_outcomes"
+        )
+        parameters = ()
+        if commit_key is not None:
+            query += " WHERE commit_key=?"
+            parameters = (commit_key,)
+        query += " ORDER BY commit_key,rank,record_id"
+        names = (
+            "commit_key", "record_id", "rank", "rrf_score", "lexical_rank",
+            "structural_rank", "matched_branch_id", "verbatim_overlap_chars",
+            "structural_similarity", "conflict_dismissed", "tick",
+        )
+        return [dict(zip(names, row)) for row in self.db.execute(query, parameters)]
+
+
+def _optional_positive_int(value, name):
+    if value is None:
+        return None
+    if type(value) is not int or value <= 0:
+        raise ValueError(f"{name} must be a positive integer or null")
+    return value
+
+
+def _optional_finite_float(value, name):
+    if value is None:
+        return None
+    if type(value) not in (int, float) or not math.isfinite(value):
+        raise ValueError(f"{name} must be finite or null")
+    return float(value)
+
+
+def longest_common_substring_chars(left, right):
+    """Exact Unicode-character LCS substring length in linear time."""
+    states = [{"length": 0, "link": -1, "next": {}}]
+    last = 0
+    for character in left:
+        current = len(states)
+        states.append({"length": states[last]["length"] + 1, "link": 0, "next": {}})
+        parent = last
+        while parent >= 0 and character not in states[parent]["next"]:
+            states[parent]["next"][character] = current
+            parent = states[parent]["link"]
+        if parent >= 0:
+            target = states[parent]["next"][character]
+            if states[parent]["length"] + 1 == states[target]["length"]:
+                states[current]["link"] = target
+            else:
+                clone = len(states)
+                states.append({
+                    "length": states[parent]["length"] + 1,
+                    "link": states[target]["link"],
+                    "next": dict(states[target]["next"]),
+                })
+                while parent >= 0 and states[parent]["next"].get(character) == target:
+                    states[parent]["next"][character] = clone
+                    parent = states[parent]["link"]
+                states[target]["link"] = clone
+                states[current]["link"] = clone
+        last = current
+    state = length = best = 0
+    for character in right:
+        while state and character not in states[state]["next"]:
+            state = states[state]["link"]
+            length = min(length, states[state]["length"])
+        target = states[state]["next"].get(character)
+        if target is None:
+            state = length = 0
+            continue
+        state = target
+        length += 1
+        best = max(best, length)
+    return best

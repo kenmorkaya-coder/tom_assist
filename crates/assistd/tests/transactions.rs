@@ -162,6 +162,58 @@ fn production_exchange_commits_manifest_once_and_defers_conflict_teaching() {
         packet["retrieved_anchor_ids"]
     );
     assert_eq!(receipt["commit_dynamics"].as_array().unwrap().len(), 5);
+    let context = observer
+        .context_run_by_digest("project-a", digest)
+        .unwrap()
+        .unwrap();
+    let trace: Value = serde_json::from_str(&context.candidate_trace_json).unwrap();
+    let expected = trace["retrieval"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["id"] == seed.anchor_id)
+        .unwrap();
+    let outcome_db = rusqlite::Connection::open(
+        temp.path()
+            .join("runtime/projects/project-a/tom/library.sqlite3"),
+    )
+    .unwrap();
+    let outcome: (
+        i64,
+        f64,
+        Option<i64>,
+        Option<i64>,
+        Option<String>,
+        i64,
+        Option<f64>,
+    ) = outcome_db
+        .query_row(
+            concat!(
+                "SELECT rank,rrf_score,lexical_rank,structural_rank,matched_branch_id,",
+                "verbatim_overlap_chars,structural_similarity FROM retrieval_outcomes ",
+                "WHERE commit_key='sent-turn:sent-user' AND record_id=?1"
+            ),
+            [&seed.anchor_id],
+            |row| {
+                Ok((
+                    row.get(0)?,
+                    row.get(1)?,
+                    row.get(2)?,
+                    row.get(3)?,
+                    row.get(4)?,
+                    row.get(5)?,
+                    row.get(6)?,
+                ))
+            },
+        )
+        .unwrap();
+    assert_eq!(outcome.0, 1);
+    assert_eq!(outcome.1, expected["rrf_score"].as_f64().unwrap());
+    assert_eq!(outcome.2, expected["lexical_rank"].as_i64());
+    assert_eq!(outcome.3, expected["structural_rank"].as_i64());
+    assert_eq!(outcome.4.as_deref(), expected["matched_branch_id"].as_str());
+    assert!(outcome.5 > 0);
+    assert_eq!(outcome.6, None);
     let checkpoint = gateway
         .preview_rank("project-a", draft, 10, 2000)
         .unwrap()
