@@ -77,6 +77,8 @@ pub struct RankPreview {
     pub structural_analysis: Option<Value>,
     #[serde(default)]
     pub shadow_structural_retrieval: Vec<Value>,
+    #[serde(default)]
+    pub parser_glossary: Option<Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -157,6 +159,26 @@ impl GatewayClient {
             Some(
                 json!({"project_id":project_id,"user_text":user_text,"k":k,"max_chars":max_chars}),
             ),
+        )
+    }
+    pub fn preview_rank_with_glossary_titles(
+        &self,
+        project_id: &str,
+        user_text: &str,
+        k: u64,
+        max_chars: u64,
+        declared_glossary_titles: &[String],
+    ) -> Result<RankPreview> {
+        self.request(
+            "POST",
+            "/preview/rank",
+            Some(json!({
+                "project_id": project_id,
+                "user_text": user_text,
+                "k": k,
+                "max_chars": max_chars,
+                "declared_glossary_titles": declared_glossary_titles,
+            })),
         )
     }
     pub fn commit_turn(

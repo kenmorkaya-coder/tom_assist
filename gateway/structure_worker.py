@@ -21,7 +21,12 @@ from gateway.semantic_chunks import (  # noqa: E402
     build_semantic_profile,
     build_token_chunks,
 )
-from gateway.structural_analysis import PARSER_VERSION, validate_candidate  # noqa: E402
+from gateway.structural_analysis import (  # noqa: E402
+    GLOSSARY_PARSER_VERSION,
+    PARSER_VERSION,
+    validate_candidate,
+)
+from gateway.project_glossary import validate_glossary  # noqa: E402
 from gateway.structure_provider import WORKER_PROTOCOL  # noqa: E402
 
 
@@ -52,12 +57,20 @@ class GemmaChild:
                  if key not in {"OPENAI_API_KEY", "TOM_LLM_API_KEY", "TOM_AGENT_LLM_API_KEY"}},
         )
 
-    def analyze(self, request_id: str, source_text: str) -> dict[str, Any]:
+    def analyze(
+        self, request_id: str, source_text: str,
+        glossary: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         if self.process.stdin is None or self.process.stdout is None:
             raise RuntimeError("Gemma child has no pipes")
-        self.process.stdin.write(json.dumps({
+        request = {
             "protocol": WORKER_PROTOCOL, "request_id": request_id, "source_text": source_text,
-        }, ensure_ascii=False, separators=(",", ":")) + "\n")
+        }
+        if glossary is not None:
+            request["glossary"] = glossary
+        self.process.stdin.write(json.dumps(
+            request, ensure_ascii=False, separators=(",", ":")
+        ) + "\n")
         self.process.stdin.flush()
         line = self.process.stdout.readline()
         if not line:
@@ -108,12 +121,19 @@ def main() -> int:
             }
             try:
                 request = json.loads(raw)
-                if set(request) != {"protocol", "request_id", "source_text"}:
+                if set(request) not in (
+                    {"protocol", "request_id", "source_text"},
+                    {"protocol", "request_id", "source_text", "glossary"},
+                ):
                     raise ValueError("worker request shape mismatch")
                 if request["protocol"] != WORKER_PROTOCOL:
                     raise ValueError("worker protocol mismatch")
                 request_id = str(request["request_id"])
                 source_text = request["source_text"]
+                glossary = (
+                    validate_glossary(request["glossary"])
+                    if "glossary" in request else None
+                )
                 if not isinstance(source_text, str) or not source_text.strip() or len(source_text) > 48_000:
                     raise ValueError("source text must contain 1..48000 characters")
                 offset_payload = tokenizer(
@@ -156,7 +176,9 @@ def main() -> int:
                 for chunk_index, chunk_text in enumerate(chunk_texts):
                     worker_telemetry["attempted_chunks"] += 1
                     worker_telemetry["failed_chunk_index"] = chunk_index
-                    gemma_result = gemma.analyze(f"{request_id}:{chunk_index}", chunk_text)
+                    gemma_result = gemma.analyze(
+                        f"{request_id}:{chunk_index}", chunk_text, glossary,
+                    )
                     candidate = validate_candidate(
                         gemma_result["candidate"],
                         chunk_text,
@@ -176,12 +198,17 @@ def main() -> int:
                     "chunk_candidates": chunk_candidates,
                     "semantic_profile": semantic_profile,
                     "parser_model": {
-                        "version": PARSER_VERSION,
+                        "version": (
+                            GLOSSARY_PARSER_VERSION
+                            if glossary is not None else PARSER_VERSION
+                        ),
                         "model": "local/gemma-instruct-tool-parser",
                         "revision": args.gemma_model.resolve().name,
                     },
                     "worker_telemetry": worker_telemetry,
                 }
+                if glossary is not None:
+                    response["parser_model"]["glossary_sha256"] = glossary["sha256"]
             except Exception as error:
                 response = {
                     "protocol": WORKER_PROTOCOL, "request_id": request_id,

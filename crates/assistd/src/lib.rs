@@ -30,7 +30,7 @@ use tom_assist_persistence::{
 use tom_assist_protocol::{
     ActorType, ContinuityPacket, Envelope, ExcludedItem, InterventionCode, Method,
     PacketDigestInput, PacketSection, ProviderCapabilities, StateMutationCandidate, StateObject,
-    canonical_sha256, packet_digest,
+    StateStatus, canonical_sha256, packet_digest,
 };
 use tom_assist_tom_adapter::GatewayClient;
 
@@ -271,8 +271,15 @@ impl AssistService {
         let state = store.current_state(&request.project_id)?;
         if let Some(gateway) = &self.gateway {
             // Production owns projection/admission; page-provided manifests are not trusted.
+            let declared_glossary_titles = active_glossary_titles(&state.objects);
             let preview = gateway
-                .preview_rank(&request.project_id, &request.user_draft, 10, 2000)
+                .preview_rank_with_glossary_titles(
+                    &request.project_id,
+                    &request.user_draft,
+                    10,
+                    2000,
+                    &declared_glossary_titles,
+                )
                 .map_err(|error| {
                     ServiceError::Invalid(format!("TOM_RUNTIME_UNAVAILABLE: {error}"))
                 })?;
@@ -358,7 +365,7 @@ impl AssistService {
             request.tom_checkpoint_digest = preview.checkpoint_digest;
             request.tom_activation_id = preview.activation_id;
             request.activated_branch_ids = preview.activated_branch_ids;
-            request.candidate_trace = json!({
+            let mut candidate_trace = json!({
                 "retrieval": preview.candidate_trace,
                 "branches": preview.branch_trace,
                 "admission": admitted.trace,
@@ -366,6 +373,10 @@ impl AssistService {
                 "structural_analysis": preview.structural_analysis,
                 "shadow_structural_retrieval": preview.shadow_structural_retrieval,
             });
+            if let Some(glossary) = preview.parser_glossary {
+                candidate_trace["parser_glossary"] = glossary;
+            }
+            request.candidate_trace = candidate_trace;
             request.sections = admitted.packet.sections;
             request.retrieved_anchor_ids = admitted.packet.retrieved_anchor_ids;
             request.excluded = admitted.packet.excluded;
@@ -974,6 +985,19 @@ impl AssistService {
             _ => unreachable!("document dispatcher received a non-document method"),
         }
     }
+}
+
+pub fn active_glossary_titles(objects: &[StateObject]) -> Vec<String> {
+    objects
+        .iter()
+        .filter(|object| {
+            matches!(
+                object.status,
+                StateStatus::Active | StateStatus::Satisfied | StateStatus::Rejected
+            )
+        })
+        .map(|object| object.title.clone())
+        .collect()
 }
 
 #[derive(Debug, Clone, Copy)]

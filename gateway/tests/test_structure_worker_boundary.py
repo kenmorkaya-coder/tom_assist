@@ -56,7 +56,7 @@ def test_syntax_fallback_quotes_bare_values_accepts_single_quotes_and_closes_con
 
 
 def test_worker_protocol_and_errors_carry_exact_attempt_telemetry():
-    assert WORKER_PROTOCOL == "tom-assist-structure-worker/1.1"
+    assert WORKER_PROTOCOL == "tom-assist-structure-worker/1.2"
     telemetry = {
         "planned_chunks": 3,
         "attempted_chunks": 2,

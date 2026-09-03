@@ -24,6 +24,7 @@ from gateway.structural_analysis import (  # noqa: E402
     project_candidate_fields,
     validate_candidate,
 )
+from gateway.project_glossary import validate_glossary  # noqa: E402
 from gateway.structure_provider import WORKER_PROTOCOL  # noqa: E402
 
 
@@ -166,13 +167,20 @@ def main() -> int:
         request_id = "unknown"
         try:
             request = json.loads(raw)
-            if set(request) != {"protocol", "request_id", "source_text"}:
+            if set(request) not in (
+                {"protocol", "request_id", "source_text"},
+                {"protocol", "request_id", "source_text", "glossary"},
+            ):
                 raise ValueError("Gemma request shape mismatch")
             if request["protocol"] != WORKER_PROTOCOL:
                 raise ValueError("Gemma protocol mismatch")
             request_id = str(request["request_id"])
             source_text = request["source_text"]
-            prompt = build_gemma_prompt(source_text)
+            glossary = (
+                validate_glossary(request["glossary"])
+                if "glossary" in request else None
+            )
+            prompt = build_gemma_prompt(source_text, glossary)
             formatted = tokenizer.apply_chat_template(
                 [{"role": "user", "content": prompt}], tools=[tool],
                 add_generation_prompt=True, tokenize=False, enable_thinking=False,

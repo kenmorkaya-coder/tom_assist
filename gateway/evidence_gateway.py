@@ -21,6 +21,13 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import gateway.tom_gateway as base
 from gateway.permanent_library import content_hash
+from gateway.project_glossary import (
+    GLOSSARY_ENV_FLAG,
+    GLOSSARY_VERSION,
+    MAX_GLOSSARY_CHARACTERS,
+    MAX_GLOSSARY_TERMS,
+    build_project_glossary,
+)
 from gateway.shadow_retrieval import (
     build_shadow_comparison,
     dense_channel_with_unscored_tail,
@@ -56,20 +63,41 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
         structure_mode: str,
         structure_provider: Any | None,
         document_embedding_provider=None,
+        parser_glossary_enabled: bool = False,
     ) -> None:
         super().__init__(
             project_id, state_dir, runtime_sha, seed, document_embedding_provider
         )
         self.structure_mode = structure_mode
         self.structure_provider = structure_provider
+        self.parser_glossary_enabled = parser_glossary_enabled
 
     def _active_structural_history(self) -> list[dict[str, Any]]:
         return self.library.structural_history(self._idempotency.keys())
 
-    def _build_structural_analysis(self, text: str, checkpoint_digest: str) -> dict[str, Any]:
+    def project_glossary(self, declared_titles=()) -> dict[str, Any]:
+        documents = [
+            self.library.document(row["document_id"], include_chunks=False)["content"]
+            for row in self.library.documents(include_withdrawn=False)
+        ]
+        return build_project_glossary(declared_titles, documents)
+
+    def _build_structural_analysis(
+        self, text: str, checkpoint_digest: str, declared_titles=(),
+    ) -> tuple[dict[str, Any], dict[str, Any] | None]:
         if self.structure_provider is None:
             raise ValueError("local structural provider is unavailable")
-        proposed = self.structure_provider.analyze(text)
+        glossary = (
+            self.project_glossary(declared_titles)
+            if self.parser_glossary_enabled else None
+        )
+        proposed = (
+            self.structure_provider.analyze(text, glossary=glossary)
+            if glossary is not None else self.structure_provider.analyze(text)
+        )
+        expected_hash = None if glossary is None else glossary["sha256"]
+        if proposed.get("parser_model", {}).get("glossary_sha256") != expected_hash:
+            raise ValueError("local structural provider glossary provenance mismatch")
         analysis = build_analysis(
             text,
             proposed.get("chunk_candidates"),
@@ -84,7 +112,7 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
                 analysis["load_signature"],
                 name="authoritative 17-channel load",
             )
-        return analysis
+        return analysis, glossary
 
     def memory_diagnostics(self, after=0):
         result = super().memory_diagnostics(after)
@@ -94,13 +122,20 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
             "structural_commit_count": len(self._active_structural_history()),
         }
 
-    def preview_rank(self, user_text: str, k: int, max_chars: int) -> dict[str, Any]:
+    def preview_rank(
+        self, user_text: str, k: int, max_chars: int,
+        declared_glossary_titles=(),
+    ) -> dict[str, Any]:
         if self.structure_mode == "legacy":
-            return super().preview_rank(user_text, k, max_chars)
+            return super().preview_rank(
+                user_text, k, max_chars, declared_glossary_titles,
+            )
         with self.lock:
             triggers = base._compute_preview_triggers(len(self._idempotency))
             checkpoint_digest = self._current_checkpoint_digest()
-            analysis = self._build_structural_analysis(user_text, checkpoint_digest)
+            analysis, glossary = self._build_structural_analysis(
+                user_text, checkpoint_digest, declared_glossary_titles,
+            )
             if self.structure_mode == "authoritative":
                 from agency.mechanics.preview_readout import (
                     load_signature_120_readout_angle,
@@ -202,6 +237,13 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
                 result["structural_semantic_ranking"] = semantic_ranking
             if shadow_comparison is not None:
                 result["shadow_retrieval_comparison"] = shadow_comparison
+            if glossary is not None:
+                result["parser_glossary"] = {
+                    key: glossary[key] for key in (
+                        "version", "term_count", "total_characters",
+                        "declared_term_count", "document_term_count", "sha256",
+                    )
+                }
             return result
 
     def commit_turn(
@@ -471,6 +513,7 @@ class EvidenceTomGateway(base.TomGateway):
         structure_mode: str | None = None,
         structure_provider: Any | None = None,
         document_embedding_provider=None,
+        parser_glossary_enabled: bool | None = None,
     ) -> None:
         super().__init__(
             data_dir,
@@ -489,12 +532,21 @@ class EvidenceTomGateway(base.TomGateway):
             from gateway.structure_provider import StructureWorkerClient
             structure_provider = StructureWorkerClient.from_environment()
         self.structure_provider = structure_provider
+        if parser_glossary_enabled is None:
+            flag = os.environ.get(GLOSSARY_ENV_FLAG, "0").strip()
+            if flag not in {"0", "1"}:
+                raise ValueError(f"{GLOSSARY_ENV_FLAG} must be 0 or 1")
+            parser_glossary_enabled = flag == "1"
+        if type(parser_glossary_enabled) is not bool:
+            raise ValueError("parser_glossary_enabled must be boolean")
+        self.parser_glossary_enabled = parser_glossary_enabled
 
     def create_project_runtime(self, project_id: str, state_dir: Path):
         return EvidenceProjectRuntime(
             project_id, state_dir, self.runtime_sha, self.seed,
             self.structure_mode, self.structure_provider,
             self.document_embedding_provider,
+            self.parser_glossary_enabled,
         )
 
     def project(self, project_id: Any) -> EvidenceProjectRuntime:
@@ -525,6 +577,12 @@ class EvidenceTomGateway(base.TomGateway):
             "local_gemma_candidate_required": self.structure_mode != "legacy",
             "model_generated_load_values": False,
             "feeling_wheel_used": False,
+            "parser_glossary_enabled": self.parser_glossary_enabled,
+            "parser_glossary_version": GLOSSARY_VERSION,
+            "parser_glossary_term_count": 0,
+            "parser_glossary_sha256": build_project_glossary([], [])["sha256"],
+            "parser_glossary_max_terms": MAX_GLOSSARY_TERMS,
+            "parser_glossary_max_characters": MAX_GLOSSARY_CHARACTERS,
         }
 
     def handle(

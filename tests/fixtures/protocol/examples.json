@@ -66,7 +66,13 @@
     "document_max_source_chars": 400000,
     "document_max_chunks": 4096,
     "document_structural_parsing": false,
-    "document_packet_admission": false
+    "document_packet_admission": false,
+    "parser_glossary_enabled": false,
+    "parser_glossary_version": "tom-assist-parser-glossary/1.0",
+    "parser_glossary_term_count": 0,
+    "parser_glossary_sha256": "sha256:5d089df285bafeb2d5aafb9644fd57124d79c38b444450da1a2634ece42b356e",
+    "parser_glossary_max_terms": 64,
+    "parser_glossary_max_characters": 2048
   },
   "document": {
     "document_id": "document-0123456789abcdef0123456789abcdef",

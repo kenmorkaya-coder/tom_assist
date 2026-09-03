@@ -123,6 +123,12 @@ export interface TomCapabilities {
   document_max_chunks: 4096;
   document_structural_parsing: false;
   document_packet_admission: false;
+  parser_glossary_enabled: boolean;
+  parser_glossary_version: "tom-assist-parser-glossary/1.0";
+  parser_glossary_term_count: number;
+  parser_glossary_sha256: string;
+  parser_glossary_max_terms: 64;
+  parser_glossary_max_characters: 2048;
   /**
    * @minItems 2
    * @maxItems 2

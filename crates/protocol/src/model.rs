@@ -218,6 +218,18 @@ pub struct TomCapabilities {
     pub document_structural_parsing: bool,
     #[serde(default)]
     pub document_packet_admission: bool,
+    #[serde(default)]
+    pub parser_glossary_enabled: bool,
+    #[serde(default)]
+    pub parser_glossary_version: String,
+    #[serde(default)]
+    pub parser_glossary_term_count: u64,
+    #[serde(default)]
+    pub parser_glossary_sha256: String,
+    #[serde(default)]
+    pub parser_glossary_max_terms: u64,
+    #[serde(default)]
+    pub parser_glossary_max_characters: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

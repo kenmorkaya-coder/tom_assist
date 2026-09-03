@@ -13,7 +13,7 @@ use tom_assist_protocol::{
 };
 use tom_assistd::{
     AssistService, EvaluateTurnRequest, EvaluationState, PrepareTurnRequest, SendTurnRequest,
-    ServiceError, WireResponse, bind_unix, handle_stream,
+    ServiceError, WireResponse, active_glossary_titles, bind_unix, handle_stream,
 };
 
 fn provider_capabilities() -> ProviderCapabilities {
@@ -444,6 +444,32 @@ fn object(id: &str) -> StateObject {
         content_hash: format!("sha256:{id}"),
         state_version: 0,
     }
+}
+
+#[test]
+fn parser_glossary_boundary_exports_only_active_surface_titles() {
+    let active = object("surface-title-only");
+    let mut satisfied = object("satisfied-surface");
+    satisfied.status = StateStatus::Satisfied;
+    let mut rejected = object("rejected-surface");
+    rejected.status = StateStatus::Rejected;
+    let mut proposed = object("proposed-must-not-cross");
+    proposed.status = StateStatus::Proposed;
+    let mut superseded = object("must-not-cross");
+    superseded.status = StateStatus::Superseded;
+    superseded.object_type = StateType::Constraint;
+    superseded.authority = Authority::TomVerified;
+    superseded.confidence = 0.731;
+    let mut archived = object("archived-must-not-cross");
+    archived.status = StateStatus::Archived;
+    assert_eq!(
+        active_glossary_titles(&[proposed, superseded, active, satisfied, rejected, archived,]),
+        vec![
+            "surface-title-only",
+            "satisfied-surface",
+            "rejected-surface"
+        ],
+    );
 }
 
 #[test]

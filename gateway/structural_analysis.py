@@ -31,10 +31,12 @@ SUPPORTED_COMPILER_VERSIONS = {
     COMPILER_VERSION,
 }
 PARSER_VERSION = "gemma-native-tool-structural-candidate/1.2"
+GLOSSARY_PARSER_VERSION = "gemma-native-tool-structural-candidate/1.3-glossary"
 GPT_PARSER_VERSION = "gpt-structured-quote-parser/1.0"
 SUPPORTED_PARSER_VERSIONS = {
     "gemma-native-tool-structural-candidate/1.0",
     PARSER_VERSION,
+    GLOSSARY_PARSER_VERSION,
     GPT_PARSER_VERSION,
 }
 NEAR_SEMANTIC_THRESHOLD = 0.70
@@ -1102,7 +1104,12 @@ def merge_chunk_candidates(
 
 
 def validate_parser_model(payload: Any) -> dict[str, str]:
-    row = _require_object(payload, "parser_model", {"version", "model", "revision"})
+    required = {"version", "model", "revision"}
+    if not isinstance(payload, Mapping) or set(payload) not in (
+        required, required | {"glossary_sha256"},
+    ):
+        raise ValueError("parser_model fields mismatch")
+    row = dict(payload)
     if row["version"] not in SUPPORTED_PARSER_VERSIONS:
         raise ValueError("parser model version is not supported")
     values = {}
@@ -1111,7 +1118,17 @@ def validate_parser_model(payload: Any) -> dict[str, str]:
         if not isinstance(value, str) or not value.strip() or len(value) > 256:
             raise ValueError(f"parser_model.{name} must contain 1..256 characters")
         values[name] = value.strip()
-    return {"version": row["version"], **values}
+    result = {"version": row["version"], **values}
+    glossary_hash = row.get("glossary_sha256")
+    if row["version"] == GLOSSARY_PARSER_VERSION:
+        if not isinstance(glossary_hash, str) or not re.fullmatch(
+            r"sha256:[0-9a-f]{64}", glossary_hash,
+        ):
+            raise ValueError("parser_model.glossary_sha256 is invalid")
+        result["glossary_sha256"] = glossary_hash
+    elif glossary_hash is not None:
+        raise ValueError("only the glossary parser version may carry a glossary hash")
+    return result
 
 
 def _clamp(value: float) -> float:
@@ -2075,8 +2092,10 @@ SOURCE_TEXT:
 """
 
 
-def build_gemma_prompt(source_text: str) -> str:
-    return f"""You are a local structure parser. Do not answer the user.
+def build_gemma_prompt(
+    source_text: str, glossary: Mapping[str, Any] | None = None,
+) -> str:
+    prompt = f"""You are a local structure parser. Do not answer the user.
 
 Fill record_structural_candidate exactly once from SOURCE_TEXT. Use exact character
 offsets and exact non-empty quoted substrings. If a word repeats, quote enough
@@ -2123,3 +2142,7 @@ SOURCE_TEXT_SHA256: {text_digest(source_text)}
 SOURCE_TEXT:
 {source_text}
 """
+    if glossary is None:
+        return prompt
+    from gateway.project_glossary import render_glossary
+    return prompt + "\n" + render_glossary(glossary) + "\n"

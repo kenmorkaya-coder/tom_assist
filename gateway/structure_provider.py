@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 
-WORKER_PROTOCOL = "tom-assist-structure-worker/1.1"
+WORKER_PROTOCOL = "tom-assist-structure-worker/1.2"
 _SAFE_ENVIRONMENT_NAMES = {
     "PATH", "HOME", "TMPDIR", "TEMP", "TMP", "LANG", "LC_ALL", "LC_CTYPE",
     "DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH", "TOKENIZERS_PARALLELISM",
@@ -104,13 +104,20 @@ class StructureWorkerClient:
         )
         return self._process
 
-    def analyze(self, source_text: str) -> dict[str, Any]:
+    def analyze(
+        self, source_text: str, *, glossary: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        if glossary is not None:
+            from gateway.project_glossary import validate_glossary
+            glossary = validate_glossary(glossary)
         request_id = str(uuid.uuid4())
         request = {
             "protocol": WORKER_PROTOCOL,
             "request_id": request_id,
             "source_text": source_text,
         }
+        if glossary is not None:
+            request["glossary"] = glossary
         with self._lock:
             process = self._start()
             if process.stdin is None or process.stdout is None:
@@ -157,12 +164,17 @@ class StructureWorkerClient:
                 "parser_model", "worker_telemetry",
             }:
                 raise StructureProviderError("local structure worker response shape mismatch")
-            return {
+            result = {
                 "chunk_candidates": response["chunk_candidates"],
                 "semantic_profile": response["semantic_profile"],
                 "parser_model": response["parser_model"],
                 "worker_telemetry": response["worker_telemetry"],
             }
+            observed_hash = result["parser_model"].get("glossary_sha256")
+            expected_hash = None if glossary is None else glossary["sha256"]
+            if observed_hash != expected_hash:
+                raise StructureProviderError("local structure worker glossary hash mismatch")
+            return result
 
     def close(self) -> None:
         process, self._process = self._process, None

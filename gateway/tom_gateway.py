@@ -63,6 +63,12 @@ from gateway.document_ingestion import (
     MAX_DOCUMENT_CHUNKS,
     MAX_DOCUMENT_SOURCE_CHARS,
 )
+from gateway.project_glossary import (
+    GLOSSARY_VERSION,
+    MAX_GLOSSARY_CHARACTERS,
+    MAX_GLOSSARY_TERMS,
+    build_project_glossary,
+)
 
 COMMIT_DYNAMICS = ["step", "rgm_write", "leaf_vec_teach", "usage_rotation", "front_row_reseat"]
 DEFAULT_SETTINGS = {"front_row_capacity": 4096, "teach_on_conflict": True}
@@ -560,7 +566,10 @@ class ProjectRuntime:
                 temporary_path.unlink(missing_ok=True)
             return tree, self.rgm.serialize().encode("utf-8")
 
-    def preview_rank(self, user_text: str, k: int, max_chars: int) -> dict[str, Any]:
+    def preview_rank(
+        self, user_text: str, k: int, max_chars: int,
+        declared_glossary_titles=(),
+    ) -> dict[str, Any]:
         """Pure ranking over last-committed state plus the draft as user_text only."""
         with self.lock:
             # Binding source evidence: rgm.py:681-733 defines VectorStore.query
@@ -937,6 +946,12 @@ class TomGateway:
             "document_max_chunks": MAX_DOCUMENT_CHUNKS,
             "document_structural_parsing": False,
             "document_packet_admission": False,
+            "parser_glossary_enabled": False,
+            "parser_glossary_version": GLOSSARY_VERSION,
+            "parser_glossary_term_count": 0,
+            "parser_glossary_sha256": build_project_glossary([], [])["sha256"],
+            "parser_glossary_max_terms": MAX_GLOSSARY_TERMS,
+            "parser_glossary_max_characters": MAX_GLOSSARY_CHARACTERS,
             **DEFAULT_SETTINGS,
         }
 
@@ -972,7 +987,10 @@ class TomGateway:
             if method == "POST" and path == "/preview/rank":
                 k = max(1, min(int(payload.get("k", 10)), 100))
                 max_chars = max(1, min(int(payload.get("max_chars", 2000)), 12000))
-                return 200, self.project(payload.get("project_id")).preview_rank(str(payload.get("user_text") or ""), k, max_chars)
+                return 200, self.project(payload.get("project_id")).preview_rank(
+                    str(payload.get("user_text") or ""), k, max_chars,
+                    payload.get("declared_glossary_titles") or [],
+                )
             if method == "POST" and path == "/turn/commit":
                 key = str(payload.get("idempotency_key") or "")
                 if not key: raise ValueError("idempotency_key is required")
