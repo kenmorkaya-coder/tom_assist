@@ -17,13 +17,14 @@ from gateway.semantic_chunks import (
     EMBEDDING_DIMENSION,
     EMBEDDING_VERSION,
 )
+from gateway.declared_structure import MAX_DECLARED_STRUCTURE_SOURCE_CHARS
 from gateway.structure_provider import isolated_worker_environment
 
 
 DOCUMENT_CHUNKING_VERSION = "minilm-document-token-sentence-max192-overlap32/1.0"
 DOCUMENT_EMBEDDING_VERSION = EMBEDDING_VERSION
 DOCUMENT_WORKER_PROTOCOL = "tom-assist-document-embedding/1.0"
-MAX_DOCUMENT_SOURCE_CHARS = 400_000
+MAX_DOCUMENT_SOURCE_CHARS = MAX_DECLARED_STRUCTURE_SOURCE_CHARS
 MAX_DOCUMENT_CHUNKS = 4_096
 ALLOWED_DOCUMENT_MEDIA_TYPES = frozenset({
     "text/plain",

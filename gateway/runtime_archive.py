@@ -82,12 +82,17 @@ def validate_snapshot(gateway, root):
         document_objects = {
             ("table", "documents"), ("table", "document_chunks"),
         }
+        declared_structure_objects = {
+            ("table", "document_declared_structures"),
+        }
         accepted_objects = {
             frozenset(legacy_objects),
             frozenset(structural_objects),
             frozenset(outcome_objects),
             frozenset(structural_objects | document_objects),
             frozenset(outcome_objects | document_objects),
+            frozenset(structural_objects | document_objects | declared_structure_objects),
+            frozenset(outcome_objects | document_objects | declared_structure_objects),
         }
         if frozenset(objects) not in accepted_objects:
             raise ValueError("unrecognized library schema objects")
@@ -230,6 +235,30 @@ def validate_snapshot(gateway, root):
                     )
                 ):
                     raise ValueError("document chunks do not overlap and cover their source")
+            if ("table", "document_declared_structures") in objects:
+                from gateway.declared_structure import (
+                    DECLARED_STRUCTURE_VERSION,
+                    validate_declared_structure,
+                )
+                structured_documents = set()
+                for document_id, version, structure_digest, encoded in db.execute(
+                    "SELECT document_id,schema_version,structure_digest,structure_json "
+                    "FROM document_declared_structures ORDER BY document_id"
+                ):
+                    content = documents.get(document_id)
+                    if content is None or document_id in structured_documents:
+                        raise ValueError("invalid document declared-structure provenance")
+                    structure = json.loads(encoded)
+                    if (
+                        version != DECLARED_STRUCTURE_VERSION
+                        or structure.get("schema_version") != version
+                        or structure.get("structure_digest") != structure_digest
+                    ):
+                        raise ValueError("invalid document declared-structure provenance")
+                    validate_declared_structure(structure, content)
+                    structured_documents.add(document_id)
+                if structured_documents != set(documents):
+                    raise ValueError("document declared-structure inventory mismatch")
         for folder in (root / "checkpoints").glob("*"):
             expected_files = {"tree_state.json", "rgm_state.json", "commit_state.json", "metadata.json"}
             if {p.name for p in folder.iterdir()} != expected_files:

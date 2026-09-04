@@ -63,16 +63,54 @@
     "supports_documents": true,
     "document_chunking_version": "minilm-document-token-sentence-max192-overlap32/1.0",
     "document_embedding_version": "minilm-l6-v2/384d-multivector/2.0",
-    "document_max_source_chars": 400000,
+    "document_max_source_chars": 2000000,
     "document_max_chunks": 4096,
     "document_structural_parsing": false,
     "document_packet_admission": false,
+    "supports_document_declared_structure": true,
+    "document_declared_structure_version": "tom-assist-declared-structure/1.0",
     "parser_glossary_enabled": false,
     "parser_glossary_version": "tom-assist-parser-glossary/1.0",
     "parser_glossary_term_count": 0,
     "parser_glossary_sha256": "sha256:5d089df285bafeb2d5aafb9644fd57124d79c38b444450da1a2634ece42b356e",
     "parser_glossary_max_terms": 64,
     "parser_glossary_max_characters": 2048
+  },
+  "declared_structure": {
+    "schema_version": "tom-assist-declared-structure/1.0",
+    "source_text_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "clause_index": {
+      "version": "tom-assist-clause-index/1.0",
+      "entries": [],
+      "entry_count": 0,
+      "valid_count": 0,
+      "malformed_count": 0,
+      "index_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "references": {
+      "version": "tom-assist-reference-resolution/1.0",
+      "references": [],
+      "reference_count": 0,
+      "resolved_count": 0,
+      "unresolved_absent_count": 0,
+      "unparsed_count": 0
+    },
+    "defined_terms": {
+      "version": "tom-assist-defined-term-binding/1.0",
+      "case_rule": "exact-unicode-codepoints-case-sensitive-whole-surface/1.0",
+      "surface_forms_only_for_prompt": true,
+      "terms": [],
+      "term_count": 0,
+      "bindings": [],
+      "binding_count": 0
+    },
+    "declared_precedence": {
+      "version": "tom-assist-declared-precedence/1.0",
+      "relations": [],
+      "relation_count": 0
+    },
+    "causation": {"derived": false, "reason": "not_self_declared"},
+    "structure_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
   },
   "document": {
     "document_id": "document-0123456789abcdef0123456789abcdef",
@@ -86,6 +124,7 @@
     "ingested_tick": 4707,
     "tombstoned_at": null,
     "chunk_count": 1,
+    "declared_structure": null,
     "chunks": [{"chunk_index": 0, "start": 0, "end": 30, "text_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}]
   },
   "state_object": {

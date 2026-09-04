@@ -63,6 +63,10 @@ from gateway.document_ingestion import (
     MAX_DOCUMENT_CHUNKS,
     MAX_DOCUMENT_SOURCE_CHARS,
 )
+from gateway.declared_structure import (
+    DECLARED_STRUCTURE_VERSION,
+    build_declared_structure,
+)
 from gateway.project_glossary import (
     GLOSSARY_VERSION,
     MAX_GLOSSARY_CHARACTERS,
@@ -209,6 +213,7 @@ class ProjectRuntime:
         self.lock = threading.RLock()
         self._idempotency_path = self.state_dir / "turn_idempotency.json"
         self.library = PermanentLibrary(self.state_dir / "library.sqlite3")
+        self._backfill_declared_document_structures()
         head = self.library.head()
         self.settings = json.loads(head[3]) if head else dict(DEFAULT_SETTINGS)
         if head:
@@ -261,6 +266,27 @@ class ProjectRuntime:
         if head is None:
             self.library.set_head(self._tree_path.read_bytes(), self._rgm_path.read_bytes(),
                                   self._idempotency, self.settings)
+
+    def _backfill_declared_document_structures(self) -> None:
+        """Migrate pre-WP-43 immutable documents using only their stored text."""
+        pending = []
+        for row in self.library.documents(include_withdrawn=True):
+            document = self.library.document(row["document_id"], include_chunks=False)
+            if document["declared_structure"] is None:
+                pending.append((document["document_id"], document["content"]))
+        if not pending:
+            return
+        self.library.db.execute("BEGIN IMMEDIATE")
+        try:
+            for document_id, content in pending:
+                self.library.retain_document_declared_structure(
+                    document_id, build_declared_structure(content),
+                )
+            self.library.db.execute("COMMIT")
+        except BaseException:
+            if self.library.db.in_transaction:
+                self.library.db.execute("ROLLBACK")
+            raise
 
     @property
     def _tree_path(self) -> Path:
@@ -431,7 +457,21 @@ class ProjectRuntime:
             if existing is not None:
                 if existing["content_sha256"] != digest or existing["content"] != content:
                     raise ValueError("document content identity conflict")
+                if existing["declared_structure"] is None:
+                    declared_structure = build_declared_structure(content)
+                    self.library.db.execute("BEGIN IMMEDIATE")
+                    try:
+                        self.library.retain_document_declared_structure(
+                            document_id, declared_structure,
+                        )
+                        self.library.db.execute("COMMIT")
+                    except BaseException:
+                        if self.library.db.in_transaction:
+                            self.library.db.execute("ROLLBACK")
+                        raise
+                    existing = self.library.document(document_id)
                 return self._public_document(existing, duplicate=True)
+            declared_structure = build_declared_structure(content)
             provider = self.document_embedding_provider
             if provider is None:
                 provider = DocumentEmbeddingWorkerClient.from_environment()
@@ -461,7 +501,9 @@ class ProjectRuntime:
             }
             self.library.db.execute("BEGIN IMMEDIATE")
             try:
-                retained = self.library.retain_document(document, chunks)
+                retained = self.library.retain_document(
+                    document, chunks, declared_structure,
+                )
                 self.library.db.execute("COMMIT")
             except BaseException:
                 if self.library.db.in_transaction:
@@ -488,6 +530,7 @@ class ProjectRuntime:
         }
         public["chunks"] = chunks
         public["chunk_count"] = len(chunks)
+        public["declared_structure"] = document.get("declared_structure")
         if duplicate is not None:
             public["duplicate"] = duplicate
         return public
@@ -946,6 +989,8 @@ class TomGateway:
             "document_max_chunks": MAX_DOCUMENT_CHUNKS,
             "document_structural_parsing": False,
             "document_packet_admission": False,
+            "supports_document_declared_structure": True,
+            "document_declared_structure_version": DECLARED_STRUCTURE_VERSION,
             "parser_glossary_enabled": False,
             "parser_glossary_version": GLOSSARY_VERSION,
             "parser_glossary_term_count": 0,

@@ -313,6 +313,7 @@ def test_archive_preserves_documents_and_pre_wp39_archive_imports_empty(tmp_path
     old = tmp_path / "old"
     shutil.copytree(archive, old)
     with sqlite3.connect(old / "library.sqlite3") as database:
+        database.execute("DROP TABLE document_declared_structures")
         database.execute("DROP TABLE document_chunks")
         database.execute("DROP TABLE documents")
     manifest = json.loads((old / "runtime-manifest.json").read_bytes())

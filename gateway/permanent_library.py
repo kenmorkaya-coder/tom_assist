@@ -71,6 +71,11 @@ class PermanentLibrary:
                 analysis_digest TEXT,
                 load_signature_json TEXT,
                 PRIMARY KEY(document_id, chunk_index));
+            CREATE TABLE IF NOT EXISTS document_declared_structures(
+                document_id TEXT PRIMARY KEY,
+                schema_version TEXT NOT NULL,
+                structure_digest TEXT NOT NULL,
+                structure_json TEXT NOT NULL);
         """)
 
     def retain(self, record, encoded):
@@ -272,9 +277,17 @@ class PermanentLibrary:
             "tombstoned_at",
         )
         result = dict(zip(names, row))
+        result["declared_structure"] = self.document_declared_structure(document_id)
         if include_chunks:
             result["chunks"] = self.document_chunks(document_id=document_id)
         return result
+
+    def document_declared_structure(self, document_id):
+        row = self.db.execute(
+            "SELECT structure_json FROM document_declared_structures WHERE document_id=?",
+            (document_id,),
+        ).fetchone()
+        return None if row is None else json.loads(row[0])
 
     def documents(self, *, include_withdrawn=False):
         query = (
@@ -292,11 +305,11 @@ class PermanentLibrary:
         )
         return [dict(zip(names, row)) for row in self.db.execute(query)]
 
-    def retain_document(self, document, chunks):
+    def retain_document(self, document, chunks, declared_structure):
         existing = self.document(document["document_id"])
         if existing is not None:
             comparable = {key: existing[key] for key in document}
-            if comparable != document:
+            if comparable != document or existing["declared_structure"] != declared_structure:
                 raise ValueError("document idempotency conflict")
             return existing
         self.db.execute(
@@ -315,7 +328,38 @@ class PermanentLibrary:
                     chunk["text_sha256"], chunk["passage_vector"], None, None,
                 ),
             )
+        encoded_structure = json.dumps(
+            declared_structure, ensure_ascii=False, sort_keys=True,
+            separators=(",", ":"),
+        )
+        self.db.execute(
+            "INSERT INTO document_declared_structures VALUES(?,?,?,?)",
+            (
+                document["document_id"], declared_structure["schema_version"],
+                declared_structure["structure_digest"], encoded_structure,
+            ),
+        )
         return self.document(document["document_id"])
+
+    def retain_document_declared_structure(self, document_id, declared_structure):
+        """Backfill only during an explicit duplicate-ingestion action."""
+        existing = self.document_declared_structure(document_id)
+        if existing is not None:
+            if existing != declared_structure:
+                raise ValueError("document declared-structure idempotency conflict")
+            return existing
+        encoded = json.dumps(
+            declared_structure, ensure_ascii=False, sort_keys=True,
+            separators=(",", ":"),
+        )
+        self.db.execute(
+            "INSERT INTO document_declared_structures VALUES(?,?,?,?)",
+            (
+                document_id, declared_structure["schema_version"],
+                declared_structure["structure_digest"], encoded,
+            ),
+        )
+        return declared_structure
 
     def withdraw_document(self, document_id, tombstoned_at):
         existing = self.document(document_id)

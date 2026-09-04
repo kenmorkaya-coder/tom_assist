@@ -12,6 +12,7 @@
     {"$ref": "continuity-packet.schema.json"},
     {"$ref": "state-mutation-candidate.schema.json"},
     {"$ref": "structural-candidate.schema.json"},
+    {"$ref": "declared-structure.schema.json"},
     {"$ref": "document.schema.json"},
     {"$ref": "intervention.schema.json"},
     {"$ref": "error.schema.json"}

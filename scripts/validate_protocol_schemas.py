@@ -22,6 +22,7 @@ MAPPING = {
     "continuity_packet": "continuity-packet.schema.json",
     "state_mutation_candidate": "state-mutation-candidate.schema.json",
     "structural_candidate": "structural-candidate.schema.json",
+    "declared_structure": "declared-structure.schema.json",
     "document": "document.schema.json",
     "intervention": "intervention.schema.json",
     "error": "error.schema.json",

@@ -219,6 +219,10 @@ pub struct TomCapabilities {
     #[serde(default)]
     pub document_packet_admission: bool,
     #[serde(default)]
+    pub supports_document_declared_structure: bool,
+    #[serde(default)]
+    pub document_declared_structure_version: String,
+    #[serde(default)]
     pub parser_glossary_enabled: bool,
     #[serde(default)]
     pub parser_glossary_version: String,
@@ -254,6 +258,125 @@ pub struct ProjectDocument {
     pub tombstoned_at: Option<String>,
     pub chunk_count: u64,
     pub chunks: Vec<DocumentChunk>,
+    pub declared_structure: Option<DeclaredDocumentStructure>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredTextSpan {
+    pub start: u64,
+    pub end: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredAddress {
+    pub entry_id: String,
+    pub kind: String,
+    pub identifier: String,
+    pub display_identifier: String,
+    pub title: String,
+    pub span: DeclaredTextSpan,
+    pub parent_entry_id: Option<String>,
+    pub status: String,
+    pub malformed_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredClauseIndex {
+    pub version: String,
+    pub entries: Vec<DeclaredAddress>,
+    pub entry_count: u64,
+    pub valid_count: u64,
+    pub malformed_count: u64,
+    pub index_digest: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredReference {
+    pub reference_id: String,
+    pub kind: String,
+    pub reference_text: String,
+    pub span: DeclaredTextSpan,
+    pub named_identifier: Option<String>,
+    pub outcome: String,
+    pub target_entry_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredReferences {
+    pub version: String,
+    pub references: Vec<DeclaredReference>,
+    pub reference_count: u64,
+    pub resolved_count: u64,
+    pub unresolved_absent_count: u64,
+    pub unparsed_count: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredTerm {
+    pub term_id: String,
+    pub surface: String,
+    pub surface_span: DeclaredTextSpan,
+    pub defining_clause_entry_id: String,
+    pub defining_clause_identifier: String,
+    pub definition_span: DeclaredTextSpan,
+    pub definition_body: String,
+    pub entry_digest: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredTermBinding {
+    pub binding_id: String,
+    pub term_id: String,
+    pub surface: String,
+    pub span: DeclaredTextSpan,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredTerms {
+    pub version: String,
+    pub case_rule: String,
+    pub surface_forms_only_for_prompt: bool,
+    pub terms: Vec<DeclaredTerm>,
+    pub term_count: u64,
+    pub bindings: Vec<DeclaredTermBinding>,
+    pub binding_count: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredPrecedenceRelation {
+    pub relation_id: String,
+    pub relation_kind: String,
+    pub source_entry_id: String,
+    pub higher_identifier: Option<String>,
+    pub lower_identifier: Option<String>,
+    pub target_identifier: Option<String>,
+    pub target_outcome: Option<String>,
+    pub span: DeclaredTextSpan,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredPrecedence {
+    pub version: String,
+    pub relations: Vec<DeclaredPrecedenceRelation>,
+    pub relation_count: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredCausationBoundary {
+    pub derived: bool,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredDocumentStructure {
+    pub schema_version: String,
+    pub source_text_sha256: String,
+    pub clause_index: DeclaredClauseIndex,
+    pub references: DeclaredReferences,
+    pub defined_terms: DeclaredTerms,
+    pub declared_precedence: DeclaredPrecedence,
+    pub causation: DeclaredCausationBoundary,
+    pub structure_digest: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
