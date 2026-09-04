@@ -1,0 +1,115 @@
+{
+  "schema_version": "tom-assist-dense-load17-anchor-source/1.0",
+  "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "embedding_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+  "formula": {
+    "absolute_beta": 6.0,
+    "contrast_temperature": 0.08,
+    "chunk_aggregation": "per_channel_max",
+    "evidence_combination": "probabilistic_or"
+  },
+  "channels": {
+    "S_entity": [
+      "entities variables objects and actors involved",
+      "identify the concrete participants and concepts in the situation",
+      "a set of distinct objects variables and agents"
+    ],
+    "S_dependency": [
+      "one component depends on requires controls or enables another",
+      "directed dependency between a cause and its effect",
+      "which variable relies on which other variable"
+    ],
+    "S_topology": [
+      "graph layout spatial structure connectivity and boundaries",
+      "network topology paths neighborhoods and containment",
+      "geometric arrangement and links among parts"
+    ],
+    "L_rule": [
+      "a rule law policy method or constraint determines what is allowed",
+      "apply a formal condition or governing requirement",
+      "an invariant procedure restricts the valid choice"
+    ],
+    "L_contradiction": [
+      "two claims conflict and one assertion contradicts another",
+      "evidence rejects or opposes the current conclusion",
+      "incompatible statements cannot both hold"
+    ],
+    "L_inference": [
+      "infer a conclusion from premises through reasoning",
+      "derive an implication that is not directly stated",
+      "reasoning connects evidence to a logical conclusion"
+    ],
+    "T_sequence": [
+      "ordered steps occur first next then and finally",
+      "one event precedes another in a temporal sequence",
+      "the procedure requires a specific order of operations"
+    ],
+    "T_memory": [
+      "recall prior state previous conversation or completed work",
+      "the current decision depends on remembered earlier context",
+      "retrieve what happened before from memory"
+    ],
+    "T_future": [
+      "anticipate future consequences goals plans or possible outcomes",
+      "what will happen later and what should be planned next",
+      "a prospective outcome or later event is considered"
+    ],
+    "threat_amplitude": [
+      "danger failure conflict or harmful risk needs prevention",
+      "a serious threat could damage the system",
+      "protect against loss hazard or adverse consequences"
+    ],
+    "frequency": [
+      "an event occurs often repeatedly at a measurable rate",
+      "how many times the same pattern appears in an interval",
+      "the occurrence rate is high or low"
+    ],
+    "persistence": [
+      "the same condition continues remains and holds over time",
+      "a state endures without ending across consecutive observations",
+      "the effect is sustained over a long duration"
+    ],
+    "burstiness": [
+      "a sudden cluster spike or surge of events occurs in a short interval",
+      "many events arrive abruptly after a quiet period",
+      "activity is concentrated into a brief burst"
+    ],
+    "volatility": [
+      "the situation fluctuates and changes rapidly or unpredictably",
+      "values swing back and forth with unstable variation",
+      "the structure changes sharply between observations"
+    ],
+    "novelty": [
+      "this is new unfamiliar unprecedented or unlike prior cases",
+      "a previously unseen pattern introduces something novel",
+      "the event differs from all known examples"
+    ],
+    "recurrence": [
+      "a previously seen pattern returns repeats or happens again",
+      "the same earlier event reappears",
+      "a known load recurs after being observed before"
+    ],
+    "decay": [
+      "uncertainty diminishes as evidence classifies and resolves the case",
+      "ambiguity drops when the observation becomes clearly classified",
+      "evidence reduces uncertainty and settles the interpretation"
+    ]
+  },
+  "drivers": {
+    "threat_load": [
+      "immediate danger harm conflict loss or failure pressure",
+      "defend against a threat and prevent adverse consequences",
+      "urgent risk requires protection"
+    ],
+    "sustenance_potential": [
+      "maintain support preserve repair recover and continue existing work",
+      "sustain a stable system and complete necessary maintenance",
+      "resources keep the current structure healthy"
+    ],
+    "procreation_potential": [
+      "create grow explore learn and develop a new future opportunity",
+      "produce a new possibility or expand beyond the current state",
+      "creative growth and novel construction"
+    ]
+  }
+}

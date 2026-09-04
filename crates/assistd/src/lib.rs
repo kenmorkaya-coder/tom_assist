@@ -17,8 +17,8 @@ use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use tom_assist_context_admission::{
-    AdmissionRequest, Candidate, CandidatePool, ContextAdmissionEngine, IntegrityStatus,
-    ScoreComponents,
+    AdmissionRequest, BudgetProfile, Candidate, CandidatePool, ContextAdmissionEngine,
+    IntegrityStatus, ScoreComponents,
 };
 use tom_assist_governance::{
     CandidateChannel, EvaluationRequest, EvaluationState as GovernanceEvaluationState,
@@ -28,16 +28,16 @@ use tom_assist_persistence::{
     ContextRunRecord, ResponseEvaluationRecord, Store, StoreError, TurnRecord,
 };
 use tom_assist_protocol::{
-    ContinuityPacket, Envelope, ExcludedItem, InterventionCode, Method, PacketDigestInput,
-    PacketSection, ProviderCapabilities, StateMutationCandidate, StateObject, canonical_sha256,
-    packet_digest,
+    ActorType, ContinuityPacket, Envelope, ExcludedItem, InterventionCode, Method,
+    PacketDigestInput, PacketSection, ProviderCapabilities, StateMutationCandidate, StateObject,
+    StateStatus, canonical_sha256, packet_digest,
 };
 use tom_assist_tom_adapter::GatewayClient;
 
 pub const SERVICE_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const SERVICE_PROTOCOL_VERSION: &str = tom_assist_protocol::PROTOCOL_VERSION;
-pub const POLICY_VERSION: &str = "context-policy/1.2";
-pub const RENDERER_VERSION: &str = "authoritative-state/1.1";
+pub const POLICY_VERSION: &str = "context-policy/1.4";
+pub const RENDERER_VERSION: &str = tom_assist_context_admission::RENDERER_VERSION;
 
 #[derive(Debug)]
 pub enum ServiceError {
@@ -270,9 +270,22 @@ impl AssistService {
             .ok_or_else(|| StoreError::ProjectNotFound(request.project_id.clone()))?;
         let state = store.current_state(&request.project_id)?;
         if let Some(gateway) = &self.gateway {
+            let broad_document_question = broad_prestart_document_question(&request.user_draft);
+            let preview_chars = if broad_document_question {
+                32_000
+            } else {
+                2_000
+            };
             // Production owns projection/admission; page-provided manifests are not trusted.
+            let declared_glossary_titles = active_glossary_titles(&state.objects);
             let preview = gateway
-                .preview_rank(&request.project_id, &request.user_draft, 10, 2000)
+                .preview_rank_with_glossary_titles(
+                    &request.project_id,
+                    &request.user_draft,
+                    if broad_document_question { 64 } else { 10 },
+                    preview_chars,
+                    &declared_glossary_titles,
+                )
                 .map_err(|error| {
                     ServiceError::Invalid(format!("TOM_RUNTIME_UNAVAILABLE: {error}"))
                 })?;
@@ -339,6 +352,51 @@ impl AssistService {
                     redundancy_penalty: 0.0,
                 },
             }));
+            candidates.extend(
+                preview
+                    .ranked_document_chunks
+                    .iter()
+                    .filter(|chunk| chunk.packet_eligible)
+                    .map(|chunk| Candidate {
+                        id: chunk.id.clone(),
+                        project_id: request.project_id.clone(),
+                        workstream_id: Some(request.workstream_id.clone()),
+                        pool: CandidatePool::Evidence,
+                        state_type: Some(tom_assist_protocol::StateType::Evidence),
+                        status: Some(StateStatus::Active),
+                        text: chunk.text.clone(),
+                        authority: "user_supplied_document".into(),
+                        binding_hard: false,
+                        integrity: IntegrityStatus::Verified,
+                        privacy_allowed: true,
+                        dependencies: vec![],
+                        provenance: Some(format!(
+                            "{} | {} | clause {} | source chars {}-{} | excerpt chars {}-{}",
+                            chunk.display_name,
+                            chunk.id,
+                            chunk
+                                .matched_clause_identifier
+                                .as_deref()
+                                .unwrap_or("unresolved"),
+                            chunk.start,
+                            chunk.end,
+                            chunk.excerpt_start,
+                            chunk.excerpt_end,
+                        )),
+                        reconsideration_condition: None,
+                        scores: ScoreComponents {
+                            retrieval_rrf: Some(chunk.rrf_score),
+                            semantic_relevance: chunk.semantic_score,
+                            structural_resonance: 0.0,
+                            dependency_sequence_relevance: 0.0,
+                            authority_strength: 0.0,
+                            bounded_recency: 0.0,
+                            stale_probability: 0.0,
+                            conflict_penalty: 0.0,
+                            redundancy_penalty: 0.0,
+                        },
+                    }),
+            );
             let admitted = ContextAdmissionEngine::default().build(AdmissionRequest {
                 project_id: request.project_id.clone(),
                 project_name: project.name.clone(),
@@ -353,12 +411,56 @@ impl AssistService {
                 user_draft: request.user_draft.clone(),
                 provider_capabilities: request.provider_capabilities.clone(),
                 candidates,
-                budget_tokens: 500,
+                budget_tokens: if broad_document_question { 9_000 } else { 500 },
+                budget_profile: if broad_document_question {
+                    BudgetProfile::DocumentResearch
+                } else {
+                    BudgetProfile::Standard
+                },
             })?;
             request.tom_checkpoint_digest = preview.checkpoint_digest;
             request.tom_activation_id = preview.activation_id;
             request.activated_branch_ids = preview.activated_branch_ids;
-            request.candidate_trace = json!({"retrieval":preview.candidate_trace,"branches":preview.branch_trace,"admission":admitted.trace});
+            let redacted_document_retrieval = preview
+                .ranked_document_chunks
+                .iter()
+                .map(|chunk| {
+                    let mut value = serde_json::to_value(chunk).expect("serializable chunk");
+                    value.as_object_mut().expect("chunk object").remove("text");
+                    value
+                })
+                .collect::<Vec<_>>();
+            let mut document_research =
+                preview.document_research_trace.unwrap_or_else(|| json!({}));
+            document_research["packet_admission"] = serde_json::to_value(&admitted.trace)?;
+            if let Some(units) = document_research
+                .pointer_mut("/final_evidence_coverage/discovered_units")
+                .and_then(Value::as_array_mut)
+            {
+                for unit in units {
+                    let id = unit["evidence_id"].as_str().unwrap_or_default().to_owned();
+                    unit["packet_admitted"] =
+                        json!(admitted.trace.admitted_ids.iter().any(|v| v == &id));
+                    if let Some(excluded) = admitted.trace.excluded.iter().find(|row| row.id == id)
+                    {
+                        unit["packet_exclusion_reason"] = json!(excluded.reason);
+                    }
+                }
+            }
+            let mut candidate_trace = json!({
+                "retrieval": preview.candidate_trace,
+                "document_retrieval": redacted_document_retrieval,
+                "document_research": document_research,
+                "branches": preview.branch_trace,
+                "admission": admitted.trace,
+                "structural_load_mode": preview.structural_load_mode,
+                "structural_analysis": preview.structural_analysis,
+                "shadow_structural_retrieval": preview.shadow_structural_retrieval,
+            });
+            if let Some(glossary) = preview.parser_glossary {
+                candidate_trace["parser_glossary"] = glossary;
+            }
+            request.candidate_trace = candidate_trace;
             request.sections = admitted.packet.sections;
             request.retrieved_anchor_ids = admitted.packet.retrieved_anchor_ids;
             request.excluded = admitted.packet.excluded;
@@ -852,6 +954,10 @@ impl AssistService {
             | Method::SelfReportPrepare
             | Method::SelfReportSend
             | Method::SelfReportLabel => self.dispatch_conversation(envelope),
+            Method::DocumentIngest
+            | Method::DocumentList
+            | Method::DocumentGet
+            | Method::DocumentWithdraw => self.dispatch_document(envelope),
             Method::CapabilitiesGet => Ok(json!({
                 "protocol": SERVICE_PROTOCOL_VERSION,
                 "service_version": SERVICE_VERSION,
@@ -897,6 +1003,124 @@ impl AssistService {
             }
             method => Err(ServiceError::UnsupportedMethod(format!("{method:?}"))),
         }
+    }
+
+    fn dispatch_document(&self, envelope: Envelope) -> Result<Value> {
+        let project_id = envelope.project_id.ok_or(ServiceError::MissingProject)?;
+        {
+            let store = self.store.lock().expect("store poisoned");
+            if store.project(&project_id)?.is_none() {
+                return Err(StoreError::ProjectNotFound(project_id).into());
+            }
+        }
+        let gateway = self.gateway.as_ref().ok_or_else(|| {
+            ServiceError::Invalid(
+                "TOM_RUNTIME_UNAVAILABLE: document service requires gateway".into(),
+            )
+        })?;
+        let mut payload = envelope.payload;
+        payload["project_id"] = json!(project_id);
+        match envelope.method {
+            Method::DocumentIngest => {
+                if payload.get("explicit_user_action") != Some(&Value::Bool(true))
+                    || !matches!(
+                        envelope.actor.actor_type,
+                        ActorType::User | ActorType::Desktop | ActorType::Extension
+                    )
+                {
+                    return Err(ServiceError::Invalid(
+                        "document ingestion requires an explicit user action".into(),
+                    ));
+                }
+                gateway.ingest_document(payload).map_err(|error| {
+                    ServiceError::Invalid(format!("document ingestion failed: {error}"))
+                })
+            }
+            Method::DocumentList => gateway
+                .list_documents(
+                    &project_id,
+                    payload["include_withdrawn"].as_bool().unwrap_or(false),
+                )
+                .map_err(|error| ServiceError::Invalid(format!("document list failed: {error}"))),
+            Method::DocumentGet => gateway
+                .get_document(
+                    &project_id,
+                    payload["document_id"]
+                        .as_str()
+                        .ok_or_else(|| ServiceError::Invalid("document_id required".into()))?,
+                )
+                .map_err(|error| ServiceError::Invalid(format!("document get failed: {error}"))),
+            Method::DocumentWithdraw => {
+                if payload.get("explicit_user_action") != Some(&Value::Bool(true))
+                    || !matches!(
+                        envelope.actor.actor_type,
+                        ActorType::User | ActorType::Desktop | ActorType::Extension
+                    )
+                {
+                    return Err(ServiceError::Invalid(
+                        "document withdrawal requires an explicit user action".into(),
+                    ));
+                }
+                payload["tombstoned_at"] = json!(envelope.sent_at);
+                gateway.withdraw_document(payload).map_err(|error| {
+                    ServiceError::Invalid(format!("document withdrawal failed: {error}"))
+                })
+            }
+            _ => unreachable!("document dispatcher received a non-document method"),
+        }
+    }
+}
+
+pub fn active_glossary_titles(objects: &[StateObject]) -> Vec<String> {
+    objects
+        .iter()
+        .filter(|object| {
+            matches!(
+                object.status,
+                StateStatus::Active | StateStatus::Satisfied | StateStatus::Rejected
+            )
+        })
+        .map(|object| object.title.clone())
+        .collect()
+}
+
+fn broad_prestart_document_question(text: &str) -> bool {
+    let folded = text.to_lowercase();
+    let oriented = [
+        "before",
+        "prior",
+        "pre-start",
+        "prestart",
+        "commenc",
+        "start",
+    ]
+    .iter()
+    .any(|term| folded.contains(term));
+    let asks_for_duties = [
+        "must",
+        "required",
+        "requirement",
+        "condition",
+        "prerequisite",
+        "what do",
+    ]
+    .iter()
+    .any(|term| folded.contains(term));
+    oriented && asks_for_duties
+}
+
+#[cfg(test)]
+mod document_question_tests {
+    use super::broad_prestart_document_question;
+
+    #[test]
+    fn recognises_broad_prestart_question_without_matching_completion() {
+        assert!(broad_prestart_document_question(
+            "What must the contractor do before it starts construction work under the deed?"
+        ));
+        assert!(!broad_prestart_document_question(
+            "What warranty applies after final completion?"
+        ));
     }
 }
 

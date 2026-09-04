@@ -8,6 +8,7 @@ from unittest.mock import patch
 from validation.production_runner import (
     AUTHORIZED_GENERATIONS,
     MANIFEST,
+    V2_DRAFT_MANIFEST,
     all_cases,
     native_case,
     observation_order,
@@ -17,6 +18,8 @@ from validation.production_runner import (
     cluster_bootstrap,
     oracle_result,
     substrate_engagement,
+    sha256_file_at_commit,
+    verify_v2_freeze,
 )
 from validation.production_runner_v4 import (
     MAX_UNKNOWN_OUTCOMES,
@@ -113,6 +116,16 @@ class ProductionRunnerContractTests(unittest.TestCase):
         with patch.dict("os.environ", {}, clear=True):
             with self.assertRaisesRegex(ValueError, "explicit WP-29 pilot-v4 authorization"):
                 run(Namespace(authorized_generations=165))
+
+    def test_historical_freeze_reads_recorded_commit_not_current_worktree(self):
+        registration = json.loads(V2_DRAFT_MANIFEST.read_text())
+        verify_v2_freeze(registration)
+        self.assertEqual(
+            sha256_file_at_commit(registration["code_sha"], "gateway/tom_gateway.py"),
+            registration["files_sha256"]["gateway/tom_gateway.py"],
+        )
+        with self.assertRaisesRegex(ValueError, "unavailable"):
+            sha256_file_at_commit("0" * 40, "gateway/tom_gateway.py")
 
     def test_v3_delta_is_exactly_the_five_owner_approved_changes(self):
         registration = json.loads(V3_DRAFT_MANIFEST.read_text())

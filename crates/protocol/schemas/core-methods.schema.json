@@ -15,6 +15,7 @@
     "snapshot.restore", "project.export", "project.import", "diagnostics.run",
     "provider.status", "conversation.list", "conversation.create", "conversation.get",
     "conversation.prepare", "conversation.send", "conversation.evaluate",
-    "conversation.self_report.prepare", "conversation.self_report.send", "conversation.self_report.label"
+    "conversation.self_report.prepare", "conversation.self_report.send", "conversation.self_report.label",
+    "document.ingest", "document.list", "document.get", "document.withdraw"
   ]
 }

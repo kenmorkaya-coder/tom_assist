@@ -23,12 +23,14 @@ CAPABILITIES = {
 }
 
 _SAFE_BROKER_ERRORS = {
+    "EXPLICIT_SEND_REQUIRED",
     "OAUTH_NOT_CONNECTED",
     "OAUTH_REFRESH_REQUIRED",
     "PROVIDER_BUSY",
     "PROVIDER_PROMPT_INVALID",
     "PROVIDER_REQUEST_FAILED",
     "PROVIDER_RESPONSE_INVALID",
+    "PROVIDER_RESPONSE_FORMAT_INVALID",
     "PROVIDER_EMPTY_OR_OVERSIZE_RESPONSE",
 }
 
@@ -155,6 +157,55 @@ class OAuthProvider:
                 raise ProviderFailure("OAUTH_NOT_CONNECTED")
             response = self.request(
                 "/complete", {"explicit_send": True, "prompt": prompt}
+            )
+            text = response.get("text")
+            model = response.get("model")
+            if (
+                not isinstance(text, str)
+                or not text.strip()
+                or len(text.encode()) > 512_000
+                or not isinstance(model, str)
+                or not model
+                or response.get("complete") is not True
+            ):
+                raise ProviderFailure("PROVIDER_EMPTY_OR_OVERSIZE_RESPONSE")
+            return {"text": text, "model": model, "complete": True}
+        finally:
+            self.slot.release()
+
+    def complete_structured(self, prompt, response_format, *, explicit_send=False):
+        """Make one explicit, schema-constrained provider call through the broker.
+
+        This candidate-only surface is intentionally not exposed as a gateway
+        preview route.  The broker remains the sole holder of credentials.
+        """
+        if explicit_send is not True:
+            raise ProviderFailure("EXPLICIT_SEND_REQUIRED")
+        if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > 48_000:
+            raise ProviderFailure("PROVIDER_PROMPT_INVALID")
+        if not isinstance(response_format, dict):
+            raise ProviderFailure("PROVIDER_RESPONSE_FORMAT_INVALID")
+        try:
+            encoded_format = json.dumps(
+                response_format, ensure_ascii=False, allow_nan=False,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        except (TypeError, ValueError):
+            raise ProviderFailure("PROVIDER_RESPONSE_FORMAT_INVALID") from None
+        if len(encoded_format) > 128 * 1024:
+            raise ProviderFailure("PROVIDER_RESPONSE_FORMAT_INVALID")
+        if not self.slot.acquire(blocking=False):
+            raise ProviderFailure("PROVIDER_BUSY")
+        try:
+            if not self.status()["connected"]:
+                raise ProviderFailure("OAUTH_NOT_CONNECTED")
+            response = self.request(
+                "/structured-complete",
+                {
+                    "explicit_send": True,
+                    "prompt": prompt,
+                    "response_format": response_format,
+                },
             )
             text = response.get("text")
             model = response.get("model")

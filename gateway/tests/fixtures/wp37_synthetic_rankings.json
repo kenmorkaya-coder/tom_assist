@@ -1,0 +1,8 @@
+{
+  "schema_version": "tom-assist-wp37-ranking-input/1.0",
+  "label": "PLUMBING-ONLY-SYNTHETIC-NOT-EVIDENCE",
+  "queries": [
+    {"query_id": "SYN-1", "current": ["a", "b", "c"], "proposed": ["b", "a", "c"]},
+    {"query_id": "SYN-2", "current": ["d", "e", "f"], "proposed": ["f", "e", "d"]}
+  ]
+}

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::io::{BufRead, BufReader, Write};
+use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::UnixStream;
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
@@ -73,6 +74,27 @@ struct Diagnostics {
     migration_error: Option<String>,
     provider_status: Value,
     memory: Value,
+    document_research: Value,
+}
+
+fn latest_document_research(store: &Store, project_id: &str) -> Result<Value, String> {
+    let Some(context) = store
+        .latest_context_run(project_id)
+        .map_err(|error| error.to_string())?
+    else {
+        return Ok(serde_json::json!({
+            "status": "no_prepared_context",
+            "project_id": project_id,
+        }));
+    };
+    let trace: Value =
+        serde_json::from_str(&context.candidate_trace_json).map_err(|error| error.to_string())?;
+    Ok(serde_json::json!({
+        "context_id": context.id,
+        "packet_digest": context.packet_digest,
+        "created_at": context.created_at,
+        "trace": trace.get("document_research").cloned().unwrap_or_else(|| serde_json::json!({})),
+    }))
 }
 
 fn gateway(store: &Store) -> tom_assist_tom_adapter::GatewayClient {
@@ -160,6 +182,10 @@ async fn chat_request(
             | Method::SelfReportPrepare
             | Method::SelfReportSend
             | Method::SelfReportLabel
+            | Method::DocumentIngest
+            | Method::DocumentList
+            | Method::DocumentGet
+            | Method::DocumentWithdraw
     ) {
         return Err("unsupported chat operation".into());
     }
@@ -287,7 +313,7 @@ fn create_project(
             &request.id,
             &request.name,
             &request.retention_profile,
-            "context-policy/1.2",
+            "context-policy/1.3",
             "desktop-user",
             &format!("project-create:{}", request.id),
             &request.created_at,
@@ -513,7 +539,59 @@ fn diagnostics(
         memory: gateway(&store)
             .memory_diagnostics(&project_id, after_event_id.unwrap_or(0))
             .unwrap_or_else(|error| serde_json::json!({"unavailable":error.to_string()})),
+        document_research: latest_document_research(&store, &project_id)?,
     })
+}
+
+#[tauri::command]
+fn export_document_research_diagnostics(
+    project_id: String,
+    state: tauri::State<'_, DesktopState>,
+) -> Result<String, String> {
+    let store = locked(&state);
+    let value = latest_document_research(&store, &project_id)?;
+    let context_id = value["context_id"]
+        .as_str()
+        .unwrap_or("none")
+        .chars()
+        .filter(|value| value.is_ascii_alphanumeric() || *value == '-')
+        .collect::<String>();
+    let directory = store
+        .path()
+        .parent()
+        .ok_or_else(|| "database has no parent directory".to_owned())?
+        .join("diagnostics");
+    std::fs::create_dir_all(&directory).map_err(|error| error.to_string())?;
+    std::fs::set_permissions(&directory, std::fs::Permissions::from_mode(0o700))
+        .map_err(|error| error.to_string())?;
+    let path = directory.join(format!("document-research-{context_id}.json"));
+    let bytes = serde_json::to_vec_pretty(&value).map_err(|error| error.to_string())?;
+    std::fs::write(&path, bytes).map_err(|error| error.to_string())?;
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))
+        .map_err(|error| error.to_string())?;
+    Ok(path.display().to_string())
+}
+
+#[tauri::command]
+fn project_documents(
+    project_id: String,
+    state: tauri::State<'_, DesktopState>,
+) -> Result<Value, String> {
+    let store = locked(&state);
+    store
+        .project(&project_id)
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| "project not found".to_owned())?;
+    gateway(&store)
+        .list_documents(&project_id, false)
+        .map_err(|error| error.to_string())
+        .and_then(|value| {
+            value["documents"]
+                .as_array()
+                .cloned()
+                .map(Value::Array)
+                .ok_or_else(|| "invalid project document inventory".to_owned())
+        })
 }
 
 #[tauri::command]
@@ -543,7 +621,7 @@ fn seed_demo_store(store: &mut Store) -> Result<Project, Box<dyn std::error::Err
             .unwrap_or("state-focused"),
         project_row["policy_profile"]
             .as_str()
-            .unwrap_or("context-policy/1.2"),
+            .unwrap_or("context-policy/1.3"),
         "demo-seeder",
         "demo-project-create",
         "2026-08-10T00:00:00Z",
@@ -719,6 +797,8 @@ fn main() {
             oauth_login,
             oauth_logout,
             diagnostics,
+            export_document_research_diagnostics,
+            project_documents,
             memory_settings,
             seed_demo
         ])

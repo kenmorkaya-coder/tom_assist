@@ -6,6 +6,7 @@ No upstream code/files are changed; no physics or plastic recall is called.
 """
 import hashlib
 import json
+import math
 import os
 from pathlib import Path, PurePosixPath
 import re
@@ -75,14 +76,34 @@ def validate_snapshot(gateway, root):
         if db.execute("PRAGMA quick_check").fetchone() != ("ok",):
             raise ValueError("library integrity check failed")
         objects = {(kind, name) for kind, name in db.execute("SELECT type,name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'")}
-        if objects != {("table", "library_records"), ("table", "runtime_head"), ("table", "demotions"), ("index", "library_content_hash")}:
+        legacy_objects = {("table", "library_records"), ("table", "runtime_head"), ("table", "demotions"), ("index", "library_content_hash")}
+        structural_objects = legacy_objects | {("table", "structural_commits")}
+        outcome_objects = structural_objects | {("table", "retrieval_outcomes")}
+        document_objects = {
+            ("table", "documents"), ("table", "document_chunks"),
+        }
+        declared_structure_objects = {
+            ("table", "document_declared_structures"),
+        }
+        accepted_objects = {
+            frozenset(legacy_objects),
+            frozenset(structural_objects),
+            frozenset(outcome_objects),
+            frozenset(structural_objects | document_objects),
+            frozenset(outcome_objects | document_objects),
+            frozenset(structural_objects | document_objects | declared_structure_objects),
+            frozenset(outcome_objects | document_objects | declared_structure_objects),
+        }
+        if frozenset(objects) not in accepted_objects:
             raise ValueError("unrecognized library schema objects")
         originals = {}
+        original_texts = {}
         for rid, digest, content, encoded in db.execute("SELECT record_id,content_hash,content,record_json FROM library_records"):
             row = json.loads(encoded)
             if hashlib.sha256(content.encode()).hexdigest() != digest or row["id"] != rid or row["content_hash"] != digest:
                 raise ValueError("permanent library original/hash mismatch")
             originals[rid] = digest
+            original_texts[rid] = content
         heads = db.execute("SELECT tree,rgm,idempotency,settings FROM runtime_head").fetchall()
         if len(heads) != 1:
             raise ValueError("runtime head missing/ambiguous")
@@ -99,6 +120,167 @@ def validate_snapshot(gateway, root):
         for rid, digest, reason in db.execute("SELECT record_id,content_hash,reason FROM demotions"):
             if originals.get(rid) != digest or reason not in ("decayed", "capacity"):
                 raise ValueError("invalid demotion provenance")
+        if ("table", "structural_commits") in objects:
+            from gateway.structural_analysis import (
+                SUPPORTED_COMPILER_VERSIONS,
+                digest as structural_digest,
+            )
+            for commit_key, rid, source_digest, compiler, analysis_digest, encoded, tick in db.execute(
+                "SELECT commit_key,record_id,source_text_sha256,compiler_version,"
+                "analysis_digest,analysis_json,tick FROM structural_commits"
+            ):
+                analysis = json.loads(encoded)
+                unsigned = {key:value for key,value in analysis.items() if key != "analysis_digest"}
+                if (
+                    not commit_key or rid not in originals or type(tick) is not int
+                    or compiler not in SUPPORTED_COMPILER_VERSIONS
+                    or analysis.get("compiler_version") != compiler
+                    or analysis.get("source_text_sha256") != source_digest
+                    or analysis.get("candidate", {}).get("source_text_sha256") != source_digest
+                    or analysis.get("analysis_digest") != analysis_digest
+                    or structural_digest(unsigned) != analysis_digest
+                    or structural_digest(analysis.get("candidate")) != analysis.get("candidate_digest")
+                ):
+                    raise ValueError("invalid structural-commit provenance")
+        if ("table", "retrieval_outcomes") in objects:
+            from gateway.permanent_library import longest_common_substring_chars
+            outcome_rows = db.execute(
+                "SELECT commit_key,record_id,rank,rrf_score,lexical_rank,"
+                "structural_rank,matched_branch_id,verbatim_overlap_chars,"
+                "structural_similarity,conflict_dismissed,tick "
+                "FROM retrieval_outcomes ORDER BY commit_key,rank,record_id"
+            ).fetchall()
+            expected_rank = {}
+            for (
+                commit_key, rid, rank, rrf_score, lexical_rank, structural_rank,
+                matched_branch_id, overlap, structural_similarity,
+                conflict_dismissed, tick,
+            ) in outcome_rows:
+                receipt = keys.get(commit_key)
+                committed_id = receipt.get("anchor_id") if isinstance(receipt, dict) else None
+                expected_rank[commit_key] = expected_rank.get(commit_key, 0) + 1
+                numeric = (rrf_score, structural_similarity)
+                if (
+                    rid not in originals or committed_id not in original_texts
+                    or rank != expected_rank[commit_key]
+                    or any(value is not None and not math.isfinite(value) for value in numeric)
+                    or any(value is not None and (type(value) is not int or value <= 0)
+                           for value in (lexical_rank, structural_rank))
+                    or matched_branch_id is not None and not isinstance(matched_branch_id, str)
+                    or overlap != longest_common_substring_chars(
+                        original_texts[rid], original_texts[committed_id]
+                    )
+                    or conflict_dismissed not in (0, 1)
+                    or type(tick) is not int
+                    or tick != receipt.get("engine_tick_after")
+                ):
+                    raise ValueError("invalid retrieval-outcome provenance")
+        if ("table", "documents") in objects:
+            from gateway.document_ingestion import (
+                ALLOWED_DOCUMENT_MEDIA_TYPES,
+                DOCUMENT_EMBEDDING_VERSION,
+                MAX_DOCUMENT_CHUNKS,
+                MAX_DOCUMENT_SOURCE_CHARS,
+                SUPPORTED_DOCUMENT_CHUNKING_VERSIONS,
+                decode_vector_f32,
+            )
+            documents = {}
+            for row in db.execute(
+                "SELECT document_id,display_name,content_sha256,content,byte_length,"
+                "media_type,chunking_version,embedding_version,ingested_tick,tombstoned_at "
+                "FROM documents ORDER BY document_id"
+            ):
+                (
+                    document_id, display_name, content_digest, content, byte_length,
+                    media_type, chunking_version, embedding_version, ingested_tick,
+                    tombstoned_at,
+                ) = row
+                if (
+                    document_id != "document-" + content_digest[:32]
+                    or hashlib.sha256(content.encode("utf-8")).hexdigest() != content_digest
+                    or byte_length != len(content.encode("utf-8"))
+                    or not display_name or len(content) > MAX_DOCUMENT_SOURCE_CHARS
+                    or media_type not in ALLOWED_DOCUMENT_MEDIA_TYPES
+                    or chunking_version not in SUPPORTED_DOCUMENT_CHUNKING_VERSIONS
+                    or embedding_version != DOCUMENT_EMBEDDING_VERSION
+                    or type(ingested_tick) is not int
+                    or tombstoned_at is not None and not isinstance(tombstoned_at, str)
+                ):
+                    raise ValueError("invalid document provenance")
+                documents[document_id] = content
+            grouped = {document_id: [] for document_id in documents}
+            for row in db.execute(
+                "SELECT document_id,chunk_index,start,end,text_sha256,passage_vector,"
+                "analysis_digest,load_signature_json FROM document_chunks "
+                "ORDER BY document_id,chunk_index"
+            ):
+                document_id, index, start, end, text_digest, vector, analysis, load = row
+                content = documents.get(document_id)
+                indexed = analysis is not None or load is not None
+                indexed_valid = True
+                if indexed:
+                    try:
+                        from gateway.structural_analysis import CHANNELS
+                        values = json.loads(load) if isinstance(load, str) else None
+                        indexed_valid = (
+                            isinstance(analysis, str)
+                            and re.fullmatch(r"sha256:[0-9a-f]{64}", analysis) is not None
+                            and isinstance(values, dict)
+                            and set(values) == set(CHANNELS)
+                            and all(
+                                isinstance(value, (int, float))
+                                and not isinstance(value, bool)
+                                and math.isfinite(float(value))
+                                and 0.0 < float(value) <= 1.0
+                                for value in values.values()
+                            )
+                        )
+                    except (TypeError, ValueError, json.JSONDecodeError):
+                        indexed_valid = False
+                if (
+                    content is None or index != len(grouped[document_id])
+                    or not 0 <= start < end <= len(content)
+                    or hashlib.sha256(content[start:end].encode("utf-8")).hexdigest() != text_digest
+                    or (analysis is None) != (load is None)
+                    or not indexed_valid
+                ):
+                    raise ValueError("invalid document-chunk provenance")
+                decode_vector_f32(vector)
+                grouped[document_id].append((start, end))
+            for document_id, spans in grouped.items():
+                if (
+                    not 1 <= len(spans) <= MAX_DOCUMENT_CHUNKS
+                    or spans[0][0] != 0 or spans[-1][1] != len(documents[document_id])
+                    or any(
+                        start >= spans[index - 1][1] or end <= spans[index - 1][1]
+                        for index, (start, end) in enumerate(spans[1:], 1)
+                    )
+                ):
+                    raise ValueError("document chunks do not overlap and cover their source")
+            if ("table", "document_declared_structures") in objects:
+                from gateway.declared_structure import (
+                    DECLARED_STRUCTURE_VERSION,
+                    validate_declared_structure,
+                )
+                structured_documents = set()
+                for document_id, version, structure_digest, encoded in db.execute(
+                    "SELECT document_id,schema_version,structure_digest,structure_json "
+                    "FROM document_declared_structures ORDER BY document_id"
+                ):
+                    content = documents.get(document_id)
+                    if content is None or document_id in structured_documents:
+                        raise ValueError("invalid document declared-structure provenance")
+                    structure = json.loads(encoded)
+                    if (
+                        version != DECLARED_STRUCTURE_VERSION
+                        or structure.get("schema_version") != version
+                        or structure.get("structure_digest") != structure_digest
+                    ):
+                        raise ValueError("invalid document declared-structure provenance")
+                    validate_declared_structure(structure, content)
+                    structured_documents.add(document_id)
+                if structured_documents != set(documents):
+                    raise ValueError("document declared-structure inventory mismatch")
         for folder in (root / "checkpoints").glob("*"):
             expected_files = {"tree_state.json", "rgm_state.json", "commit_state.json", "metadata.json"}
             if {p.name for p in folder.iterdir()} != expected_files:
@@ -194,7 +376,12 @@ def import_snapshot(gateway, action, directory, context):
         stage.mkdir(mode=0o700)
         shutil.copytree(root, stage / "tom")
         validate_snapshot(gateway, stage / "tom")  # Recheck the copied bytes.
-        probe = ProjectRuntime(project_id, stage / "tom", gateway.runtime_sha, gateway.seed)
+        factory = getattr(gateway, "create_project_runtime", None)
+        probe = (
+            factory(project_id, stage / "tom")
+            if callable(factory)
+            else ProjectRuntime(project_id, stage / "tom", gateway.runtime_sha, gateway.seed)
+        )
         try:
             expected = probe.library.head()
             if probe.serialized_state_bytes() != expected[:2]:

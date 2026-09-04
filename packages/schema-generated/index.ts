@@ -11,6 +11,9 @@ export type TomAssistProtocol =
   | StateEdge
   | ContinuityPacket
   | StateMutationCandidate
+  | StructuralCandidate
+  | DeclaredDocumentStructure
+  | ProjectDocument
   | Intervention
   | ProtocolError;
 export type Method =
@@ -56,11 +59,22 @@ export type Method =
   | "conversation.evaluate"
   | "conversation.self_report.prepare"
   | "conversation.self_report.send"
-  | "conversation.self_report.label";
+  | "conversation.self_report.label"
+  | "document.ingest"
+  | "document.list"
+  | "document.get"
+  | "document.withdraw";
 /**
  * Source-turn identifier contract source-id/1.1. Legacy UUIDs remain valid; provider conversation turns may append the recorded user or assistant role.
  */
 export type SourceId = string;
+/**
+ * @maxItems 32
+ */
+export type EvidenceFacts = {
+  evidence: Span;
+  confidence: number;
+}[];
 
 export interface Envelope {
   protocol: "tom-assist/1.0";
@@ -92,11 +106,38 @@ export interface TomCapabilities {
   commit_dynamics: ["step", "rgm_write", "leaf_vec_teach", "usage_rotation", "front_row_reseat"];
   front_row_capacity: number;
   teach_on_conflict: boolean;
+  structural_load_mode: "legacy" | "shadow" | "authoritative";
+  structural_load_compiler_version: "tom-assist-evidence-load17/1.2";
+  load_evidence_policy: "tom-assist-evidenced-load17/1.0";
+  authoritative_requires_all_17_channels_evidenced: true;
+  authoritative_disallowed_zero_kinds: ["clamped_negative"];
+  strict_positive_load_policy: "tom-assist-strict-positive-load17/1.0";
+  authoritative_requires_all_17_channels_positive: true;
+  semantic_embedding_version: "minilm-l6-v2/384d-multivector/2.0";
+  local_gemma_candidate_required: boolean;
+  model_generated_load_values: false;
+  feeling_wheel_used: false;
+  supports_documents: true;
+  document_chunking_version: "minilm-document-token-sentence-max192-overlap32/1.0";
+  document_embedding_version: "minilm-l6-v2/384d-multivector/2.0";
+  document_max_source_chars: 2000000;
+  document_max_chunks: 4096;
+  document_structural_parsing: false;
+  document_packet_admission: true;
+  document_packet_admission_version: "minilm-document-hybrid-packet-admission/1.0";
+  supports_document_declared_structure: true;
+  document_declared_structure_version: "tom-assist-declared-structure/1.0";
+  parser_glossary_enabled: boolean;
+  parser_glossary_version: "tom-assist-parser-glossary/1.0";
+  parser_glossary_term_count: number;
+  parser_glossary_sha256: string;
+  parser_glossary_max_terms: 64;
+  parser_glossary_max_characters: 2048;
   /**
-   * @minItems 2
-   * @maxItems 2
+   * @minItems 3
+   * @maxItems 3
    */
-  preview_channels?: [unknown, unknown];
+  preview_channels?: [unknown, unknown, unknown];
   runtime_version: string;
   state_format_version: "sicd-engine-save/1";
   supports_load_ingest: boolean;
@@ -185,7 +226,7 @@ export interface ContinuityPacket {
   tom_checkpoint_digest: string;
   draft_hash: string;
   policy_version: string;
-  renderer_version: "authoritative-state/1.1";
+  renderer_version: "authoritative-state/1.3";
   provider_capabilities: ProviderCapabilities;
   tom_activation_id: string;
   sections: {
@@ -221,6 +262,235 @@ export interface StateMutationCandidate {
     conflicts: string[];
     requires_user_confirmation: true;
   };
+}
+/**
+ * Candidate-only, quoted-evidence structure emitted by a local parser. It contains no load values.
+ */
+export interface StructuralCandidate {
+  schema_version: "tom-assist-structural-candidate/1.0";
+  source_text_sha256: string;
+  /**
+   * @maxItems 64
+   */
+  entities: {
+    id: string;
+    label: string;
+    kind:
+      "actor" | "object" | "concept" | "decision" | "constraint" | "event" | "state" | "outcome" | "work" | "unknown";
+    evidence: Span;
+    confidence: number;
+  }[];
+  /**
+   * @maxItems 64
+   */
+  orientations: {
+    id: string;
+    source_entity_id: string;
+    target_entity_id: string;
+    kind:
+      | "supports"
+      | "opposes"
+      | "depends_on"
+      | "contains"
+      | "owns"
+      | "controls"
+      | "targets"
+      | "refers_to"
+      | "precedes"
+      | "follows"
+      | "supersedes"
+      | "neutral_toward";
+    polarity: "positive" | "negative" | "neutral";
+    modality: "asserted" | "inferred" | "tentative" | "hypothetical" | "questioned";
+    negated: boolean;
+    evidence: Span;
+    confidence: number;
+  }[];
+  /**
+   * @maxItems 64
+   */
+  causal_relations: {
+    id: string;
+    cause_entity_id: string;
+    effect_entity_id: string;
+    kind: "causes" | "enables" | "prevents" | "contributes_to" | "requires";
+    modality: "asserted" | "inferred" | "tentative" | "hypothetical" | "questioned";
+    negated: boolean;
+    evidence: Span;
+    confidence: number;
+  }[];
+  signals: {
+    rules: EvidenceFacts;
+    contradictions: EvidenceFacts;
+    inferences: EvidenceFacts;
+    sequences: EvidenceFacts;
+    memory_references: EvidenceFacts;
+    future_references: EvidenceFacts;
+    completions: EvidenceFacts;
+    rejections: EvidenceFacts;
+  };
+  unknown_fields: (
+    | "entities"
+    | "orientations"
+    | "causal_relations"
+    | "rules"
+    | "contradictions"
+    | "inferences"
+    | "sequences"
+    | "memory_references"
+    | "future_references"
+    | "completions"
+    | "rejections"
+  )[];
+  confidence: number;
+}
+export interface Span {
+  start: number;
+  end: number;
+  quote: string;
+}
+export interface DeclaredDocumentStructure {
+  schema_version: "tom-assist-declared-structure/1.0";
+  source_text_sha256: string;
+  clause_index: {
+    version: "tom-assist-clause-index/1.0";
+    /**
+     * @maxItems 50000
+     */
+    entries: Address[];
+    entry_count: number;
+    valid_count: number;
+    malformed_count: number;
+    index_digest: string;
+  };
+  references: {
+    version: "tom-assist-reference-resolution/1.0";
+    /**
+     * @maxItems 100000
+     */
+    references: Reference[];
+    reference_count: number;
+    resolved_count: number;
+    unresolved_absent_count: number;
+    unparsed_count: number;
+  };
+  defined_terms: {
+    version: "tom-assist-defined-term-binding/1.0";
+    case_rule: "exact-unicode-codepoints-case-sensitive-whole-surface/1.0";
+    surface_forms_only_for_prompt: true;
+    /**
+     * @maxItems 10000
+     */
+    terms: DefinedTerm[];
+    term_count: number;
+    /**
+     * @maxItems 100000
+     */
+    bindings: Binding[];
+    binding_count: number;
+  };
+  declared_precedence: {
+    version: "tom-assist-declared-precedence/1.0";
+    /**
+     * @maxItems 10000
+     */
+    relations: Precedence[];
+    relation_count: number;
+  };
+  causation: {
+    derived: false;
+    reason: "not_self_declared";
+  };
+  structure_digest: string;
+}
+export interface Address {
+  entry_id: string;
+  kind: "clause" | "subclause" | "schedule" | "exhibit" | "appendix" | "attachment" | "named_section";
+  identifier: string;
+  display_identifier: string;
+  title: string;
+  span: Span1;
+  parent_entry_id: string | null;
+  status: "valid" | "malformed";
+  malformed_reason: string | null;
+}
+export interface Span1 {
+  start: number;
+  end: number;
+}
+export interface Reference {
+  reference_id: string;
+  kind: "clause" | "schedule" | "section" | "exhibit" | "appendix" | "attachment";
+  reference_text: string;
+  span: Span1;
+  named_identifier: string | null;
+  outcome: "resolved" | "unresolved_absent" | "unparsed";
+  target_entry_id: string | null;
+}
+export interface DefinedTerm {
+  term_id: string;
+  surface: string;
+  surface_span: Span1;
+  defining_clause_entry_id: string;
+  defining_clause_identifier: string;
+  definition_span: Span1;
+  definition_body: string;
+  entry_digest: string;
+}
+export interface Binding {
+  binding_id: string;
+  term_id: string;
+  surface: string;
+  span: Span1;
+}
+export interface Precedence {
+  relation_id: string;
+  relation_kind: "precedes" | "notwithstanding";
+  source_entry_id: string;
+  higher_identifier: string | null;
+  lower_identifier: string | null;
+  target_identifier: string | null;
+  target_outcome: "resolved" | "unresolved_absent" | null;
+  span: Span1;
+}
+export interface ProjectDocument {
+  document_id: string;
+  display_name: string;
+  content_sha256: string;
+  content: string;
+  byte_length: number;
+  media_type:
+    | "text/plain"
+    | "text/markdown"
+    | "text/x-markdown"
+    | "text/html"
+    | "text/xml"
+    | "application/xml"
+    | "application/json";
+  chunking_version: "minilm-document-token-sentence-max192-overlap32/1.0";
+  embedding_version: "minilm-l6-v2/384d-multivector/2.0";
+  ingested_tick: number;
+  tombstoned_at: string | null;
+  chunk_count: number;
+  declared_structure: DeclaredDocumentStructure | null;
+  /**
+   * @minItems 1
+   * @maxItems 4096
+   */
+  chunks: [
+    {
+      chunk_index: number;
+      start: number;
+      end: number;
+      text_sha256: string;
+    },
+    ...{
+      chunk_index: number;
+      start: number;
+      end: number;
+      text_sha256: string;
+    }[]
+  ];
 }
 export interface Intervention {
   id: string;

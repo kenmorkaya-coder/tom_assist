@@ -1,0 +1,48 @@
+{
+  "schema_version": "tom-assist-wp36b-cases/1.0",
+  "label": "PRE-REGISTERED-SHADOW-CALIBRATION-NOT-A-GATE",
+  "channel_cases": [
+    {"id":"CH-01","expected":"S_entity","text":"The inventory identifies the turbine, operator, control relay, and pressure variable.","structural":{"S_entity":0.75}},
+    {"id":"CH-02","expected":"S_dependency","text":"The alarm depends on the relay, and the relay requires the pressure sensor.","structural":{"S_dependency":0.85,"S_topology":0.55}},
+    {"id":"CH-03","expected":"S_topology","text":"Four nodes form a ring around the hub, with a bridge linking the two outer regions.","structural":{"S_topology":0.85,"S_entity":0.35}},
+    {"id":"CH-04","expected":"L_rule","text":"The release policy requires a signed approval before any deployment may proceed.","structural":{"L_rule":0.90}},
+    {"id":"CH-05","expected":"L_contradiction","text":"The draft says the valve is open, while the signed inspection says the valve is closed.","structural":{"L_contradiction":0.90}},
+    {"id":"CH-06","expected":"L_inference","text":"Because the outlet is sealed and pressure is rising, the chamber must be heating.","structural":{"L_inference":0.85,"S_dependency":0.45}},
+    {"id":"CH-07","expected":"T_sequence","text":"Isolate the pipe first, drain it next, replace the seal, and reopen it last.","structural":{"T_sequence":0.90}},
+    {"id":"CH-08","expected":"T_memory","text":"Apply the decision retained from our earlier session and the work completed yesterday.","structural":{"T_memory":0.90}},
+    {"id":"CH-09","expected":"T_future","text":"The team plans next quarter's expansion and is considering its later consequences.","structural":{"T_future":0.90}},
+    {"id":"CH-10","expected":"threat_amplitude","text":"A ruptured line could injure the crew and destroy the pump unless it is isolated.","structural":{"threat_amplitude":0.95}},
+    {"id":"CH-11","expected":"frequency","text":"The same alarm appeared twelve times in every hour of the trial.","history":{"similarities":[0.72,0.76,0.74,0.78]}},
+    {"id":"CH-12","expected":"persistence","text":"The pressure remained elevated throughout six consecutive inspections.","history":{"similarities":[0.86,0.87,0.89,0.92]}},
+    {"id":"CH-13","expected":"burstiness","text":"After a quiet interval, twenty warnings arrived within three seconds.","history":{"similarities":[0.12,0.14,0.15,0.82,0.86,0.91]}},
+    {"id":"CH-14","expected":"volatility","text":"The reading swung from 2 to 90 to 4 to 85 across consecutive samples.","history":{"similarities":[0.15],"static_distance_from_previous":0.82,"change_evidence":0.75}},
+    {"id":"CH-15","expected":"novelty","text":"This previously unseen failure pattern differs from every archived case.","history":{"similarities":[0.08,0.11,0.09,0.14]}},
+    {"id":"CH-16","expected":"recurrence","text":"The identical fault observed last week has returned again today.","history":{"similarities":[0.22,0.94,0.31,0.28]}},
+    {"id":"CH-17","expected":"decay","text":"The new measurement resolves the ambiguity and makes the classification clear.","history":{"similarities":[0.44],"previous_confidence":0.35,"current_confidence":0.92}}
+  ],
+  "driver_cases": [
+    {"id":"DR-01","expected":"threat_load","text":"An electrical fire could harm staff, so shut down the cabinet immediately.","driver_evidence":{"threat_load":0.95}},
+    {"id":"DR-02","expected":"sustenance_potential","text":"Repair the cooling loop, preserve the working service, and complete the maintenance.","driver_evidence":{"sustenance_potential":0.90}},
+    {"id":"DR-03","expected":"procreation_potential","text":"Create a new prototype, explore a fresh design, and grow it into a useful capability.","driver_evidence":{"procreation_potential":0.90}}
+  ],
+  "paraphrase_pairs": [
+    {"id":"PP-01","expected":"L_rule","left":"A signed approval is required before release.","right":"Do not release anything until an authorised signature has been obtained.","structural":{"L_rule":0.90}},
+    {"id":"PP-02","expected":"T_sequence","left":"Test the valve after isolating the line.","right":"First isolate the line; only then test its valve.","structural":{"T_sequence":0.85}}
+  ],
+  "direction_case": {
+    "id":"DIR-01",
+    "forward":"Opening valve Alpha causes tank Beta to fill.",
+    "reverse":"Tank Beta filling causes valve Alpha to open.",
+    "forward_graph":[["alpha","causes","beta"]],
+    "reverse_graph":[["beta","causes","alpha"]],
+    "structural":{"S_dependency":0.80,"S_topology":0.55,"L_inference":0.35,"T_sequence":0.40}
+  },
+  "long_tail_case": {
+    "id":"TAIL-01",
+    "expected":"L_contradiction",
+    "neutral_sentence":"The appendix lists ordinary formatting examples without changing any decision. ",
+    "neutral_repetitions":55,
+    "load_bearing":"However, the signed result contradicts and rejects the earlier claim.",
+    "structural":{"L_contradiction":0.90,"threat_amplitude":0.55}
+  }
+}

@@ -15,6 +15,7 @@ import json
 import math
 import os
 import random
+import re
 import socket
 import subprocess
 import sys
@@ -46,6 +47,34 @@ def sha256_bytes(data: bytes) -> str:
 
 def sha256_file(path: Path) -> str:
     return sha256_bytes(path.read_bytes())
+
+
+def sha256_file_at_commit(commit: str, relative: str) -> str:
+    """Hash a frozen source from its recorded commit, not today's worktree."""
+    if not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{40}", commit):
+        raise ValueError("frozen code SHA is invalid")
+    if not isinstance(relative, str) or relative.startswith("/") or ".." in Path(relative).parts:
+        raise ValueError("frozen source path is invalid")
+    try:
+        data = subprocess.check_output(
+            ["git", "show", f"{commit}:{relative}"],
+            cwd=ROOT,
+            stderr=subprocess.DEVNULL,
+        )
+    except subprocess.CalledProcessError:
+        raise ValueError(f"frozen source is unavailable: {relative}") from None
+    return sha256_bytes(data)
+
+
+def sha256_frozen_source(commit: str, relative: str) -> str:
+    """Hash accepted code at its commit, or a later-added immutable freeze record."""
+    try:
+        return sha256_file_at_commit(commit, relative)
+    except ValueError as error:
+        path = ROOT / relative
+        if "frozen source is unavailable" not in str(error) or not path.is_file():
+            raise
+        return sha256_file(path)
 
 
 def atomic_json(path: Path, value: object) -> None:
@@ -370,8 +399,9 @@ def verify_v2_freeze(registration: dict) -> None:
     expected_sha = payload.pop("freeze_sha256")
     if sha256_bytes(canonical(payload).encode()) != expected_sha:
         raise ValueError("WP-29 v2 freeze SHA mismatch")
+    code_sha = registration.get("code_sha")
     for relative, expected in registration.get("files_sha256", {}).items():
-        if sha256_file(ROOT / relative) != expected:
+        if sha256_frozen_source(code_sha, relative) != expected:
             raise ValueError(f"WP-29 v2 frozen file changed: {relative}")
 
 

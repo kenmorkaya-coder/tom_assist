@@ -57,6 +57,27 @@ LOGGER = logging.getLogger("tom_assist.gateway")
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from gateway.structural_preview import POLICY_VERSION, project_text, select_cohort, fuse_anchors
 from gateway.permanent_library import PermanentLibrary, content_hash
+from gateway.document_ingestion import (
+    DOCUMENT_CHUNKING_VERSION,
+    DOCUMENT_EMBEDDING_VERSION,
+    DOCUMENT_PACKET_ADMISSION_VERSION,
+    DocumentEmbeddingWorkerClient,
+    MAX_DOCUMENT_CHUNKS,
+    MAX_DOCUMENT_SOURCE_CHARS,
+    build_document_query_profile,
+    rank_document_chunks_for_packet,
+)
+from gateway.document_research import parse_research_intent
+from gateway.declared_structure import (
+    DECLARED_STRUCTURE_VERSION,
+    build_declared_structure,
+)
+from gateway.project_glossary import (
+    GLOSSARY_VERSION,
+    MAX_GLOSSARY_CHARACTERS,
+    MAX_GLOSSARY_TERMS,
+    build_project_glossary,
+)
 
 COMMIT_DYNAMICS = ["step", "rgm_write", "leaf_vec_teach", "usage_rotation", "front_row_reseat"]
 DEFAULT_SETTINGS = {"front_row_capacity": 4096, "teach_on_conflict": True}
@@ -163,6 +184,25 @@ class SeedConfiguration:
     mechanics_parameters: dict[str, str]
 
 
+def _engine_config(seed: SeedConfiguration) -> Any:
+    """Build the single audited Python 10K mechanics configuration."""
+    from agency.mechanics.sicd_engine import TreeGrowthConfig
+
+    config = TreeGrowthConfig()
+    parameters = seed.mechanics_parameters
+    config.tau1 = float(parameters["TOM_TAU1"])
+    config.kappa_update.heal_rate = float(parameters["TOM_HEAL_RATE"])
+    config.kappa_update.damage_rate = float(parameters["TOM_DAMAGE_RATE"])
+    config.kappa_update.kappa_decay = float(parameters["TOM_KAPPA_DECAY"])
+    if not abs(config.kappa_update.kappa_decay - EFFECTIVE_KAPPA_DECAY) <= 1e-12:
+        raise ValueError("kappa_decay differs from audited effective physics (0.03)")
+    config.kappa_update.kappa_delta_cap = float(parameters["TOM_KAPPA_DELTA_CAP"])
+    config.kappa_update.kappa_nourish_recovery = float(
+        parameters["TOM_KAPPA_NOURISH_RECOVERY"]
+    )
+    return config
+
+
 def _compute_preview_triggers(committed_turn_count: int) -> list[_RetrievalTrigger]:
     """Mirror the only trigger applicable to draft preview without importing interface.__init__."""
     if committed_turn_count < 3:
@@ -185,6 +225,8 @@ class ProjectRuntime:
         state_dir: Path,
         runtime_sha: str,
         seed: SeedConfiguration,
+        document_embedding_provider=None,
+        document_index=None,
     ) -> None:
         self.project_id = _safe_project_id(project_id)
         self.state_dir = state_dir.resolve()
@@ -192,9 +234,14 @@ class ProjectRuntime:
         os.chmod(self.state_dir, 0o700)
         self.runtime_sha = runtime_sha
         self.seed = seed
+        self.document_embedding_provider = document_embedding_provider
+        if document_index is None:
+            raise ValueError("shared Tom Assist document index is required")
+        self.document_index = document_index
         self.lock = threading.RLock()
         self._idempotency_path = self.state_dir / "turn_idempotency.json"
         self.library = PermanentLibrary(self.state_dir / "library.sqlite3")
+        self._backfill_declared_document_structures()
         head = self.library.head()
         self.settings = json.loads(head[3]) if head else dict(DEFAULT_SETTINGS)
         if head:
@@ -239,6 +286,7 @@ class ProjectRuntime:
                 self._checkpoint_digest = self._persist_current_artifacts()
             self.creation_metadata = self._load_creation_metadata()
             self._restore_serialized_fields()
+        self._assert_native_10k_tree_lineage()
         # Legacy short anchors can be migrated losslessly. Never pretend a
         # truncated summary is the durable twin of unavailable original content.
         for record in self.rgm.state.anchors.values():
@@ -246,6 +294,28 @@ class ProjectRuntime:
         if head is None:
             self.library.set_head(self._tree_path.read_bytes(), self._rgm_path.read_bytes(),
                                   self._idempotency, self.settings)
+        self._backfill_document_index()
+
+    def _backfill_declared_document_structures(self) -> None:
+        """Migrate pre-WP-43 immutable documents using only their stored text."""
+        pending = []
+        for row in self.library.documents(include_withdrawn=True):
+            document = self.library.document(row["document_id"], include_chunks=False)
+            if document["declared_structure"] is None:
+                pending.append((document["document_id"], document["content"]))
+        if not pending:
+            return
+        self.library.db.execute("BEGIN IMMEDIATE")
+        try:
+            for document_id, content in pending:
+                self.library.retain_document_declared_structure(
+                    document_id, build_declared_structure(content),
+                )
+            self.library.db.execute("COMMIT")
+        except BaseException:
+            if self.library.db.in_transaction:
+                self.library.db.execute("ROLLBACK")
+            raise
 
     @property
     def _tree_path(self) -> Path:
@@ -259,26 +329,63 @@ class ProjectRuntime:
     def _creation_metadata_path(self) -> Path:
         return self.state_dir / "creation_metadata.json"
 
+    def _backfill_document_index(self) -> None:
+        """Synchronize project metadata, then index retained pre-index documents."""
+        committed = self.document_index.project_commits(self.project_id)
+        if committed:
+            self.library.db.execute("BEGIN IMMEDIATE")
+            try:
+                by_document = {}
+                for row in committed:
+                    by_document.setdefault(row["document_id"], []).append(row)
+                for document_id, rows in by_document.items():
+                    self.document_index.set_project_chunk_analyses(
+                        self.library,
+                        document_id,
+                        [{"chunk_index": row["chunk_index"]} for row in rows],
+                        [row["analysis"] for row in rows],
+                    )
+                self.library.db.execute("COMMIT")
+            except BaseException:
+                if self.library.db.in_transaction:
+                    self.library.db.execute("ROLLBACK")
+                raise
+        existing = self.document_index.indexed_chunk_keys(self.project_id)
+        for document_row in self.library.documents(include_withdrawn=True):
+            document_id = document_row["document_id"]
+            chunks = self.library.document_chunks(document_id=document_id)
+            missing = [
+                row for row in chunks
+                if (document_id, row["chunk_index"]) not in existing
+            ]
+            if not missing:
+                continue
+            tree_bytes, receipts, analyses = self.document_index.apply_document(
+                self.project_id,
+                document_id,
+                missing,
+                self.library.document_declared_structure(document_id),
+                "backfilled",
+                "migration:tom-assist-shared-document-tree/1.0",
+            )
+            self.library.db.execute("BEGIN IMMEDIATE")
+            try:
+                self.document_index.set_project_chunk_analyses(
+                    self.library, document_id, receipts, analyses,
+                )
+                self.library.db.execute("COMMIT")
+            except BaseException:
+                if self.library.db.in_transaction:
+                    self.library.db.execute("ROLLBACK")
+                raise
+            if document_row["tombstoned_at"] is not None:
+                self.document_index.record_withdrawal(
+                    self.project_id, document_id, document_row["tombstoned_at"],
+                )
+
     def _new_engine_config(self) -> Any:
         """Apply the audited profile and reject unreviewed effective-physics changes."""
-        from agency.mechanics.sicd_engine import TreeGrowthConfig
-
-        config = TreeGrowthConfig()
-        parameters = self.seed.mechanics_parameters
-        config.tau1 = float(parameters["TOM_TAU1"])
-        config.kappa_update.heal_rate = float(parameters["TOM_HEAL_RATE"])
-        config.kappa_update.damage_rate = float(parameters["TOM_DAMAGE_RATE"])
-        # WP-18/WP-19: profile + reader are authoritative as of e9fdef81c.
-        # Review 3 audited 0.03 as the effective growth/operating value;
-        # any future divergence requires an explicit reviewed decision.
-        config.kappa_update.kappa_decay = float(parameters["TOM_KAPPA_DECAY"])
-        if not abs(config.kappa_update.kappa_decay - EFFECTIVE_KAPPA_DECAY) <= 1e-12:
-            raise ValueError("kappa_decay differs from audited effective physics (0.03)")
-        config.kappa_update.kappa_delta_cap = float(parameters["TOM_KAPPA_DELTA_CAP"])
-        config.kappa_update.kappa_nourish_recovery = float(
-            parameters["TOM_KAPPA_NOURISH_RECOVERY"]
-        )
-        return config
+        return _engine_config(self.seed)
 
     def _seed_creation_metadata(self, initial_checkpoint_digest: str) -> dict[str, Any]:
         return {
@@ -294,6 +401,32 @@ class ProjectRuntime:
             "kappa_decay_source": KAPPA_DECAY_SOURCE,
             "initial_checkpoint_digest": initial_checkpoint_digest,
         }
+
+    def _assert_native_10k_tree_lineage(self) -> None:
+        """Fail closed before any 17D projection can reach a non-native tree."""
+        expected = {
+            "seed_profile": SEED_PROFILE,
+            "seed_artifact_sha256": SEED_ARTIFACT_SHA256,
+            "seed_tick": SEED_TICK,
+            "seed_branch_count": SEED_BRANCH_COUNT,
+        }
+        mismatches = {
+            key: self.creation_metadata.get(key)
+            for key, value in expected.items()
+            if self.creation_metadata.get(key) != value
+        }
+        initial_digest = self.creation_metadata.get("initial_checkpoint_digest")
+        engine_type = type(self.engine)
+        if (
+            mismatches
+            or not isinstance(initial_digest, str)
+            or not initial_digest.startswith("sha256:")
+            or engine_type.__module__ != "agency.mechanics.sicd_engine"
+            or engine_type.__name__ != "TreeGrowthEngine"
+        ):
+            raise ValueError(
+                "17D operation requires verified Python msr_8d_native_10k tree lineage"
+            )
 
     def _load_creation_metadata(self) -> dict[str, Any]:
         if not self._creation_metadata_path.exists():
@@ -363,12 +496,190 @@ class ProjectRuntime:
     def memory_diagnostics(self, after=0):
         with self.lock:
             events = self.library.events(after)
+            active_documents = self.library.documents(include_withdrawn=False)
+            all_documents = self.library.documents(include_withdrawn=True)
             return {**self.settings, "front_row_count": len(self.rgm.state.anchors),
                     "engine_tick": self.engine.state.tick, "rgm_current_tick": self.rgm.state.current_tick,
                     "checkpoint_digest": self._current_checkpoint_digest(), "commit_count": len(self._idempotency),
                     "library_count": self.library.db.execute("SELECT COUNT(*) FROM library_records").fetchone()[0],
+                    "document_count": len(active_documents),
+                    "document_count_all": len(all_documents),
+                    "document_bytes": sum(row["byte_length"] for row in active_documents),
+                    "document_chunk_count": self.library.db.execute(
+                        "SELECT COUNT(*) FROM document_chunks c JOIN documents d "
+                        "ON d.document_id=c.document_id WHERE d.tombstoned_at IS NULL"
+                    ).fetchone()[0],
+                    "document_tree_tick": int(self.document_index.engine.state.tick),
+                    "document_tree_branch_count": len(self.document_index.engine.state.branches),
+                    "document_tree_commit_count": self.document_index.project_commit_count(
+                        self.project_id
+                    ),
+                    "document_tree_path": "document-index/tree_state.json",
                     "demotion_count": self.library.db.execute("SELECT COUNT(*) FROM demotions").fetchone()[0],
                     "demotions": events, "next_event_id": events[-1]["event_id"] if events else after}
+
+    def ingest_document(self, display_name, content, media_type):
+        """Store explicitly supplied text inventory without touching runtime state."""
+        from gateway.document_ingestion import (
+            DOCUMENT_CHUNKING_VERSION,
+            DOCUMENT_EMBEDDING_VERSION,
+            DocumentEmbeddingWorkerClient,
+            validate_document_input,
+            validate_embedding_result,
+        )
+
+        display_name, content, media_type, byte_length = validate_document_input(
+            display_name, content, media_type
+        )
+        digest = content_hash(content)
+        document_id = "document-" + digest[:32]
+        with self.lock:
+            existing = self.library.document(document_id)
+            if existing is not None:
+                if existing["content_sha256"] != digest or existing["content"] != content:
+                    raise ValueError("document content identity conflict")
+                if existing["declared_structure"] is None:
+                    declared_structure = build_declared_structure(content)
+                    self.library.db.execute("BEGIN IMMEDIATE")
+                    try:
+                        self.library.retain_document_declared_structure(
+                            document_id, declared_structure,
+                        )
+                        self.library.db.execute("COMMIT")
+                    except BaseException:
+                        if self.library.db.in_transaction:
+                            self.library.db.execute("ROLLBACK")
+                        raise
+                    existing = self.library.document(document_id)
+                self._backfill_document_index()
+                existing = self.library.document(document_id)
+                return self._public_document(existing, duplicate=True)
+            declared_structure = build_declared_structure(content)
+            provider = self.document_embedding_provider
+            if provider is None:
+                provider = DocumentEmbeddingWorkerClient.from_environment()
+                self.document_embedding_provider = provider
+            embedded = validate_embedding_result(content, provider.embed_document(content))
+            chunks = []
+            for row in embedded["chunks"]:
+                chunk_text = content[row["start"]:row["end"]]
+                chunks.append({
+                    "index": row["index"],
+                    "start": row["start"],
+                    "end": row["end"],
+                    "text_sha256": content_hash(chunk_text),
+                    "passage_vector": row["vector_f32_le_base64"],
+                })
+            document = {
+                "document_id": document_id,
+                "display_name": display_name,
+                "content_sha256": digest,
+                "content": content,
+                "byte_length": byte_length,
+                "media_type": media_type,
+                "chunking_version": DOCUMENT_CHUNKING_VERSION,
+                "embedding_version": DOCUMENT_EMBEDDING_VERSION,
+                "ingested_tick": int(self.engine.state.tick),
+                "tombstoned_at": None,
+            }
+            self.library.db.execute("BEGIN IMMEDIATE")
+            try:
+                retained = self.library.retain_document(
+                    document, chunks, declared_structure,
+                )
+                self.library.db.execute("COMMIT")
+            except BaseException:
+                if self.library.db.in_transaction:
+                    self.library.db.execute("ROLLBACK")
+                raise
+            tree_chunks = [
+                {
+                    **row,
+                    "text": content[row["start"]:row["end"]],
+                }
+                for row in chunks
+            ]
+            _, receipts, analyses = self.document_index.apply_document(
+                self.project_id,
+                document_id,
+                tree_chunks,
+                declared_structure,
+                "activated",
+                f"ingested_tick:{document['ingested_tick']}",
+            )
+            self.library.db.execute("BEGIN IMMEDIATE")
+            try:
+                self.document_index.set_project_chunk_analyses(
+                    self.library, document_id, receipts, analyses,
+                )
+                self.library.db.execute("COMMIT")
+            except BaseException:
+                if self.library.db.in_transaction:
+                    self.library.db.execute("ROLLBACK")
+                raise
+            retained = self.library.document(document_id)
+            return self._public_document(retained, duplicate=False)
+
+    @staticmethod
+    def _public_document(document, *, duplicate=None):
+        chunks = [
+            {
+                key: row[key]
+                for key in ("chunk_index", "start", "end", "text_sha256")
+            }
+            for row in document.get("chunks", [])
+        ]
+        public = {
+            key: document[key]
+            for key in (
+                "document_id", "display_name", "content_sha256", "content",
+                "byte_length", "media_type", "chunking_version", "embedding_version",
+                "ingested_tick", "tombstoned_at",
+            )
+        }
+        public["chunks"] = chunks
+        public["chunk_count"] = len(chunks)
+        public["declared_structure"] = document.get("declared_structure")
+        if duplicate is not None:
+            public["duplicate"] = duplicate
+        return public
+
+    def list_documents(self, include_withdrawn=False):
+        with self.lock:
+            result = []
+            for row in self.library.documents(include_withdrawn=bool(include_withdrawn)):
+                count = self.library.db.execute(
+                    "SELECT COUNT(*) FROM document_chunks WHERE document_id=?",
+                    (row["document_id"],),
+                ).fetchone()[0]
+                result.append({**row, "chunk_count": count})
+            return result
+
+    def get_document(self, document_id):
+        with self.lock:
+            document = self.library.document(str(document_id))
+            if document is None:
+                raise ValueError("document does not exist")
+            return self._public_document(document)
+
+    def withdraw_document(self, document_id, tombstoned_at):
+        if not isinstance(tombstoned_at, str) or not tombstoned_at.strip():
+            raise ValueError("document withdrawal timestamp is required")
+        with self.lock:
+            self.library.db.execute("BEGIN IMMEDIATE")
+            try:
+                document = self.library.withdraw_document(
+                    str(document_id), tombstoned_at.strip()
+                )
+                self.library.db.execute("COMMIT")
+            except BaseException:
+                if self.library.db.in_transaction:
+                    self.library.db.execute("ROLLBACK")
+                raise
+            self.document_index.record_withdrawal(
+                self.project_id, str(document_id), tombstoned_at.strip(),
+            )
+            return self._public_document(document)
 
     def _artifact_payload(self, tree_bytes: bytes, rgm_bytes: bytes) -> dict[str, Any]:
         return {
@@ -410,7 +721,93 @@ class ProjectRuntime:
                 temporary_path.unlink(missing_ok=True)
             return tree, self.rgm.serialize().encode("utf-8")
 
-    def preview_rank(self, user_text: str, k: int, max_chars: int) -> dict[str, Any]:
+    def _rank_document_packet(
+        self, user_text: str, k: int, max_chars: int, *, query_profile=None,
+    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+        chunks = self.library.document_chunks(active_only=True)
+        if not chunks:
+            return [], {
+                "version": "tom-assist-document-research-trace/1.0",
+                "intent": parse_research_intent(user_text),
+                "inventory": {
+                    "active_document_count": 0,
+                    "active_chunk_count": 0,
+                    "documents": [],
+                    "unresolved_external_reference_count": 0,
+                },
+                "final_evidence_coverage": {
+                    "discovered_units": [],
+                    "selected_evidence_ids": [],
+                    "missing_sources": [],
+                    "exhaustiveness": "no_active_project_documents",
+                },
+            }
+        metadata = self.document_index.project_chunk_metadata(self.project_id)
+        chunks = [
+            {
+                **row,
+                **metadata.get((str(row["document_id"]), int(row["chunk_index"])), {}),
+            }
+            for row in chunks
+        ]
+        if query_profile is None:
+            provider = self.document_embedding_provider
+            if provider is None:
+                provider = DocumentEmbeddingWorkerClient.from_environment()
+                self.document_embedding_provider = provider
+            query_profile = build_document_query_profile(user_text, provider)
+        query_analysis, cohort, query_branch_trace = self.document_index.query_address(
+            user_text, query_profile,
+        )
+        structural_scores, structural_telemetry = self.document_index.structural_scores(
+            self.project_id, chunks, cohort,
+        )
+        document_sources = {}
+        for document_id in sorted({str(row["document_id"]) for row in chunks}):
+            source = self.library.document(document_id, include_chunks=False)
+            if source is None or source.get("tombstoned_at") is not None:
+                raise ValueError("active document chunk has no active permanent source")
+            source["chunk_count"] = sum(
+                row["document_id"] == document_id for row in chunks
+            )
+            document_sources[document_id] = source
+        ranked, research_trace = rank_document_chunks_for_packet(
+            user_text, query_profile, chunks, k=k, max_chars=max_chars,
+            structural_scores=structural_scores,
+            structural_telemetry=structural_telemetry,
+            document_sources=document_sources,
+            return_trace=True,
+        )
+        for row in ranked:
+            from gateway.document_tree import DOCUMENT_TREE_VERSION
+            source = next(item for item in chunks if (
+                item["document_id"] == row["document_id"]
+                and item["chunk_index"] == row["chunk_index"]
+            ))
+            row["structural_signature"] = {
+                "document_tree_version": DOCUMENT_TREE_VERSION,
+                "query_analysis_digest": query_analysis["analysis_digest"],
+                "chunk_analysis_digest": source["analysis_digest"],
+                "matched_branch_id": row.get("matched_document_branch_id"),
+                "tree_channel": structural_telemetry,
+                "clause_identifiers": row.get("clause_identifiers", []),
+                "matched_clause_identifier": row.get("matched_clause_identifier"),
+            }
+        research_trace["document_tree"].update({
+            "head": self.document_index.head_metadata(),
+            "query_analysis_digest": query_analysis["analysis_digest"],
+            "query_source_text_sha256": query_analysis["source_text_sha256"],
+            "query_branch_trace": query_branch_trace,
+            "project_chunk_receipt_count": self.document_index.project_commit_count(
+                self.project_id
+            ),
+        })
+        return ranked, research_trace
+
+    def preview_rank(
+        self, user_text: str, k: int, max_chars: int,
+        declared_glossary_titles=(),
+    ) -> dict[str, Any]:
         """Pure ranking over last-committed state plus the draft as user_text only."""
         with self.lock:
             # Binding source evidence: rgm.py:681-733 defines VectorStore.query
@@ -451,6 +848,9 @@ class ProjectRuntime:
                 )
                 if len(ranked) >= k:
                     break
+            ranked_documents, document_research_trace = self._rank_document_packet(
+                user_text, k, max_chars,
+            )
             checkpoint_digest = self._current_checkpoint_digest()
             activation_id = canonical_digest(
                 {
@@ -459,12 +859,21 @@ class ProjectRuntime:
                     "k": k,
                     "max_chars": max_chars,
                     "checkpoint_digest": checkpoint_digest,
+                    "document_packet_candidates": [
+                        [
+                            row["id"], row["excerpt_sha256"],
+                            row["semantic_score"],
+                        ]
+                        for row in ranked_documents
+                    ],
                 }
             )
             return {
                 "activation_id": activation_id,
                 "triggers": [asdict(trigger) for trigger in triggers],
                 "ranked_anchors": ranked,
+                "ranked_document_chunks": ranked_documents,
+                "document_research_trace": document_research_trace,
                 "activated_branch_ids": [bid for bid, _, _ in cohort],
                 "candidate_trace": fused,
                 "branch_trace": branch_trace,
@@ -475,7 +884,8 @@ class ProjectRuntime:
 
     def commit_turn(self, role: str, text: str, idempotency_key: str, *,
                     response_text=None, activated_branch_ids=(), admitted_anchor_ids=(),
-                    conflict_dismissed=False, packet_digest=None) -> dict[str, Any]:
+                    conflict_dismissed=False, packet_digest=None,
+                    retrieval_trace=()) -> dict[str, Any]:
         """Atomic quintuple. SQLite head is authoritative; JSON files are projections."""
         from gateway.front_row import FrontRowMemory
         from memory.rgm import MemoryRecord, PolicyOutcome
@@ -486,7 +896,10 @@ class ProjectRuntime:
             if not text or type(conflict_dismissed) is not bool:
                 raise ValueError("nonempty committed text and boolean conflict_dismissed required")
             branch_ids = sorted(set(str(bid) for bid in activated_branch_ids))
-            anchor_ids = sorted(set(str(rid) for rid in admitted_anchor_ids))
+            packet_anchor_ids = [str(rid) for rid in admitted_anchor_ids]
+            if len(packet_anchor_ids) != len(set(packet_anchor_ids)):
+                raise ValueError("admitted anchor ids must be unique and ordered")
+            anchor_ids = sorted(set(packet_anchor_ids))
             for bid in branch_ids:
                 if bid not in self.engine.state.branches:
                     raise ValueError(f"sent packet branch no longer exists: {bid}")
@@ -597,6 +1010,10 @@ class ProjectRuntime:
                     "readmitted_anchor_ids": readmitted_ids, "packet_digest": packet_digest,
                 }
                 self._idempotency[idempotency_key] = result
+                self.library.retain_retrieval_outcomes(
+                    idempotency_key, packet_anchor_ids, retrieval_trace, stored_text,
+                    conflict_dismissed, int(self.engine.state.tick),
+                )
                 self.library.set_head(tree_bytes, rgm_bytes, self._idempotency, self.settings)
                 self.library.db.execute("COMMIT")
             except BaseException:
@@ -670,9 +1087,11 @@ class TomGateway:
         *,
         seed_artifact: Path | None = None,
         mechanics_profile: Path | None = None,
+        document_embedding_provider=None,
     ) -> None:
         self.data_dir = data_dir.expanduser().resolve()
         self.tom_master = tom_master.expanduser().resolve()
+        self.document_embedding_provider = document_embedding_provider
         sys.dont_write_bytecode = True  # Imports must not write caches in frozen upstream.
         self.data_dir.mkdir(parents=True, exist_ok=True)
         os.chmod(self.data_dir, 0o700)
@@ -717,6 +1136,10 @@ class TomGateway:
         from gateway.oauth_provider import OAuthProvider
         self.oauth_provider = OAuthProvider()
         self._probe_imports()
+        from gateway.document_tree import SharedDocumentTreeIndex
+        self.document_index = SharedDocumentTreeIndex(
+            self.data_dir, self.seed, _engine_config(self.seed),
+        )
 
     @staticmethod
     def _probe_imports() -> None:
@@ -734,14 +1157,21 @@ class TomGateway:
             if runtime is None:
                 from gateway.runtime_archive import finalize_pending
                 finalize_pending(self.data_dir / "projects" / project_id)
-                runtime = ProjectRuntime(
-                    project_id,
-                    self.data_dir / "projects" / project_id / "tom",
-                    self.runtime_sha,
-                    self.seed,
+                runtime = self.create_project_runtime(
+                    project_id, self.data_dir / "projects" / project_id / "tom",
                 )
                 self._projects[project_id] = runtime
             return runtime
+
+    def create_project_runtime(self, project_id: str, state_dir: Path):
+        return ProjectRuntime(
+            project_id,
+            state_dir,
+            self.runtime_sha,
+            self.seed,
+            self.document_embedding_provider,
+            self.document_index,
+        )
 
     def capabilities(self) -> dict[str, Any]:
         return {
@@ -767,8 +1197,24 @@ class TomGateway:
             "mechanics_profile_sha256": self.seed.mechanics_profile_sha256,
             "mechanics_parameters": dict(sorted(self.seed.mechanics_parameters.items())),
             "kappa_decay_source": KAPPA_DECAY_SOURCE,
-            "preview_channels": ["lexical", "structural_geometry"],
+            "preview_channels": ["lexical", "structural_geometry", "document_dense"],
             "commit_dynamics": list(COMMIT_DYNAMICS),
+            "supports_documents": True,
+            "document_chunking_version": DOCUMENT_CHUNKING_VERSION,
+            "document_embedding_version": DOCUMENT_EMBEDDING_VERSION,
+            "document_max_source_chars": MAX_DOCUMENT_SOURCE_CHARS,
+            "document_max_chunks": MAX_DOCUMENT_CHUNKS,
+            "document_structural_parsing": False,
+            "document_packet_admission": True,
+            "document_packet_admission_version": DOCUMENT_PACKET_ADMISSION_VERSION,
+            "supports_document_declared_structure": True,
+            "document_declared_structure_version": DECLARED_STRUCTURE_VERSION,
+            "parser_glossary_enabled": False,
+            "parser_glossary_version": GLOSSARY_VERSION,
+            "parser_glossary_term_count": 0,
+            "parser_glossary_sha256": build_project_glossary([], [])["sha256"],
+            "parser_glossary_max_terms": MAX_GLOSSARY_TERMS,
+            "parser_glossary_max_characters": MAX_GLOSSARY_CHARACTERS,
             **DEFAULT_SETTINGS,
         }
 
@@ -803,8 +1249,11 @@ class TomGateway:
                     return 200, import_snapshot(self, payload["action"], payload["directory"], payload["context"])
             if method == "POST" and path == "/preview/rank":
                 k = max(1, min(int(payload.get("k", 10)), 100))
-                max_chars = max(1, min(int(payload.get("max_chars", 2000)), 12000))
-                return 200, self.project(payload.get("project_id")).preview_rank(str(payload.get("user_text") or ""), k, max_chars)
+                max_chars = max(1, min(int(payload.get("max_chars", 2000)), 32000))
+                return 200, self.project(payload.get("project_id")).preview_rank(
+                    str(payload.get("user_text") or ""), k, max_chars,
+                    payload.get("declared_glossary_titles") or [],
+                )
             if method == "POST" and path == "/turn/commit":
                 key = str(payload.get("idempotency_key") or "")
                 if not key: raise ValueError("idempotency_key is required")
@@ -814,7 +1263,29 @@ class TomGateway:
                     activated_branch_ids=payload.get("activated_branch_ids") or [],
                     admitted_anchor_ids=payload.get("admitted_anchor_ids") or [],
                     conflict_dismissed=payload.get("conflict_dismissed", False),
-                    packet_digest=payload.get("packet_digest"))
+                    packet_digest=payload.get("packet_digest"),
+                    retrieval_trace=payload.get("retrieval_trace") or [])
+            if method == "POST" and path == "/document/ingest":
+                if payload.get("explicit_user_action") is not True:
+                    raise ValueError("document ingestion requires an explicit user action")
+                return 200, self.project(payload.get("project_id")).ingest_document(
+                    payload.get("display_name"), payload.get("content"),
+                    payload.get("media_type"),
+                )
+            if method == "POST" and path == "/document/list":
+                return 200, {"documents": self.project(
+                    payload.get("project_id")
+                ).list_documents(payload.get("include_withdrawn", False))}
+            if method == "POST" and path == "/document/get":
+                return 200, self.project(payload.get("project_id")).get_document(
+                    payload.get("document_id")
+                )
+            if method == "POST" and path == "/document/withdraw":
+                if payload.get("explicit_user_action") is not True:
+                    raise ValueError("document withdrawal requires an explicit user action")
+                return 200, self.project(payload.get("project_id")).withdraw_document(
+                    payload.get("document_id"), payload.get("tombstoned_at")
+                )
             if method == "POST" and path == "/project/settings":
                 runtime = self.project(payload.get("project_id"))
                 return 200, runtime.update_settings(payload.get("settings") or {})

@@ -21,6 +21,9 @@ MAPPING = {
     "state_edge": "state-edge.schema.json",
     "continuity_packet": "continuity-packet.schema.json",
     "state_mutation_candidate": "state-mutation-candidate.schema.json",
+    "structural_candidate": "structural-candidate.schema.json",
+    "declared_structure": "declared-structure.schema.json",
+    "document": "document.schema.json",
     "intervention": "intervention.schema.json",
     "error": "error.schema.json",
 }
@@ -69,8 +72,8 @@ def main() -> None:
             raise AssertionError(f"invalid source ID accepted: {source_id}")
 
     methods = schemas["core-methods.schema.json"]["enum"]
-    if len(methods) != 43 or len(methods) != len(set(methods)):
-        raise AssertionError(f"expected 43 unique core methods, got {len(methods)}")
+    if len(methods) != 47 or len(methods) != len(set(methods)):
+        raise AssertionError(f"expected 47 unique core methods, got {len(methods)}")
     print(
         f"validated {len(MAPPING)} fixtures, {len(methods)} core methods, "
         f"and source-id/1.1 ({len(VALID_SOURCE_IDS)} valid, "

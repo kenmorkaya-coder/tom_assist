@@ -56,12 +56,25 @@ pub fn commit_captured_exchange(
         .context_run_by_digest(&evaluation.project_id, &evaluation.packet_digest)?
         .ok_or(ServiceError::UnknownPacket)?;
     // The only manifest authority is the durable sent context, never response payload IDs.
-    let result = gateway.commit_exchange(json!({
+    let trace: Value = serde_json::from_str(&context.candidate_trace_json)?;
+    let mut payload = json!({
         "project_id": evaluation.project_id, "role":"user", "text":sent.normalized_text,
         "response_text": response.normalized_text, "idempotency_key":format!("sent-turn:{}",sent.id),
         "packet_digest": context.packet_digest, "activated_branch_ids":context.activated_branch_ids,
         "admitted_anchor_ids":context.admitted_anchor_ids, "conflict_dismissed":dismissed,
-    })).map_err(|error| ServiceError::Invalid(format!("runtime_commit_pending: {error}")))?;
+    });
+    if let Some(analysis) = trace
+        .get("structural_analysis")
+        .filter(|value| !value.is_null())
+    {
+        payload["structural_analysis"] = analysis.clone();
+    }
+    if let Some(retrieval) = trace.get("retrieval").filter(|value| value.is_array()) {
+        payload["retrieval_trace"] = retrieval.clone();
+    }
+    let result = gateway
+        .commit_exchange(payload)
+        .map_err(|error| ServiceError::Invalid(format!("runtime_commit_pending: {error}")))?;
     // Gateway's durable idempotency covers a lost reply or a crash before this receipt.
     store.record_runtime_commit(&sent.id, &evaluation.id, &result)?;
     Ok(Some(result))

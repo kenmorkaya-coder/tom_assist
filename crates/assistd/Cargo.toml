@@ -22,4 +22,5 @@ tom-assist-tom-adapter = { path = "../tom-adapter" }
 tom-assist-context-admission = { path = "../context-admission" }
 
 [dev-dependencies]
+rusqlite = { version = "0.37", features = ["bundled"] }
 tempfile = "3"

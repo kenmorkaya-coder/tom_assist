@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tom-assist.local/schemas/declared-structure.schema.json",
+  "title": "DeclaredDocumentStructure",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "source_text_sha256", "clause_index", "references", "defined_terms", "declared_precedence", "causation", "structure_digest"],
+  "properties": {
+    "schema_version": {"const": "tom-assist-declared-structure/1.0"},
+    "source_text_sha256": {"$ref": "#/$defs/digest"},
+    "clause_index": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "entries", "entry_count", "valid_count", "malformed_count", "index_digest"],
+      "properties": {
+        "version": {"const": "tom-assist-clause-index/1.0"},
+        "entries": {
+          "type": "array",
+          "maxItems": 50000,
+          "items": {"$ref": "#/$defs/address"}
+        },
+        "entry_count": {"type": "integer", "minimum": 0, "maximum": 50000},
+        "valid_count": {"type": "integer", "minimum": 0, "maximum": 50000},
+        "malformed_count": {"type": "integer", "minimum": 0, "maximum": 50000},
+        "index_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "references": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "references", "reference_count", "resolved_count", "unresolved_absent_count", "unparsed_count"],
+      "properties": {
+        "version": {"const": "tom-assist-reference-resolution/1.0"},
+        "references": {
+          "type": "array",
+          "maxItems": 100000,
+          "items": {"$ref": "#/$defs/reference"}
+        },
+        "reference_count": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "resolved_count": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "unresolved_absent_count": {"type": "integer", "minimum": 0, "maximum": 100000},
+        "unparsed_count": {"type": "integer", "minimum": 0, "maximum": 100000}
+      }
+    },
+    "defined_terms": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "case_rule", "surface_forms_only_for_prompt", "terms", "term_count", "bindings", "binding_count"],
+      "properties": {
+        "version": {"const": "tom-assist-defined-term-binding/1.0"},
+        "case_rule": {"const": "exact-unicode-codepoints-case-sensitive-whole-surface/1.0"},
+        "surface_forms_only_for_prompt": {"const": true},
+        "terms": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {"$ref": "#/$defs/definedTerm"}
+        },
+        "term_count": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "bindings": {
+          "type": "array",
+          "maxItems": 100000,
+          "items": {"$ref": "#/$defs/binding"}
+        },
+        "binding_count": {"type": "integer", "minimum": 0, "maximum": 100000}
+      }
+    },
+    "declared_precedence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "relations", "relation_count"],
+      "properties": {
+        "version": {"const": "tom-assist-declared-precedence/1.0"},
+        "relations": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {"$ref": "#/$defs/precedence"}
+        },
+        "relation_count": {"type": "integer", "minimum": 0, "maximum": 10000}
+      }
+    },
+    "causation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["derived", "reason"],
+      "properties": {
+        "derived": {"const": false},
+        "reason": {"const": "not_self_declared"}
+      }
+    },
+    "structure_digest": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "span": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start", "end"],
+      "properties": {
+        "start": {"type": "integer", "minimum": 0, "maximum": 2000000},
+        "end": {"type": "integer", "minimum": 1, "maximum": 2000000}
+      }
+    },
+    "address": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["entry_id", "kind", "identifier", "display_identifier", "title", "span", "parent_entry_id", "status", "malformed_reason"],
+      "properties": {
+        "entry_id": {"type": "string", "pattern": "^address-[0-9a-f]{24}$"},
+        "kind": {"enum": ["clause", "subclause", "schedule", "exhibit", "appendix", "attachment", "named_section"]},
+        "identifier": {"type": "string", "minLength": 1, "maxLength": 512},
+        "display_identifier": {"type": "string", "minLength": 1, "maxLength": 160},
+        "title": {"type": "string", "maxLength": 4000},
+        "span": {"$ref": "#/$defs/span"},
+        "parent_entry_id": {"type": ["string", "null"], "pattern": "^address-[0-9a-f]{24}$"},
+        "status": {"enum": ["valid", "malformed"]},
+        "malformed_reason": {"type": ["string", "null"], "maxLength": 160}
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference_id", "kind", "reference_text", "span", "named_identifier", "outcome", "target_entry_id"],
+      "properties": {
+        "reference_id": {"type": "string", "pattern": "^reference-[0-9a-f]{24}$"},
+        "kind": {"enum": ["clause", "schedule", "section", "exhibit", "appendix", "attachment"]},
+        "reference_text": {"type": "string", "minLength": 1, "maxLength": 256},
+        "span": {"$ref": "#/$defs/span"},
+        "named_identifier": {"type": ["string", "null"], "maxLength": 256},
+        "outcome": {"enum": ["resolved", "unresolved_absent", "unparsed"]},
+        "target_entry_id": {"type": ["string", "null"], "pattern": "^address-[0-9a-f]{24}$"}
+      }
+    },
+    "definedTerm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["term_id", "surface", "surface_span", "defining_clause_entry_id", "defining_clause_identifier", "definition_span", "definition_body", "entry_digest"],
+      "properties": {
+        "term_id": {"type": "string", "pattern": "^term-[0-9a-f]{24}$"},
+        "surface": {"type": "string", "minLength": 1, "maxLength": 160},
+        "surface_span": {"$ref": "#/$defs/span"},
+        "defining_clause_entry_id": {"type": "string", "pattern": "^address-[0-9a-f]{24}$"},
+        "defining_clause_identifier": {"type": "string", "minLength": 1, "maxLength": 160},
+        "definition_span": {"$ref": "#/$defs/span"},
+        "definition_body": {"type": "string", "minLength": 1, "maxLength": 400000},
+        "entry_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["binding_id", "term_id", "surface", "span"],
+      "properties": {
+        "binding_id": {"type": "string", "pattern": "^binding-[0-9a-f]{24}$"},
+        "term_id": {"type": "string", "pattern": "^term-[0-9a-f]{24}$"},
+        "surface": {"type": "string", "minLength": 1, "maxLength": 160},
+        "span": {"$ref": "#/$defs/span"}
+      }
+    },
+    "precedence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relation_id", "relation_kind", "source_entry_id", "higher_identifier", "lower_identifier", "target_identifier", "target_outcome", "span"],
+      "properties": {
+        "relation_id": {"type": "string", "pattern": "^precedence-[0-9a-f]{24}$"},
+        "relation_kind": {"enum": ["precedes", "notwithstanding"]},
+        "source_entry_id": {"type": "string", "pattern": "^address-[0-9a-f]{24}$"},
+        "higher_identifier": {"type": ["string", "null"], "maxLength": 4000},
+        "lower_identifier": {"type": ["string", "null"], "maxLength": 4000},
+        "target_identifier": {"type": ["string", "null"], "maxLength": 256},
+        "target_outcome": {"type": ["string", "null"], "enum": ["resolved", "unresolved_absent", null]},
+        "span": {"$ref": "#/$defs/span"}
+      }
+    }
+  }
+}

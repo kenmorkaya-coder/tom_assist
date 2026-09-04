@@ -1,0 +1,95 @@
+{
+  "schema_version": "tom-assist-wp37-shadow-corpus/1.0",
+  "label": "FROZEN-LABEL-FREE-SHADOW-DIAGNOSTIC-NOT-A-GATE",
+  "seed_profile": "msr_8d_native_10k",
+  "semantic_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "legacy_commits": [
+    {"id": "LEG-01", "text": "Copper valve calibration stays at forty-two units."},
+    {"id": "LEG-02", "text": "Archive the amber protocol after final review."},
+    {"id": "LEG-03", "text": "The north storage room contains the spare pressure gauge."}
+  ],
+  "evidence_commits": [
+    {
+      "id": "EVD-01",
+      "text": "Opening valve Alpha causes tank Beta to fill.",
+      "structure": {"causal": {"cause": "valve Alpha", "effect": "tank Beta", "kind": "causes"}}
+    },
+    {
+      "id": "EVD-02",
+      "text": "Tank Beta filling causes valve Alpha to open.",
+      "structure": {"causal": {"cause": "Tank Beta filling", "effect": "valve Alpha", "kind": "causes"}}
+    },
+    {
+      "id": "EVD-03",
+      "text": "The signed report contradicts the unsafe release and rejects deployment.",
+      "structure": {"signals": {"contradictions": ["contradicts the unsafe release"], "rejections": ["rejects deployment"]}}
+    },
+    {
+      "id": "EVD-04",
+      "text": "Remember the completed repair and preserve the stable configuration.",
+      "structure": {"signals": {"memory_references": ["Remember the completed repair"], "completions": ["completed repair"]}}
+    },
+    {
+      "id": "EVD-05",
+      "text": "Next quarter create a new service after the migration finishes.",
+      "structure": {"signals": {"future_references": ["Next quarter"], "sequences": ["after the migration finishes"]}}
+    },
+    {
+      "id": "EVD-06",
+      "text": "A safety review depends on pressure testing before launch.",
+      "structure": {"orientation": {"source": "safety review", "target": "pressure testing", "kind": "depends_on"}, "signals": {"sequences": ["before launch"]}}
+    },
+    {
+      "id": "EVD-07",
+      "text": "The operating rule requires two inspectors for a confined-space entry.",
+      "structure": {"signals": {"rules": ["requires two inspectors"]}}
+    },
+    {
+      "id": "EVD-08",
+      "text": "First isolate the pump, then inspect the seal, and finally restore power.",
+      "structure": {"signals": {"sequences": ["First isolate the pump, then inspect the seal, and finally restore power"]}}
+    }
+  ],
+  "queries": [
+    {
+      "id": "QRY-01",
+      "text": "Does opening valve Alpha make tank Beta fill?",
+      "structure": {"causal": {"cause": "opening valve Alpha", "effect": "tank Beta", "kind": "causes", "modality": "questioned"}}
+    },
+    {
+      "id": "QRY-02",
+      "text": "Could tank Beta filling make valve Alpha open?",
+      "structure": {"causal": {"cause": "tank Beta filling", "effect": "valve Alpha", "kind": "causes", "modality": "questioned"}}
+    },
+    {
+      "id": "QRY-03",
+      "text": "What did the signed report reject about the unsafe release?",
+      "structure": {"signals": {"contradictions": ["unsafe release"], "rejections": ["reject"]}}
+    },
+    {
+      "id": "QRY-04",
+      "text": "Recall the repair and the stable configuration we preserved.",
+      "structure": {"signals": {"memory_references": ["Recall the repair"], "completions": ["repair"]}}
+    },
+    {
+      "id": "QRY-05",
+      "text": "What new service is planned after the migration?",
+      "structure": {"signals": {"future_references": ["planned"], "sequences": ["after the migration"]}}
+    },
+    {
+      "id": "QRY-06",
+      "text": "What must the safety review depend on before launch?",
+      "structure": {"orientation": {"source": "safety review", "target": "launch", "kind": "depends_on", "modality": "questioned"}, "signals": {"sequences": ["before launch"]}}
+    },
+    {
+      "id": "QRY-07",
+      "text": "How many inspectors does the operating rule require?",
+      "structure": {"signals": {"rules": ["rule require"]}}
+    },
+    {
+      "id": "QRY-08",
+      "text": "After isolating the pump, what inspection comes before restoring power?",
+      "structure": {"signals": {"sequences": ["After isolating the pump, what inspection comes before restoring power"]}}
+    }
+  ]
+}

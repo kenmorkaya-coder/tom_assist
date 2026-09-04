@@ -1,4 +1,9 @@
-import type { ChatMethod, DesktopBackend, MemorySettings } from "./backend";
+import type {
+  ChatMethod,
+  DesktopBackend,
+  MemorySettings,
+  ProjectDocument,
+} from "./backend";
 import type { Conversation, ConversationView, Exchange } from "./Chat";
 import type {
   AuditEvent,
@@ -14,6 +19,7 @@ export class FakeDesktopBackend implements DesktopBackend {
   private events = new Map<string, AuditEvent[]>();
   private settings = new Map<string, MemorySettings>();
   private sessions = new Map<string, ConversationView>();
+  private projectDocuments = new Map<string, ProjectDocument[]>();
   connected = true; // Test-only transport, never an OAuth client.
 
   async oauthStatus() {
@@ -84,6 +90,49 @@ export class FakeDesktopBackend implements DesktopBackend {
         prompt_hash: "fixture-hash",
         packet_digest: "fixture-packet",
         status: "prepared",
+        context_preview: {
+          sections: [
+            {
+              type: "EVIDENCE_BOUNDARY",
+              items: [
+                {
+                  state_id: "document-fixture:chunk:4",
+                  text: "4.2 Release checks\n\nBefore release, the team must:\n\n(a) verify the package; and\n\n(b) record the receipt.",
+                  authority: "user_supplied_document",
+                  structural_score: 0,
+                  semantic_score: 0.8,
+                  reason_selected: "hard-gate-pass + ranked",
+                },
+              ],
+            },
+          ],
+          excluded: [
+            { id: "document-fixture:chunk:8", reason: "packet-budget" },
+          ],
+          document_research: {
+            final_evidence_coverage: {
+              discovered_units: [
+                {
+                  evidence_id: "document-fixture:chunk:4",
+                  clause_identifier: "4.2",
+                  conditionality: ["project_wide"],
+                  packet_admitted: true,
+                },
+                {
+                  evidence_id: "document-fixture:chunk:8",
+                  clause_identifier: "8.1",
+                  conditionality: ["activity_conditional"],
+                  packet_admitted: false,
+                  packet_exclusion_reason: "packet-budget",
+                },
+              ],
+              missing_sources: [
+                { named_identifier: "Schedule Z", reason_code: "MISSING_REFERENCED_SOURCE" },
+              ],
+              exhaustiveness: "limited_by_missing_referenced_sources",
+            },
+          },
+        },
       };
       view.exchanges.push({ exchange });
       return structuredClone(exchange);
@@ -128,7 +177,22 @@ export class FakeDesktopBackend implements DesktopBackend {
 
   async seedDemo(): Promise<Project> {
     if (this.projects.length) return this.projects[0]!;
-    return this.createProject("Local Release Console");
+    const project = await this.createProject("Local Release Console");
+    this.projectDocuments.set(project.id, [
+      {
+        document_id: "document-fixture",
+        display_name: "Project deed.txt",
+        content_sha256: "fixture-document-sha256",
+        byte_length: 12345,
+        media_type: "text/plain",
+        chunking_version: "fixture-chunks/1",
+        embedding_version: "fixture-embedding/1",
+        ingested_tick: 0,
+        tombstoned_at: null,
+        chunk_count: 24,
+      },
+    ]);
+    return project;
   }
   async listProjects(): Promise<Project[]> {
     return structuredClone(this.projects);
@@ -141,7 +205,7 @@ export class FakeDesktopBackend implements DesktopBackend {
       state_version: 0,
       state_digest: "sha256:empty",
       retention_profile: "state-focused",
-      policy_profile: "context-policy/1.2",
+      policy_profile: "context-policy/1.3",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -153,6 +217,7 @@ export class FakeDesktopBackend implements DesktopBackend {
       edges: [],
     });
     this.events.set(project.id, [this.event("PROJECT_CREATED", 0)]);
+    this.projectDocuments.set(project.id, []);
     return structuredClone(project);
   }
   async rename(project: Project, name: string): Promise<Project> {
@@ -205,8 +270,28 @@ export class FakeDesktopBackend implements DesktopBackend {
     project.status = "archived";
     return structuredClone(project);
   }
-  async diagnostics(): Promise<Record<string, unknown>> {
-    return { database_replay_ok: true, network_services: false };
+  async diagnostics(projectId: string): Promise<Record<string, unknown>> {
+    const documents = this.projectDocuments.get(projectId) ?? [];
+    return {
+      database_replay_ok: true,
+      network_services: false,
+      memory: {
+        front_row_capacity: 4096,
+        front_row_count: 3,
+        library_count: 7,
+        demotion_count: 4,
+        document_count: documents.filter((row) => !row.tombstoned_at).length,
+        document_count_all: documents.length,
+        document_bytes: documents.reduce((total, row) => total + row.byte_length, 0),
+        document_chunk_count: documents.reduce((total, row) => total + row.chunk_count, 0),
+      },
+    };
+  }
+  async exportDocumentResearchDiagnostics(projectId: string): Promise<string> {
+    return `/fixture/diagnostics/document-research-${projectId}.json`;
+  }
+  async documents(projectId: string): Promise<ProjectDocument[]> {
+    return structuredClone(this.projectDocuments.get(projectId) ?? []);
   }
   async memorySettings(
     projectId: string,

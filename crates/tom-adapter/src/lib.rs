@@ -62,6 +62,36 @@ pub struct RankedAnchor {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RankedDocumentChunk {
+    pub id: String,
+    pub document_id: String,
+    pub display_name: String,
+    pub chunk_index: u64,
+    pub start: u64,
+    pub end: u64,
+    pub excerpt_start: u64,
+    pub excerpt_end: u64,
+    pub text: String,
+    pub text_sha256: String,
+    pub excerpt_sha256: String,
+    pub semantic_score: f64,
+    pub best_chunk_score: f64,
+    pub lexical_score: f64,
+    pub dense_rank: u64,
+    pub lexical_rank: Option<u64>,
+    pub rrf_score: f64,
+    pub rank: u64,
+    pub score_space: String,
+    pub packet_eligible: bool,
+    pub structural_signature: Option<Value>,
+    pub truncated: bool,
+    #[serde(default)]
+    pub clause_identifiers: Vec<String>,
+    #[serde(default)]
+    pub matched_clause_identifier: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RankPreview {
     pub activated_branch_ids: Vec<String>,
     pub candidate_trace: Vec<Value>,
@@ -70,7 +100,19 @@ pub struct RankPreview {
     pub activation_id: String,
     pub triggers: Vec<Value>,
     pub ranked_anchors: Vec<RankedAnchor>,
+    #[serde(default)]
+    pub ranked_document_chunks: Vec<RankedDocumentChunk>,
+    #[serde(default)]
+    pub document_research_trace: Option<Value>,
     pub checkpoint_digest: String,
+    #[serde(default)]
+    pub structural_load_mode: String,
+    #[serde(default)]
+    pub structural_analysis: Option<Value>,
+    #[serde(default)]
+    pub shadow_structural_retrieval: Vec<Value>,
+    #[serde(default)]
+    pub parser_glossary: Option<Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -153,6 +195,26 @@ impl GatewayClient {
             ),
         )
     }
+    pub fn preview_rank_with_glossary_titles(
+        &self,
+        project_id: &str,
+        user_text: &str,
+        k: u64,
+        max_chars: u64,
+        declared_glossary_titles: &[String],
+    ) -> Result<RankPreview> {
+        self.request(
+            "POST",
+            "/preview/rank",
+            Some(json!({
+                "project_id": project_id,
+                "user_text": user_text,
+                "k": k,
+                "max_chars": max_chars,
+                "declared_glossary_titles": declared_glossary_titles,
+            })),
+        )
+    }
     pub fn commit_turn(
         &self,
         project_id: &str,
@@ -188,6 +250,29 @@ impl GatewayClient {
             "/memory/diagnostics",
             Some(json!({"project_id":project_id,"after_event_id":after_event_id})),
         )
+    }
+    pub fn ingest_document(&self, payload: Value) -> Result<Value> {
+        self.request("POST", "/document/ingest", Some(payload))
+    }
+    pub fn list_documents(&self, project_id: &str, include_withdrawn: bool) -> Result<Value> {
+        self.request(
+            "POST",
+            "/document/list",
+            Some(json!({
+                "project_id": project_id,
+                "include_withdrawn": include_withdrawn,
+            })),
+        )
+    }
+    pub fn get_document(&self, project_id: &str, document_id: &str) -> Result<Value> {
+        self.request(
+            "POST",
+            "/document/get",
+            Some(json!({"project_id":project_id,"document_id":document_id})),
+        )
+    }
+    pub fn withdraw_document(&self, payload: Value) -> Result<Value> {
+        self.request("POST", "/document/withdraw", Some(payload))
     }
     pub fn restore_checkpoint(&self, project_id: &str, checkpoint_id: &str) -> Result<Value> {
         self.request(

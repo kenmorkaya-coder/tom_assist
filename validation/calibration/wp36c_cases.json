@@ -1,0 +1,94 @@
+{
+  "schema_version": "tom-assist-wp36c-cases/1.0",
+  "label": "PRE-REGISTERED-SHADOW-CORRECTION-NOT-A-GATE",
+  "history_experiments": [
+    {
+      "id": "HX-FREQ-REC",
+      "text": "The pump pattern has appeared repeatedly across the observation window.",
+      "left": {"id":"many_moderate","similarities":[0.62,0.64,0.66,0.63,0.65,0.64]},
+      "right": {"id":"one_strong_return","similarities":[0.10,0.12,0.11,0.99]},
+      "expect": ["left.frequency > right.frequency","right.recurrence > left.recurrence"]
+    },
+    {
+      "id": "HX-PERSIST",
+      "text": "The condition continues through the most recent observations.",
+      "left": {"id":"recent_continuation","similarities":[0.15,0.18,0.82,0.86]},
+      "right": {"id":"old_continuation","similarities":[0.82,0.86,0.15,0.18]},
+      "expect": ["left.frequency == right.frequency","left.recurrence == right.recurrence","left.persistence > right.persistence"]
+    },
+    {
+      "id": "HX-BURST",
+      "text": "Activity changes sharply between the earlier and recent intervals.",
+      "left": {"id":"rising","similarities":[0.15,0.18,0.82,0.86]},
+      "right": {"id":"falling","similarities":[0.82,0.86,0.15,0.18]},
+      "control": {"id":"steady","similarities":[0.49,0.51,0.50,0.50]},
+      "expect": ["left.burstiness == right.burstiness","left.burstiness > control.burstiness","left.burstiness_signed > 0","right.burstiness_signed < 0"]
+    },
+    {
+      "id": "HX-NOVELTY",
+      "text": "The current event resembles one old case but differs from the history as a whole.",
+      "left": {"id":"individual_return_centroid_far","similarities":[0.93,0.18,0.16],"history_centroid_similarity":0.35},
+      "right": {"id":"individual_return_centroid_near","similarities":[0.93,0.18,0.16],"history_centroid_similarity":0.88},
+      "expect": ["left.recurrence == right.recurrence","left.novelty > right.novelty"]
+    }
+  ],
+  "driver_cases": [
+    {
+      "id":"DRV-T","expected":"threat_load",
+      "text":"The signed report contradicts the draft and rejects the unsafe release.",
+      "signals":{"contradictions":[{"quote":"contradicts the draft","confidence":0.91}],"rejections":[{"quote":"rejects the unsafe release","confidence":0.87}]},
+      "expected_direct":{"threat_load":0.91,"sustenance_potential":0.0,"procreation_potential":0.0},
+      "expected_support_counts":{"threat_load":2,"sustenance_potential":0,"procreation_potential":0}
+    },
+    {
+      "id":"DRV-S","expected":"sustenance_potential",
+      "text":"The repair is complete; remember the stable configuration from yesterday.",
+      "signals":{"completions":[{"quote":"repair is complete","confidence":0.93}],"memory_references":[{"quote":"remember the stable configuration from yesterday","confidence":0.84}]},
+      "expected_direct":{"threat_load":0.0,"sustenance_potential":0.93,"procreation_potential":0.0},
+      "expected_support_counts":{"threat_load":0,"sustenance_potential":2,"procreation_potential":0}
+    },
+    {
+      "id":"DRV-P","expected":"procreation_potential",
+      "text":"Next quarter we may create a new service and infer a broader opportunity.",
+      "signals":{"future_references":[{"quote":"Next quarter","confidence":0.89}],"inferences":[{"quote":"infer a broader opportunity","confidence":0.86}]},
+      "expected_direct":{"threat_load":0.0,"sustenance_potential":0.0,"procreation_potential":0.89},
+      "expected_support_counts":{"threat_load":0,"sustenance_potential":0,"procreation_potential":2}
+    },
+    {
+      "id":"DRV-MIX","expected":"mixed",
+      "text":"The old path is rejected; preserve the completed repair and consider a future prototype.",
+      "signals":{"rejections":[{"quote":"old path is rejected","confidence":0.82}],"completions":[{"quote":"completed repair","confidence":0.78}],"future_references":[{"quote":"future prototype","confidence":0.88}]},
+      "expected_direct":{"threat_load":0.82,"sustenance_potential":0.78,"procreation_potential":0.88},
+      "expected_support_counts":{"threat_load":1,"sustenance_potential":1,"procreation_potential":1}
+    },
+    {
+      "id":"DRV-NONE","expected":"none",
+      "text":"Please format the short project note clearly.",
+      "signals":{},
+      "expected_direct":{"threat_load":0.0,"sustenance_potential":0.0,"procreation_potential":0.0},
+      "expected_support_counts":{"threat_load":0,"sustenance_potential":0,"procreation_potential":0}
+    }
+  ],
+  "corroboration_cases": [
+    {"id":"COR-C","channel":"L_contradiction","expected":true,"text":"The signed record contradicts the earlier claim.","structural":{"L_contradiction":0.88},"signals":{"contradictions":[{"quote":"contradicts the earlier claim","confidence":0.88}]}},
+    {"id":"COR-I","channel":"L_inference","expected":true,"text":"From these measurements we infer that the chamber is heating.","structural":{"L_inference":0.86},"signals":{"inferences":[{"quote":"infer that the chamber is heating","confidence":0.86}]}},
+    {"id":"COR-C-NONE","channel":"L_contradiction","expected":false,"text":"The glossary explains the word contradiction without asserting one.","structural":{},"signals":{}},
+    {"id":"COR-I-NONE","channel":"L_inference","expected":false,"text":"The index contains a chapter titled inference methods.","structural":{},"signals":{}}
+  ],
+  "direction_case": {
+    "id":"DIR-02",
+    "forward":"Opening valve Alpha causes tank Beta to fill.",
+    "reverse":"Tank Beta filling causes valve Alpha to open.",
+    "forward_relation":{"cause":"Alpha","effect":"Beta"},
+    "reverse_relation":{"cause":"Beta","effect":"Alpha"},
+    "structural":{"S_dependency":0.80,"S_topology":0.55,"L_inference":0.35,"T_sequence":0.40}
+  },
+  "long_tail_case": {
+    "id":"TAIL-02","expected":"L_inference",
+    "neutral_sentence":"The appendix repeats neutral formatting guidance and ordinary examples. ",
+    "neutral_repetitions":55,
+    "load_bearing":"Therefore the measurements imply that the sealed chamber is heating.",
+    "structural":{"L_inference":0.90},
+    "signals":{"inferences":[{"quote":"imply that the sealed chamber is heating","confidence":0.90}]}
+  }
+}

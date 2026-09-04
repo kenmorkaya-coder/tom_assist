@@ -122,6 +122,14 @@ pub enum Method {
     SelfReportSend,
     #[serde(rename = "conversation.self_report.label")]
     SelfReportLabel,
+    #[serde(rename = "document.ingest")]
+    DocumentIngest,
+    #[serde(rename = "document.list")]
+    DocumentList,
+    #[serde(rename = "document.get")]
+    DocumentGet,
+    #[serde(rename = "document.withdraw")]
+    DocumentWithdraw,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -174,6 +182,334 @@ pub struct TomCapabilities {
     pub front_row_capacity: u64,
     pub teach_on_conflict: bool,
     pub preview_channels: Vec<String>,
+    #[serde(default)]
+    pub structural_load_mode: String,
+    #[serde(default)]
+    pub structural_load_compiler_version: String,
+    #[serde(default)]
+    pub load_evidence_policy: String,
+    #[serde(default)]
+    pub authoritative_requires_all_17_channels_evidenced: bool,
+    #[serde(default)]
+    pub authoritative_disallowed_zero_kinds: Vec<String>,
+    #[serde(default)]
+    pub strict_positive_load_policy: String,
+    #[serde(default)]
+    pub authoritative_requires_all_17_channels_positive: bool,
+    #[serde(default)]
+    pub semantic_embedding_version: String,
+    #[serde(default)]
+    pub local_gemma_candidate_required: bool,
+    #[serde(default)]
+    pub model_generated_load_values: bool,
+    #[serde(default)]
+    pub feeling_wheel_used: bool,
+    #[serde(default)]
+    pub supports_documents: bool,
+    #[serde(default)]
+    pub document_chunking_version: String,
+    #[serde(default)]
+    pub document_embedding_version: String,
+    #[serde(default)]
+    pub document_max_source_chars: u64,
+    #[serde(default)]
+    pub document_max_chunks: u64,
+    #[serde(default)]
+    pub document_structural_parsing: bool,
+    #[serde(default)]
+    pub document_packet_admission: bool,
+    #[serde(default)]
+    pub document_packet_admission_version: String,
+    #[serde(default)]
+    pub supports_document_declared_structure: bool,
+    #[serde(default)]
+    pub document_declared_structure_version: String,
+    #[serde(default)]
+    pub parser_glossary_enabled: bool,
+    #[serde(default)]
+    pub parser_glossary_version: String,
+    #[serde(default)]
+    pub parser_glossary_term_count: u64,
+    #[serde(default)]
+    pub parser_glossary_sha256: String,
+    #[serde(default)]
+    pub parser_glossary_max_terms: u64,
+    #[serde(default)]
+    pub parser_glossary_max_characters: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DocumentChunk {
+    pub chunk_index: u64,
+    pub start: u64,
+    pub end: u64,
+    pub text_sha256: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ProjectDocument {
+    pub document_id: String,
+    pub display_name: String,
+    pub content_sha256: String,
+    pub content: String,
+    pub byte_length: u64,
+    pub media_type: String,
+    pub chunking_version: String,
+    pub embedding_version: String,
+    pub ingested_tick: u64,
+    pub tombstoned_at: Option<String>,
+    pub chunk_count: u64,
+    pub chunks: Vec<DocumentChunk>,
+    pub declared_structure: Option<DeclaredDocumentStructure>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredTextSpan {
+    pub start: u64,
+    pub end: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredAddress {
+    pub entry_id: String,
+    pub kind: String,
+    pub identifier: String,
+    pub display_identifier: String,
+    pub title: String,
+    pub span: DeclaredTextSpan,
+    pub parent_entry_id: Option<String>,
+    pub status: String,
+    pub malformed_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredClauseIndex {
+    pub version: String,
+    pub entries: Vec<DeclaredAddress>,
+    pub entry_count: u64,
+    pub valid_count: u64,
+    pub malformed_count: u64,
+    pub index_digest: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredReference {
+    pub reference_id: String,
+    pub kind: String,
+    pub reference_text: String,
+    pub span: DeclaredTextSpan,
+    pub named_identifier: Option<String>,
+    pub outcome: String,
+    pub target_entry_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredReferences {
+    pub version: String,
+    pub references: Vec<DeclaredReference>,
+    pub reference_count: u64,
+    pub resolved_count: u64,
+    pub unresolved_absent_count: u64,
+    pub unparsed_count: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredTerm {
+    pub term_id: String,
+    pub surface: String,
+    pub surface_span: DeclaredTextSpan,
+    pub defining_clause_entry_id: String,
+    pub defining_clause_identifier: String,
+    pub definition_span: DeclaredTextSpan,
+    pub definition_body: String,
+    pub entry_digest: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredTermBinding {
+    pub binding_id: String,
+    pub term_id: String,
+    pub surface: String,
+    pub span: DeclaredTextSpan,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredTerms {
+    pub version: String,
+    pub case_rule: String,
+    pub surface_forms_only_for_prompt: bool,
+    pub terms: Vec<DeclaredTerm>,
+    pub term_count: u64,
+    pub bindings: Vec<DeclaredTermBinding>,
+    pub binding_count: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredPrecedenceRelation {
+    pub relation_id: String,
+    pub relation_kind: String,
+    pub source_entry_id: String,
+    pub higher_identifier: Option<String>,
+    pub lower_identifier: Option<String>,
+    pub target_identifier: Option<String>,
+    pub target_outcome: Option<String>,
+    pub span: DeclaredTextSpan,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredPrecedence {
+    pub version: String,
+    pub relations: Vec<DeclaredPrecedenceRelation>,
+    pub relation_count: u64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredCausationBoundary {
+    pub derived: bool,
+    pub reason: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct DeclaredDocumentStructure {
+    pub schema_version: String,
+    pub source_text_sha256: String,
+    pub clause_index: DeclaredClauseIndex,
+    pub references: DeclaredReferences,
+    pub defined_terms: DeclaredTerms,
+    pub declared_precedence: DeclaredPrecedence,
+    pub causation: DeclaredCausationBoundary,
+    pub structure_digest: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EvidenceSpan {
+    pub start: u64,
+    pub end: u64,
+    pub quote: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StructuralEvidenceFact {
+    pub evidence: EvidenceSpan,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StructuralEntity {
+    pub id: String,
+    pub label: String,
+    pub kind: StructuralEntityKind,
+    pub evidence: EvidenceSpan,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StructuralEntityKind {
+    Actor,
+    Object,
+    Concept,
+    Decision,
+    Constraint,
+    Event,
+    State,
+    Outcome,
+    Work,
+    Unknown,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StructuralOrientation {
+    pub id: String,
+    pub source_entity_id: String,
+    pub target_entity_id: String,
+    pub kind: OrientationKind,
+    pub polarity: StructuralPolarity,
+    pub modality: StructuralModality,
+    pub negated: bool,
+    pub evidence: EvidenceSpan,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OrientationKind {
+    Supports,
+    Opposes,
+    DependsOn,
+    Contains,
+    Owns,
+    Controls,
+    Targets,
+    RefersTo,
+    Precedes,
+    Follows,
+    Supersedes,
+    NeutralToward,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StructuralPolarity {
+    Positive,
+    Negative,
+    Neutral,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum StructuralModality {
+    Asserted,
+    Inferred,
+    Tentative,
+    Hypothetical,
+    Questioned,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StructuralCausalRelation {
+    pub id: String,
+    pub cause_entity_id: String,
+    pub effect_entity_id: String,
+    pub kind: CausalRelationKind,
+    pub modality: StructuralModality,
+    pub negated: bool,
+    pub evidence: EvidenceSpan,
+    pub confidence: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum CausalRelationKind {
+    Causes,
+    Enables,
+    Prevents,
+    ContributesTo,
+    Requires,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StructuralSignals {
+    pub rules: Vec<StructuralEvidenceFact>,
+    pub contradictions: Vec<StructuralEvidenceFact>,
+    pub inferences: Vec<StructuralEvidenceFact>,
+    pub sequences: Vec<StructuralEvidenceFact>,
+    pub memory_references: Vec<StructuralEvidenceFact>,
+    pub future_references: Vec<StructuralEvidenceFact>,
+    pub completions: Vec<StructuralEvidenceFact>,
+    pub rejections: Vec<StructuralEvidenceFact>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct StructuralCandidate {
+    pub schema_version: String,
+    pub source_text_sha256: String,
+    pub entities: Vec<StructuralEntity>,
+    pub orientations: Vec<StructuralOrientation>,
+    pub causal_relations: Vec<StructuralCausalRelation>,
+    pub signals: StructuralSignals,
+    pub unknown_fields: Vec<String>,
+    pub confidence: f64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

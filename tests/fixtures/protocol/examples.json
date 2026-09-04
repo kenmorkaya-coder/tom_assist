@@ -20,7 +20,7 @@
     "supports_system_field": false
   },
   "tom_capabilities": {
-    "preview_channels": ["lexical", "structural_geometry"],
+    "preview_channels": ["lexical", "structural_geometry", "document_dense"],
     "commit_dynamics": ["step", "rgm_write", "leaf_vec_teach", "usage_rotation", "front_row_reseat"],
     "front_row_capacity": 4096,
     "teach_on_conflict": true,
@@ -48,7 +48,85 @@
       "TOM_TAU1": "4.0",
       "TOM_KAPPA_DECAY": "0.03"
     },
-    "kappa_decay_source": "profile_env_reader_wp18_effective_0.03"
+    "kappa_decay_source": "profile_env_reader_wp18_effective_0.03",
+    "structural_load_mode": "legacy",
+    "structural_load_compiler_version": "tom-assist-evidence-load17/1.2",
+    "load_evidence_policy": "tom-assist-evidenced-load17/1.0",
+    "authoritative_requires_all_17_channels_evidenced": true,
+    "authoritative_disallowed_zero_kinds": ["clamped_negative"],
+    "strict_positive_load_policy": "tom-assist-strict-positive-load17/1.0",
+    "authoritative_requires_all_17_channels_positive": true,
+    "semantic_embedding_version": "minilm-l6-v2/384d-multivector/2.0",
+    "local_gemma_candidate_required": false,
+    "model_generated_load_values": false,
+    "feeling_wheel_used": false,
+    "supports_documents": true,
+    "document_chunking_version": "minilm-document-token-sentence-max192-overlap32/1.0",
+    "document_embedding_version": "minilm-l6-v2/384d-multivector/2.0",
+    "document_max_source_chars": 2000000,
+    "document_max_chunks": 4096,
+    "document_structural_parsing": false,
+    "document_packet_admission": true,
+    "document_packet_admission_version": "minilm-document-hybrid-packet-admission/1.0",
+    "supports_document_declared_structure": true,
+    "document_declared_structure_version": "tom-assist-declared-structure/1.0",
+    "parser_glossary_enabled": false,
+    "parser_glossary_version": "tom-assist-parser-glossary/1.0",
+    "parser_glossary_term_count": 0,
+    "parser_glossary_sha256": "sha256:5d089df285bafeb2d5aafb9644fd57124d79c38b444450da1a2634ece42b356e",
+    "parser_glossary_max_terms": 64,
+    "parser_glossary_max_characters": 2048
+  },
+  "declared_structure": {
+    "schema_version": "tom-assist-declared-structure/1.0",
+    "source_text_sha256": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "clause_index": {
+      "version": "tom-assist-clause-index/1.0",
+      "entries": [],
+      "entry_count": 0,
+      "valid_count": 0,
+      "malformed_count": 0,
+      "index_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "references": {
+      "version": "tom-assist-reference-resolution/1.0",
+      "references": [],
+      "reference_count": 0,
+      "resolved_count": 0,
+      "unresolved_absent_count": 0,
+      "unparsed_count": 0
+    },
+    "defined_terms": {
+      "version": "tom-assist-defined-term-binding/1.0",
+      "case_rule": "exact-unicode-codepoints-case-sensitive-whole-surface/1.0",
+      "surface_forms_only_for_prompt": true,
+      "terms": [],
+      "term_count": 0,
+      "bindings": [],
+      "binding_count": 0
+    },
+    "declared_precedence": {
+      "version": "tom-assist-declared-precedence/1.0",
+      "relations": [],
+      "relation_count": 0
+    },
+    "causation": {"derived": false, "reason": "not_self_declared"},
+    "structure_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "document": {
+    "document_id": "document-0123456789abcdef0123456789abcdef",
+    "display_name": "Design notes.md",
+    "content_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+    "content": "The east brace controls drift.",
+    "byte_length": 30,
+    "media_type": "text/markdown",
+    "chunking_version": "minilm-document-token-sentence-max192-overlap32/1.0",
+    "embedding_version": "minilm-l6-v2/384d-multivector/2.0",
+    "ingested_tick": 4707,
+    "tombstoned_at": null,
+    "chunk_count": 1,
+    "declared_structure": null,
+    "chunks": [{"chunk_index": 0, "start": 0, "end": 30, "text_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}]
   },
   "state_object": {
     "id": "10000000-0000-4000-8000-000000000001",
@@ -89,7 +167,7 @@
     "tom_checkpoint_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
     "draft_hash": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
     "policy_version": "context-policy/1.0",
-    "renderer_version": "authoritative-state/1.1",
+    "renderer_version": "authoritative-state/1.3",
     "provider_capabilities": {
       "provider_surface": "chatgpt-web",
       "visible_prompt_injection": true,
@@ -123,6 +201,21 @@
     "operation": "CREATE",
     "object": {"type": "DECISION", "title": "Candidate only", "status": "proposed"},
     "tom_check": {"result": "compatible", "conflicts": [], "requires_user_confirmation": true}
+  },
+  "structural_candidate": {
+    "schema_version": "tom-assist-structural-candidate/1.0",
+    "source_text_sha256": "sha256:a5f2d1d8590f6fdd2273c9ff184444c5543dcd6b826bb2753e54d529313a8192",
+    "entities": [
+      {"id": "brake", "label": "brake", "kind": "object", "evidence": {"start": 4, "end": 9, "quote": "brake"}, "confidence": 1.0},
+      {"id": "cart", "label": "cart", "kind": "object", "evidence": {"start": 23, "end": 27, "quote": "cart"}, "confidence": 1.0}
+    ],
+    "orientations": [],
+    "causal_relations": [
+      {"id": "brake_prevents_cart", "cause_entity_id": "brake", "effect_entity_id": "cart", "kind": "prevents", "modality": "asserted", "negated": false, "evidence": {"start": 0, "end": 40, "quote": "The brake prevents the cart from moving."}, "confidence": 1.0}
+    ],
+    "signals": {"rules": [], "contradictions": [], "inferences": [], "sequences": [], "memory_references": [], "future_references": [], "completions": [], "rejections": []},
+    "unknown_fields": [],
+    "confidence": 1.0
   },
   "intervention": {
     "id": "70000000-0000-4000-8000-000000000001",

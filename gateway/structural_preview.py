@@ -1,7 +1,7 @@
 """Product fusion/trace adapter; e9fdef81c upstream arithmetic is canonical."""
 from __future__ import annotations
 
-POLICY_VERSION = "context-policy/1.2"
+POLICY_VERSION = "context-policy/1.3"
 W_LEAF = 0.6  # Review 4 calibration prior, not a product efficacy claim.
 RRF_K = 60
 

@@ -125,7 +125,7 @@ def main():
                "TOM_ASSIST_GATEWAY_SOCKET":str(root / "gateway.sock"),"TOM_ASSISTD_SOCKET":str(root / "assistd.sock"),
                "TOM_ASSIST_OAUTH_BROKER_SOCKET":str(fixture_socket)}
         commands = [
-            [str(repo / ".venv-gateway/bin/python"), str(repo / "gateway/tom_gateway.py"), "--socket", env["TOM_ASSIST_GATEWAY_SOCKET"], "--data-dir", str(data)],
+            [str(repo / ".venv-gateway/bin/python"), "-m", "gateway.evidence_gateway", "--socket", env["TOM_ASSIST_GATEWAY_SOCKET"], "--data-dir", str(data)],
             [str(repo / "target/release/tom-assistd"), env["TOM_ASSISTD_SOCKET"], str(data / "tom-assist.sqlite3"), env["TOM_ASSIST_GATEWAY_SOCKET"]],
             [str(app / "Contents/MacOS/Tom Assist")],
         ]

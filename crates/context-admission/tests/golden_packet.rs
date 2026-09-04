@@ -1,6 +1,6 @@
 use tom_assist_context_admission::{
-    AdmissionRequest, Candidate, CandidatePool, ContextAdmissionEngine, IntegrityStatus,
-    ScoreComponents,
+    AdmissionRequest, BudgetProfile, Candidate, CandidatePool, ContextAdmissionEngine,
+    IntegrityStatus, ScoreComponents,
 };
 use tom_assist_protocol::{ModelInternalBias, ProviderCapabilities, StateStatus, StateType};
 
@@ -65,6 +65,7 @@ fn request(mut candidates: Vec<Candidate>) -> AdmissionRequest {
         },
         candidates,
         budget_tokens: 500,
+        budget_profile: BudgetProfile::Standard,
     }
 }
 
@@ -165,11 +166,55 @@ fn golden_packet_renderer_manifest_and_digest_are_byte_stable() {
     assert_eq!(first.packet.excluded.len(), 2);
     assert_eq!(
         first.packet.packet_digest,
-        "sha256:261d19c73d8aaaf4ed6c83fd65a28e1a739649794ec8b7cfcb89128c2eb266c9"
+        "sha256:637b046f52e8c569c922e1fd6325ba46f8b6d1c653ff546a336ece1129c8bcfd"
     );
     assert!(first.composer_text.ends_with(
         "[CURRENT_USER_REQUEST]\nWhat should I implement next?\nKeep the answer concise."
     ));
+}
+
+#[test]
+fn fresh_project_first_packet_is_the_user_draft_without_an_authority_scaffold() {
+    let request = request(vec![]);
+    let draft = request.user_draft.clone();
+    let result = ContextAdmissionEngine::default().build(request).unwrap();
+
+    assert_eq!(result.state_block, "");
+    assert_eq!(result.composer_text, draft);
+    assert!(result.packet.sections.is_empty());
+    assert_eq!(result.packet.estimated_tokens, 0);
+    assert_eq!(result.packet.renderer_version, "authoritative-state/1.3");
+    assert!(!result.composer_text.contains("TOM_ASSIST_STATE"));
+}
+
+#[test]
+fn admitted_document_evidence_is_cited_but_never_masquerades_as_a_runtime_anchor() {
+    let mut document = candidate(
+        "document-deed:chunk:7",
+        StateType::Evidence,
+        "The Contractor must submit the plan before starting work.",
+    );
+    document.pool = CandidatePool::Evidence;
+    document.authority = "user_supplied_document".into();
+    document.provenance = Some("SCAW deed | document-deed:chunk:7 | source chars 120-180".into());
+    document.scores.semantic_relevance = 0.81;
+
+    let result = ContextAdmissionEngine::default()
+        .build(request(vec![document]))
+        .unwrap();
+    assert!(result.state_block.contains("EVIDENCE_BOUNDARY"));
+    assert!(
+        result
+            .state_block
+            .contains("[state_id=document-deed:chunk:7]")
+    );
+    assert!(result.state_block.contains("source chars 120-180"));
+    assert!(result.packet.retrieved_anchor_ids.is_empty());
+    assert_eq!(result.packet.sections[0].section_type, "EVIDENCE_BOUNDARY");
+    assert_eq!(
+        result.packet.sections[0].items[0].authority,
+        "user_supplied_document"
+    );
 }
 
 #[test]
@@ -256,5 +301,16 @@ fn zero_budget_selects_the_documented_default_and_large_values_cap_at_twelve_hun
             .trace
             .budget_tokens,
         1_200
+    );
+    let mut research = request(vec![]);
+    research.budget_tokens = 99_000;
+    research.budget_profile = BudgetProfile::DocumentResearch;
+    assert_eq!(
+        ContextAdmissionEngine::default()
+            .build(research)
+            .unwrap()
+            .trace
+            .budget_tokens,
+        9_000
     );
 }

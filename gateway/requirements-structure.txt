@@ -1,0 +1,7 @@
+# Isolated local structure worker. Never install these into .venv-gateway or tom_master.
+torch==2.10.0
+transformers==5.5.3
+sentencepiece==0.2.1
+mlx==0.31.1
+mlx-metal==0.31.1
+mlx-lm==0.31.2

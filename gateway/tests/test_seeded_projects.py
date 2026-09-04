@@ -73,9 +73,8 @@ def test_corrupted_seed_copy_fails_project_creation_closed(tmp_path: Path) -> No
         handle.seek(-1, 2)
         handle.write(b"0" if final != b"0" else b"1")
 
-    gateway = TomGateway(tmp_path / "data", TOM_MASTER, seed_artifact=corrupted)
-    with pytest.raises(ValueError, match="seed artifact sha256 mismatch"):
-        gateway.project("must-fail-closed")
+    with pytest.raises(ValueError, match="document Tree seed digest mismatch"):
+        TomGateway(tmp_path / "data", TOM_MASTER, seed_artifact=corrupted)
     assert not (tmp_path / "data" / "projects" / "must-fail-closed" / "tom" / "tree_state.json").exists()
 
 
