@@ -477,7 +477,7 @@ fn prepare_is_snapshot_bound_and_send_is_idempotent() {
     let service = service();
     let prepared = prepare(&service, "Keep the transaction pure.");
     assert_eq!(prepared.packet.project_state_version, 0);
-    assert_eq!(prepared.packet.renderer_version, "authoritative-state/1.2");
+    assert_eq!(prepared.packet.renderer_version, "authoritative-state/1.3");
     let request = SendTurnRequest {
         project_id: "project-a".into(),
         packet_digest: prepared.packet.packet_digest.clone(),

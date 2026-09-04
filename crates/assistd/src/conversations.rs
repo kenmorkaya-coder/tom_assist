@@ -27,6 +27,28 @@ fn field(value: &Value, name: &str) -> Result<String> {
         .map(str::to_owned)
         .ok_or_else(|| ServiceError::Invalid(format!("{name} is required")))
 }
+
+fn prepared_exchange_view(
+    record: &ProviderExchange,
+    sections: &[PacketSection],
+    excluded: &[ExcludedItem],
+) -> Value {
+    let mut value = json!(record);
+    value["context_preview"] = json!({
+        "sections": sections,
+        "excluded": excluded,
+    });
+    value
+}
+
+fn persisted_prepared_exchange_view(store: &Store, record: &ProviderExchange) -> Result<Value> {
+    let context = store
+        .context_run_by_digest(&record.project_id, &record.packet_digest)?
+        .ok_or(ServiceError::UnknownPacket)?;
+    let sections: Vec<PacketSection> = serde_json::from_str(&context.selected_json)?;
+    let excluded: Vec<ExcludedItem> = serde_json::from_str(&context.excluded_json)?;
+    Ok(prepared_exchange_view(record, &sections, &excluded))
+}
 struct Inflight<'a>(&'a Mutex<std::collections::HashSet<String>>, String);
 impl Drop for Inflight<'_> {
     fn drop(&mut self) {
@@ -91,7 +113,7 @@ impl AssistService {
                 if existing.session_id != session || existing.user_draft != draft {
                     return Err(ServiceError::PacketMismatch);
                 }
-                return Ok(json!(existing));
+                return persisted_prepared_exchange_view(&store, &existing);
             }
             store.conversation_turns(project, &session)?
         };
@@ -136,7 +158,11 @@ impl AssistService {
             .lock()
             .unwrap()
             .prepare_provider_exchange(&record)?;
-        Ok(json!(record))
+        Ok(prepared_exchange_view(
+            &record,
+            &prepared.packet.sections,
+            &prepared.packet.excluded,
+        ))
     }
     pub fn conversation_send(&self, project: &str, payload: &Value, at: &str) -> Result<Value> {
         if payload["explicit_send"] != true {

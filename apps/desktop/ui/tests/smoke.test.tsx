@@ -71,6 +71,22 @@ describe("desktop project → capture → supersede → audit smoke", () => {
       ).toBe("4096"),
     );
   });
+  it("shows project-local front, long and document shelves without leaking documents", async () => {
+    const backend = new FakeDesktopBackend();
+    render(<App backend={backend} />);
+    await screen.findByRole("heading", { name: "Local Release Console" });
+    fireEvent.click(screen.getByRole("button", { name: "Memory" }));
+    await screen.findByRole("heading", { name: "Project deed.txt" });
+    expect(screen.getByText("3 / 4,096")).toBeTruthy();
+    expect(screen.getByText("7 permanent records")).toBeTruthy();
+    expect(screen.getByText("1 active documents")).toBeTruthy();
+    expect(screen.getByText(/belongs only to the selected project/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: /new project/i }));
+    await screen.findByRole("heading", { name: "New Project" });
+    await screen.findByText("No permanent documents in this project.");
+    expect(screen.queryByRole("heading", { name: "Project deed.txt" })).toBeNull();
+  });
   it("holds recovery import until verification and invalidates changed paths", async () => {
     const backend = new FakeDesktopBackend();
     const verify = vi.spyOn(backend, "verifyArchive");
@@ -133,6 +149,26 @@ describe("desktop project → capture → supersede → audit smoke", () => {
       chat.mock.calls.filter((c) => c[1] === "conversation.send"),
     ).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: "Preview packet" }));
+    await screen.findByRole("heading", {
+      name: "Evidence selected for your question",
+    });
+    expect(screen.getByText("4.2 Release checks")).toBeTruthy();
+    expect(screen.getByText("(a) verify the package; and")).toBeTruthy();
+    expect(screen.getByText("(b) record the receipt.")).toBeTruthy();
+    expect(screen.getByText("2 requirements in this selected clause")).toBeTruthy();
+    expect(
+      screen.getByText(
+        "This is a retrieved evidence subset, not a complete requirements inventory.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/1 contract excerpt is shown; 1 other contract candidate was excluded/),
+    ).toBeTruthy();
+    expect(screen.getByText("Retained contract source · chunk 4")).toBeTruthy();
+    expect(
+      (screen.getByText("Technical send details").closest("details") as HTMLDetailsElement)
+        .open,
+    ).toBe(false);
     await screen.findByLabelText("Outgoing provider prompt");
     expect(
       chat.mock.calls.filter((c) => c[1] === "conversation.send"),

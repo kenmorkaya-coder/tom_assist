@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -11,14 +13,21 @@ import pytest
 
 from gateway.document_ingestion import (
     DOCUMENT_CHUNKING_VERSION,
+    DOCUMENT_MAX_CHUNK_TOKENS,
     DOCUMENT_EMBEDDING_VERSION,
     MAX_DOCUMENT_CHUNKS,
     MAX_DOCUMENT_SOURCE_CHARS,
     decode_vector_f32,
+    encode_vector_f32,
+    rank_document_chunks_for_packet,
 )
 from gateway.evidence_gateway import EvidenceTomGateway
 from gateway.runtime_archive import digest_file, export_snapshot, import_snapshot, validate_snapshot
-from gateway.semantic_chunks import EMBEDDING_DIMENSION, build_token_chunks
+from gateway.semantic_chunks import (
+    EMBEDDING_DIMENSION,
+    build_semantic_profile,
+    build_token_chunks,
+)
 from gateway.structural_analysis import build_analysis, compile_load
 from gateway.tests.test_evidence_loads import (
     _Provider as StructureProvider,
@@ -42,6 +51,7 @@ class FixtureEmbeddingProvider:
         plan = build_token_chunks(
             text,
             offsets,
+            max_tokens=DOCUMENT_MAX_CHUNK_TOKENS,
             max_source_chars=MAX_DOCUMENT_SOURCE_CHARS,
             max_chunks=MAX_DOCUMENT_CHUNKS,
         )
@@ -115,6 +125,19 @@ def test_large_document_ingestion_is_inert_exact_complete_and_float32(tmp_path):
         assert len(row["passage_vector"].encode("ascii")) == 2_048
         assert row["analysis_digest"] is None
         assert row["load_signature_json"] is None
+
+
+def test_document_chunk_plan_reserves_retokenization_margin_and_is_linear_at_boundaries():
+    text = ("A requirement ends here.     " * 400) + "Final requirement."
+    offsets = [(match.start(), match.end()) for match in re.finditer(r"\S+", text)]
+    plan = build_token_chunks(
+        text, offsets, max_tokens=DOCUMENT_MAX_CHUNK_TOKENS,
+        max_source_chars=MAX_DOCUMENT_SOURCE_CHARS,
+        max_chunks=MAX_DOCUMENT_CHUNKS,
+    )
+    assert max(row["token_end"] - row["token_start"] for row in plan) <= 188
+    assert plan[0]["start"] == 0
+    assert plan[-1]["end"] == len(text)
 
 
 def test_originals_are_immutable_content_idempotent_and_names_do_not_alias(tmp_path):
@@ -200,7 +223,82 @@ def test_saturation_telemetry_distinguishes_ties_from_one_dominant_chunk():
     }
 
 
-def test_shadow_reports_document_dense_rank_but_never_serves_it_and_withdraws(tmp_path):
+def test_legacy_preview_admits_bounded_document_evidence_without_state_mutation(tmp_path):
+    embeddings = FixtureEmbeddingProvider(axis=0)
+    runtime = TomGateway(
+        tmp_path, document_embedding_provider=embeddings,
+    ).project("documents")
+    document = runtime.ingest_document(
+        "contract.txt", "Before starting work, the Contractor must submit the plan.",
+        "text/plain",
+    )
+    before = _state(runtime)
+    preview = runtime.preview_rank(
+        "What must the Contractor do before starting work?", 10, 2000,
+    )
+    assert _state(runtime) == before
+    assert preview["ranked_anchors"] == []
+    assert len(preview["ranked_document_chunks"]) == 1
+    ranked = preview["ranked_document_chunks"][0]
+    assert ranked["id"] == f'{document["document_id"]}:chunk:0'
+    assert ranked["document_id"] == document["document_id"]
+    assert ranked["display_name"] == "contract.txt"
+    assert ranked["text"] == "Before starting work, the Contractor must submit the plan."
+    assert ranked["packet_eligible"] is True
+    assert ranked["structural_signature"] is None
+    assert ranked["excerpt_start"] == ranked["start"] == 0
+    assert ranked["excerpt_end"] == ranked["end"]
+    assert ranked["excerpt_sha256"].startswith("sha256:")
+    assert preview == runtime.preview_rank(
+        "What must the Contractor do before starting work?", 10, 2000,
+    )
+    assert _state(runtime) == before
+
+
+def test_document_hybrid_rank_promotes_exact_clause_and_stops_at_next_clause():
+    query = "What must the contractor do before it starts construction work under the deed?"
+    vector = [1.0] + [0.0] * (EMBEDDING_DIMENSION - 1)
+    profile = build_semantic_profile(
+        query,
+        [{"start": 0, "end": len(query), "values": vector}],
+        model="fixture/minilm",
+        revision="fixture-v1",
+    )
+    distractor = "The Contractor performed early work under the deed."
+    relevant = (
+        "7.9 Long service levy\n\nBefore commencing any construction work under "
+        "this deed, the Contractor must pay the levy and produce evidence of "
+        "payment.\n\n11.3 Review of Project Plans\n\nUnrelated next clause."
+    )
+
+    def chunk(document_id, text):
+        return {
+            "document_id": document_id,
+            "chunk_index": 0,
+            "start": 0,
+            "end": len(text),
+            "text": text,
+            "text_sha256": "sha256:" + hashlib.sha256(text.encode()).hexdigest(),
+            "passage_vector": encode_vector_f32(vector),
+            "display_name": "deed.txt",
+        }
+
+    ranked = rank_document_chunks_for_packet(
+        query,
+        profile,
+        [chunk("document-a", distractor), chunk("document-b", relevant)],
+        k=10,
+        max_chars=2000,
+    )
+    assert ranked[0]["id"] == "document-b:chunk:0"
+    assert ranked[0]["dense_rank"] == 2
+    assert ranked[0]["lexical_rank"] == 1
+    assert ranked[0]["text"].startswith("7.9 Long service levy")
+    assert "must pay the levy and produce evidence" in ranked[0]["text"]
+    assert "11.3 Review" not in ranked[0]["text"]
+
+
+def test_shadow_reports_document_dense_rank_and_packet_eligibility_then_withdraws(tmp_path):
     embeddings = FixtureEmbeddingProvider(axis=0)
     structure = StructureProvider()
     gateway = EvidenceTomGateway(
@@ -221,11 +319,11 @@ def test_shadow_reports_document_dense_rank_but_never_serves_it_and_withdraws(tm
     assert report["document_chunk_count"] == 1
     assert report["chunks_that_would_displace_an_anchor"] == 1
     assert report["ranking"][0]["document_id"] == document["document_id"]
-    assert report["ranking"][0]["packet_eligible"] is False
+    assert report["ranking"][0]["packet_eligible"] is True
+    assert report["packet_admission_enabled"] is True
     assert report["ranking"][0]["structural_signature"] is None
-    assert all(
-        not row["id"].startswith("document-") for row in preview["ranked_anchors"]
-    )
+    assert preview["ranked_document_chunks"][0]["document_id"] == document["document_id"]
+    assert all(not row["id"].startswith("document-") for row in preview["ranked_anchors"])
     assert all(not branch.startswith("document-") for branch in preview["activated_branch_ids"])
     retained = runtime.withdraw_document(document["document_id"], "2026-09-03T00:00:00Z")
     assert retained["tombstoned_at"] == "2026-09-03T00:00:00Z"
@@ -235,6 +333,7 @@ def test_shadow_reports_document_dense_rank_but_never_serves_it_and_withdraws(tm
     assert after["shadow_retrieval_comparison"]["document_chunk_dense_channel"][
         "document_chunk_count"
     ] == 0
+    assert after["ranked_document_chunks"] == []
 
 
 def test_binary_non_utf8_and_implicit_mutations_are_refused_without_storage(tmp_path):
@@ -292,6 +391,33 @@ def test_document_protocol_routes_require_explicit_mutation_and_round_trip(tmp_p
     })
     assert status == 200
     assert withdrawn["tombstoned_at"] == "2026-09-03T00:00:00Z"
+
+
+def test_documents_and_diagnostics_are_strictly_project_local(tmp_path):
+    gateway = TomGateway(
+        tmp_path, document_embedding_provider=FixtureEmbeddingProvider(),
+    )
+    left = gateway.project("left-project")
+    right = gateway.project("right-project")
+    retained = left.ingest_document(
+        "left-only.md", "Only the left project may retrieve this requirement.",
+        "text/markdown",
+    )
+
+    assert [row["document_id"] for row in left.list_documents()] == [
+        retained["document_id"]
+    ]
+    assert right.list_documents() == []
+    assert left.state_dir != right.state_dir
+    assert left.library.db.execute("PRAGMA database_list").fetchone()[2] != (
+        right.library.db.execute("PRAGMA database_list").fetchone()[2]
+    )
+    assert left.memory_diagnostics()["document_count"] == 1
+    assert left.memory_diagnostics()["document_chunk_count"] == 1
+    assert right.memory_diagnostics()["document_count"] == 0
+    assert right.preview_rank("left project requirement", 10, 2000)[
+        "ranked_document_chunks"
+    ] == []
 
 
 def test_archive_preserves_documents_and_pre_wp39_archive_imports_empty(tmp_path):

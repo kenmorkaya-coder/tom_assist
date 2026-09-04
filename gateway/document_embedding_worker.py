@@ -14,6 +14,7 @@ sys.path.insert(0, str(ROOT))
 
 from gateway.document_ingestion import (  # noqa: E402
     DOCUMENT_WORKER_PROTOCOL,
+    DOCUMENT_MAX_CHUNK_TOKENS,
     MAX_DOCUMENT_CHUNKS,
     MAX_DOCUMENT_SOURCE_CHARS,
 )
@@ -59,6 +60,7 @@ def main():
             plan = build_token_chunks(
                 source_text,
                 offsets,
+                max_tokens=DOCUMENT_MAX_CHUNK_TOKENS,
                 max_source_chars=MAX_DOCUMENT_SOURCE_CHARS,
                 max_chunks=MAX_DOCUMENT_CHUNKS,
             )

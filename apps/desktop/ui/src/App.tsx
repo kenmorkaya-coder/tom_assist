@@ -9,6 +9,7 @@ import type {
 } from "./types";
 import { Chat } from "./Chat";
 import { Recovery } from "./Recovery";
+import { Memory } from "./Memory";
 
 type View =
   | "Overview"
@@ -17,10 +18,12 @@ type View =
   | "Audit"
   | "Settings"
   | "Diagnostics"
-  | "Chat";
+  | "Chat"
+  | "Memory";
 const views: View[] = [
   "Overview",
   "Chat",
+  "Memory",
   "Ledger",
   "Interventions",
   "Audit",
@@ -323,6 +326,9 @@ export function App({ backend = tauriBackend }: { backend?: DesktopBackend }) {
             backend={backend}
             onChanged={() => refresh()}
           />
+        )}
+        {view === "Memory" && active && (
+          <Memory key={active.id} projectId={active.id} backend={backend} />
         )}
         {view === "Diagnostics" && (
           <section>

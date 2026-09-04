@@ -332,7 +332,7 @@ def rank_document_chunks(
     document_chunks: Sequence[Mapping[str, Any]],
     query_profile: Mapping[str, Any] | None,
 ) -> dict[str, Any]:
-    """Rank inactive document chunks only in the dense semantic score space."""
+    """Rank document chunks in the diagnostic dense semantic score space."""
     anchors = [
         {
             "kind": "anchor",
@@ -380,7 +380,7 @@ def rank_document_chunks(
             **{key: value for key, value in row.items() if key != "kind"},
             "dense_rank_with_anchors": rank,
             "anchors_ranked_below": sum(anchor_rank > rank for anchor_rank in anchor_ranks),
-            "packet_eligible": False,
+            "packet_eligible": True,
             "structural_signature": None,
         })
     return {
@@ -393,7 +393,7 @@ def rank_document_chunks(
             row["anchors_ranked_below"] for row in ranked_documents
         ),
         "ranking": ranked_documents,
-        "packet_admission_enabled": False,
+        "packet_admission_enabled": True,
         "structural_channel_enabled": False,
     }
 

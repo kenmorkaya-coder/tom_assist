@@ -20,6 +20,20 @@ export interface Exchange {
   status: string;
   response_text?: string;
   error_code?: string;
+  context_preview?: {
+    sections: {
+      type: string;
+      items: {
+        state_id: string;
+        text: string;
+        authority: string;
+        structural_score: number;
+        semantic_score: number;
+        reason_selected: string;
+      }[];
+    }[];
+    excluded: { id: string; reason: string }[];
+  };
 }
 export interface ConversationView {
   session: Conversation;
@@ -38,6 +52,44 @@ export interface ProviderStatus {
   model?: string;
   streaming?: boolean;
   capabilities?: Record<string, unknown>;
+}
+
+function readableEvidence(text: string) {
+  const blocks = text
+    .trim()
+    .split(/\n\s*\n+/)
+    .map((block) => block.split("\n").map((line) => line.trim()).join(" "))
+    .filter(Boolean);
+  if (blocks.length <= 1) return { heading: "Selected project material", paragraphs: blocks };
+  return { heading: blocks[0], paragraphs: blocks.slice(1) };
+}
+
+function topLevelRequirementCount(text: string) {
+  const markers = [...text.matchAll(/^([ \t]*)\(([A-Za-z0-9]+)\)[ \t]+/gm)];
+  if (!markers.length || !/\b(?:must|must not|may not)\b/i.test(text)) return 0;
+  const shallowest = Math.min(...markers.map((match) => match[1].length));
+  return markers.filter((match) => match[1].length === shallowest).length;
+}
+
+function readableResponse(text: string) {
+  return text.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1");
+}
+
+function sectionLabel(section: string) {
+  const labels: Record<string, string> = {
+    EVIDENCE_BOUNDARY: "Contract evidence",
+    BINDING_CONSTRAINTS: "Project constraints",
+    HELD_DECISIONS: "Project decisions",
+    ACTIVE_OBJECTIVE: "Project objectives",
+    "REJECTED_OR_SUPERSEDED - DO NOT REVIVE WITHOUT EXPLICIT RECONSIDERATION": "Rejected or superseded paths",
+    "COMPLETED_WORK - DO NOT REPROPOSE AS OPEN": "Completed work",
+  };
+  return labels[section] ?? section.toLowerCase().replaceAll("_", " ");
+}
+
+function sourceLabel(id: string) {
+  const match = id.match(/^document-[^:]+:chunk:(\d+)$/);
+  return match ? `Retained contract source · chunk ${match[1]}` : "Retained project state";
 }
 
 export function Chat({
@@ -118,6 +170,20 @@ export function Chat({
   const waiting = view?.exchanges.some((row) =>
     ["sending", "evaluation_pending"].includes(row.exchange.status),
   );
+  const previewSections = prepared?.context_preview?.sections ?? [];
+  const evidenceSections = previewSections.filter(
+    (section) => section.type === "EVIDENCE_BOUNDARY",
+  );
+  const otherContextSections = previewSections.filter(
+    (section) => section.type !== "EVIDENCE_BOUNDARY",
+  );
+  const selectedEvidenceCount = evidenceSections.reduce(
+    (total, section) => total + section.items.length,
+    0,
+  );
+  const excludedEvidenceCount = (prepared?.context_preview?.excluded ?? []).filter(
+    (item) => item.id.startsWith("document-"),
+  ).length;
   useEffect(() => {
     if ((!waiting && !sending) || !view) return;
     const timer = setInterval(
@@ -248,7 +314,7 @@ export function Chat({
               <div class="chat-message assistant">
                 <strong>Assistant</strong>
                 {e.response_text ? (
-                  <p>{e.response_text}</p>
+                  <p>{readableResponse(e.response_text)}</p>
                 ) : (
                   <p role="status">
                     {e.status === "sending"
@@ -476,10 +542,77 @@ export function Chat({
           </button>
           {prepared && (
             <section class="chat-preview">
-              <h3>Review before sending</h3>
-              <p>Packet digest: {prepared.packet_digest}</p>
-              <details open>
-                <summary>Exactly what will be sent</summary>
+              <h3>Evidence selected for your question</h3>
+              <p class="chat-preview-intro">
+                {evidenceSections.some((section) => section.items.length)
+                  ? "Tom Assist found the following project material. Review it before you choose Send with Tom. Nothing has been sent yet."
+                  : otherContextSections.some((section) => section.items.length)
+                    ? "Tom Assist found retained project context but no document evidence for this question. Nothing has been sent yet."
+                    : "No retained project material was selected. Your message will be sent as written if you choose Send with Tom."}
+              </p>
+              {!!selectedEvidenceCount && (
+                <div class="chat-preview-coverage" role="note">
+                  <strong>
+                    This is a retrieved evidence subset, not a complete requirements inventory.
+                  </strong>
+                  <p>
+                    {selectedEvidenceCount} contract excerpt
+                    {selectedEvidenceCount === 1 ? " is" : "s are"} shown
+                    {excludedEvidenceCount
+                      ? `; ${excludedEvidenceCount} other contract candidate${excludedEvidenceCount === 1 ? " was" : "s were"} excluded by the packet budget.`
+                      : "."}
+                    {" "}Tom Assist has not counted every requirement in the deed.
+                  </p>
+                </div>
+              )}
+              <div class="chat-preview-evidence" aria-label="Selected project evidence">
+                {evidenceSections.map((section) =>
+                  section.items.map((item) => {
+                    const evidence = readableEvidence(item.text);
+                    const requirementCount = topLevelRequirementCount(item.text);
+                    return (
+                      <article class="chat-preview-source" key={item.state_id}>
+                        <span class="chat-preview-kind">{sectionLabel(section.type)}</span>
+                        <h4>{evidence.heading}</h4>
+                        {!!requirementCount && (
+                          <p class="chat-preview-requirement-count">
+                            {requirementCount} requirement
+                            {requirementCount === 1 ? "" : "s"} in this selected clause
+                          </p>
+                        )}
+                        <div class="chat-preview-quote">
+                          {evidence.paragraphs.map((paragraph) => (
+                            <p>{paragraph}</p>
+                          ))}
+                        </div>
+                        <p class="chat-preview-citation">{sourceLabel(item.state_id)}</p>
+                      </article>
+                    );
+                  }),
+                )}
+              </div>
+              {!!otherContextSections.length && (
+                <details class="chat-preview-other">
+                  <summary>Other retained project context</summary>
+                  {otherContextSections.map((section) =>
+                    section.items.map((item) => (
+                      <p key={item.state_id}>
+                        <strong>{sectionLabel(section.type)}:</strong>{" "}
+                        {readableResponse(item.text)}
+                      </p>
+                    )),
+                  )}
+                </details>
+              )}
+              {!!prepared.context_preview?.excluded.length && (
+                <p class="chat-preview-excluded">
+                  {prepared.context_preview.excluded.length} other candidate
+                  {prepared.context_preview.excluded.length === 1 ? " was" : "s were"} not included within this packet's evidence budget.
+                </p>
+              )}
+              <details class="chat-preview-technical">
+                <summary>Technical send details</summary>
+                <p>Packet digest: {prepared.packet_digest}</p>
                 <pre aria-label="Outgoing provider prompt">
                   {prepared.prompt}
                 </pre>

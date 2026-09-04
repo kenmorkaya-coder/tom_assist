@@ -62,6 +62,32 @@ pub struct RankedAnchor {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RankedDocumentChunk {
+    pub id: String,
+    pub document_id: String,
+    pub display_name: String,
+    pub chunk_index: u64,
+    pub start: u64,
+    pub end: u64,
+    pub excerpt_start: u64,
+    pub excerpt_end: u64,
+    pub text: String,
+    pub text_sha256: String,
+    pub excerpt_sha256: String,
+    pub semantic_score: f64,
+    pub best_chunk_score: f64,
+    pub lexical_score: f64,
+    pub dense_rank: u64,
+    pub lexical_rank: Option<u64>,
+    pub rrf_score: f64,
+    pub rank: u64,
+    pub score_space: String,
+    pub packet_eligible: bool,
+    pub structural_signature: Option<Value>,
+    pub truncated: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RankPreview {
     pub activated_branch_ids: Vec<String>,
     pub candidate_trace: Vec<Value>,
@@ -70,6 +96,8 @@ pub struct RankPreview {
     pub activation_id: String,
     pub triggers: Vec<Value>,
     pub ranked_anchors: Vec<RankedAnchor>,
+    #[serde(default)]
+    pub ranked_document_chunks: Vec<RankedDocumentChunk>,
     pub checkpoint_digest: String,
     #[serde(default)]
     pub structural_load_mode: String,

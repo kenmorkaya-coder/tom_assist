@@ -178,10 +178,10 @@ def validate_snapshot(gateway, root):
         if ("table", "documents") in objects:
             from gateway.document_ingestion import (
                 ALLOWED_DOCUMENT_MEDIA_TYPES,
-                DOCUMENT_CHUNKING_VERSION,
                 DOCUMENT_EMBEDDING_VERSION,
                 MAX_DOCUMENT_CHUNKS,
                 MAX_DOCUMENT_SOURCE_CHARS,
+                SUPPORTED_DOCUMENT_CHUNKING_VERSIONS,
                 decode_vector_f32,
             )
             documents = {}
@@ -201,7 +201,7 @@ def validate_snapshot(gateway, root):
                     or byte_length != len(content.encode("utf-8"))
                     or not display_name or len(content) > MAX_DOCUMENT_SOURCE_CHARS
                     or media_type not in ALLOWED_DOCUMENT_MEDIA_TYPES
-                    or chunking_version != DOCUMENT_CHUNKING_VERSION
+                    or chunking_version not in SUPPORTED_DOCUMENT_CHUNKING_VERSIONS
                     or embedding_version != DOCUMENT_EMBEDDING_VERSION
                     or type(ingested_tick) is not int
                     or tombstoned_at is not None and not isinstance(tombstoned_at, str)

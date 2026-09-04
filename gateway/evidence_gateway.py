@@ -50,7 +50,7 @@ from gateway.structural_analysis import (
 )
 
 
-EVIDENCE_GATEWAY_VERSION = "tom-gateway-evidence/1.2"
+EVIDENCE_GATEWAY_VERSION = "tom-gateway-evidence/1.3"
 
 
 class EvidenceProjectRuntime(base.ProjectRuntime):
@@ -207,6 +207,10 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
                 })
                 if len(ranked) >= k:
                     break
+            ranked_documents = self._rank_document_packet(
+                user_text, k, max_chars,
+                query_profile=analysis["semantic_profile"],
+            )
             activation_id = base.canonical_digest({
                 "project_id": self.project_id,
                 "user_text": user_text,
@@ -214,11 +218,19 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
                 "max_chars": max_chars,
                 "checkpoint_digest": checkpoint_digest,
                 "structural_analysis_digest": analysis["analysis_digest"],
+                "document_packet_candidates": [
+                    [
+                        row["id"], row["excerpt_sha256"],
+                        row["semantic_score"],
+                    ]
+                    for row in ranked_documents
+                ],
             })
             result = {
                 "activation_id": activation_id,
                 "triggers": [asdict(trigger) for trigger in triggers],
                 "ranked_anchors": ranked,
+                "ranked_document_chunks": ranked_documents,
                 "activated_branch_ids": [bid for bid, _, _ in cohort],
                 "candidate_trace": fused,
                 "branch_trace": branch_trace,

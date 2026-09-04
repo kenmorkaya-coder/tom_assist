@@ -219,6 +219,8 @@ pub struct TomCapabilities {
     #[serde(default)]
     pub document_packet_admission: bool,
     #[serde(default)]
+    pub document_packet_admission_version: String,
+    #[serde(default)]
     pub supports_document_declared_structure: bool,
     #[serde(default)]
     pub document_declared_structure_version: String,

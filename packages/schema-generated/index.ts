@@ -123,7 +123,8 @@ export interface TomCapabilities {
   document_max_source_chars: 2000000;
   document_max_chunks: 4096;
   document_structural_parsing: false;
-  document_packet_admission: false;
+  document_packet_admission: true;
+  document_packet_admission_version: "minilm-document-hybrid-packet-admission/1.0";
   supports_document_declared_structure: true;
   document_declared_structure_version: "tom-assist-declared-structure/1.0";
   parser_glossary_enabled: boolean;
@@ -133,10 +134,10 @@ export interface TomCapabilities {
   parser_glossary_max_terms: 64;
   parser_glossary_max_characters: 2048;
   /**
-   * @minItems 2
-   * @maxItems 2
+   * @minItems 3
+   * @maxItems 3
    */
-  preview_channels?: [unknown, unknown];
+  preview_channels?: [unknown, unknown, unknown];
   runtime_version: string;
   state_format_version: "sicd-engine-save/1";
   supports_load_ingest: boolean;
@@ -225,7 +226,7 @@ export interface ContinuityPacket {
   tom_checkpoint_digest: string;
   draft_hash: string;
   policy_version: string;
-  renderer_version: "authoritative-state/1.2";
+  renderer_version: "authoritative-state/1.3";
   provider_capabilities: ProviderCapabilities;
   tom_activation_id: string;
   sections: {

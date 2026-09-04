@@ -104,7 +104,10 @@ export TOM_ASSIST_STRUCTURE_TIMEOUT_SECONDS=600
 
 Modes are:
 
-- `legacy` (default): current frozen behavior; no local model call.
+- `legacy` (default): keyword/structural tree behavior for retained anchors. When
+  a project has active documents, preview additionally runs local MiniLM query
+  embedding so dense document excerpts can enter the visible packet; Gemma is
+  not called.
 - `shadow`: build, validate, persist and report the evidence analysis, but keep
   the existing drive/ranking behavior for comparison.
 - `authoritative`: use the validated 17D signature for the canonical pinned

@@ -291,7 +291,7 @@ fn create_project(
             &request.id,
             &request.name,
             &request.retention_profile,
-            "context-policy/1.2",
+            "context-policy/1.3",
             "desktop-user",
             &format!("project-create:{}", request.id),
             &request.created_at,
@@ -521,6 +521,28 @@ fn diagnostics(
 }
 
 #[tauri::command]
+fn project_documents(
+    project_id: String,
+    state: tauri::State<'_, DesktopState>,
+) -> Result<Value, String> {
+    let store = locked(&state);
+    store
+        .project(&project_id)
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| "project not found".to_owned())?;
+    gateway(&store)
+        .list_documents(&project_id, false)
+        .map_err(|error| error.to_string())
+        .and_then(|value| {
+            value["documents"]
+                .as_array()
+                .cloned()
+                .map(Value::Array)
+                .ok_or_else(|| "invalid project document inventory".to_owned())
+        })
+}
+
+#[tauri::command]
 fn seed_demo(state: tauri::State<'_, DesktopState>) -> Result<Project, String> {
     let mut store = locked(&state);
     seed_demo_store(&mut store).map_err(|error| error.to_string())
@@ -547,7 +569,7 @@ fn seed_demo_store(store: &mut Store) -> Result<Project, Box<dyn std::error::Err
             .unwrap_or("state-focused"),
         project_row["policy_profile"]
             .as_str()
-            .unwrap_or("context-policy/1.2"),
+            .unwrap_or("context-policy/1.3"),
         "demo-seeder",
         "demo-project-create",
         "2026-08-10T00:00:00Z",
@@ -723,6 +745,7 @@ fn main() {
             oauth_login,
             oauth_logout,
             diagnostics,
+            project_documents,
             memory_settings,
             seed_demo
         ])

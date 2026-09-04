@@ -23,11 +23,17 @@ def _text_digest(text: str) -> str:
 
 
 def _sentence_boundary(source_text: str, char_end: int, next_char_start: int) -> bool:
-    before = source_text[:char_end].rstrip()
     between = source_text[char_end:next_char_start]
     if "\n\n" in between:
         return True
-    return bool(re.search(r"[.!?…][\"')\]}]*$", before))
+    # Inspect only the exact trailing run instead of repeatedly copying the
+    # entire document prefix for every candidate boundary.
+    cursor = char_end - 1
+    while cursor >= 0 and source_text[cursor].isspace():
+        cursor -= 1
+    while cursor >= 0 and source_text[cursor] in "\"')]}":
+        cursor -= 1
+    return cursor >= 0 and source_text[cursor] in ".!?…"
 
 
 def build_token_chunks(

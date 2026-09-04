@@ -7,8 +7,8 @@ use tom_assist_protocol::{
     ProviderCapabilities, StateStatus, StateType, canonical_sha256, packet_digest,
 };
 
-pub const RENDERER_VERSION: &str = "authoritative-state/1.2";
-pub const POLICY_VERSION: &str = "context-policy/1.2";
+pub const RENDERER_VERSION: &str = "authoritative-state/1.3";
+pub const POLICY_VERSION: &str = "context-policy/1.3";
 pub const DEFAULT_BUDGET_TOKENS: u64 = 500;
 pub const MAX_BUDGET_TOKENS: u64 = 1_200;
 pub const DEPENDENCY_DEPTH_CAP: usize = 2;

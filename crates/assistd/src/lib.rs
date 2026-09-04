@@ -36,7 +36,7 @@ use tom_assist_tom_adapter::GatewayClient;
 
 pub const SERVICE_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const SERVICE_PROTOCOL_VERSION: &str = tom_assist_protocol::PROTOCOL_VERSION;
-pub const POLICY_VERSION: &str = "context-policy/1.2";
+pub const POLICY_VERSION: &str = "context-policy/1.3";
 pub const RENDERER_VERSION: &str = tom_assist_context_admission::RENDERER_VERSION;
 
 #[derive(Debug)]
@@ -346,6 +346,47 @@ impl AssistService {
                     redundancy_penalty: 0.0,
                 },
             }));
+            candidates.extend(
+                preview
+                    .ranked_document_chunks
+                    .iter()
+                    .filter(|chunk| chunk.packet_eligible)
+                    .map(|chunk| Candidate {
+                        id: chunk.id.clone(),
+                        project_id: request.project_id.clone(),
+                        workstream_id: Some(request.workstream_id.clone()),
+                        pool: CandidatePool::Evidence,
+                        state_type: Some(tom_assist_protocol::StateType::Evidence),
+                        status: Some(StateStatus::Active),
+                        text: chunk.text.clone(),
+                        authority: "user_supplied_document".into(),
+                        binding_hard: false,
+                        integrity: IntegrityStatus::Verified,
+                        privacy_allowed: true,
+                        dependencies: vec![],
+                        provenance: Some(format!(
+                            "{} | {} | source chars {}-{} | excerpt chars {}-{}",
+                            chunk.display_name,
+                            chunk.id,
+                            chunk.start,
+                            chunk.end,
+                            chunk.excerpt_start,
+                            chunk.excerpt_end,
+                        )),
+                        reconsideration_condition: None,
+                        scores: ScoreComponents {
+                            retrieval_rrf: Some(chunk.rrf_score),
+                            semantic_relevance: chunk.semantic_score,
+                            structural_resonance: 0.0,
+                            dependency_sequence_relevance: 0.0,
+                            authority_strength: 0.0,
+                            bounded_recency: 0.0,
+                            stale_probability: 0.0,
+                            conflict_penalty: 0.0,
+                            redundancy_penalty: 0.0,
+                        },
+                    }),
+            );
             let admitted = ContextAdmissionEngine::default().build(AdmissionRequest {
                 project_id: request.project_id.clone(),
                 project_name: project.name.clone(),
@@ -367,6 +408,7 @@ impl AssistService {
             request.activated_branch_ids = preview.activated_branch_ids;
             let mut candidate_trace = json!({
                 "retrieval": preview.candidate_trace,
+                "document_retrieval": preview.ranked_document_chunks,
                 "branches": preview.branch_trace,
                 "admission": admitted.trace,
                 "structural_load_mode": preview.structural_load_mode,

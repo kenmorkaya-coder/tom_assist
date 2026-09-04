@@ -165,7 +165,7 @@ fn golden_packet_renderer_manifest_and_digest_are_byte_stable() {
     assert_eq!(first.packet.excluded.len(), 2);
     assert_eq!(
         first.packet.packet_digest,
-        "sha256:7cde573887477b423218c8dee21199ad72173414b77aa20e87d691aa37e61c55"
+        "sha256:781c19499276b2d16831ab56679081b811f8efe508758e9e7e0d30d5377bfa37"
     );
     assert!(first.composer_text.ends_with(
         "[CURRENT_USER_REQUEST]\nWhat should I implement next?\nKeep the answer concise."
@@ -182,8 +182,38 @@ fn fresh_project_first_packet_is_the_user_draft_without_an_authority_scaffold() 
     assert_eq!(result.composer_text, draft);
     assert!(result.packet.sections.is_empty());
     assert_eq!(result.packet.estimated_tokens, 0);
-    assert_eq!(result.packet.renderer_version, "authoritative-state/1.2");
+    assert_eq!(result.packet.renderer_version, "authoritative-state/1.3");
     assert!(!result.composer_text.contains("TOM_ASSIST_STATE"));
+}
+
+#[test]
+fn admitted_document_evidence_is_cited_but_never_masquerades_as_a_runtime_anchor() {
+    let mut document = candidate(
+        "document-deed:chunk:7",
+        StateType::Evidence,
+        "The Contractor must submit the plan before starting work.",
+    );
+    document.pool = CandidatePool::Evidence;
+    document.authority = "user_supplied_document".into();
+    document.provenance = Some("SCAW deed | document-deed:chunk:7 | source chars 120-180".into());
+    document.scores.semantic_relevance = 0.81;
+
+    let result = ContextAdmissionEngine::default()
+        .build(request(vec![document]))
+        .unwrap();
+    assert!(result.state_block.contains("EVIDENCE_BOUNDARY"));
+    assert!(
+        result
+            .state_block
+            .contains("[state_id=document-deed:chunk:7]")
+    );
+    assert!(result.state_block.contains("source chars 120-180"));
+    assert!(result.packet.retrieved_anchor_ids.is_empty());
+    assert_eq!(result.packet.sections[0].section_type, "EVIDENCE_BOUNDARY");
+    assert_eq!(
+        result.packet.sections[0].items[0].authority,
+        "user_supplied_document"
+    );
 }
 
 #[test]

@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import base64
 import binascii
+import hashlib
 import json
 import math
 import os
 from pathlib import Path
+import re
 import selectors
 import struct
 import subprocess
@@ -16,16 +18,29 @@ import uuid
 from gateway.semantic_chunks import (
     EMBEDDING_DIMENSION,
     EMBEDDING_VERSION,
+    build_semantic_profile,
+    profile_similarity,
 )
 from gateway.declared_structure import MAX_DECLARED_STRUCTURE_SOURCE_CHARS
 from gateway.structure_provider import isolated_worker_environment
 
 
-DOCUMENT_CHUNKING_VERSION = "minilm-document-token-sentence-max192-overlap32/1.0"
+DOCUMENT_CHUNKING_VERSION = "minilm-document-token-sentence-max188-overlap32/1.1"
+SUPPORTED_DOCUMENT_CHUNKING_VERSIONS = frozenset({
+    "minilm-document-token-sentence-max192-overlap32/1.0",
+    DOCUMENT_CHUNKING_VERSION,
+})
 DOCUMENT_EMBEDDING_VERSION = EMBEDDING_VERSION
 DOCUMENT_WORKER_PROTOCOL = "tom-assist-document-embedding/1.0"
+DOCUMENT_PACKET_ADMISSION_VERSION = "minilm-document-hybrid-packet-admission/1.0"
 MAX_DOCUMENT_SOURCE_CHARS = MAX_DECLARED_STRUCTURE_SOURCE_CHARS
 MAX_DOCUMENT_CHUNKS = 4_096
+MAX_DOCUMENT_PACKET_CANDIDATES = 4
+MAX_DOCUMENT_PACKET_EXCERPT_CHARS = 680
+DOCUMENT_MAX_CHUNK_TOKENS = 188
+DOCUMENT_DENSE_RRF_WEIGHT = 0.50
+DOCUMENT_LEXICAL_RRF_WEIGHT = 0.50
+DOCUMENT_RRF_K = 60
 ALLOWED_DOCUMENT_MEDIA_TYPES = frozenset({
     "text/plain",
     "text/markdown",
@@ -141,6 +156,206 @@ def validate_embedding_result(source_text, payload):
         "revision": payload["revision"].strip(),
         "chunks": validated,
     }
+
+
+def build_document_query_profile(source_text, provider):
+    """Embed a draft without mutating document, tree, or memory state."""
+    if not isinstance(source_text, str) or not source_text.strip():
+        raise ValueError("document retrieval query is required")
+    embedded = validate_embedding_result(
+        source_text, provider.embed_document(source_text),
+    )
+    return build_semantic_profile(
+        source_text,
+        [
+            {
+                "start": row["start"],
+                "end": row["end"],
+                "values": decode_vector_f32(row["vector_f32_le_base64"]),
+            }
+            for row in embedded["chunks"]
+        ],
+        model=embedded["model"],
+        revision=embedded["revision"],
+    )
+
+
+def rank_document_chunks_for_packet(
+    query_text, query_profile, document_chunks, *, k, max_chars,
+):
+    """Return bounded, exact source excerpts from immutable active chunks."""
+    if type(k) is not int or k <= 0:
+        raise ValueError("document packet k must be a positive integer")
+    if type(max_chars) is not int or max_chars <= 0:
+        raise ValueError("document packet max_chars must be a positive integer")
+    ranked = []
+    query_terms = _retrieval_terms(query_text)
+    for row in document_chunks:
+        text = row.get("text")
+        if not isinstance(text, str) or not text:
+            raise ValueError("document chunk text is required for packet admission")
+        vector = decode_vector_f32(row["passage_vector"])
+        scores = profile_similarity(
+            query_profile, {"chunks": [{"values": vector}]},
+        )
+        document_id = str(row["document_id"])
+        chunk_index = int(row["chunk_index"])
+        ranked.append({
+            "id": f"{document_id}:chunk:{chunk_index}",
+            "document_id": document_id,
+            "display_name": str(row["display_name"]),
+            "chunk_index": chunk_index,
+            "start": int(row["start"]),
+            "end": int(row["end"]),
+            "text": text,
+            "text_sha256": str(row["text_sha256"]),
+            "semantic_score": float(scores["query_relevance_score"]),
+            "best_chunk_score": float(scores["best_chunk_score"]),
+            "lexical_score": _lexical_query_coverage(query_terms, text),
+            "score_space": "minilm_dense_plus_exact_term_rrf",
+            "packet_eligible": True,
+            "structural_signature": None,
+        })
+    ranked.sort(
+        key=lambda row: (
+            -row["semantic_score"],
+            row["document_id"],
+            row["chunk_index"],
+        )
+    )
+    for dense_rank, row in enumerate(ranked, 1):
+        row["dense_rank"] = dense_rank
+    lexical_rows = sorted(
+        (row for row in ranked if row["lexical_score"] > 0.0),
+        key=lambda row: (
+            -row["lexical_score"],
+            -row["semantic_score"],
+            row["document_id"],
+            row["chunk_index"],
+        ),
+    )
+    lexical_ranks = {row["id"]: rank for rank, row in enumerate(lexical_rows, 1)}
+    for row in ranked:
+        lexical_rank = lexical_ranks.get(row["id"])
+        row["lexical_rank"] = lexical_rank
+        row["rrf_score"] = (
+            DOCUMENT_DENSE_RRF_WEIGHT / (DOCUMENT_RRF_K + row["dense_rank"])
+            + (
+                DOCUMENT_LEXICAL_RRF_WEIGHT / (DOCUMENT_RRF_K + lexical_rank)
+                if lexical_rank is not None else 0.0
+            )
+        )
+    ranked.sort(
+        key=lambda row: (
+            -row["rrf_score"],
+            -row["lexical_score"],
+            -row["semantic_score"],
+            row["document_id"],
+            row["chunk_index"],
+        )
+    )
+    admitted = []
+    used_chars = 0
+    limit = min(k, MAX_DOCUMENT_PACKET_CANDIDATES)
+    for packet_rank, row in enumerate(ranked, 1):
+        if len(admitted) >= limit or used_chars >= max_chars:
+            break
+        excerpt_length = min(
+            len(row["text"]),
+            MAX_DOCUMENT_PACKET_EXCERPT_CHARS,
+            max_chars - used_chars,
+        )
+        if excerpt_length <= 0:
+            break
+        relative_start = _evidence_excerpt_start(
+            row["text"], query_text, excerpt_length,
+        )
+        relative_end = relative_start + excerpt_length
+        clause_pattern = re.compile(r"(?m)^[ \t]*\d+(?:\.\d+)+(?:[ \t]|$)")
+        if clause_pattern.match(row["text"], relative_start):
+            next_clause = next(
+                (
+                    match.start() for match in clause_pattern.finditer(
+                        row["text"], relative_start + 1, relative_end,
+                    )
+                ),
+                None,
+            )
+            if next_clause is not None:
+                relative_end = next_clause
+        excerpt = row["text"][relative_start:relative_end].rstrip()
+        relative_end = relative_start + len(excerpt)
+        admitted.append({
+            **{key: value for key, value in row.items() if key != "text"},
+            "text": excerpt,
+            "rank": packet_rank,
+            "excerpt_start": row["start"] + relative_start,
+            "excerpt_end": row["start"] + relative_end,
+            "excerpt_sha256": "sha256:" + hashlib.sha256(
+                excerpt.encode("utf-8")
+            ).hexdigest(),
+            "truncated": relative_start > 0 or relative_end < len(row["text"]),
+        })
+        used_chars += excerpt_length
+    return admitted
+
+
+def _evidence_excerpt_start(text, query_text, limit):
+    """Centre an exact excerpt on the densest shared-term window after dense rank."""
+    if len(text) <= limit:
+        return 0
+    terms = _retrieval_terms(query_text)
+    folded = text.casefold()
+    occurrences = []
+    for term in terms:
+        occurrences.extend(
+            (match.start(), term)
+            for match in re.finditer(re.escape(term), folded)
+        )
+    if not occurrences:
+        return 0
+    starts = {
+        min(max(0, position - limit // 3), len(text) - limit)
+        for position, _ in occurrences
+    }
+    best = None
+    for start in sorted(starts):
+        end = start + limit
+        within = [(position, term) for position, term in occurrences if start <= position < end]
+        score = (len({term for _, term in within}), len(within), -start)
+        if best is None or score > best[0]:
+            best = (score, start)
+    start = best[1]
+    within = [
+        (position, term) for position, term in occurrences
+        if start <= position < start + limit
+    ]
+    focus, _ = min(within, key=lambda item: (-len(item[1]), item[0]))
+    boundaries = [
+        match.start()
+        for match in re.finditer(
+            r"(?m)^[ \t]*\d+(?:\.\d+)+(?:[ \t]|$)", text,
+        )
+        if match.start() <= focus
+    ]
+    if boundaries and focus - boundaries[-1] <= limit // 2:
+        return min(boundaries[-1], len(text) - limit)
+    return start
+
+
+def _retrieval_terms(query_text):
+    return sorted({
+        term.casefold()
+        for term in re.findall(r"[\w'-]+", str(query_text), flags=re.UNICODE)
+        if len(term) >= 4
+    })
+
+
+def _lexical_query_coverage(query_terms, text):
+    if not query_terms:
+        return 0.0
+    folded = text.casefold()
+    return sum(term in folded for term in query_terms) / len(query_terms)
 
 
 class DocumentEmbeddingWorkerClient:

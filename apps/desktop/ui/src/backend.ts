@@ -11,6 +11,18 @@ export interface MemorySettings {
   front_row_capacity: number;
   teach_on_conflict: boolean;
 }
+export interface ProjectDocument {
+  document_id: string;
+  display_name: string;
+  content_sha256: string;
+  byte_length: number;
+  media_type: string;
+  chunking_version: string;
+  embedding_version: string;
+  ingested_tick: number;
+  tombstoned_at?: string | null;
+  chunk_count: number;
+}
 export interface PreparedExchange {
   packet: {
     packet_digest: string;
@@ -60,6 +72,7 @@ export interface DesktopBackend {
     projectId: string,
     afterEventId?: number,
   ): Promise<Record<string, unknown>>;
+  documents(projectId: string): Promise<ProjectDocument[]>;
   memorySettings(
     projectId: string,
     settings?: Partial<MemorySettings>,
@@ -211,6 +224,7 @@ export const tauriBackend: DesktopBackend = {
     invoke("archive_project", { projectId: project.id, updatedAt: now() }),
   diagnostics: (projectId, afterEventId = 0) =>
     invoke("diagnostics", { projectId, afterEventId }),
+  documents: (projectId) => invoke("project_documents", { projectId }),
   memorySettings: (projectId, settings = {}) =>
     invoke("memory_settings", { projectId, settings }),
   exportProject: (projectId, directory) =>

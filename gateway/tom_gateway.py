@@ -60,8 +60,12 @@ from gateway.permanent_library import PermanentLibrary, content_hash
 from gateway.document_ingestion import (
     DOCUMENT_CHUNKING_VERSION,
     DOCUMENT_EMBEDDING_VERSION,
+    DOCUMENT_PACKET_ADMISSION_VERSION,
+    DocumentEmbeddingWorkerClient,
     MAX_DOCUMENT_CHUNKS,
     MAX_DOCUMENT_SOURCE_CHARS,
+    build_document_query_profile,
+    rank_document_chunks_for_packet,
 )
 from gateway.declared_structure import (
     DECLARED_STRUCTURE_VERSION,
@@ -430,10 +434,19 @@ class ProjectRuntime:
     def memory_diagnostics(self, after=0):
         with self.lock:
             events = self.library.events(after)
+            active_documents = self.library.documents(include_withdrawn=False)
+            all_documents = self.library.documents(include_withdrawn=True)
             return {**self.settings, "front_row_count": len(self.rgm.state.anchors),
                     "engine_tick": self.engine.state.tick, "rgm_current_tick": self.rgm.state.current_tick,
                     "checkpoint_digest": self._current_checkpoint_digest(), "commit_count": len(self._idempotency),
                     "library_count": self.library.db.execute("SELECT COUNT(*) FROM library_records").fetchone()[0],
+                    "document_count": len(active_documents),
+                    "document_count_all": len(all_documents),
+                    "document_bytes": sum(row["byte_length"] for row in active_documents),
+                    "document_chunk_count": self.library.db.execute(
+                        "SELECT COUNT(*) FROM document_chunks c JOIN documents d "
+                        "ON d.document_id=c.document_id WHERE d.tombstoned_at IS NULL"
+                    ).fetchone()[0],
                     "demotion_count": self.library.db.execute("SELECT COUNT(*) FROM demotions").fetchone()[0],
                     "demotions": events, "next_event_id": events[-1]["event_id"] if events else after}
 
@@ -609,6 +622,22 @@ class ProjectRuntime:
                 temporary_path.unlink(missing_ok=True)
             return tree, self.rgm.serialize().encode("utf-8")
 
+    def _rank_document_packet(
+        self, user_text: str, k: int, max_chars: int, *, query_profile=None,
+    ) -> list[dict[str, Any]]:
+        chunks = self.library.document_chunks(active_only=True)
+        if not chunks:
+            return []
+        if query_profile is None:
+            provider = self.document_embedding_provider
+            if provider is None:
+                provider = DocumentEmbeddingWorkerClient.from_environment()
+                self.document_embedding_provider = provider
+            query_profile = build_document_query_profile(user_text, provider)
+        return rank_document_chunks_for_packet(
+            user_text, query_profile, chunks, k=k, max_chars=max_chars,
+        )
+
     def preview_rank(
         self, user_text: str, k: int, max_chars: int,
         declared_glossary_titles=(),
@@ -653,6 +682,7 @@ class ProjectRuntime:
                 )
                 if len(ranked) >= k:
                     break
+            ranked_documents = self._rank_document_packet(user_text, k, max_chars)
             checkpoint_digest = self._current_checkpoint_digest()
             activation_id = canonical_digest(
                 {
@@ -661,12 +691,20 @@ class ProjectRuntime:
                     "k": k,
                     "max_chars": max_chars,
                     "checkpoint_digest": checkpoint_digest,
+                    "document_packet_candidates": [
+                        [
+                            row["id"], row["excerpt_sha256"],
+                            row["semantic_score"],
+                        ]
+                        for row in ranked_documents
+                    ],
                 }
             )
             return {
                 "activation_id": activation_id,
                 "triggers": [asdict(trigger) for trigger in triggers],
                 "ranked_anchors": ranked,
+                "ranked_document_chunks": ranked_documents,
                 "activated_branch_ids": [bid for bid, _, _ in cohort],
                 "candidate_trace": fused,
                 "branch_trace": branch_trace,
@@ -980,7 +1018,7 @@ class TomGateway:
             "mechanics_profile_sha256": self.seed.mechanics_profile_sha256,
             "mechanics_parameters": dict(sorted(self.seed.mechanics_parameters.items())),
             "kappa_decay_source": KAPPA_DECAY_SOURCE,
-            "preview_channels": ["lexical", "structural_geometry"],
+            "preview_channels": ["lexical", "structural_geometry", "document_dense"],
             "commit_dynamics": list(COMMIT_DYNAMICS),
             "supports_documents": True,
             "document_chunking_version": DOCUMENT_CHUNKING_VERSION,
@@ -988,7 +1026,8 @@ class TomGateway:
             "document_max_source_chars": MAX_DOCUMENT_SOURCE_CHARS,
             "document_max_chunks": MAX_DOCUMENT_CHUNKS,
             "document_structural_parsing": False,
-            "document_packet_admission": False,
+            "document_packet_admission": True,
+            "document_packet_admission_version": DOCUMENT_PACKET_ADMISSION_VERSION,
             "supports_document_declared_structure": True,
             "document_declared_structure_version": DECLARED_STRUCTURE_VERSION,
             "parser_glossary_enabled": False,
