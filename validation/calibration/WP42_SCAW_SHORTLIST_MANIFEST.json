@@ -1,0 +1,685 @@
+{
+  "contract_text_committed": false,
+  "extraction": {
+    "arguments": [
+      "-layout",
+      "-enc",
+      "UTF-8",
+      "-eol",
+      "unix"
+    ],
+    "byte_count": 1215976,
+    "character_count": 1215924,
+    "external_file_name": "SCAW_DEED_PDFTOTEXT_LAYOUT.txt",
+    "pdf_page_count": 343,
+    "sha256": "sha256:7d0b79c1fb5403db044f1ea78da3a592707c2169f32fe5bb44ce138006951c12",
+    "tool": "pdftotext",
+    "tool_version": "26.03.0"
+  },
+  "glossary_candidate": {
+    "definition_pdf_pages": [
+      10,
+      69
+    ],
+    "external_file_bytes": 16885,
+    "external_file_name": "SCAW_DEFINED_TERMS_SURFACE_ONLY.json",
+    "external_file_sha256": "sha256:9c62712ebb830458199ae71c00fa220c53cbbeaed17c47b24daa4596bb23bb0d",
+    "surface_forms_only": true,
+    "term_count": 531,
+    "terms_sha256": "sha256:fd20aa3f4ef0666f7116b88a9b62a72a15b3b60f4a22a3d28f7a2229e8bbc646",
+    "total_characters": 12192,
+    "version": "tom-assist-scaw-defined-terms/1.0"
+  },
+  "passages": [
+    {
+      "character_count": 703,
+      "clause_identifier": "Recitals A-D",
+      "difficulty": "easy",
+      "extraction_end": 34322,
+      "extraction_start": 33619,
+      "families": [],
+      "passage_id": "SCAW-001",
+      "pdf_pages": [
+        10
+      ],
+      "text_sha256": "sha256:ccb110fa5a4c25ae8d3b4edea0a0b3264b2be0ee4be6c1cfdd6bd5888b96a4be"
+    },
+    {
+      "character_count": 1624,
+      "clause_identifier": "3.1",
+      "difficulty": "easy",
+      "extraction_end": 249895,
+      "extraction_start": 248271,
+      "families": [],
+      "passage_id": "SCAW-002",
+      "pdf_pages": [
+        77
+      ],
+      "text_sha256": "sha256:1480c6a1d4e74cecdcee0b0f2f4d3715f617f780a9294ef5c55fef4a0ae4241d"
+    },
+    {
+      "character_count": 2251,
+      "clause_identifier": "3.2",
+      "difficulty": "medium",
+      "extraction_end": 252224,
+      "extraction_start": 249973,
+      "families": [],
+      "passage_id": "SCAW-003",
+      "pdf_pages": [
+        78
+      ],
+      "text_sha256": "sha256:bf21268b969ae13289cb18c23c1af8fd734e6cf9257ab6ec7544981e9dcfcf9e"
+    },
+    {
+      "character_count": 2360,
+      "clause_identifier": "1.5",
+      "difficulty": "hard",
+      "extraction_end": 239517,
+      "extraction_start": 237157,
+      "families": [
+        "rule_or_constraint",
+        "supersession"
+      ],
+      "passage_id": "SCAW-004",
+      "pdf_pages": [
+        74
+      ],
+      "text_sha256": "sha256:30269e08cfe26ad42d3ff25720ef964c0a243b66eacdece9c5e5c685b770c818"
+    },
+    {
+      "character_count": 1059,
+      "clause_identifier": "1.6",
+      "difficulty": "medium",
+      "extraction_end": 240900,
+      "extraction_start": 239841,
+      "families": [
+        "causation",
+        "supersession"
+      ],
+      "passage_id": "SCAW-005",
+      "pdf_pages": [
+        75
+      ],
+      "text_sha256": "sha256:30a86de08eb8294709901d24799c361d3cec5e9c25dbc1b43c8f31c9dcb72e5b"
+    },
+    {
+      "character_count": 1246,
+      "clause_identifier": "2.4(b)-(c)",
+      "difficulty": "medium",
+      "extraction_end": 248270,
+      "extraction_start": 247024,
+      "families": [
+        "causation",
+        "dependency",
+        "supersession"
+      ],
+      "passage_id": "SCAW-006",
+      "pdf_pages": [
+        77
+      ],
+      "text_sha256": "sha256:15c1266bbf70a9dd7071de2c82ac3465d774c0004471dfb0ced0ff630955d3eb"
+    },
+    {
+      "character_count": 1015,
+      "clause_identifier": "4.1(a)-(d)",
+      "difficulty": "easy",
+      "extraction_end": 253954,
+      "extraction_start": 252939,
+      "families": [
+        "rule_or_constraint"
+      ],
+      "passage_id": "SCAW-007",
+      "pdf_pages": [
+        79
+      ],
+      "text_sha256": "sha256:f4cabb3fd968908310a613f0e05408073bc7d3a897bb83c13c97c7fbb2414d09"
+    },
+    {
+      "character_count": 969,
+      "clause_identifier": "4.5",
+      "difficulty": "easy",
+      "extraction_end": 279852,
+      "extraction_start": 278883,
+      "families": [
+        "rule_or_constraint"
+      ],
+      "passage_id": "SCAW-008",
+      "pdf_pages": [
+        86
+      ],
+      "text_sha256": "sha256:a039a17bd3061cf4b6bb8275c44c5c2a66ce3e72e6f46a2e58ec32f38ab29dd2"
+    },
+    {
+      "character_count": 626,
+      "clause_identifier": "4.20(a)-(b)",
+      "difficulty": "easy",
+      "extraction_end": 324526,
+      "extraction_start": 323900,
+      "families": [
+        "rule_or_constraint"
+      ],
+      "passage_id": "SCAW-009",
+      "pdf_pages": [
+        98
+      ],
+      "text_sha256": "sha256:7f103e6e82dec0bd06f40ab505c5ef2c11322de2b66f7d041ded8f470392c993"
+    },
+    {
+      "character_count": 678,
+      "clause_identifier": "6.6",
+      "difficulty": "easy",
+      "extraction_end": 354680,
+      "extraction_start": 354002,
+      "families": [
+        "rule_or_constraint"
+      ],
+      "passage_id": "SCAW-010",
+      "pdf_pages": [
+        106
+      ],
+      "text_sha256": "sha256:c2cae3cbc27740962ed60956bcd5332b159daac7d5f67cc8cb59ad2b0c43abd6"
+    },
+    {
+      "character_count": 1501,
+      "clause_identifier": "7.3(a)(i)",
+      "difficulty": "hard",
+      "extraction_end": 366152,
+      "extraction_start": 364651,
+      "families": [
+        "causation",
+        "dependency"
+      ],
+      "passage_id": "SCAW-011",
+      "pdf_pages": [
+        109
+      ],
+      "text_sha256": "sha256:315ec80d35d5f7dc4593b802cea6e3b6ec97b2c44cdafa1f39da323ec3a8143c"
+    },
+    {
+      "character_count": 1177,
+      "clause_identifier": "7.4(a)(ii)-7.4(b)",
+      "difficulty": "hard",
+      "extraction_end": 377678,
+      "extraction_start": 376501,
+      "families": [
+        "dependency",
+        "supersession"
+      ],
+      "passage_id": "SCAW-012",
+      "pdf_pages": [
+        112
+      ],
+      "text_sha256": "sha256:4b44ae15dd9b59bc8216f8e4b8644dca7daa28b1bc5d8445c021c388c6e6b07d"
+    },
+    {
+      "character_count": 616,
+      "clause_identifier": "7.9",
+      "difficulty": "easy",
+      "extraction_end": 388370,
+      "extraction_start": 387754,
+      "families": [
+        "dependency",
+        "rule_or_constraint"
+      ],
+      "passage_id": "SCAW-013",
+      "pdf_pages": [
+        115
+      ],
+      "text_sha256": "sha256:97c6d125cc2afdb8a29e2b9ba2c99faebfee2a6c2cb9b093a84dc6a9c30eb6f1"
+    },
+    {
+      "character_count": 1193,
+      "clause_identifier": "11.3",
+      "difficulty": "medium",
+      "extraction_end": 451796,
+      "extraction_start": 450603,
+      "families": [
+        "dependency",
+        "supersession"
+      ],
+      "passage_id": "SCAW-014",
+      "pdf_pages": [
+        132
+      ],
+      "text_sha256": "sha256:be7f09bf71e6fe6e73b29d818639143e671893f80af70d90e92ac14bad54cb9c"
+    },
+    {
+      "character_count": 1132,
+      "clause_identifier": "11.4(b)",
+      "difficulty": "hard",
+      "extraction_end": 456542,
+      "extraction_start": 455410,
+      "families": [
+        "dependency",
+        "supersession"
+      ],
+      "passage_id": "SCAW-015",
+      "pdf_pages": [
+        134
+      ],
+      "text_sha256": "sha256:d80a21a77092066ced2d9a6c8ac6a984f889712b5c4f556ea7ed253223804d59"
+    },
+    {
+      "character_count": 1137,
+      "clause_identifier": "12.1(b)-(c)",
+      "difficulty": "medium",
+      "extraction_end": 460045,
+      "extraction_start": 458908,
+      "families": [
+        "causation",
+        "rule_or_constraint"
+      ],
+      "passage_id": "SCAW-016",
+      "pdf_pages": [
+        135
+      ],
+      "text_sha256": "sha256:5dac53cfcc3499dce64ec98e67bec9ca2fa89e9eb7af62de1a5ea03c6e763b15"
+    },
+    {
+      "character_count": 1220,
+      "clause_identifier": "12.2(b)-(c)",
+      "difficulty": "hard",
+      "extraction_end": 468821,
+      "extraction_start": 467601,
+      "families": [
+        "dependency",
+        "rule_or_constraint"
+      ],
+      "passage_id": "SCAW-017",
+      "pdf_pages": [
+        137
+      ],
+      "text_sha256": "sha256:aa715828ba03ddc399ffea4a879f9bbddf35555a4c7c4d270fda8c302687d974"
+    },
+    {
+      "character_count": 996,
+      "clause_identifier": "12.12",
+      "difficulty": "medium",
+      "extraction_end": 516082,
+      "extraction_start": 515086,
+      "families": [
+        "dependency",
+        "rule_or_constraint"
+      ],
+      "passage_id": "SCAW-018",
+      "pdf_pages": [
+        150
+      ],
+      "text_sha256": "sha256:160fbffb915f8461b820ae5a5d5cee65cb587db71e429bb016d9f6b1616a9bfb"
+    },
+    {
+      "character_count": 1512,
+      "clause_identifier": "12.13(a)-(b)",
+      "difficulty": "medium",
+      "extraction_end": 517595,
+      "extraction_start": 516083,
+      "families": [
+        "causation",
+        "rule_or_constraint"
+      ],
+      "passage_id": "SCAW-019",
+      "pdf_pages": [
+        150
+      ],
+      "text_sha256": "sha256:d4a51a6dda03d4624febbdd1b6382c5f506edab9f09d55fc93e4c18034918ff3"
+    },
+    {
+      "character_count": 1054,
+      "clause_identifier": "12.19(f)-(g)",
+      "difficulty": "medium",
+      "extraction_end": 569851,
+      "extraction_start": 568797,
+      "families": [
+        "dependency",
+        "supersession"
+      ],
+      "passage_id": "SCAW-020",
+      "pdf_pages": [
+        164
+      ],
+      "text_sha256": "sha256:f2d68d8b66338c0277f342cb354d11a6bb311fb8bff1fababa34a791474fe5db"
+    },
+    {
+      "character_count": 1365,
+      "clause_identifier": "12.20(g)-(h)",
+      "difficulty": "medium",
+      "extraction_end": 581900,
+      "extraction_start": 580535,
+      "families": [
+        "dependency",
+        "supersession"
+      ],
+      "passage_id": "SCAW-021",
+      "pdf_pages": [
+        167
+      ],
+      "text_sha256": "sha256:151ad40b2461eb8da7642d24f473e60dacf6b8778d234ebfb31c5c4b187fa7f7"
+    },
+    {
+      "character_count": 828,
+      "clause_identifier": "12.20(i)",
+      "difficulty": "hard",
+      "extraction_end": 582729,
+      "extraction_start": 581901,
+      "families": [
+        "dependency",
+        "rule_or_constraint"
+      ],
+      "passage_id": "SCAW-022",
+      "pdf_pages": [
+        167
+      ],
+      "text_sha256": "sha256:41211a08c6df75b245264d7a453e38b365ad957a4224d327ed2222653004a3fb"
+    },
+    {
+      "character_count": 1298,
+      "clause_identifier": "12.28(c)(ii)(G)-12.28(d)",
+      "difficulty": "hard",
+      "extraction_end": 642033,
+      "extraction_start": 640735,
+      "families": [
+        "causation",
+        "supersession"
+      ],
+      "passage_id": "SCAW-023",
+      "pdf_pages": [
+        182
+      ],
+      "text_sha256": "sha256:689da52016412609f4e2e2afebf010b36cc94d86d82d63903f6d9da4782e7288"
+    },
+    {
+      "character_count": 832,
+      "clause_identifier": "14.4(b)-(c)",
+      "difficulty": "medium",
+      "extraction_end": 679422,
+      "extraction_start": 678590,
+      "families": [
+        "dependency",
+        "rule_or_constraint"
+      ],
+      "passage_id": "SCAW-024",
+      "pdf_pages": [
+        193
+      ],
+      "text_sha256": "sha256:09f16fb3d8bf239e560d2c5ef3545ee18b6b653cc612b979d6768eb7e656100d"
+    },
+    {
+      "character_count": 2590,
+      "clause_identifier": "15.3(a)-(c)",
+      "difficulty": "medium",
+      "extraction_end": 716906,
+      "extraction_start": 714316,
+      "families": [
+        "rule_or_constraint",
+        "supersession"
+      ],
+      "passage_id": "SCAW-025",
+      "pdf_pages": [
+        202
+      ],
+      "text_sha256": "sha256:e885833562a2f898170958636452de3007806e0a782302828d1c6bdf46247647"
+    },
+    {
+      "character_count": 1545,
+      "clause_identifier": "15.3(e)-(g)",
+      "difficulty": "hard",
+      "extraction_end": 719299,
+      "extraction_start": 717754,
+      "families": [
+        "causation",
+        "supersession"
+      ],
+      "passage_id": "SCAW-026",
+      "pdf_pages": [
+        203
+      ],
+      "text_sha256": "sha256:37b527883d230f4455f90569d719389dc71cc373abd457b02d5778cade0374b3"
+    },
+    {
+      "character_count": 1454,
+      "clause_identifier": "15.10",
+      "difficulty": "medium",
+      "extraction_end": 744605,
+      "extraction_start": 743151,
+      "families": [
+        "dependency",
+        "rule_or_constraint"
+      ],
+      "passage_id": "SCAW-027",
+      "pdf_pages": [
+        210
+      ],
+      "text_sha256": "sha256:6bd72af964762306922a4515c1fdc653bf8049feda14715d235dc0272014d303"
+    },
+    {
+      "character_count": 688,
+      "clause_identifier": "16.4(b)",
+      "difficulty": "easy",
+      "extraction_end": 753950,
+      "extraction_start": 753262,
+      "families": [
+        "causation",
+        "rule_or_constraint"
+      ],
+      "passage_id": "SCAW-028",
+      "pdf_pages": [
+        213
+      ],
+      "text_sha256": "sha256:ff42a6b6663897586fa9e89759a3692730bb09ccf2e5a9df66da1821bb92f5c5"
+    },
+    {
+      "character_count": 1006,
+      "clause_identifier": "12.1(e)",
+      "difficulty": "medium",
+      "extraction_end": 461788,
+      "extraction_start": 460782,
+      "families": [
+        "causation",
+        "dependency"
+      ],
+      "passage_id": "SCAW-029",
+      "pdf_pages": [
+        135
+      ],
+      "text_sha256": "sha256:64045b5fd17bf5f406d798377d361f04071ac20167aa9f2040f2e01177f03798"
+    },
+    {
+      "character_count": 1928,
+      "clause_identifier": "16.13(j)-(k)",
+      "difficulty": "hard",
+      "extraction_end": 786245,
+      "extraction_start": 784317,
+      "families": [
+        "dependency",
+        "supersession"
+      ],
+      "passage_id": "SCAW-030",
+      "pdf_pages": [
+        221
+      ],
+      "text_sha256": "sha256:59ccce40eada1438cfe25cd0283cc5011b6fec81672cbce651b6b4b603c48755"
+    },
+    {
+      "character_count": 267,
+      "clause_identifier": "17.12",
+      "difficulty": "easy",
+      "extraction_end": 824682,
+      "extraction_start": 824415,
+      "families": [
+        "rule_or_constraint"
+      ],
+      "passage_id": "SCAW-031",
+      "pdf_pages": [
+        232
+      ],
+      "text_sha256": "sha256:390b168b98fa4b12adfffaa6d0000e0adb31d319cfe2732824670d6bef38968e"
+    },
+    {
+      "character_count": 825,
+      "clause_identifier": "18.10",
+      "difficulty": "easy",
+      "extraction_end": 852285,
+      "extraction_start": 851460,
+      "families": [
+        "rule_or_constraint"
+      ],
+      "passage_id": "SCAW-032",
+      "pdf_pages": [
+        240
+      ],
+      "text_sha256": "sha256:baae656a0b8248df9bc4ef37db6ce53f0db156c3de82e0aa6b3eef5726b25353"
+    },
+    {
+      "character_count": 976,
+      "clause_identifier": "18.21(c)(ii)",
+      "difficulty": "medium",
+      "extraction_end": 880162,
+      "extraction_start": 879186,
+      "families": [
+        "dependency",
+        "rule_or_constraint"
+      ],
+      "passage_id": "SCAW-033",
+      "pdf_pages": [
+        248
+      ],
+      "text_sha256": "sha256:4c68540ee21a25fa259c03be1891018eca1e2957df57b00467b7348dc839ae49"
+    },
+    {
+      "character_count": 1614,
+      "clause_identifier": "19.5-19.6(a)",
+      "difficulty": "medium",
+      "extraction_end": 888726,
+      "extraction_start": 887112,
+      "families": [
+        "causation",
+        "dependency"
+      ],
+      "passage_id": "SCAW-034",
+      "pdf_pages": [
+        250
+      ],
+      "text_sha256": "sha256:68284c56d069b425816564efce3ec84f8860485a3ea6543c6c77b1cc9a8711ac"
+    },
+    {
+      "character_count": 854,
+      "clause_identifier": "19.6(e)-(f)",
+      "difficulty": "hard",
+      "extraction_end": 895081,
+      "extraction_start": 894227,
+      "families": [
+        "causation",
+        "dependency"
+      ],
+      "passage_id": "SCAW-035",
+      "pdf_pages": [
+        252
+      ],
+      "text_sha256": "sha256:a697d365d622848dd03d9b142553f730e0b0afd9369839a7fea96551ec7ee08e"
+    },
+    {
+      "character_count": 2406,
+      "clause_identifier": "19.8",
+      "difficulty": "hard",
+      "extraction_end": 908894,
+      "extraction_start": 906488,
+      "families": [
+        "causation",
+        "dependency"
+      ],
+      "passage_id": "SCAW-036",
+      "pdf_pages": [
+        255
+      ],
+      "text_sha256": "sha256:7c2ce69ebec35ce06536be65dbe4cd53d1cdec210a3a4e4e9ef2c9ef770458ee"
+    },
+    {
+      "character_count": 1420,
+      "clause_identifier": "19.11(d)-(e)",
+      "difficulty": "medium",
+      "extraction_end": 927160,
+      "extraction_start": 925740,
+      "families": [
+        "causation",
+        "rule_or_constraint"
+      ],
+      "passage_id": "SCAW-037",
+      "pdf_pages": [
+        260
+      ],
+      "text_sha256": "sha256:1ba41c933bf2caaf2e24dabbbb20aa497bbe62e1359db6238fba333e87905a45"
+    },
+    {
+      "character_count": 305,
+      "clause_identifier": "23.17(b)",
+      "difficulty": "easy",
+      "extraction_end": 1055483,
+      "extraction_start": 1055178,
+      "families": [
+        "causation"
+      ],
+      "passage_id": "SCAW-038",
+      "pdf_pages": [
+        296
+      ],
+      "text_sha256": "sha256:7ea860c6c322ce4031ad448da4a398222deea522c8eae556e04051df7aff6928"
+    },
+    {
+      "character_count": 149,
+      "clause_identifier": "32.6",
+      "difficulty": "easy",
+      "extraction_end": 1187750,
+      "extraction_start": 1187601,
+      "families": [
+        "rule_or_constraint",
+        "supersession"
+      ],
+      "passage_id": "SCAW-039",
+      "pdf_pages": [
+        334
+      ],
+      "text_sha256": "sha256:e387758a93f74d88b182006a2713b945fb40236b4e7b073b60a3702acb231f7c"
+    },
+    {
+      "character_count": 410,
+      "clause_identifier": "32.11",
+      "difficulty": "easy",
+      "extraction_end": 1194905,
+      "extraction_start": 1194495,
+      "families": [
+        "rule_or_constraint",
+        "supersession"
+      ],
+      "passage_id": "SCAW-040",
+      "pdf_pages": [
+        336
+      ],
+      "text_sha256": "sha256:e2b9ce669a06f11b0a0e9884f99fc1a5057d09d0ab6f9a2151cf2d8ebe11cd50"
+    }
+  ],
+  "shortlist": {
+    "difficulty_coverage": {
+      "easy": 13,
+      "hard": 11,
+      "medium": 16
+    },
+    "external_file_bytes": 65243,
+    "external_file_name": "SCAW_SHORTLIST_TEXT.json",
+    "external_file_sha256": "sha256:a9502fa24d09f3eb4539d44dcb5b2e8269b069c9ef86603023e331d85459bb65",
+    "family_coverage": {
+      "causation": 14,
+      "dependency": 19,
+      "rule_or_constraint": 21,
+      "supersession": 14
+    },
+    "passage_count": 40,
+    "total_contract_characters": 46829
+  },
+  "source": {
+    "byte_count": 22399742,
+    "file_name": "SCAW D_C Deed - Executed 1 March 2022.pdf",
+    "pdf_page_count": 343,
+    "sha256": "sha256:a9dda3b6376d27bd76a01adc4a7692838b4271a9967c53f69fa6883dafc14f99"
+  },
+  "version": "tom-assist-scaw-shortlist-manifest/1.0"
+}
