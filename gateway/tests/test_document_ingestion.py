@@ -17,8 +17,11 @@ from gateway.document_ingestion import (
     DOCUMENT_EMBEDDING_VERSION,
     MAX_DOCUMENT_CHUNKS,
     MAX_DOCUMENT_SOURCE_CHARS,
+    build_document_query_profile,
     decode_vector_f32,
     encode_vector_f32,
+    prestart_relation_details,
+    prestart_requirement_query,
     rank_document_chunks_for_packet,
 )
 from gateway.evidence_gateway import EvidenceTomGateway
@@ -28,7 +31,7 @@ from gateway.semantic_chunks import (
     build_semantic_profile,
     build_token_chunks,
 )
-from gateway.structural_analysis import build_analysis, compile_load
+from gateway.structural_analysis import CHANNELS, build_analysis, compile_load
 from gateway.tests.test_evidence_loads import (
     _Provider as StructureProvider,
     _candidate,
@@ -123,8 +126,10 @@ def test_large_document_ingestion_is_inert_exact_complete_and_float32(tmp_path):
         assert row["text"] == content[row["start"]:row["end"]]
         assert len(decode_vector_f32(row["passage_vector"])) == 384
         assert len(row["passage_vector"].encode("ascii")) == 2_048
-        assert row["analysis_digest"] is None
-        assert row["load_signature_json"] is None
+        assert re.fullmatch(r"sha256:[0-9a-f]{64}", row["analysis_digest"])
+        load = json.loads(row["load_signature_json"])
+        assert set(load) == set(CHANNELS)
+        assert all(0.0 < value <= 1.0 for value in load.values())
 
 
 def test_document_chunk_plan_reserves_retokenization_margin_and_is_linear_at_boundaries():
@@ -138,6 +143,21 @@ def test_document_chunk_plan_reserves_retokenization_margin_and_is_linear_at_bou
     assert max(row["token_end"] - row["token_start"] for row in plan) <= 188
     assert plan[0]["start"] == 0
     assert plan[-1]["end"] == len(text)
+
+
+def test_prestart_relation_instrument_preserves_orientation_and_excludes_completion():
+    query = "What must the contractor do before it starts construction work?"
+    assert prestart_requirement_query(query) is True
+    rows = prestart_relation_details(
+        "Before commencing work, the contractor must lodge the plan. "
+        "As a condition precedent to Substantial Completion, it must submit as-builts."
+    )
+    assert [row["relation"] for row in rows] == ["before_commencing"]
+    assert rows[0]["actor_role"] == "contractor"
+    principal = prestart_relation_details(
+        "The Principal must, on or before the commencement deadline, effect insurance."
+    )
+    assert principal[0]["actor_role"] == "principal"
 
 
 def test_originals_are_immutable_content_idempotent_and_names_do_not_alias(tmp_path):
@@ -245,7 +265,10 @@ def test_legacy_preview_admits_bounded_document_evidence_without_state_mutation(
     assert ranked["display_name"] == "contract.txt"
     assert ranked["text"] == "Before starting work, the Contractor must submit the plan."
     assert ranked["packet_eligible"] is True
-    assert ranked["structural_signature"] is None
+    assert ranked["structural_signature"]["document_tree_version"] == (
+        "tom-assist-shared-document-tree/1.1"
+    )
+    assert ranked["structural_signature"]["chunk_analysis_digest"]
     assert ranked["excerpt_start"] == ranked["start"] == 0
     assert ranked["excerpt_end"] == ranked["end"]
     assert ranked["excerpt_sha256"].startswith("sha256:")
@@ -418,6 +441,230 @@ def test_documents_and_diagnostics_are_strictly_project_local(tmp_path):
     assert right.preview_rank("left project requirement", 10, 2000)[
         "ranked_document_chunks"
     ] == []
+
+
+def test_shared_document_tree_persists_filters_projects_and_preview_is_byte_pure(tmp_path):
+    provider = FixtureEmbeddingProvider(axis=0)
+    data = tmp_path / "data"
+    gateway = TomGateway(data, document_embedding_provider=provider)
+    left = gateway.project("left-project")
+    right = gateway.project("right-project")
+    assert left.document_index is right.document_index
+    assert left.document_index.path == data.resolve() / "document-index/tree_state.json"
+    assert left.document_index.durable_tree_bytes() == gateway.seed.artifact_path.read_bytes()
+
+    left_experience_before = left.serialized_state_bytes()
+    right_experience_before = right.serialized_state_bytes()
+    left_doc = left.ingest_document(
+        "left.txt",
+        "Before work starts, the left contractor must submit the approved safety plan.",
+        "text/plain",
+    )
+    right_doc = right.ingest_document(
+        "right.txt",
+        "The right project warranty expires after final completion.",
+        "text/plain",
+    )
+    assert left.serialized_state_bytes() == left_experience_before
+    assert right.serialized_state_bytes() == right_experience_before
+    assert gateway.document_index.engine.state.tick == gateway.seed.tick + 2
+    assert gateway.document_index.project_commit_count("left-project") == 1
+    assert gateway.document_index.project_commit_count("right-project") == 1
+    assert {
+        row[0] for row in gateway.document_index.db.execute(
+            "SELECT DISTINCT project_id FROM chunk_commits"
+        )
+    } == {"left-project", "right-project"}
+
+    shared_before = gateway.document_index.durable_tree_bytes()
+    left_before = left.serialized_state_bytes()
+    preview = left.preview_rank("What must happen before work starts?", 10, 2000)
+    assert [row["document_id"] for row in preview["ranked_document_chunks"]] == [
+        left_doc["document_id"]
+    ]
+    assert right_doc["document_id"] not in json.dumps(preview)
+    assert gateway.document_index.durable_tree_bytes() == shared_before
+    assert left.serialized_state_bytes() == left_before
+
+    gateway.document_index.db.close()
+    restarted = TomGateway(data, document_embedding_provider=FixtureEmbeddingProvider(axis=0))
+    restored_left = restarted.project("left-project")
+    assert restarted.document_index.durable_tree_bytes() == shared_before
+    assert restarted.document_index.engine.state.tick == restarted.seed.tick + 2
+    restored = restored_left.preview_rank(
+        "What must happen before work starts?", 10, 2000,
+    )
+    assert [row["document_id"] for row in restored["ranked_document_chunks"]] == [
+        left_doc["document_id"]
+    ]
+    assert right_doc["document_id"] not in json.dumps(restored)
+
+
+def test_document_tree_selects_prerequisite_section_over_completion_and_warranty(tmp_path):
+    from gateway.dense_load17 import load_anchor_bank
+
+    bank = load_anchor_bank()
+    prerequisite = list(bank["channels"]["L_rule"][0]["vector"])
+    completion = list(bank["channels"]["T_memory"][0]["vector"])
+    warranty = list(bank["channels"]["T_future"][0]["vector"])
+
+    class MultiSectionProvider:
+        def embed_document(self, text):
+            if text.startswith("What must"):
+                spans = [(0, len(text), prerequisite)]
+            else:
+                second = text.index("10. Completion")
+                third = text.index("20. Warranty")
+                spans = [
+                    (0, second + 8, prerequisite),
+                    (second - 8, third + 8, completion),
+                    (third - 8, len(text), warranty),
+                ]
+            return {
+                "model": bank["embedding_model"],
+                "revision": bank["embedding_revision"],
+                "chunks": [
+                    {"index": index, "start": start, "end": end, "values": vector}
+                    for index, (start, end, vector) in enumerate(spans)
+                ],
+            }
+
+    text = (
+        "7. Prerequisites\nBefore commencing construction work, the Contractor must "
+        "submit the safety plan and obtain the Principal's approval.\n\n"
+        "10. Completion\nAfter the works are complete, the Contractor submits its "
+        "completion report and final account.\n\n"
+        "20. Warranty\nThe warranty remains in force for twelve months after final completion."
+    )
+    runtime = TomGateway(
+        tmp_path / "data", document_embedding_provider=MultiSectionProvider(),
+    ).project("contract")
+    experience_before = runtime.serialized_state_bytes()
+    retained = runtime.ingest_document("deed.txt", text, "text/plain")
+    assert runtime.serialized_state_bytes() == experience_before
+
+    preview = runtime.preview_rank(
+        "What must the contractor do before commencing construction work?", 10, 2000,
+    )
+    assert preview["ranked_document_chunks"][0]["document_id"] == retained["document_id"]
+    assert preview["ranked_document_chunks"][0]["chunk_index"] == 0
+    assert "Before commencing construction work" in preview["ranked_document_chunks"][0]["text"]
+    assert preview["ranked_document_chunks"][0]["structural_rank"] == 1
+    assert preview["ranked_document_chunks"][0]["matched_document_branch_id"]
+    assert preview["ranked_document_chunks"][0]["score_space"] == (
+        "minilm_dense_plus_exact_relation_plus_document_tree_rrf"
+    )
+    assert [row["chunk_index"] for row in preview["ranked_document_chunks"]] == [0]
+    by_chunk = {
+        row["chunk_index"]: row
+        for row in preview["document_research_trace"]["candidate_recall"]
+    }
+    assert by_chunk[0]["structural_resonance"] > by_chunk[1]["structural_resonance"]
+    assert by_chunk[0]["structural_resonance"] > by_chunk[2]["structural_resonance"]
+    retained_rows = runtime.library.document_chunks(
+        document_id=retained["document_id"],
+    )
+    assert len({row["analysis_digest"] for row in retained_rows}) == 3
+    assert len({row["load_signature_json"] for row in retained_rows}) == 3
+    receipts = runtime.document_index.project_commits("contract")
+    assert len(receipts) == 3
+    assert all(len(row["analysis"]["routing_basis_8d"]["vector_8d"]) == 8 for row in receipts)
+    assert all(len(row["address_branches"]) == 32 for row in receipts)
+    assert receipts[0]["clause_provenance"]
+
+
+def test_broad_document_research_keeps_composite_units_and_text_free_trace(tmp_path):
+    text = (
+        "1. Conditions\n"
+        "1.1 Before commencing any construction work, the Contractor must:\n"
+        "(a) file the secret plan; and\n"
+        "(b) obtain the written approval under clause 3.\n\n"
+        "2. Access\n"
+        "2.1 The Principal is not obliged to give the Contractor access until "
+        "the Contractor has:\n"
+        "(a) delivered insurance; and\n"
+        "(b) submitted the secret method.\n\n"
+        "3. Principal insurance\n"
+        "3.1 On or before the Condition Precedent Deadline Date, the Principal "
+        "must effect its own insurance.\n"
+        "3.2 The Principal must keep its own insurance current.\n"
+    )
+    runtime = TomGateway(
+        tmp_path / "data", document_embedding_provider=FixtureEmbeddingProvider(),
+    ).project("contract")
+    before = runtime.serialized_state_bytes()
+    runtime.ingest_document("instrument.txt", text, "text/plain")
+    document_tree_before = runtime.document_index.durable_tree_bytes()
+
+    preview = runtime.preview_rank(
+        "What must the contractor do before it starts construction work under the deed?",
+        24,
+        12_000,
+    )
+    assert runtime.serialized_state_bytes() == before
+    assert runtime.document_index.durable_tree_bytes() == document_tree_before
+    rows = preview["ranked_document_chunks"]
+    assert [row["matched_clause_identifier"] for row in rows] == ["1.1", "2.1"]
+    assert "(a) file the secret plan" in rows[0]["text"]
+    assert "(b) obtain the written approval" in rows[0]["text"]
+    assert "(a) delivered insurance" in rows[1]["text"]
+    assert "(b) submitted the secret method" in rows[1]["text"]
+    assert all(row["truncated"] is False for row in rows)
+
+    trace = preview["document_research_trace"]
+    assert trace["intent"]["broad_document_research"] is True
+    assert trace["document_tree"]["head"]["chunk_receipt_count"] > 0
+    coverage = trace["final_evidence_coverage"]
+    assert [row["clause_identifier"] for row in coverage["discovered_units"]] == [
+        "1.1", "2.1",
+    ]
+    assert all(
+        row["document_tree_address"]["branch_count"] == 32
+        and row["document_tree_address"]["receipt_analysis_digest"].startswith("sha256:")
+        for row in coverage["discovered_units"]
+    )
+    encoded = json.dumps(trace, sort_keys=True)
+    assert "secret plan" not in encoded
+    assert "secret method" not in encoded
+    assert "Principal insurance" not in json.dumps(rows, sort_keys=True)
+
+    # The tiny fixture's structure resolver reports the forward parent
+    # reference as absent. Reclassify that one record as resolved in memory to
+    # exercise the production guard deterministically: a reference to parent
+    # clause 3 may not guess between children 3.1 and 3.2.
+    source = runtime.library.document(runtime.list_documents()[0]["document_id"])
+    reference = source["declared_structure"]["references"]["references"][0]
+    assert reference["named_identifier"] == "3"
+    reference["outcome"] = "resolved"
+    parent = next(
+        row for row in source["declared_structure"]["clause_index"]["entries"]
+        if row["identifier"] == "3"
+    )
+    parent["kind"] = "clause"
+    parent["status"] = "valid"
+    metadata = runtime.document_index.project_chunk_metadata("contract")
+    document_chunks = [
+        {
+            **chunk,
+            **metadata[(chunk["document_id"], chunk["chunk_index"])],
+            "display_name": "instrument.txt",
+        }
+        for chunk in runtime.library.document_chunks()
+    ]
+    query = "What must the contractor do before it starts construction work under the deed?"
+    _, forced_trace = rank_document_chunks_for_packet(
+        query,
+        build_document_query_profile(query, FixtureEmbeddingProvider()),
+        document_chunks,
+        k=24,
+        max_chars=12_000,
+        document_sources={source["document_id"]: source},
+        return_trace=True,
+    )
+    assert any(
+        row["decision"] == "RESOLVED_REFERENCE_TARGET_TOO_BROAD"
+        for row in forced_trace["cross_reference_traversal"]
+    ), forced_trace["cross_reference_traversal"]
 
 
 def test_archive_preserves_documents_and_pre_wp39_archive_imports_empty(tmp_path):

@@ -33,6 +33,19 @@ export interface Exchange {
       }[];
     }[];
     excluded: { id: string; reason: string }[];
+    document_research?: {
+      final_evidence_coverage?: {
+        discovered_units?: {
+          evidence_id: string;
+          clause_identifier?: string;
+          conditionality?: string[];
+          packet_admitted?: boolean;
+          packet_exclusion_reason?: string;
+        }[];
+        missing_sources?: { named_identifier?: string; reason_code?: string }[];
+        exhaustiveness?: string;
+      };
+    };
   };
 }
 export interface ConversationView {
@@ -67,8 +80,8 @@ function readableEvidence(text: string) {
 function topLevelRequirementCount(text: string) {
   const markers = [...text.matchAll(/^([ \t]*)\(([A-Za-z0-9]+)\)[ \t]+/gm)];
   if (!markers.length || !/\b(?:must|must not|may not)\b/i.test(text)) return 0;
-  const shallowest = Math.min(...markers.map((match) => match[1].length));
-  return markers.filter((match) => match[1].length === shallowest).length;
+  const shallowest = Math.min(...markers.map((match) => (match[1] ?? "").length));
+  return markers.filter((match) => (match[1] ?? "").length === shallowest).length;
 }
 
 function readableResponse(text: string) {
@@ -89,7 +102,9 @@ function sectionLabel(section: string) {
 
 function sourceLabel(id: string) {
   const match = id.match(/^document-[^:]+:chunk:(\d+)$/);
-  return match ? `Retained contract source · chunk ${match[1]}` : "Retained project state";
+  if (match) return `Retained contract source · chunk ${match[1]}`;
+  if (/^document-[^:]+:unit:/.test(id)) return "Retained authored contract clause";
+  return "Retained project state";
 }
 
 export function Chat({
@@ -184,6 +199,18 @@ export function Chat({
   const excludedEvidenceCount = (prepared?.context_preview?.excluded ?? []).filter(
     (item) => item.id.startsWith("document-"),
   ).length;
+  const researchCoverage = prepared?.context_preview?.document_research
+    ?.final_evidence_coverage;
+  const discoveredUnits = researchCoverage?.discovered_units ?? [];
+  const projectWideCount = discoveredUnits.filter((row) =>
+    row.conditionality?.includes("project_wide"),
+  ).length;
+  const activityConditionalCount = discoveredUnits.filter((row) =>
+    row.conditionality?.includes("activity_conditional"),
+  ).length;
+  const discoveredClauses = [...new Set(
+    discoveredUnits.map((row) => row.clause_identifier).filter(Boolean),
+  )];
   useEffect(() => {
     if ((!waiting && !sending) || !view) return;
     const timer = setInterval(
@@ -564,6 +591,36 @@ export function Chat({
                     {" "}Tom Assist has not counted every requirement in the deed.
                   </p>
                 </div>
+              )}
+              {!!discoveredUnits.length && (
+                <section class="chat-research-coverage" aria-label="Document research coverage">
+                  <h4>Prerequisite coverage found in the project documents</h4>
+                  <p>
+                    Tom Assist found {discoveredUnits.length} authored evidence unit
+                    {discoveredUnits.length === 1 ? "" : "s"}: {projectWideCount} project-wide and {activityConditionalCount} activity-conditional.
+                    {" "}{selectedEvidenceCount} fit in this outgoing packet; the remainder are still recorded below, not silently discarded.
+                  </p>
+                  <p><strong>Clause addresses:</strong> {discoveredClauses.join(", ")}</p>
+                  {!!researchCoverage?.missing_sources?.length && (
+                    <p role="alert">
+                      Not exhaustive: the deed refers to material that is not addressable in the retained source ({researchCoverage.missing_sources
+                        .map((row) => row.named_identifier ?? "unresolved reference")
+                        .join(", ")}).
+                    </p>
+                  )}
+                  <details>
+                    <summary>Why discovered items did or did not reach the packet</summary>
+                    <ul>
+                      {discoveredUnits.map((row) => (
+                        <li key={row.evidence_id}>
+                          {row.clause_identifier ?? row.evidence_id}: {row.packet_admitted
+                            ? "included"
+                            : row.packet_exclusion_reason ?? "not selected by the gateway"}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                </section>
               )}
               <div class="chat-preview-evidence" aria-label="Selected project evidence">
                 {evidenceSections.map((section) =>

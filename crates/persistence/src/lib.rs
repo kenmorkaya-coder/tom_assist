@@ -908,6 +908,18 @@ impl Store {
         }
     }
 
+    pub fn latest_context_run(&self, project_id: &str) -> Result<Option<ContextRunRecord>> {
+        let digest = self.connection.query_row(
+            "SELECT packet_digest FROM context_runs WHERE project_id=?1 ORDER BY rowid DESC LIMIT 1",
+            [project_id],
+            |row| row.get::<_, String>(0),
+        ).optional()?;
+        match digest {
+            Some(value) => self.context_run_by_digest(project_id, &value),
+            None => Ok(None),
+        }
+    }
+
     pub fn record_turn(&self, record: &TurnRecord) -> Result<()> {
         self.connection.execute(
             "INSERT OR IGNORE INTO turns(id,session_id,project_id,workstream_id,role,ordinal,normalized_text,content_hash,packet_digest,completeness,captured_at,provider_timestamp) VALUES(?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)",

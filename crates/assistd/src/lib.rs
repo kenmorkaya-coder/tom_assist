@@ -17,8 +17,8 @@ use std::os::unix::net::{UnixListener, UnixStream};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use tom_assist_context_admission::{
-    AdmissionRequest, Candidate, CandidatePool, ContextAdmissionEngine, IntegrityStatus,
-    ScoreComponents,
+    AdmissionRequest, BudgetProfile, Candidate, CandidatePool, ContextAdmissionEngine,
+    IntegrityStatus, ScoreComponents,
 };
 use tom_assist_governance::{
     CandidateChannel, EvaluationRequest, EvaluationState as GovernanceEvaluationState,
@@ -36,7 +36,7 @@ use tom_assist_tom_adapter::GatewayClient;
 
 pub const SERVICE_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const SERVICE_PROTOCOL_VERSION: &str = tom_assist_protocol::PROTOCOL_VERSION;
-pub const POLICY_VERSION: &str = "context-policy/1.3";
+pub const POLICY_VERSION: &str = "context-policy/1.4";
 pub const RENDERER_VERSION: &str = tom_assist_context_admission::RENDERER_VERSION;
 
 #[derive(Debug)]
@@ -270,14 +270,20 @@ impl AssistService {
             .ok_or_else(|| StoreError::ProjectNotFound(request.project_id.clone()))?;
         let state = store.current_state(&request.project_id)?;
         if let Some(gateway) = &self.gateway {
+            let broad_document_question = broad_prestart_document_question(&request.user_draft);
+            let preview_chars = if broad_document_question {
+                32_000
+            } else {
+                2_000
+            };
             // Production owns projection/admission; page-provided manifests are not trusted.
             let declared_glossary_titles = active_glossary_titles(&state.objects);
             let preview = gateway
                 .preview_rank_with_glossary_titles(
                     &request.project_id,
                     &request.user_draft,
-                    10,
-                    2000,
+                    if broad_document_question { 64 } else { 10 },
+                    preview_chars,
                     &declared_glossary_titles,
                 )
                 .map_err(|error| {
@@ -365,9 +371,13 @@ impl AssistService {
                         privacy_allowed: true,
                         dependencies: vec![],
                         provenance: Some(format!(
-                            "{} | {} | source chars {}-{} | excerpt chars {}-{}",
+                            "{} | {} | clause {} | source chars {}-{} | excerpt chars {}-{}",
                             chunk.display_name,
                             chunk.id,
+                            chunk
+                                .matched_clause_identifier
+                                .as_deref()
+                                .unwrap_or("unresolved"),
                             chunk.start,
                             chunk.end,
                             chunk.excerpt_start,
@@ -401,14 +411,46 @@ impl AssistService {
                 user_draft: request.user_draft.clone(),
                 provider_capabilities: request.provider_capabilities.clone(),
                 candidates,
-                budget_tokens: 500,
+                budget_tokens: if broad_document_question { 9_000 } else { 500 },
+                budget_profile: if broad_document_question {
+                    BudgetProfile::DocumentResearch
+                } else {
+                    BudgetProfile::Standard
+                },
             })?;
             request.tom_checkpoint_digest = preview.checkpoint_digest;
             request.tom_activation_id = preview.activation_id;
             request.activated_branch_ids = preview.activated_branch_ids;
+            let redacted_document_retrieval = preview
+                .ranked_document_chunks
+                .iter()
+                .map(|chunk| {
+                    let mut value = serde_json::to_value(chunk).expect("serializable chunk");
+                    value.as_object_mut().expect("chunk object").remove("text");
+                    value
+                })
+                .collect::<Vec<_>>();
+            let mut document_research =
+                preview.document_research_trace.unwrap_or_else(|| json!({}));
+            document_research["packet_admission"] = serde_json::to_value(&admitted.trace)?;
+            if let Some(units) = document_research
+                .pointer_mut("/final_evidence_coverage/discovered_units")
+                .and_then(Value::as_array_mut)
+            {
+                for unit in units {
+                    let id = unit["evidence_id"].as_str().unwrap_or_default().to_owned();
+                    unit["packet_admitted"] =
+                        json!(admitted.trace.admitted_ids.iter().any(|v| v == &id));
+                    if let Some(excluded) = admitted.trace.excluded.iter().find(|row| row.id == id)
+                    {
+                        unit["packet_exclusion_reason"] = json!(excluded.reason);
+                    }
+                }
+            }
             let mut candidate_trace = json!({
                 "retrieval": preview.candidate_trace,
-                "document_retrieval": preview.ranked_document_chunks,
+                "document_retrieval": redacted_document_retrieval,
+                "document_research": document_research,
                 "branches": preview.branch_trace,
                 "admission": admitted.trace,
                 "structural_load_mode": preview.structural_load_mode,
@@ -1040,6 +1082,46 @@ pub fn active_glossary_titles(objects: &[StateObject]) -> Vec<String> {
         })
         .map(|object| object.title.clone())
         .collect()
+}
+
+fn broad_prestart_document_question(text: &str) -> bool {
+    let folded = text.to_lowercase();
+    let oriented = [
+        "before",
+        "prior",
+        "pre-start",
+        "prestart",
+        "commenc",
+        "start",
+    ]
+    .iter()
+    .any(|term| folded.contains(term));
+    let asks_for_duties = [
+        "must",
+        "required",
+        "requirement",
+        "condition",
+        "prerequisite",
+        "what do",
+    ]
+    .iter()
+    .any(|term| folded.contains(term));
+    oriented && asks_for_duties
+}
+
+#[cfg(test)]
+mod document_question_tests {
+    use super::broad_prestart_document_question;
+
+    #[test]
+    fn recognises_broad_prestart_question_without_matching_completion() {
+        assert!(broad_prestart_document_question(
+            "What must the contractor do before it starts construction work under the deed?"
+        ));
+        assert!(!broad_prestart_document_question(
+            "What warranty applies after final completion?"
+        ));
+    }
 }
 
 #[derive(Debug, Clone, Copy)]

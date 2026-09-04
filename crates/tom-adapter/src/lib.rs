@@ -85,6 +85,10 @@ pub struct RankedDocumentChunk {
     pub packet_eligible: bool,
     pub structural_signature: Option<Value>,
     pub truncated: bool,
+    #[serde(default)]
+    pub clause_identifiers: Vec<String>,
+    #[serde(default)]
+    pub matched_clause_identifier: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -98,6 +102,8 @@ pub struct RankPreview {
     pub ranked_anchors: Vec<RankedAnchor>,
     #[serde(default)]
     pub ranked_document_chunks: Vec<RankedDocumentChunk>,
+    #[serde(default)]
+    pub document_research_trace: Option<Value>,
     pub checkpoint_digest: String,
     #[serde(default)]
     pub structural_load_mode: String,

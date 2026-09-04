@@ -21,6 +21,7 @@ from gateway.structural_analysis import CHANNELS, digest, text_digest, validate_
 
 
 DENSE_LOAD_VERSION = "tom-assist-dense-semantic-load17/0.2-shadow"
+DOCUMENT_DENSE_LOAD_VERSION = "tom-assist-document-dense-load17/1.0"
 ANCHOR_BANK_SCHEMA = "tom-assist-dense-load17-anchor-bank/1.0"
 ANCHOR_BANK_PATH = Path(__file__).with_name("data") / "dense_load17_anchor_bank_v1.json"
 DRIVERS = ("threat_load", "sustenance_potential", "procreation_potential")
@@ -178,22 +179,27 @@ def _semantic_measurements(
     chunks = semantic_profile["chunks"]
     beta = bank["formula"]["absolute_beta"]
     temperature = bank["formula"]["contrast_temperature"]
-    measurements: dict[str, dict[str, Any]] = {}
-    for name in names:
-        candidates = []
-        for chunk in chunks:
-            vector = chunk["values"]
-            positives = [
+    candidates_by_name: dict[str, list[dict[str, Any]]] = {
+        name: [] for name in names
+    }
+    for chunk in chunks:
+        vector = chunk["values"]
+        # Every anchor cosine is independent of the channel for which it later
+        # serves as a positive or contrast. Compute it exactly once, retaining
+        # the same Python sum order and tie-break as the original formula.
+        scored = {
+            name: [
                 (_cosine(vector, anchor["vector"]), anchor)
                 for anchor in bank[family][name]
             ]
+            for name in names
+        }
+        for name in names:
             positive_cosine, positive_anchor = max(
-                positives, key=lambda item: (item[0], item[1]["anchor_id"])
+                scored[name], key=lambda item: (item[0], item[1]["anchor_id"])
             )
             contrasts = [
-                (_cosine(vector, anchor["vector"]), anchor)
-                for other in names if other != name
-                for anchor in bank[family][other]
+                item for other in names if other != name for item in scored[other]
             ]
             contrast_cosine, contrast_anchor = max(
                 contrasts, key=lambda item: (item[0], item[1]["anchor_id"])
@@ -205,7 +211,7 @@ def _semantic_measurements(
             value = absolute * specificity
             if not 0.0 < value <= 1.0:
                 raise ValueError(f"dense semantic value for {name} is not positive")
-            candidates.append({
+            candidates_by_name[name].append({
                 "value": value,
                 "absolute_resonance": absolute,
                 "contrast_specificity": specificity,
@@ -220,10 +226,13 @@ def _semantic_measurements(
                 "end": int(chunk["end"]),
                 "chunk_text_sha256": chunk["text_sha256"],
             })
-        measurements[name] = max(
-            candidates, key=lambda item: (item["value"], -item["chunk_index"])
+    return {
+        name: max(
+            candidates_by_name[name],
+            key=lambda item: (item["value"], -item["chunk_index"]),
         )
-    return measurements
+        for name in names
+    }
 
 
 def _history_features(
@@ -537,6 +546,130 @@ def compile_dense_shadow_load(
     }
     result["analysis_digest"] = digest(result)
     return result
+
+
+def compile_document_dense_load(
+    source_text: str,
+    vector: Sequence[float],
+    *,
+    source_embedding_version: str,
+    directed_graph: Sequence[Sequence[str]] = (),
+) -> dict[str, Any]:
+    """Compile one immutable document chunk into a replayable positive 17D drive.
+
+    This is the production form of the owner-approved vector-first construction.
+    The source vector is already retained with the immutable chunk.  No keyword
+    projection and no language-model inference participates in this function.
+    Authored reference/precedence edges may accompany the address, but are never
+    invented here and do not silently alter the scalar load.
+    """
+    if not isinstance(source_text, str) or not source_text.strip():
+        raise ValueError("document dense load requires non-empty source text")
+    if not isinstance(source_embedding_version, str) or not source_embedding_version:
+        raise ValueError("document dense load requires an embedding version")
+    values = tuple(float(value) for value in vector)
+    if len(values) != EMBEDDING_DIMENSION or not all(math.isfinite(value) for value in values):
+        raise ValueError("document dense load vector must contain 384 finite values")
+    norm = math.sqrt(sum(value * value for value in values))
+    if abs(norm - 1.0) > 2e-3:
+        raise ValueError("document dense load vector must be unit normalised")
+    graph = []
+    for index, edge in enumerate(directed_graph):
+        if (
+            not isinstance(edge, (list, tuple))
+            or len(edge) != 3
+            or not all(isinstance(item, str) and item for item in edge)
+        ):
+            raise ValueError(f"document directed graph edge {index} is invalid")
+        graph.append([str(item) for item in edge])
+
+    bank = load_anchor_bank()
+    profile = {
+        "chunks": [{
+            "index": 0,
+            "start": 0,
+            "end": len(source_text),
+            "text_sha256": text_digest(source_text),
+            "values": list(values),
+        }]
+    }
+    semantic = _semantic_measurements(source_text, profile, bank, "channels")
+    load_signature = {name: _positive_unit(
+        semantic[name]["value"], f"document dense load.{name}"
+    ) for name in CHANNELS}
+    driver_semantic = _semantic_measurements(source_text, profile, bank, "drivers")
+    driver_loads = {name: _positive_unit(
+        driver_semantic[name]["value"], f"document dense driver.{name}"
+    ) for name in DRIVERS}
+    # The pinned runtime's routing projection is the canonical bridge between
+    # the 17-channel load and the 10K Tree's eight-dimensional branch vectors.
+    # Keep both forms in the immutable receipt so an address can be replayed
+    # without treating the mutable Tree as the only copy of the evidence.
+    from agency.mechanics.sicd_msr_load import LoadSignature
+    from agency.mechanics.sicd_msr_routing_basis import (
+        project_load_signature_to_routing_basis,
+    )
+
+    routing = project_load_signature_to_routing_basis(
+        LoadSignature.from_mapping(load_signature, strict=True)
+    )
+    result = {
+        "version": DOCUMENT_DENSE_LOAD_VERSION,
+        "status": "authoritative_document_index_drive",
+        "source_text_sha256": text_digest(source_text),
+        "source_embedding_version": source_embedding_version,
+        "source_vector_sha256": "sha256:" + hashlib.sha256(
+            struct.pack(f"<{EMBEDDING_DIMENSION}f", *values)
+        ).hexdigest(),
+        "anchor_bank_sha256": bank["artifact_sha256"],
+        "anchor_source_sha256": bank["source_sha256"],
+        "formula": bank["formula"],
+        "load_signature": load_signature,
+        "routing_basis_8d": routing.as_dict(),
+        "driver_loads": driver_loads,
+        "channel_records": [{
+            "channel": name,
+            "semantic": semantic[name],
+            "value": load_signature[name],
+            "derivation": (
+                "semantic=exp(-beta*(1-positive_cosine))*"
+                "sigmoid((positive_cosine-contrast_cosine)/temperature)"
+            ),
+        } for name in CHANNELS],
+        "driver_records": [{
+            "driver": name,
+            "semantic": driver_semantic[name],
+            "value": driver_loads[name],
+            "derivation": (
+                "semantic=exp(-beta*(1-positive_cosine))*"
+                "sigmoid((positive_cosine-contrast_cosine)/temperature)"
+            ),
+        } for name in DRIVERS],
+        "directed_graph": graph,
+        "directed_graph_digest": digest(graph),
+    }
+    result["analysis_digest"] = digest(result)
+    return result
+
+
+def validate_document_dense_load(
+    payload: Any,
+    source_text: str,
+    vector: Sequence[float],
+    *,
+    source_embedding_version: str,
+    directed_graph: Sequence[Sequence[str]] = (),
+) -> dict[str, Any]:
+    """Replay a document drive exactly from retained source evidence."""
+    rebuilt = compile_document_dense_load(
+        source_text,
+        vector,
+        source_embedding_version=source_embedding_version,
+        directed_graph=directed_graph,
+    )
+    if payload != rebuilt:
+        raise ValueError("document dense load does not replay exactly")
+    return rebuilt
 
 
 def validate_dense_shadow_load(

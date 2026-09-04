@@ -32,11 +32,13 @@ fn prepared_exchange_view(
     record: &ProviderExchange,
     sections: &[PacketSection],
     excluded: &[ExcludedItem],
+    document_research: Value,
 ) -> Value {
     let mut value = json!(record);
     value["context_preview"] = json!({
         "sections": sections,
         "excluded": excluded,
+        "document_research": document_research,
     });
     value
 }
@@ -47,7 +49,16 @@ fn persisted_prepared_exchange_view(store: &Store, record: &ProviderExchange) ->
         .ok_or(ServiceError::UnknownPacket)?;
     let sections: Vec<PacketSection> = serde_json::from_str(&context.selected_json)?;
     let excluded: Vec<ExcludedItem> = serde_json::from_str(&context.excluded_json)?;
-    Ok(prepared_exchange_view(record, &sections, &excluded))
+    let trace: Value = serde_json::from_str(&context.candidate_trace_json)?;
+    Ok(prepared_exchange_view(
+        record,
+        &sections,
+        &excluded,
+        trace
+            .get("document_research")
+            .cloned()
+            .unwrap_or_else(|| json!({})),
+    ))
 }
 struct Inflight<'a>(&'a Mutex<std::collections::HashSet<String>>, String);
 impl Drop for Inflight<'_> {
@@ -154,15 +165,9 @@ impl AssistService {
             accepted_review: false,
             created_at: at.into(),
         };
-        self.store
-            .lock()
-            .unwrap()
-            .prepare_provider_exchange(&record)?;
-        Ok(prepared_exchange_view(
-            &record,
-            &prepared.packet.sections,
-            &prepared.packet.excluded,
-        ))
+        let store = self.store.lock().unwrap();
+        store.prepare_provider_exchange(&record)?;
+        persisted_prepared_exchange_view(&store, &record)
     }
     pub fn conversation_send(&self, project: &str, payload: &Value, at: &str) -> Result<Value> {
         if payload["explicit_send"] != true {

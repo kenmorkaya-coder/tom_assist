@@ -72,6 +72,7 @@ export interface DesktopBackend {
     projectId: string,
     afterEventId?: number,
   ): Promise<Record<string, unknown>>;
+  exportDocumentResearchDiagnostics(projectId: string): Promise<string>;
   documents(projectId: string): Promise<ProjectDocument[]>;
   memorySettings(
     projectId: string,
@@ -224,6 +225,8 @@ export const tauriBackend: DesktopBackend = {
     invoke("archive_project", { projectId: project.id, updatedAt: now() }),
   diagnostics: (projectId, afterEventId = 0) =>
     invoke("diagnostics", { projectId, afterEventId }),
+  exportDocumentResearchDiagnostics: (projectId) =>
+    invoke("export_document_research_diagnostics", { projectId }),
   documents: (projectId) => invoke("project_documents", { projectId }),
   memorySettings: (projectId, settings = {}) =>
     invoke("memory_settings", { projectId, settings }),

@@ -8,9 +8,10 @@ use tom_assist_protocol::{
 };
 
 pub const RENDERER_VERSION: &str = "authoritative-state/1.3";
-pub const POLICY_VERSION: &str = "context-policy/1.3";
+pub const POLICY_VERSION: &str = "context-policy/1.4";
 pub const DEFAULT_BUDGET_TOKENS: u64 = 500;
 pub const MAX_BUDGET_TOKENS: u64 = 1_200;
+pub const MAX_DOCUMENT_RESEARCH_BUDGET_TOKENS: u64 = 9_000;
 pub const DEPENDENCY_DEPTH_CAP: usize = 2;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -148,6 +149,16 @@ pub struct AdmissionRequest {
     pub provider_capabilities: ProviderCapabilities,
     pub candidates: Vec<Candidate>,
     pub budget_tokens: u64,
+    #[serde(default)]
+    pub budget_profile: BudgetProfile,
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BudgetProfile {
+    #[default]
+    Standard,
+    DocumentResearch,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -160,6 +171,7 @@ pub struct AdmissionTrace {
     pub missing_dependencies: Vec<String>,
     pub budget_tokens: u64,
     pub estimated_tokens: u64,
+    pub budget_profile: BudgetProfile,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -244,10 +256,14 @@ impl ContextAdmissionEngine {
     }
 
     pub fn build(&self, request: AdmissionRequest) -> Result<AdmissionResult, serde_json::Error> {
+        let ceiling = match request.budget_profile {
+            BudgetProfile::Standard => MAX_BUDGET_TOKENS,
+            BudgetProfile::DocumentResearch => MAX_DOCUMENT_RESEARCH_BUDGET_TOKENS,
+        };
         let budget_tokens = if request.budget_tokens == 0 {
             DEFAULT_BUDGET_TOKENS
         } else {
-            request.budget_tokens.min(MAX_BUDGET_TOKENS)
+            request.budget_tokens.min(ceiling)
         };
         let budget_chars = (budget_tokens * 4) as usize;
         let mut excluded = Vec::new();
@@ -444,6 +460,7 @@ impl ContextAdmissionEngine {
                 missing_dependencies,
                 budget_tokens,
                 estimated_tokens,
+                budget_profile: request.budget_profile,
             },
         })
     }

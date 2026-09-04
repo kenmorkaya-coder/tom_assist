@@ -28,11 +28,10 @@ empty channels never reaches the tree.
                  +---------------------+---------------------+
                  |                                           |
                  v                                           v
-        THE PROJECT RECORD                               THE TREE
+        THE PROJECT RECORD                         THE EXPERIENCE TREE
          goals / decisions                        a structure that bends
         limits / dead ends                              under load
           open questions                          the bend IS the memory
-       documents you added                                 |
                  |                                         v
                  |                             +--------------------------+
                  |                             |  RESOLVED 31 AUG 2026    |
@@ -135,7 +134,16 @@ written down.
 
                               THE DOCUMENTS
                      stored whole, split for finding,
-                       never allowed to push the tree
+                      permanent inside one project.
+                     every chunk has a receipt in the
+                      PROJECT'S DOCUMENT INDEX and an
+                       address in Tom Assist's separate
+                       10K-derived DOCUMENT TREE.
+
+                   ingestion pushes that document tree.
+                   preview only reads it. documents never
+                     push the EXPERIENCE TREE and never
+                         cross a project boundary.
 ```
 
 And beside all of that, a different kind of memory entirely:
@@ -151,9 +159,12 @@ And beside all of that, a different kind of memory entirely:
 
 Four things it still does not remember.
 
-Nothing carries between projects. Each one starts with the same blank tree and
-an empty shelf, so how you write, what you always want, and who you work with
-never survive.
+Nothing carries between projects. Project records, conversation history and
+document candidates are always selected from the active project. The document
+Tree may share structural territory, but every retained chunk has a
+project-tagged receipt and only the active project's receipts can become a
+candidate or packet item; document text and identifiers never cross that
+boundary.
 
 Nothing ages. Something from the first message competes on equal terms with
 something from the last.
@@ -162,20 +173,30 @@ A no is now written down but never read. When you dismiss a clash, that is
 recorded against everything that was on offer at the time. Nothing consults it,
 so the same rejected thing can still come back.
 
-And nothing outside a single project knows a document exists.
+Nothing outside a single project can retrieve or receive that project's
+document text.
 
 ## What is honest about the middle of that picture
 
-The tree really is the main thing choosing what gets picked. It carries more
-weight than word matching. But the coordinates it is given still come from word
-cues rather than from meaning, on both sides: the region it looks in, and where
-each memory sits. So it is doing the right job on the wrong numbers. A shadow
-comparison now runs on every look-up and reports what would change if both sides
-came from evidence instead. Nothing about it is switched on.
+There are now two different tree jobs. Accepted conversation experience drives
+the project's experience Tree only after the governed commit. Documents never
+drive that Tree. At document ingestion, each immutable chunk is embedded,
+compiled into a fully positive evidence-addressed 17D load, projected through
+the pinned 8D routing basis and applied to a dedicated copy of the canonical
+Python 10K 8D/17D Tree held under Tom Assist's `document-index/` directory. The
+whole document and exact source offsets remain in the project-local permanent
+library; the document Tree stores structural territory and receipts, not the
+contract prose.
 
-Documents can now be stored, split and made findable, but they are inventory,
-not events. Adding a document never pushes the tree, and no document has yet
-reached a message.
+At preview, Tom Assist projects the question through the same document address
+path and reads the document Tree without stepping it. Candidate chunks must
+carry a Tree receipt for the active project. Broad document research may then
+expand a Tree-addressed hit to its exact authored clause, follow only precise
+declared references and classify explicit temporal duties. Every included or
+excluded unit keeps its clause address, Tree receipt, actor support and reason.
+The resulting cited document evidence may enter the visible packet, but it is
+never presented as committed Tom state and never becomes experience merely by
+being retrieved.
 
 What was offered to you and what you actually used is now written down. Nothing
 reads it yet. It is accumulating so that a later decision can be made on real

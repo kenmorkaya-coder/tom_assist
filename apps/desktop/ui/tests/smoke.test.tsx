@@ -166,6 +166,18 @@ describe("desktop project → capture → supersede → audit smoke", () => {
     ).toBeTruthy();
     expect(screen.getByText("Retained contract source · chunk 4")).toBeTruthy();
     expect(
+      screen.getByRole("heading", {
+        name: "Prerequisite coverage found in the project documents",
+      }),
+    ).toBeTruthy();
+    expect(screen.getByText(/found 2 authored evidence units/)).toBeTruthy();
+    expect(screen.getByText(/Clause addresses:/).closest("p")?.textContent).toContain(
+      "4.2, 8.1",
+    );
+    expect(screen.getByText(/Not exhaustive:/).closest("p")?.textContent).toContain(
+      "Schedule Z",
+    );
+    expect(
       (screen.getByText("Technical send details").closest("details") as HTMLDetailsElement)
         .open,
     ).toBe(false);

@@ -216,11 +216,33 @@ def validate_snapshot(gateway, root):
             ):
                 document_id, index, start, end, text_digest, vector, analysis, load = row
                 content = documents.get(document_id)
+                indexed = analysis is not None or load is not None
+                indexed_valid = True
+                if indexed:
+                    try:
+                        from gateway.structural_analysis import CHANNELS
+                        values = json.loads(load) if isinstance(load, str) else None
+                        indexed_valid = (
+                            isinstance(analysis, str)
+                            and re.fullmatch(r"sha256:[0-9a-f]{64}", analysis) is not None
+                            and isinstance(values, dict)
+                            and set(values) == set(CHANNELS)
+                            and all(
+                                isinstance(value, (int, float))
+                                and not isinstance(value, bool)
+                                and math.isfinite(float(value))
+                                and 0.0 < float(value) <= 1.0
+                                for value in values.values()
+                            )
+                        )
+                    except (TypeError, ValueError, json.JSONDecodeError):
+                        indexed_valid = False
                 if (
                     content is None or index != len(grouped[document_id])
                     or not 0 <= start < end <= len(content)
                     or hashlib.sha256(content[start:end].encode("utf-8")).hexdigest() != text_digest
-                    or analysis is not None or load is not None
+                    or (analysis is None) != (load is None)
+                    or not indexed_valid
                 ):
                     raise ValueError("invalid document-chunk provenance")
                 decode_vector_f32(vector)

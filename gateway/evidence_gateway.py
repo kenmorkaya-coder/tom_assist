@@ -64,9 +64,11 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
         structure_provider: Any | None,
         document_embedding_provider=None,
         parser_glossary_enabled: bool = False,
+        document_index=None,
     ) -> None:
         super().__init__(
-            project_id, state_dir, runtime_sha, seed, document_embedding_provider
+            project_id, state_dir, runtime_sha, seed, document_embedding_provider,
+            document_index,
         )
         self.structure_mode = structure_mode
         self.structure_provider = structure_provider
@@ -207,7 +209,7 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
                 })
                 if len(ranked) >= k:
                     break
-            ranked_documents = self._rank_document_packet(
+            ranked_documents, document_research_trace = self._rank_document_packet(
                 user_text, k, max_chars,
                 query_profile=analysis["semantic_profile"],
             )
@@ -231,6 +233,7 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
                 "triggers": [asdict(trigger) for trigger in triggers],
                 "ranked_anchors": ranked,
                 "ranked_document_chunks": ranked_documents,
+                "document_research_trace": document_research_trace,
                 "activated_branch_ids": [bid for bid, _, _ in cohort],
                 "candidate_trace": fused,
                 "branch_trace": branch_trace,
@@ -559,6 +562,7 @@ class EvidenceTomGateway(base.TomGateway):
             self.structure_mode, self.structure_provider,
             self.document_embedding_provider,
             self.parser_glossary_enabled,
+            self.document_index,
         )
 
     def project(self, project_id: Any) -> EvidenceProjectRuntime:

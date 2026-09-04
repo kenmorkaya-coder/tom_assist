@@ -1,6 +1,6 @@
 use tom_assist_context_admission::{
-    AdmissionRequest, Candidate, CandidatePool, ContextAdmissionEngine, IntegrityStatus,
-    ScoreComponents,
+    AdmissionRequest, BudgetProfile, Candidate, CandidatePool, ContextAdmissionEngine,
+    IntegrityStatus, ScoreComponents,
 };
 use tom_assist_protocol::{ModelInternalBias, ProviderCapabilities, StateStatus, StateType};
 
@@ -65,6 +65,7 @@ fn request(mut candidates: Vec<Candidate>) -> AdmissionRequest {
         },
         candidates,
         budget_tokens: 500,
+        budget_profile: BudgetProfile::Standard,
     }
 }
 
@@ -165,7 +166,7 @@ fn golden_packet_renderer_manifest_and_digest_are_byte_stable() {
     assert_eq!(first.packet.excluded.len(), 2);
     assert_eq!(
         first.packet.packet_digest,
-        "sha256:781c19499276b2d16831ab56679081b811f8efe508758e9e7e0d30d5377bfa37"
+        "sha256:637b046f52e8c569c922e1fd6325ba46f8b6d1c653ff546a336ece1129c8bcfd"
     );
     assert!(first.composer_text.ends_with(
         "[CURRENT_USER_REQUEST]\nWhat should I implement next?\nKeep the answer concise."
@@ -300,5 +301,16 @@ fn zero_budget_selects_the_documented_default_and_large_values_cap_at_twelve_hun
             .trace
             .budget_tokens,
         1_200
+    );
+    let mut research = request(vec![]);
+    research.budget_tokens = 99_000;
+    research.budget_profile = BudgetProfile::DocumentResearch;
+    assert_eq!(
+        ContextAdmissionEngine::default()
+            .build(research)
+            .unwrap()
+            .trace
+            .budget_tokens,
+        9_000
     );
 }

@@ -109,6 +109,29 @@ export class FakeDesktopBackend implements DesktopBackend {
           excluded: [
             { id: "document-fixture:chunk:8", reason: "packet-budget" },
           ],
+          document_research: {
+            final_evidence_coverage: {
+              discovered_units: [
+                {
+                  evidence_id: "document-fixture:chunk:4",
+                  clause_identifier: "4.2",
+                  conditionality: ["project_wide"],
+                  packet_admitted: true,
+                },
+                {
+                  evidence_id: "document-fixture:chunk:8",
+                  clause_identifier: "8.1",
+                  conditionality: ["activity_conditional"],
+                  packet_admitted: false,
+                  packet_exclusion_reason: "packet-budget",
+                },
+              ],
+              missing_sources: [
+                { named_identifier: "Schedule Z", reason_code: "MISSING_REFERENCED_SOURCE" },
+              ],
+              exhaustiveness: "limited_by_missing_referenced_sources",
+            },
+          },
         },
       };
       view.exchanges.push({ exchange });
@@ -263,6 +286,9 @@ export class FakeDesktopBackend implements DesktopBackend {
         document_chunk_count: documents.reduce((total, row) => total + row.chunk_count, 0),
       },
     };
+  }
+  async exportDocumentResearchDiagnostics(projectId: string): Promise<string> {
+    return `/fixture/diagnostics/document-research-${projectId}.json`;
   }
   async documents(projectId: string): Promise<ProjectDocument[]> {
     return structuredClone(this.projectDocuments.get(projectId) ?? []);

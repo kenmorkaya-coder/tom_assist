@@ -14,6 +14,7 @@ from gateway.dense_load17 import (
     load_anchor_bank,
     validate_dense_shadow_load,
 )
+import gateway.dense_load17 as dense_module
 from gateway.semantic_chunks import build_semantic_profile
 from gateway.structural_analysis import CANDIDATE_VERSION, CHANNELS, SIGNAL_NAMES, text_digest
 
@@ -74,6 +75,65 @@ def test_dense_shadow_is_positive_provenanced_and_replays_exactly():
     assert all(record["semantic"]["positive_anchor_id"] for record in result["channel_records"])
     assert all(record["semantic"]["contrast_anchor_id"] for record in result["channel_records"])
     assert validate_dense_shadow_load(result, text, profile, analysis) == result
+
+
+def test_anchor_cosine_precomputation_is_exactly_equivalent_to_original_formula():
+    text, profile, _ = _fixture()
+    bank = load_anchor_bank()
+
+    def original(family):
+        names = dense_module.CHANNELS if family == "channels" else dense_module.DRIVERS
+        chunks = profile["chunks"]
+        beta = bank["formula"]["absolute_beta"]
+        temperature = bank["formula"]["contrast_temperature"]
+        measurements = {}
+        for name in names:
+            candidates = []
+            for chunk in chunks:
+                vector = chunk["values"]
+                positives = [
+                    (dense_module._cosine(vector, anchor["vector"]), anchor)
+                    for anchor in bank[family][name]
+                ]
+                positive_cosine, positive_anchor = max(
+                    positives, key=lambda item: (item[0], item[1]["anchor_id"])
+                )
+                contrasts = [
+                    (dense_module._cosine(vector, anchor["vector"]), anchor)
+                    for other in names if other != name
+                    for anchor in bank[family][other]
+                ]
+                contrast_cosine, contrast_anchor = max(
+                    contrasts, key=lambda item: (item[0], item[1]["anchor_id"])
+                )
+                absolute = dense_module.math.exp(-beta * (1.0 - positive_cosine))
+                specificity = dense_module._sigmoid(
+                    (positive_cosine - contrast_cosine) / temperature
+                )
+                candidates.append({
+                    "value": absolute * specificity,
+                    "absolute_resonance": absolute,
+                    "contrast_specificity": specificity,
+                    "positive_cosine": positive_cosine,
+                    "contrast_cosine": contrast_cosine,
+                    "positive_anchor_id": positive_anchor["anchor_id"],
+                    "positive_anchor_sha256": positive_anchor["text_sha256"],
+                    "contrast_anchor_id": contrast_anchor["anchor_id"],
+                    "contrast_anchor_sha256": contrast_anchor["text_sha256"],
+                    "chunk_index": int(chunk["index"]),
+                    "start": int(chunk["start"]),
+                    "end": int(chunk["end"]),
+                    "chunk_text_sha256": chunk["text_sha256"],
+                })
+            measurements[name] = max(
+                candidates, key=lambda item: (item["value"], -item["chunk_index"])
+            )
+        return measurements
+
+    for family in ("channels", "drivers"):
+        assert dense_module._semantic_measurements(
+            text, profile, bank, family,
+        ) == original(family)
 
 
 def test_missing_history_never_falls_through_to_legacy_dynamic_defaults():

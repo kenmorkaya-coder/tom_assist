@@ -39,6 +39,7 @@ export function App({ backend = tauriBackend }: { backend?: DesktopBackend }) {
   const [interventions, setInterventions] = useState<InterventionRecord[]>([]);
   const [view, setView] = useState<View>("Overview");
   const [diagnostics, setDiagnostics] = useState<Record<string, unknown>>({});
+  const [diagnosticsExport, setDiagnosticsExport] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [projectName, setProjectName] = useState("");
@@ -344,6 +345,20 @@ export function App({ backend = tauriBackend }: { backend?: DesktopBackend }) {
               Run local diagnostics
             </button>
             <pre>{JSON.stringify(diagnostics, null, 2)}</pre>
+            <button
+              disabled={!active || busy}
+              onClick={() =>
+                active &&
+                void run(async () =>
+                  setDiagnosticsExport(
+                    await backend.exportDocumentResearchDiagnostics(active.id),
+                  ),
+                )
+              }
+            >
+              Export document research trace
+            </button>
+            {diagnosticsExport && <p>Saved locally: {diagnosticsExport}</p>}
             <button
               disabled={
                 !active ||
