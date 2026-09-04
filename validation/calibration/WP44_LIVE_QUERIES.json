@@ -1,0 +1,110 @@
+{
+  "version": "tom-assist-wp44-live-queries/1.0",
+  "status": "FROZEN-BEFORE-LIVE-OPERATION",
+  "base_code_sha": "c2074f1d58647c0c307a705a427f316422fa2e4f",
+  "created_at": "2026-09-04T00:00:00+10:00",
+  "corpus_identity": {
+    "filename": "SCAW_SHORTLIST_TEXT_CORRECTED.json",
+    "sha256": "5c019f0be5401b6edea28f1d4a1f467f646bc0e077be8e206a6b50230962889e",
+    "passage_count": 41
+  },
+  "policy": {
+    "query_count": 18,
+    "relevance_labels_authored": false,
+    "accuracy_score_authorised": false,
+    "retrieval_tuning_authorised": false,
+    "out_of_corpus_probe_count": 3
+  },
+  "queries": [
+    {
+      "query_id": "WP44-Q01",
+      "out_of_corpus_probe": false,
+      "text": "What must the contractor do before it starts construction work under the deed?"
+    },
+    {
+      "query_id": "WP44-Q02",
+      "out_of_corpus_probe": false,
+      "text": "If the deed body conflicts with a schedule or exhibit, which document takes precedence?"
+    },
+    {
+      "query_id": "WP44-Q03",
+      "out_of_corpus_probe": false,
+      "text": "What notice must the contractor give for a Change in Law that may delay the works?"
+    },
+    {
+      "query_id": "WP44-Q04",
+      "out_of_corpus_probe": false,
+      "text": "What must the contractor do immediately if an artefact is found on site?"
+    },
+    {
+      "query_id": "WP44-Q05",
+      "out_of_corpus_probe": false,
+      "text": "When may bulk excavation begin in an Aboriginal Artefact Risk Area?"
+    },
+    {
+      "query_id": "WP44-Q06",
+      "out_of_corpus_probe": false,
+      "text": "Who carries the risk of delay and when must an Excusable Cause of Delay be notified?"
+    },
+    {
+      "query_id": "WP44-Q07",
+      "out_of_corpus_probe": false,
+      "text": "What follows if a Portion does not reach Substantial Completion by its contractual date?"
+    },
+    {
+      "query_id": "WP44-Q08",
+      "out_of_corpus_probe": false,
+      "text": "What happens to an extension-of-time claim if the clause 19.6 conditions precedent are not met?"
+    },
+    {
+      "query_id": "WP44-Q09",
+      "out_of_corpus_probe": false,
+      "text": "Must the contractor implement a Change Order while it disputes the change?"
+    },
+    {
+      "query_id": "WP44-Q10",
+      "out_of_corpus_probe": false,
+      "text": "How is submitted Design Documentation reviewed, and what cooperation is required from the contractor?"
+    },
+    {
+      "query_id": "WP44-Q11",
+      "out_of_corpus_probe": false,
+      "text": "What contractual documents and third-party requirements condition access to the Construction Site?"
+    },
+    {
+      "query_id": "WP44-Q12",
+      "out_of_corpus_probe": false,
+      "text": "What must be in place before offsite-disposal remediation activities may commence?"
+    },
+    {
+      "query_id": "WP44-Q13",
+      "out_of_corpus_probe": false,
+      "text": "Who must obtain approvals needed to execute a Change?"
+    },
+    {
+      "query_id": "WP44-Q14",
+      "out_of_corpus_probe": false,
+      "text": "What happens when a submitted Project Plan does not comply with the deed?"
+    },
+    {
+      "query_id": "WP44-Q15",
+      "out_of_corpus_probe": false,
+      "text": "Can defective or unsafe works be used when they threaten people's health or safety?"
+    },
+    {
+      "query_id": "WP44-Q16",
+      "out_of_corpus_probe": true,
+      "text": "What is the required professional indemnity insurance limit under the deed?"
+    },
+    {
+      "query_id": "WP44-Q17",
+      "out_of_corpus_probe": true,
+      "text": "What is the exact daily liquidated-damages amount for Portion 1?"
+    },
+    {
+      "query_id": "WP44-Q18",
+      "out_of_corpus_probe": true,
+      "text": "Which courts have exclusive jurisdiction over disputes under the deed?"
+    }
+  ]
+}
