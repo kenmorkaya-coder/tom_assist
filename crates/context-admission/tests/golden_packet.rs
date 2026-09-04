@@ -165,11 +165,25 @@ fn golden_packet_renderer_manifest_and_digest_are_byte_stable() {
     assert_eq!(first.packet.excluded.len(), 2);
     assert_eq!(
         first.packet.packet_digest,
-        "sha256:261d19c73d8aaaf4ed6c83fd65a28e1a739649794ec8b7cfcb89128c2eb266c9"
+        "sha256:7cde573887477b423218c8dee21199ad72173414b77aa20e87d691aa37e61c55"
     );
     assert!(first.composer_text.ends_with(
         "[CURRENT_USER_REQUEST]\nWhat should I implement next?\nKeep the answer concise."
     ));
+}
+
+#[test]
+fn fresh_project_first_packet_is_the_user_draft_without_an_authority_scaffold() {
+    let request = request(vec![]);
+    let draft = request.user_draft.clone();
+    let result = ContextAdmissionEngine::default().build(request).unwrap();
+
+    assert_eq!(result.state_block, "");
+    assert_eq!(result.composer_text, draft);
+    assert!(result.packet.sections.is_empty());
+    assert_eq!(result.packet.estimated_tokens, 0);
+    assert_eq!(result.packet.renderer_version, "authoritative-state/1.2");
+    assert!(!result.composer_text.contains("TOM_ASSIST_STATE"));
 }
 
 #[test]

@@ -7,7 +7,7 @@ use tom_assist_protocol::{
     ProviderCapabilities, StateStatus, StateType, canonical_sha256, packet_digest,
 };
 
-pub const RENDERER_VERSION: &str = "authoritative-state/1.1";
+pub const RENDERER_VERSION: &str = "authoritative-state/1.2";
 pub const POLICY_VERSION: &str = "context-policy/1.2";
 pub const DEFAULT_BUDGET_TOKENS: u64 = 500;
 pub const MAX_BUDGET_TOKENS: u64 = 1_200;
@@ -361,11 +361,19 @@ impl ContextAdmissionEngine {
             .iter()
             .filter_map(|id| ranked_by_id.get(id))
             .collect();
-        let state_block = render_state_block(&request, &admitted, &missing_dependencies);
-        let composer_text = format!(
-            "{state_block}\n[CURRENT_USER_REQUEST]\n{}",
-            request.user_draft
-        );
+        let state_block = if admitted.is_empty() && missing_dependencies.is_empty() {
+            String::new()
+        } else {
+            render_state_block(&request, &admitted, &missing_dependencies)
+        };
+        let composer_text = if state_block.is_empty() {
+            request.user_draft.clone()
+        } else {
+            format!(
+                "{state_block}\n[CURRENT_USER_REQUEST]\n{}",
+                request.user_draft
+            )
+        };
         let estimated_tokens = state_block.chars().count().div_ceil(4) as u64;
         let draft_hash = canonical_sha256(&request.user_draft)?;
         let admitted_ids: Vec<&str> = admitted

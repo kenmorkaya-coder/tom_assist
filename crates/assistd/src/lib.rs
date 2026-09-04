@@ -37,7 +37,7 @@ use tom_assist_tom_adapter::GatewayClient;
 pub const SERVICE_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const SERVICE_PROTOCOL_VERSION: &str = tom_assist_protocol::PROTOCOL_VERSION;
 pub const POLICY_VERSION: &str = "context-policy/1.2";
-pub const RENDERER_VERSION: &str = "authoritative-state/1.1";
+pub const RENDERER_VERSION: &str = tom_assist_context_admission::RENDERER_VERSION;
 
 #[derive(Debug)]
 pub enum ServiceError {

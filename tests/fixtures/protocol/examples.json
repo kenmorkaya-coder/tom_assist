@@ -166,7 +166,7 @@
     "tom_checkpoint_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
     "draft_hash": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
     "policy_version": "context-policy/1.0",
-    "renderer_version": "authoritative-state/1.1",
+    "renderer_version": "authoritative-state/1.2",
     "provider_capabilities": {
       "provider_surface": "chatgpt-web",
       "visible_prompt_injection": true,
