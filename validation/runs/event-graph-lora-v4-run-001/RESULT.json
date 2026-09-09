@@ -1,0 +1,808 @@
+{
+  "formally_verified_utc": "2026-09-09T10:44:34.322552+00:00",
+  "verification": "All frozen files and model hashes, final adapter, raw-to-parsed outputs, row inventory, and aggregate recomputation agree.",
+  "local_run": "/Users/kenmorkaya/PycharmProjects/ToM_assist/.tmp/event-graph-lora-v4-run-001",
+  "freeze_sha256": "0ca792d4a42b9e629e13960bfe39bf43737c25c3afefa9d7a634d676accc5f13",
+  "aggregate_sha256": "be704747bd6cde6019bc69f1720ca8d1035031f7e760d38eed06554633847e56",
+  "training_iterations": 512,
+  "thresholds": {
+    "valid": 1.0,
+    "exact": 0.95,
+    "family_exact": 0.9,
+    "invented_authority": 0,
+    "contrast_distinct": 1.0,
+    "paraphrase_equal": 0.95,
+    "matrix_margin": 0.05,
+    "condition_number_max": 10.0
+  },
+  "aggregate": {
+    "verdict": "RED",
+    "total": 132,
+    "valid": 103,
+    "exact": 91,
+    "invented_authority": 0,
+    "paraphrase_equal": 29,
+    "contrast_distinct": 29,
+    "groups": 44,
+    "families": {
+      "quantity": {
+        "total": 6,
+        "exact": 3,
+        "valid": 3
+      },
+      "comparator": {
+        "total": 6,
+        "exact": 3,
+        "valid": 3
+      },
+      "polarity": {
+        "total": 6,
+        "exact": 2,
+        "valid": 3
+      },
+      "recipient": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "authority": {
+        "total": 6,
+        "exact": 2,
+        "valid": 4
+      },
+      "unless": {
+        "total": 6,
+        "valid": 6,
+        "exact": 4
+      },
+      "nested": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "direction": {
+        "total": 6,
+        "valid": 6,
+        "exact": 5
+      },
+      "temporal": {
+        "total": 6,
+        "exact": 1,
+        "valid": 1
+      },
+      "revision": {
+        "total": 6,
+        "valid": 5,
+        "exact": 5
+      },
+      "time": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "paragraph": {
+        "total": 6,
+        "exact": 0,
+        "valid": 4
+      },
+      "approval": {
+        "total": 6,
+        "valid": 5,
+        "exact": 3
+      },
+      "nested_boolean": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "negation_scope": {
+        "total": 6,
+        "valid": 5,
+        "exact": 5
+      },
+      "conflict": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "multi_quantity": {
+        "total": 6,
+        "exact": 4,
+        "valid": 4
+      },
+      "unit_equivalence": {
+        "total": 6,
+        "exact": 4,
+        "valid": 4
+      },
+      "comparison_bounds": {
+        "total": 18,
+        "exact": 17,
+        "valid": 17
+      },
+      "notification_roles": {
+        "total": 6,
+        "exact": 3,
+        "valid": 3
+      }
+    },
+    "field_exact": {
+      "action": 99,
+      "roles": 95,
+      "modality": 98,
+      "negated": 103,
+      "condition": 99,
+      "exception": 100,
+      "complement": 103,
+      "revision": 103,
+      "time": 103,
+      "links": 103
+    },
+    "details": [
+      {
+        "id": "v3-heldout-quantity-0-0",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-quantity-0-1",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-quantity-0-2",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-quantity-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-quantity-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-quantity-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparator-0-0",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-comparator-0-1",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-comparator-0-2",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-comparator-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparator-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparator-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-polarity-0-0",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-polarity-0-1",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-polarity-0-2",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-polarity-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-polarity-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-polarity-1-2",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v3-heldout-recipient-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-recipient-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-recipient-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-recipient-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-recipient-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-recipient-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-authority-0-0",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-authority-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-authority-0-2",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-authority-1-0",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v3-heldout-authority-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-authority-1-2",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v3-heldout-unless-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-unless-0-1",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v3-heldout-unless-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-unless-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-unless-1-1",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v3-heldout-unless-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-nested-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-nested-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-nested-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-nested-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-nested-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-nested-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-direction-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-direction-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-direction-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-direction-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-direction-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-direction-1-2",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v3-heldout-temporal-0-0",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-temporal-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-temporal-0-2",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-temporal-1-0",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-temporal-1-1",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-temporal-1-2",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-revision-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-revision-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-revision-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-revision-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-revision-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-revision-1-2",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-time-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-time-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-time-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-time-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-time-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-time-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-paragraph-0-0",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-paragraph-0-1",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v3-heldout-paragraph-0-2",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-paragraph-1-0",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v3-heldout-paragraph-1-1",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v3-heldout-paragraph-1-2",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v3-heldout-approval-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-approval-0-1",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-approval-0-2",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v3-heldout-approval-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-approval-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-approval-1-2",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v3-heldout-nested_boolean-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-nested_boolean-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-nested_boolean-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-nested_boolean-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-nested_boolean-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-nested_boolean-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-negation_scope-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-negation_scope-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-negation_scope-0-2",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-negation_scope-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-negation_scope-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-negation_scope-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-conflict-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-conflict-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-conflict-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-conflict-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-conflict-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-conflict-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-multi_quantity-0-0",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-multi_quantity-0-1",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-multi_quantity-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-multi_quantity-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-multi_quantity-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-multi_quantity-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-unit_equivalence-0-0",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-unit_equivalence-0-1",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-unit_equivalence-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-unit_equivalence-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-unit_equivalence-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-unit_equivalence-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-0-0",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-2-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-2-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-2-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-3-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-3-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-3-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-4-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-4-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-4-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-5-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-5-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-comparison_bounds-5-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-notification_roles-0-0",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-notification_roles-0-1",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-notification_roles-0-2",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v3-heldout-notification_roles-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-notification_roles-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v3-heldout-notification_roles-1-2",
+        "exact": true,
+        "error": null
+      }
+    ],
+    "adapter_sha256": "6f4f2cd5e40d37aecb43a23bdcf6369c776b8a55ec0842fbfc703490767caa9e",
+    "prediction_sha256": "5e40801f11642adbca7ebefae1b7f43c09e2d29f29fda8d150e204ddb302c346",
+    "local_generations": 132,
+    "cloud_generations": 0
+  }
+}
