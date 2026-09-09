@@ -1,0 +1,808 @@
+{
+  "verified_utc": "2026-09-09T21:03:27.266849+00:00",
+  "verification": "Inherited and new input freezes, selected adapter, all raw-to-parsed outputs, complete row inventory and aggregate recomputation agree.",
+  "local_run": "/Users/kenmorkaya/PycharmProjects/ToM_assist/.tmp/event-graph-lora-v6-heldout-001",
+  "selected_cumulative_steps": 992,
+  "freeze_sha256": "e4bfa9393a879e009ed1e672f45089cc004df0b4ed591cae7d02c70038a8c97e",
+  "aggregate_sha256": "82fbb1e2b696a462f3b81b668673f0cbfd55dbca8bed36d4e47a95ca46d51248",
+  "thresholds": {
+    "valid": 1.0,
+    "exact": 0.95,
+    "family_exact": 0.9,
+    "invented_authority": 0,
+    "contrast_distinct": 1.0,
+    "paraphrase_equal": 0.95,
+    "matrix_margin": 0.05,
+    "condition_number_max": 10.0
+  },
+  "aggregate": {
+    "verdict": "RED",
+    "total": 132,
+    "valid": 124,
+    "exact": 116,
+    "invented_authority": 2,
+    "paraphrase_equal": 37,
+    "contrast_distinct": 40,
+    "groups": 44,
+    "families": {
+      "quantity": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "comparator": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "polarity": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "recipient": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "authority": {
+        "total": 6,
+        "valid": 6,
+        "exact": 4
+      },
+      "unless": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "nested": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "direction": {
+        "total": 6,
+        "valid": 5,
+        "exact": 5
+      },
+      "temporal": {
+        "total": 6,
+        "valid": 4,
+        "exact": 4
+      },
+      "revision": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "time": {
+        "total": 6,
+        "exact": 4,
+        "valid": 4
+      },
+      "paragraph": {
+        "total": 6,
+        "valid": 6,
+        "exact": 4
+      },
+      "approval": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "nested_boolean": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "negation_scope": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "conflict": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "multi_quantity": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "unit_equivalence": {
+        "total": 6,
+        "valid": 6,
+        "exact": 4
+      },
+      "comparison_bounds": {
+        "total": 18,
+        "valid": 18,
+        "exact": 18
+      },
+      "notification_roles": {
+        "total": 6,
+        "exact": 1,
+        "valid": 3
+      }
+    },
+    "field_exact": {
+      "action": 124,
+      "roles": 118,
+      "modality": 124,
+      "negated": 124,
+      "condition": 120,
+      "exception": 124,
+      "complement": 124,
+      "revision": 124,
+      "time": 124,
+      "links": 124
+    },
+    "details": [
+      {
+        "id": "v6-quantity-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-quantity-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-quantity-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-quantity-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-quantity-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-quantity-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparator-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparator-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparator-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparator-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparator-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparator-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-polarity-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-polarity-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-polarity-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-polarity-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-polarity-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-polarity-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-recipient-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-recipient-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-recipient-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-recipient-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-recipient-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-recipient-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-authority-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-authority-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-authority-0-2",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v6-authority-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-authority-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-authority-1-2",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v6-unless-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-unless-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-unless-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-unless-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-unless-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-unless-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-nested-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-nested-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-nested-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-nested-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-nested-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-nested-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-direction-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-direction-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-direction-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-direction-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-direction-1-1",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v6-direction-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-temporal-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-temporal-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-temporal-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-temporal-1-0",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v6-temporal-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-temporal-1-2",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v6-revision-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-revision-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-revision-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-revision-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-revision-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-revision-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-time-0-0",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v6-time-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-time-0-2",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v6-time-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-time-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-time-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-paragraph-0-0",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v6-paragraph-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-paragraph-0-2",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v6-paragraph-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-paragraph-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-paragraph-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-approval-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-approval-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-approval-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-approval-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-approval-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-approval-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-nested_boolean-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-nested_boolean-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-nested_boolean-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-nested_boolean-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-nested_boolean-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-nested_boolean-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-negation_scope-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-negation_scope-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-negation_scope-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-negation_scope-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-negation_scope-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-negation_scope-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-conflict-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-conflict-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-conflict-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-conflict-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-conflict-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-conflict-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-multi_quantity-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-multi_quantity-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-multi_quantity-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-multi_quantity-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-multi_quantity-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-multi_quantity-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-unit_equivalence-0-0",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v6-unit_equivalence-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-unit_equivalence-0-2",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v6-unit_equivalence-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-unit_equivalence-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-unit_equivalence-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-2-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-2-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-2-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-3-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-3-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-3-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-4-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-4-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-4-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-5-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-5-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-comparison_bounds-5-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-notification_roles-0-0",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v6-notification_roles-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v6-notification_roles-0-2",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v6-notification_roles-1-0",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v6-notification_roles-1-1",
+        "exact": false,
+        "error": "'graph'"
+      },
+      {
+        "id": "v6-notification_roles-1-2",
+        "exact": false,
+        "error": "semantic mismatch"
+      }
+    ],
+    "adapter_sha256": "f6246e49effd62e1913786eab24bcfeb7db1283f227cb7f16f9a4ca9ec6929c7",
+    "prediction_sha256": "b24ffdef394f7c6b8c40c8b7c21f1a36a248e3a634d6f52452ba639b5ddf9118",
+    "local_generations": 132,
+    "cloud_generations": 0
+  }
+}
