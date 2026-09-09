@@ -1,0 +1,322 @@
+{
+  "version": "tom-assist-matrix-tree-32sq-fixture/1.0",
+  "purpose": "Frozen teacher-interpreted events for a local shadow test of a directly matrix-driven document Tree. This tests the matrix and Tree mechanics, not natural-language parsing accuracy.",
+  "fixed_k": [1, 3, 5],
+  "tree": {
+    "leaf_capacity": 2,
+    "beam_width": 2
+  },
+  "matrix": {
+    "size": 32,
+    "source_target_weight": 1.0,
+    "relation_weight": 0.5,
+    "context_weight": 0.25,
+    "projection": "splitmix64-rademacher-jl-384-to-32/1.0",
+    "projection_seed": 539362568
+  },
+  "passages": [
+    {
+      "id": "PRESTART_SAFETY_PLAN",
+      "text": "Before any site construction activity begins, the contractor must submit a task-specific safety management plan and obtain the superintendent's written approval of that plan. Mobilisation alone does not satisfy this condition.",
+      "event": {
+        "source": "contractor",
+        "target": "submit a task-specific safety plan and obtain written approval",
+        "relation": "required precondition before work",
+        "context": "before site construction begins"
+      }
+    },
+    {
+      "id": "PRESTART_INSURANCE",
+      "text": "The principal is not required to provide access to the work site until the contractor has delivered current certificates of currency for public liability, workers compensation, and contract works insurance.",
+      "event": {
+        "source": "contractor",
+        "target": "deliver current insurance certificates of currency",
+        "relation": "required precondition before access",
+        "context": "before the principal provides site access"
+      }
+    },
+    {
+      "id": "WATER_DISCHARGE_APPROVAL",
+      "text": "The contractor must not discharge groundwater or treated construction water from the site unless the environmental representative has approved the discharge method and the required water-quality test results have been supplied.",
+      "event": {
+        "source": "contractor",
+        "target": "obtain discharge approval and supply water-quality test results",
+        "relation": "prohibited until condition is satisfied",
+        "context": "before releasing groundwater or construction water"
+      }
+    },
+    {
+      "id": "UTILITY_ISOLATION_BEFORE_EXCAVATION",
+      "text": "Before excavation starts near an existing service, the contractor must locate the service, verify its depth, obtain the asset owner's isolation confirmation, and brief the excavation crew on the verified service route.",
+      "event": {
+        "source": "contractor",
+        "target": "locate the utility verify depth obtain isolation confirmation and brief the crew",
+        "relation": "required precondition before work",
+        "context": "before excavation near an existing service"
+      }
+    },
+    {
+      "id": "TRAFFIC_PLAN_BEFORE_LANE_CLOSURE",
+      "text": "A traffic control plan accepted by the road authority must be in place before the contractor closes a traffic lane or changes a pedestrian route. The approved controls must be installed before the closure begins.",
+      "event": {
+        "source": "contractor",
+        "target": "obtain acceptance of the traffic control plan and install approved controls",
+        "relation": "required precondition before work",
+        "context": "before closing a lane or changing a pedestrian route"
+      }
+    },
+    {
+      "id": "COMPLETION_REPORT",
+      "text": "After practical completion, the contractor must provide an indexed completion report containing final test records, photographs, and signed inspection sheets.",
+      "event": {
+        "source": "contractor",
+        "target": "provide an indexed completion report and final records",
+        "relation": "required after completion",
+        "context": "after practical completion"
+      }
+    },
+    {
+      "id": "WARRANTY_PERIOD",
+      "text": "The warranty period for installed equipment continues for twelve months after practical completion and restarts for an item that is replaced during that period.",
+      "event": {
+        "source": "installed equipment warranty",
+        "target": "continue for twelve months and restart for replaced items",
+        "relation": "duration and restart rule",
+        "context": "after practical completion"
+      }
+    },
+    {
+      "id": "PROGRESS_PAYMENT",
+      "text": "A progress claim must identify work completed during the relevant month, approved variations, applicable retention, and the amount previously certified.",
+      "event": {
+        "source": "contractor progress claim",
+        "target": "identify completed work variations retention and previous certificates",
+        "relation": "monthly reporting requirement",
+        "context": "when claiming progress payment"
+      }
+    },
+    {
+      "id": "DESIGN_REVIEW",
+      "text": "Design review comments do not transfer design responsibility to the principal. The contractor remains responsible for coordination and fitness for purpose.",
+      "event": {
+        "source": "design review comments",
+        "target": "contractor retains design responsibility",
+        "relation": "does not transfer responsibility",
+        "context": "during design review"
+      }
+    },
+    {
+      "id": "DEFECT_CORRECTION",
+      "text": "When notified of a defect, the contractor must investigate its cause, propose corrective work, and complete the accepted correction within the directed period.",
+      "event": {
+        "source": "contractor",
+        "target": "investigate defect propose correction and complete corrective work",
+        "relation": "required response to notice",
+        "context": "after receiving a defect notice"
+      }
+    },
+    {
+      "id": "MATERIAL_STORAGE",
+      "text": "Materials stored on site must be protected from weather, separated from incompatible substances, and identified so that inspection records can be traced to each batch.",
+      "event": {
+        "source": "contractor",
+        "target": "protect separate and identify stored materials",
+        "relation": "continuing site requirement",
+        "context": "while materials are stored on site"
+      }
+    },
+    {
+      "id": "PROGRAM_UPDATE",
+      "text": "The monthly program update must show actual progress, forecast completion dates, the critical path, emerging delay risks, and recovery actions.",
+      "event": {
+        "source": "contractor monthly program",
+        "target": "show progress forecast dates critical path delay risks and recovery",
+        "relation": "monthly reporting requirement",
+        "context": "during project delivery"
+      }
+    },
+    {
+      "id": "COMMUNICATION_PROTOCOL",
+      "text": "Formal notices must be addressed to the nominated representatives and delivered through the contract correspondence system with the subject and clause reference completed.",
+      "event": {
+        "source": "contractor formal notice",
+        "target": "address nominated representatives and use the correspondence system",
+        "relation": "communication requirement",
+        "context": "when giving a formal contract notice"
+      }
+    },
+    {
+      "id": "ENVIRONMENTAL_AUDIT",
+      "text": "The environmental manager may audit erosion controls, waste records, noise monitoring, and incident close-out evidence at reasonable times.",
+      "event": {
+        "source": "environmental manager",
+        "target": "audit environmental controls records monitoring and incidents",
+        "relation": "permission to inspect",
+        "context": "at reasonable times during construction"
+      }
+    },
+    {
+      "id": "WORKER_INDUCTION",
+      "text": "Every worker attending the site must complete the project induction and sign the attendance record before entering an active work area.",
+      "event": {
+        "source": "site worker",
+        "target": "complete project induction and sign attendance record",
+        "relation": "required precondition before access",
+        "context": "before entering an active work area"
+      }
+    },
+    {
+      "id": "EMERGENCY_RESPONSE",
+      "text": "The emergency response procedure identifies alarms, evacuation routes, assembly points, first aid contacts, spill response equipment, and incident notification duties.",
+      "event": {
+        "source": "emergency response procedure",
+        "target": "identify alarms evacuation first aid spill response and notification duties",
+        "relation": "procedure contents requirement",
+        "context": "during emergency preparation"
+      }
+    }
+  ],
+  "queries": [
+    {
+      "id": "Q_SAFETY_DIRECT",
+      "family": "prestart_safety",
+      "text": "What safety plan must be approved before construction begins?",
+      "event": {
+        "source": "contractor",
+        "target": "submit a safety plan and obtain approval",
+        "relation": "required precondition before work",
+        "context": "before construction begins"
+      },
+      "relevant_passage_ids": ["PRESTART_SAFETY_PLAN"]
+    },
+    {
+      "id": "Q_SAFETY_PARAPHRASE",
+      "family": "prestart_safety",
+      "text": "Which planning condition has to be cleared before the crew starts site work?",
+      "event": {
+        "source": "contractor",
+        "target": "clear the required safety planning condition",
+        "relation": "required precondition before work",
+        "context": "before the crew starts site work"
+      },
+      "relevant_passage_ids": ["PRESTART_SAFETY_PLAN"]
+    },
+    {
+      "id": "Q_INSURANCE_DIRECT",
+      "family": "prestart_insurance",
+      "text": "Which insurance evidence must the contractor provide before receiving site access?",
+      "event": {
+        "source": "contractor",
+        "target": "provide insurance certificates and evidence of current cover",
+        "relation": "required precondition before access",
+        "context": "before receiving site access"
+      },
+      "relevant_passage_ids": ["PRESTART_INSURANCE"]
+    },
+    {
+      "id": "Q_INSURANCE_PARAPHRASE",
+      "family": "prestart_insurance",
+      "text": "What proof of cover is a condition for the principal opening the work site?",
+      "event": {
+        "source": "contractor",
+        "target": "deliver proof of insurance cover",
+        "relation": "required precondition before access",
+        "context": "before the principal opens the work site"
+      },
+      "relevant_passage_ids": ["PRESTART_INSURANCE"]
+    },
+    {
+      "id": "Q_WATER_DIRECT",
+      "family": "water_discharge",
+      "text": "What approval and test results are required before construction water is discharged?",
+      "event": {
+        "source": "contractor",
+        "target": "obtain water discharge approval and provide test results",
+        "relation": "prohibited until condition is satisfied",
+        "context": "before discharging construction water"
+      },
+      "relevant_passage_ids": ["WATER_DISCHARGE_APPROVAL"]
+    },
+    {
+      "id": "Q_WATER_PARAPHRASE",
+      "family": "water_discharge",
+      "text": "When may groundwater be released from the project site?",
+      "event": {
+        "source": "contractor",
+        "target": "release groundwater after approval and water-quality evidence",
+        "relation": "prohibited until condition is satisfied",
+        "context": "groundwater release from the project site"
+      },
+      "relevant_passage_ids": ["WATER_DISCHARGE_APPROVAL"]
+    },
+    {
+      "id": "Q_UTILITY_DIRECT",
+      "family": "utility_isolation",
+      "text": "What must happen before excavating near an existing utility service?",
+      "event": {
+        "source": "contractor",
+        "target": "locate utility verify depth obtain isolation and brief crew",
+        "relation": "required precondition before work",
+        "context": "before excavation near an existing utility"
+      },
+      "relevant_passage_ids": ["UTILITY_ISOLATION_BEFORE_EXCAVATION"]
+    },
+    {
+      "id": "Q_UTILITY_PARAPHRASE",
+      "family": "utility_isolation",
+      "text": "What checks and isolation confirmation are needed before digging beside buried infrastructure?",
+      "event": {
+        "source": "contractor",
+        "target": "check buried infrastructure and obtain isolation confirmation",
+        "relation": "required precondition before work",
+        "context": "before digging beside buried services"
+      },
+      "relevant_passage_ids": ["UTILITY_ISOLATION_BEFORE_EXCAVATION"]
+    },
+    {
+      "id": "Q_TRAFFIC_DIRECT",
+      "family": "traffic_closure",
+      "text": "What traffic approval is needed before closing a lane?",
+      "event": {
+        "source": "contractor",
+        "target": "obtain acceptance of the traffic control plan",
+        "relation": "required precondition before work",
+        "context": "before closing a traffic lane"
+      },
+      "relevant_passage_ids": ["TRAFFIC_PLAN_BEFORE_LANE_CLOSURE"]
+    },
+    {
+      "id": "Q_TRAFFIC_PARAPHRASE",
+      "family": "traffic_closure",
+      "text": "Which accepted controls must be installed before vehicle or pedestrian routes are changed?",
+      "event": {
+        "source": "contractor",
+        "target": "install accepted traffic and pedestrian controls",
+        "relation": "required precondition before work",
+        "context": "before changing vehicle or pedestrian routes"
+      },
+      "relevant_passage_ids": ["TRAFFIC_PLAN_BEFORE_LANE_CLOSURE"]
+    }
+  ],
+  "orientation_control": {
+    "forward": {
+      "source": "principal",
+      "target": "approve contractor safety plan",
+      "relation": "causes permission to proceed",
+      "context": "before construction"
+    },
+    "reversed": {
+      "source": "approve contractor safety plan",
+      "target": "principal",
+      "relation": "causes permission to proceed",
+      "context": "before construction"
+    }
+  },
+  "diagnostic_expectations": {
+    "direct_matrix_mean_recall_at_1_min": 0.8,
+    "tree_mean_recall_at_3_min": 0.8,
+    "tree_must_evaluate_fewer_than_all_passages": true,
+    "orientation_transpose_max_absolute_error": 1e-12,
+    "restart_must_be_byte_exact": true
+  }
+}
