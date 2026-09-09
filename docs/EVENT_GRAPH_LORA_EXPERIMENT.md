@@ -70,3 +70,17 @@ and unit spellings outside the schema are not inferred by compiler code.
 Original regression, independent review and the temporal-authority battery
 remain required downstream of the two gates. Nothing here changes an existing
 frozen compiler result, production feature flag, Tree, memory or project data.
+
+## Separately versioned presentation repair
+
+`gateway/event_graph_extractor_v2.py` accepts bare JSON or exactly one complete
+JSON Markdown fence. This general transport repair was implemented after the
+first frozen v1 held-out outputs exposed fences. It does not alter semantic
+fields, invent offsets, repair malformed containers, or accept commentary around
+an answer. Ten dedicated tests cover accepted wrappers and rejected ambiguity.
+
+The frozen v1 experiment continues to use its original bare-JSON parser. Its
+verdict is immutable. `validation/analyze_event_graph_failures.py` may separately
+unwrap presentation for a clearly labeled post-hoc diagnosis, with no new model
+calls or numerical compilation. Neither these diagnostics nor unit tests establish
+a fresh held-out extraction pass for parser v2.
