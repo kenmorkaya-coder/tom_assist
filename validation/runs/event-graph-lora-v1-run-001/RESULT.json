@@ -1,0 +1,179 @@
+{
+  "formal_verification_recorded_utc": "2026-09-09T09:30:19.925428+00:00",
+  "verdict": "RED",
+  "total": 108,
+  "valid": 0,
+  "exact": 0,
+  "local_generations": 108,
+  "cloud_generations": 0,
+  "freeze_file_sha256": "358e2a7271e2d6abce32dc54bc2ec28ea4315a9ec6355bfbd866e92cf3a968ac",
+  "prediction_sha256": "cacfc4c6c4a169693161f9d17dae419d4c1939cd9ea98b170e6b6ed0b5d05c04",
+  "adapter_sha256": "7f6243e30ce007911a7e9615b4897ef676ff453cd0c947c13bac38bcf0b181f7",
+  "aggregate_sha256": "0fa3709dab6651f885f14adf8ee9e288dccf95dd6f0c4001074e61c697076b50",
+  "local_run": "/Users/kenmorkaya/PycharmProjects/ToM_assist/.tmp/event-graph-lora-v1-run-001",
+  "post_hoc_diagnostic": {
+    "status": "POST_HOC_DIAGNOSTIC_ONLY",
+    "frozen_verdict": "RED",
+    "warning": "Presentation-only unwrapping is not an authorized gate repair for this frozen run. No new model calls or numerical compilation occurred.",
+    "counts": {
+      "single_markdown_fence": 107,
+      "exact_after_presentation_only_unwrap": 39,
+      "remaining_validation_failure:unreferenced graph content": 3,
+      "semantic_difference:condition": 9,
+      "semantic_difference:exception": 1,
+      "semantic_mismatch": 35,
+      "semantic_difference:roles": 15,
+      "semantic_difference:modality": 8,
+      "remaining_validation_failure:unresolved clauses": 3,
+      "remaining_validation_failure:Expecting value: line 70 column 18 (char 1340)": 1,
+      "semantic_difference:links": 1,
+      "remaining_validation_failure:quote is absent or ambiguous": 13,
+      "remaining_validation_failure:Expecting ',' delimiter: line 79 column 5 (char 1692)": 1,
+      "remaining_validation_failure:Expecting property name enclosed in double quotes: line 33 column 1 (char 618)": 2,
+      "semantic_difference:revision": 6,
+      "semantic_difference:time": 6,
+      "remaining_validation_failure:Expecting property name enclosed in double quotes: line 100 column 1 (char 1866)": 2,
+      "remaining_validation_failure:Expecting ',' delimiter: line 50 column 14 (char 990)": 1,
+      "remaining_validation_failure:Extra data: line 126 column 1 (char 2276)": 4,
+      "remaining_validation_failure:Expecting value: line 1 column 1 (char 0)": 1,
+      "remaining_validation_failure:Extra data: line 126 column 1 (char 2283)": 2,
+      "remaining_validation_failure:Expecting ',' delimiter: line 110 column 3 (char 2008)": 1
+    },
+    "by_family": {
+      "quantity": {
+        "exact_after_presentation_only_unwrap": 6
+      },
+      "comparator": {
+        "exact_after_presentation_only_unwrap": 6
+      },
+      "polarity": {
+        "exact_after_presentation_only_unwrap": 4,
+        "remaining_validation_failure:unreferenced graph content": 1,
+        "semantic_mismatch": 1
+      },
+      "recipient": {
+        "semantic_mismatch": 6
+      },
+      "authority": {
+        "exact_after_presentation_only_unwrap": 4,
+        "semantic_mismatch": 2
+      },
+      "unless": {
+        "semantic_mismatch": 5,
+        "exact_after_presentation_only_unwrap": 1
+      },
+      "nested": {
+        "exact_after_presentation_only_unwrap": 6
+      },
+      "direction": {
+        "remaining_validation_failure:unreferenced graph content": 2,
+        "remaining_validation_failure:unresolved clauses": 3,
+        "exact_after_presentation_only_unwrap": 1
+      },
+      "temporal": {
+        "semantic_mismatch": 5,
+        "remaining_validation_failure:Expecting value: line 70 column 18 (char 1340)": 1
+      },
+      "revision": {
+        "remaining_validation_failure:quote is absent or ambiguous": 3,
+        "remaining_validation_failure:Expecting ',' delimiter: line 79 column 5 (char 1692)": 1,
+        "remaining_validation_failure:Expecting property name enclosed in double quotes: line 33 column 1 (char 618)": 2
+      },
+      "time": {
+        "semantic_mismatch": 6
+      },
+      "paragraph": {
+        "remaining_validation_failure:Expecting property name enclosed in double quotes: line 100 column 1 (char 1866)": 2,
+        "remaining_validation_failure:quote is absent or ambiguous": 4
+      },
+      "approval": {
+        "semantic_mismatch": 5,
+        "remaining_validation_failure:Expecting ',' delimiter: line 50 column 14 (char 990)": 1
+      },
+      "nested_boolean": {
+        "exact_after_presentation_only_unwrap": 1,
+        "remaining_validation_failure:Extra data: line 126 column 1 (char 2276)": 2,
+        "remaining_validation_failure:Expecting value: line 1 column 1 (char 0)": 1,
+        "remaining_validation_failure:Extra data: line 126 column 1 (char 2283)": 1,
+        "remaining_validation_failure:Expecting ',' delimiter: line 110 column 3 (char 2008)": 1
+      },
+      "negation_scope": {
+        "exact_after_presentation_only_unwrap": 3,
+        "remaining_validation_failure:Extra data: line 126 column 1 (char 2276)": 2,
+        "remaining_validation_failure:Extra data: line 126 column 1 (char 2283)": 1
+      },
+      "conflict": {
+        "remaining_validation_failure:quote is absent or ambiguous": 6
+      },
+      "multi_quantity": {
+        "exact_after_presentation_only_unwrap": 3,
+        "semantic_mismatch": 3
+      },
+      "unit_equivalence": {
+        "exact_after_presentation_only_unwrap": 4,
+        "semantic_mismatch": 2
+      }
+    },
+    "examples": {
+      "exact_after_presentation_only_unwrap": [
+        "heldout-quantity-0-0",
+        "heldout-quantity-0-1",
+        "heldout-quantity-0-2"
+      ],
+      "remaining_validation_failure:unreferenced graph content": [
+        "heldout-polarity-0-2",
+        "heldout-direction-0-0",
+        "heldout-direction-0-1"
+      ],
+      "semantic_mismatch": [
+        "heldout-polarity-1-2",
+        "heldout-recipient-0-0",
+        "heldout-recipient-0-1"
+      ],
+      "remaining_validation_failure:unresolved clauses": [
+        "heldout-direction-0-2",
+        "heldout-direction-1-0",
+        "heldout-direction-1-2"
+      ],
+      "remaining_validation_failure:Expecting value: line 70 column 18 (char 1340)": [
+        "heldout-temporal-0-2"
+      ],
+      "remaining_validation_failure:quote is absent or ambiguous": [
+        "heldout-revision-0-0",
+        "heldout-revision-0-2",
+        "heldout-revision-1-1"
+      ],
+      "remaining_validation_failure:Expecting ',' delimiter: line 79 column 5 (char 1692)": [
+        "heldout-revision-0-1"
+      ],
+      "remaining_validation_failure:Expecting property name enclosed in double quotes: line 33 column 1 (char 618)": [
+        "heldout-revision-1-0",
+        "heldout-revision-1-2"
+      ],
+      "remaining_validation_failure:Expecting property name enclosed in double quotes: line 100 column 1 (char 1866)": [
+        "heldout-paragraph-0-0",
+        "heldout-paragraph-0-2"
+      ],
+      "remaining_validation_failure:Expecting ',' delimiter: line 50 column 14 (char 990)": [
+        "heldout-approval-0-1"
+      ],
+      "remaining_validation_failure:Extra data: line 126 column 1 (char 2276)": [
+        "heldout-nested_boolean-0-1",
+        "heldout-nested_boolean-1-1",
+        "heldout-negation_scope-0-1"
+      ],
+      "remaining_validation_failure:Expecting value: line 1 column 1 (char 0)": [
+        "heldout-nested_boolean-0-2"
+      ],
+      "remaining_validation_failure:Extra data: line 126 column 1 (char 2283)": [
+        "heldout-nested_boolean-1-0",
+        "heldout-negation_scope-1-0"
+      ],
+      "remaining_validation_failure:Expecting ',' delimiter: line 110 column 3 (char 2008)": [
+        "heldout-nested_boolean-1-2"
+      ]
+    }
+  },
+  "numerical_and_tree_gates": "BLOCKED_BY_EXTRACTION",
+  "source_provenance": "Original files froze before training; first source commit was during training and before inference. V2 and the later baseline lock followed partial held-out exposure."
+}
