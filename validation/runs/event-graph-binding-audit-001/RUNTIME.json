@@ -1,0 +1,23 @@
+{
+  "status": "READ_ONLY_RUNTIME_AUDIT",
+  "new_generations": 0,
+  "training_updates": 0,
+  "detokenizer": "SPMStreamingDetokenizer",
+  "splits": {
+    "train": {
+      "records_verified": 480,
+      "max_supervised_tokens": 1677,
+      "inference_prefix_matches": true,
+      "answer_roundtrip_matches": true,
+      "streamed_answer_replay_matches": true
+    },
+    "valid": {
+      "records_verified": 132,
+      "max_supervised_tokens": 1693,
+      "inference_prefix_matches": true,
+      "answer_roundtrip_matches": true,
+      "streamed_answer_replay_matches": true
+    }
+  },
+  "limitation": "Known-token replay tests decoding; historical generation token IDs were not saved, so this is not a reconstruction of their sampled token streams."
+}

@@ -1,0 +1,216 @@
+{
+  "status": "POST_HOC_AUDIT_NO_SCORE_REPAIR",
+  "corpora": {
+    "train": {
+      "records": 480,
+      "unique_source_strings": 432,
+      "conflicting_semantic_labels": 0,
+      "entity_count_distribution": {
+        "2": 216,
+        "3": 120,
+        "1": 48,
+        "4": 72,
+        "5": 24
+      },
+      "old_wire_bytes": 627176,
+      "prototype_wire_bytes": 403763,
+      "old_repeated_quote_characters": 165875,
+      "prototype_added_source_table_bytes": 276193,
+      "wire_size_reduction_percent": 35.62
+    },
+    "dev": {
+      "records": 132,
+      "unique_source_strings": 120,
+      "conflicting_semantic_labels": 0,
+      "entity_count_distribution": {
+        "2": 66,
+        "3": 30,
+        "1": 12,
+        "4": 18,
+        "5": 6
+      },
+      "old_wire_bytes": 174837,
+      "prototype_wire_bytes": 108212,
+      "old_repeated_quote_characters": 50701,
+      "prototype_added_source_table_bytes": 85346,
+      "wire_size_reduction_percent": 38.11
+    }
+  },
+  "v7_epoch1_reference_failures": [
+    {
+      "id": "v3-dev-recipient-0-1",
+      "error": "unreferenced graph content",
+      "unused_entity_names": [
+        "project instructions"
+      ],
+      "absent_referenced_ids": []
+    },
+    {
+      "id": "v3-dev-recipient-1-1",
+      "error": "unreferenced graph content",
+      "unused_entity_names": [
+        "Ridge project instructions"
+      ],
+      "absent_referenced_ids": []
+    },
+    {
+      "id": "v3-dev-unless-0-1",
+      "error": "unreferenced graph content",
+      "unused_entity_names": [
+        "project instructions"
+      ],
+      "absent_referenced_ids": []
+    },
+    {
+      "id": "v3-dev-unless-1-1",
+      "error": "unreferenced graph content",
+      "unused_entity_names": [
+        "project instructions"
+      ],
+      "absent_referenced_ids": []
+    },
+    {
+      "id": "v3-dev-nested-0-1",
+      "error": "unreferenced graph content",
+      "unused_entity_names": [
+        "project instructions"
+      ],
+      "absent_referenced_ids": []
+    },
+    {
+      "id": "v3-dev-nested-1-1",
+      "error": "unreferenced graph content",
+      "unused_entity_names": [
+        "project instructions"
+      ],
+      "absent_referenced_ids": []
+    },
+    {
+      "id": "v3-dev-direction-0-1",
+      "error": "unreferenced graph content",
+      "unused_entity_names": [
+        "project instructions"
+      ],
+      "absent_referenced_ids": []
+    },
+    {
+      "id": "v3-dev-direction-1-1",
+      "error": "unreferenced graph content",
+      "unused_entity_names": [
+        "project instructions"
+      ],
+      "absent_referenced_ids": []
+    },
+    {
+      "id": "v3-dev-temporal-0-1",
+      "error": "unreferenced graph content",
+      "unused_entity_names": [
+        "project instructions"
+      ],
+      "absent_referenced_ids": []
+    },
+    {
+      "id": "v3-dev-time-0-1",
+      "error": "unreferenced graph content",
+      "unused_entity_names": [
+        "project instructions"
+      ],
+      "absent_referenced_ids": []
+    },
+    {
+      "id": "v3-dev-time-1-1",
+      "error": "unreferenced graph content",
+      "unused_entity_names": [
+        "project instructions"
+      ],
+      "absent_referenced_ids": []
+    },
+    {
+      "id": "v3-dev-paragraph-1-1",
+      "error": "dangling or mistyped reference",
+      "unused_entity_names": [
+        "Project instructions"
+      ],
+      "absent_referenced_ids": [
+        "n6"
+      ]
+    },
+    {
+      "id": "v3-dev-approval-0-1",
+      "error": "unreferenced graph content",
+      "unused_entity_names": [
+        "project instructions"
+      ],
+      "absent_referenced_ids": []
+    },
+    {
+      "id": "v3-dev-approval-1-1",
+      "error": "unreferenced graph content",
+      "unused_entity_names": [
+        "project instructions"
+      ],
+      "absent_referenced_ids": []
+    },
+    {
+      "id": "v3-dev-notification_roles-0-0",
+      "error": "dangling or mistyped reference",
+      "unused_entity_names": [],
+      "absent_referenced_ids": [
+        "n5"
+      ]
+    },
+    {
+      "id": "v3-dev-notification_roles-0-1",
+      "error": "dangling or mistyped reference",
+      "unused_entity_names": [],
+      "absent_referenced_ids": [
+        "n5"
+      ]
+    },
+    {
+      "id": "v3-dev-notification_roles-0-2",
+      "error": "dangling or mistyped reference",
+      "unused_entity_names": [],
+      "absent_referenced_ids": [
+        "n5"
+      ]
+    },
+    {
+      "id": "v3-dev-notification_roles-1-0",
+      "error": "dangling or mistyped reference",
+      "unused_entity_names": [],
+      "absent_referenced_ids": [
+        "n5"
+      ]
+    },
+    {
+      "id": "v3-dev-notification_roles-1-1",
+      "error": "unreferenced graph content",
+      "unused_entity_names": [
+        "Ridge engineer's order"
+      ],
+      "absent_referenced_ids": []
+    },
+    {
+      "id": "v3-dev-notification_roles-1-2",
+      "error": "dangling or mistyped reference",
+      "unused_entity_names": [],
+      "absent_referenced_ids": [
+        "n5"
+      ]
+    }
+  ],
+  "orphan_entity_name_counts": {
+    "project instructions": 12,
+    "Ridge project instructions": 1,
+    "Project instructions": 1,
+    "Ridge engineer's order": 1
+  },
+  "missing_id_counts": {
+    "n6": 1,
+    "n5": 5
+  },
+  "new_generations": 0,
+  "training_updates": 0,
+  "prototype_limit": "Deterministic roundtrips demonstrate representability only. Index selection and role accuracy require new supervised training and evaluation; wrong valid spans remain possible."
+}
