@@ -1,0 +1,687 @@
+{
+  "transitions": {
+    "unchanged_correct": 109,
+    "regressed": 12,
+    "recovered": 2,
+    "persistent": 9
+  },
+  "comparison": {
+    "status": "DEVELOPMENT_COMPARISON_ONLY",
+    "selected_epoch": 1,
+    "selected_cumulative_steps": 960,
+    "exact_gain_records": 0,
+    "reference": "first trained v8 checkpoint; old wire scores are not directly comparable",
+    "checkpoints": [
+      {
+        "epoch": 1,
+        "cumulative_steps": 960,
+        "total": 132,
+        "valid": 130,
+        "exact": 121,
+        "invented_authority": 0,
+        "paraphrase_equal": 41,
+        "contrast_distinct": 43,
+        "parser_errors": {
+          "cyclic condition": 2
+        }
+      },
+      {
+        "epoch": 2,
+        "cumulative_steps": 1920,
+        "total": 132,
+        "valid": 131,
+        "exact": 111,
+        "invented_authority": 0,
+        "paraphrase_equal": 38,
+        "contrast_distinct": 42,
+        "parser_errors": {
+          "dangling or mistyped reference": 1
+        }
+      }
+    ],
+    "fresh_heldout": "NOT_RUN",
+    "matrix_and_tree": "NOT_RUN"
+  },
+  "details": [
+    {
+      "id": "v8-dev-4-2",
+      "family": "polarity",
+      "transition": "regressed",
+      "source": "Site briefing: Canal Reach D004 excavation must not stop whenever Canal Reach D004 vibration exceeds 1.7 mm/s.",
+      "epochs": [
+        {
+          "differences": []
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].negated",
+              "expected": true,
+              "actual": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-10-0",
+      "family": "unless",
+      "transition": "recovered",
+      "source": "In the execution notes: Unless Canal Reach D010 vibration is greater than 1.7 mm/s, Canal Reach D010 excavation may continue.",
+      "epochs": [
+        {
+          "error": "cyclic condition"
+        },
+        {
+          "differences": []
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-10-2",
+      "family": "unless",
+      "transition": "persistent",
+      "source": "Site briefing: Unless Canal Reach D010 vibration is greater than 4.0 mm/s, Canal Reach D010 excavation may continue.",
+      "epochs": [
+        {
+          "differences": [
+            {
+              "path": ".events[0].condition",
+              "expected": null,
+              "actual": {
+                "subject": "Canal Reach D010 vibration",
+                "comparator": "GT",
+                "quantity": {
+                  "numerator": 1,
+                  "denominator": 250,
+                  "unit": "m/s"
+                },
+                "negated": false
+              }
+            },
+            {
+              "path": ".events[0].exception",
+              "expected": {
+                "subject": "Canal Reach D010 vibration",
+                "comparator": "GT",
+                "quantity": {
+                  "numerator": 1,
+                  "denominator": 250,
+                  "unit": "m/s"
+                },
+                "negated": false
+              },
+              "actual": null
+            }
+          ]
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].condition",
+              "expected": null,
+              "actual": {
+                "subject": "Canal Reach D010 vibration",
+                "comparator": "GT",
+                "quantity": {
+                  "numerator": 1,
+                  "denominator": 250,
+                  "unit": "m/s"
+                },
+                "negated": false
+              }
+            },
+            {
+              "path": ".events[0].exception",
+              "expected": {
+                "subject": "Canal Reach D010 vibration",
+                "comparator": "GT",
+                "quantity": {
+                  "numerator": 1,
+                  "denominator": 250,
+                  "unit": "m/s"
+                },
+                "negated": false
+              },
+              "actual": null
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-11-1",
+      "family": "unless",
+      "transition": "recovered",
+      "source": "Site briefing: In the project instructions, Unless Ravine Station D011 vibration is greater than 4.1 mm/s, Ravine Station D011 west excavation area is permitted to continue.",
+      "epochs": [
+        {
+          "error": "cyclic condition"
+        },
+        {
+          "differences": []
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-14-2",
+      "family": "direction",
+      "transition": "persistent",
+      "source": "In the execution notes: The cause of Canal Reach D014 dewatering is Canal Reach D014 settlement.",
+      "epochs": [
+        {
+          "differences": [
+            {
+              "path": ".events[0].roles.source",
+              "expected": "Canal Reach D014 settlement",
+              "actual": "Canal Reach D014 dewatering is Canal Reach D014 settlement"
+            }
+          ]
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].roles.source",
+              "expected": "Canal Reach D014 settlement",
+              "actual": "Canal Reach D014 dewatering is Canal Reach D014 settlement"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-15-2",
+      "family": "direction",
+      "transition": "persistent",
+      "source": "The cause of Ravine Station D015 dewatering is Ravine Station D015 settlement.",
+      "epochs": [
+        {
+          "differences": [
+            {
+              "path": ".events[0].roles.source",
+              "expected": "Ravine Station D015 settlement",
+              "actual": "Ravine Station D015 dewatering is Ravine Station D015 settlement"
+            },
+            {
+              "path": ".events[0].roles.target",
+              "expected": "Ravine Station D015 dewatering",
+              "actual": "Ravine Station D015 dewatering is Ravine Station D015 settlement"
+            }
+          ]
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].roles.source",
+              "expected": "Ravine Station D015 settlement",
+              "actual": "Ravine Station D015 dewatering is Ravine Station D015 settlement"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-19-2",
+      "family": "revision",
+      "transition": "regressed",
+      "source": "Site briefing: Under revision R-Ravine Station D019-1-A, Ravine Station D019 west excavation area must stop. Its replacement, revision R-Ravine Station D019-1-C, allows Ravine Station D019 west excavation area to continue.",
+      "epochs": [
+        {
+          "differences": []
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[1].revision",
+              "expected": "R-Ravine Station D019-1-C",
+              "actual": "R-Ravie Station D019-1-C"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-22-1",
+      "family": "paragraph",
+      "transition": "regressed",
+      "source": "In the project instructions, Continuation of Canal Reach D022 excavation is permitted provided Canal Reach D022 vibration remains below 1.7 mm/s. Above 1.7 mm/s on that monitor, stopping Canal Reach D022 excavation and notifying Canal Reach D022 superintendent are required. Canal Reach D022 discharge may run at no more than 1.7 L/min.",
+      "epochs": [
+        {
+          "differences": []
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].roles.object",
+              "expected": "Canal Reach D022 excavation",
+              "actual": "Continuation of Canal Reach D022 excavation"
+            },
+            {
+              "path": ".events[1].roles.object",
+              "expected": "Canal Reach D022 excavation",
+              "actual": "Continuation of Canal Reach D022 excavation"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-23-1",
+      "family": "paragraph",
+      "transition": "regressed",
+      "source": "Site briefing: In the project instructions, Continuation of Ravine Station D023 west excavation area is permitted provided Ravine Station D023 vibration remains below 4.1 mm/s. Above 4.1 mm/s on that monitor, stopping Ravine Station D023 west excavation area and notifying Ravine Station D023 deputy superintendent are required. Ravine Station D023 discharge may run at no more than 4.1 L/min.",
+      "epochs": [
+        {
+          "differences": []
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].condition.comparator",
+              "expected": "LT",
+              "actual": "LE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-24-0",
+      "family": "approval",
+      "transition": "regressed",
+      "source": "Site briefing: Continuation of Canal Reach D024 excavation is allowed except when Canal Reach D024 superintendent approves its stoppage.",
+      "epochs": [
+        {
+          "differences": []
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].roles.object",
+              "expected": "Canal Reach D024 excavation",
+              "actual": "Continuation of Canal Reach D024 excavation"
+            },
+            {
+              "path": ".events[2].roles.object",
+              "expected": "Canal Reach D024 excavation",
+              "actual": "Continuation of Canal Reach D024 excavation"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-24-1",
+      "family": "approval",
+      "transition": "regressed",
+      "source": "In the execution notes: In the project instructions, Continuation of Canal Reach D024 excavation is allowed except when Canal Reach D024 superintendent approves its stoppage.",
+      "epochs": [
+        {
+          "differences": []
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].roles.object",
+              "expected": "Canal Reach D024 excavation",
+              "actual": "Continuation of Canal Reach D024 excavation"
+            },
+            {
+              "path": ".events[2].roles.object",
+              "expected": "Canal Reach D024 excavation",
+              "actual": "Continuation of Canal Reach D024 excavation"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-24-2",
+      "family": "approval",
+      "transition": "regressed",
+      "source": "Continuation of Canal Reach D024 excavation is allowed except when Canal Reach D024 superintendent alternate approves its stoppage.",
+      "epochs": [
+        {
+          "differences": []
+        },
+        {
+          "error": "dangling or mistyped reference"
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-25-0",
+      "family": "approval",
+      "transition": "persistent",
+      "source": "In the execution notes: Continuation of Ravine Station D025 west excavation area is allowed except when Ravine Station D025 deputy superintendent approves its stoppage.",
+      "epochs": [
+        {
+          "differences": [
+            {
+              "path": ".events[0].roles.object",
+              "expected": "Ravine Station D025 west excavation area",
+              "actual": "Continuation of Ravine Station D025 west excavation area"
+            },
+            {
+              "path": ".events[2].roles.object",
+              "expected": "Ravine Station D025 west excavation area",
+              "actual": "Continuation of Ravine Station D025 west excavation area"
+            }
+          ]
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].roles.object",
+              "expected": "Ravine Station D025 west excavation area",
+              "actual": "Continuation of Ravine Station D025 west excavation area"
+            },
+            {
+              "path": ".events[2].roles.object",
+              "expected": "Ravine Station D025 west excavation area",
+              "actual": "Continuation of Ravine Station D025 west excavation area"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-25-1",
+      "family": "approval",
+      "transition": "persistent",
+      "source": "In the project instructions, Continuation of Ravine Station D025 west excavation area is allowed except when Ravine Station D025 deputy superintendent approves its stoppage.",
+      "epochs": [
+        {
+          "differences": [
+            {
+              "path": ".events[0].roles.object",
+              "expected": "Ravine Station D025 west excavation area",
+              "actual": "Continuation of Ravine Station D025 west excavation area"
+            },
+            {
+              "path": ".events[2].roles.object",
+              "expected": "Ravine Station D025 west excavation area",
+              "actual": "Continuation of Ravine Station D025 west excavation area"
+            }
+          ]
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].roles.object",
+              "expected": "Ravine Station D025 west excavation area",
+              "actual": "Continuation of Ravine Station D025 west excavation area"
+            },
+            {
+              "path": ".events[2].roles.object",
+              "expected": "Ravine Station D025 west excavation area",
+              "actual": "Continuation of Ravine Station D025 west excavation area"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-31-1",
+      "family": "conflict",
+      "transition": "regressed",
+      "source": "In the project instructions, Stopping Ravine Station D031 west excavation area is required; a conflicting rule says Ravine Station D031 west excavation area must not stop.",
+      "epochs": [
+        {
+          "differences": []
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].roles.object",
+              "expected": "Ravine Station D031 west excavation area",
+              "actual": "Stopping Ravine Station D031 west excavation area"
+            },
+            {
+              "path": ".events[1].roles.object",
+              "expected": "Ravine Station D031 west excavation area",
+              "actual": "Stopping Ravine Station D031 west excavation area"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-32-0",
+      "family": "multi_quantity",
+      "transition": "persistent",
+      "source": "Above 1.7 mm/s on Canal Reach D032 vibration, Canal Reach D032 excavation must stop; above 4.0 mm/s on that same monitor, notification to Canal Reach D032 superintendent is required.",
+      "epochs": [
+        {
+          "differences": [
+            {
+              "path": ".events[0].roles.object",
+              "expected": "Canal Reach D032 excavation",
+              "actual": "Canal Reach D032 vibration, Canal Reach D032 excavation"
+            },
+            {
+              "path": ".events[0].condition.subject",
+              "expected": "Canal Reach D032 vibration",
+              "actual": "1.7"
+            },
+            {
+              "path": ".events[1].condition.subject",
+              "expected": "Canal Reach D032 vibration",
+              "actual": "1.7 mm/s on Canal Reach D032 vibration, Canal Reach D032 excavation must stop; above 4.0 mm/s on that same monitor"
+            }
+          ]
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].condition.subject",
+              "expected": "Canal Reach D032 vibration",
+              "actual": "1.7 mm/s on Canal Reach D032 vibration"
+            },
+            {
+              "path": ".events[1].condition.subject",
+              "expected": "Canal Reach D032 vibration",
+              "actual": "4.0 mm/s on that same monitor"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-32-1",
+      "family": "multi_quantity",
+      "transition": "persistent",
+      "source": "Site briefing: In the project instructions, Above 1.7 mm/s on Canal Reach D032 vibration, Canal Reach D032 excavation must stop; above 4.0 mm/s on that same monitor, notification to Canal Reach D032 superintendent is required.",
+      "epochs": [
+        {
+          "differences": [
+            {
+              "path": ".events[1].condition.subject",
+              "expected": "Canal Reach D032 vibration",
+              "actual": "Canal Reach D032 vibration, Canal Reach D032 excavation"
+            }
+          ]
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].condition.subject",
+              "expected": "Canal Reach D032 vibration",
+              "actual": "1.7 mm/s on Canal Reach D032 vibration"
+            },
+            {
+              "path": ".events[1].condition.subject",
+              "expected": "Canal Reach D032 vibration",
+              "actual": "4.0 mm/s on that same monitor"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-32-2",
+      "family": "multi_quantity",
+      "transition": "persistent",
+      "source": "In the execution notes: Above 4.0 mm/s on Canal Reach D032 vibration, Canal Reach D032 excavation must stop; above 1.7 mm/s on that same monitor, notification to Canal Reach D032 superintendent is required.",
+      "epochs": [
+        {
+          "differences": [
+            {
+              "path": ".events[1].condition.subject",
+              "expected": "Canal Reach D032 vibration",
+              "actual": "Canal Reach D032 vibration, Canal Reach D032 excavation must stop; above 1.7 mm/s on that same monitor"
+            }
+          ]
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].condition.subject",
+              "expected": "Canal Reach D032 vibration",
+              "actual": "4.0 mm/s on Canal Reach D032 vibration"
+            },
+            {
+              "path": ".events[1].condition.subject",
+              "expected": "Canal Reach D032 vibration",
+              "actual": "above 1.7 mm/s on that same monitor"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-33-0",
+      "family": "multi_quantity",
+      "transition": "regressed",
+      "source": "Site briefing: Above 4.1 mm/s on Ravine Station D033 vibration, Ravine Station D033 west excavation area must stop; above 6.4 mm/s on that same monitor, notification to Ravine Station D033 deputy superintendent is required.",
+      "epochs": [
+        {
+          "differences": []
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].condition.subject",
+              "expected": "Ravine Station D033 vibration",
+              "actual": "4.1 mm/s on Ravine Station D033 vibration"
+            },
+            {
+              "path": ".events[1].condition.subject",
+              "expected": "Ravine Station D033 vibration",
+              "actual": "above 6.4 mm/s on that same monitor"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-33-1",
+      "family": "multi_quantity",
+      "transition": "regressed",
+      "source": "In the execution notes: In the project instructions, Above 4.1 mm/s on Ravine Station D033 vibration, Ravine Station D033 west excavation area must stop; above 6.4 mm/s on that same monitor, notification to Ravine Station D033 deputy superintendent is required.",
+      "epochs": [
+        {
+          "differences": []
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].condition.subject",
+              "expected": "Ravine Station D033 vibration",
+              "actual": "4.1 mm/s on Ravine Station D033 vibration"
+            },
+            {
+              "path": ".events[1].condition.subject",
+              "expected": "Ravine Station D033 vibration",
+              "actual": "6.4 mm/s on that same monitor"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-33-2",
+      "family": "multi_quantity",
+      "transition": "persistent",
+      "source": "Above 6.4 mm/s on Ravine Station D033 vibration, Ravine Station D033 west excavation area must stop; above 4.1 mm/s on that same monitor, notification to Ravine Station D033 deputy superintendent is required.",
+      "epochs": [
+        {
+          "differences": [
+            {
+              "path": ".events[1].condition.subject",
+              "expected": "Ravine Station D033 vibration",
+              "actual": "Ravine Station D033 vibration,"
+            }
+          ]
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].condition.subject",
+              "expected": "Ravine Station D033 vibration",
+              "actual": "6.4 mm/s on Ravine Station D033 vibration"
+            },
+            {
+              "path": ".events[1].condition.subject",
+              "expected": "Ravine Station D033 vibration",
+              "actual": "4.1 mm/s on that same monitor"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-38-1",
+      "family": "comparison_bounds",
+      "transition": "regressed",
+      "source": "Site briefing: When Canal Reach D038 monitor is exactly 1.7 mm/s, stopping Canal Reach D038 excavation is required.",
+      "epochs": [
+        {
+          "differences": []
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].condition.subject",
+              "expected": "Canal Reach D038 monitor",
+              "actual": "1.7 mm/s"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "v8-dev-41-1",
+      "family": "comparison_bounds",
+      "transition": "regressed",
+      "source": "Site briefing: When Ravine Station D041 monitor is different from 7.1 mm/s, stopping Ravine Station D041 west excavation area is required.",
+      "epochs": [
+        {
+          "differences": []
+        },
+        {
+          "differences": [
+            {
+              "path": ".events[0].condition.subject",
+              "expected": "Ravine Station D041 monitor",
+              "actual": "7.1 mm/s"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "prediction_hashes": [
+    "8cd72d68c9afa6b8a628988c9400961cf1672107d8a4789a47d5ec45a9d79b6a",
+    "4ec542deb405a81ec38cda4c02c68ea19da7d4f5be777869ed3a05f15763b801"
+  ],
+  "limitation": "Observed error transitions do not establish the causal contribution of learning rate, optimizer reset or template coverage.",
+  "token_replay": {
+    "exact_saved_stream_replays": {
+      "1": 132,
+      "2": 132
+    },
+    "model_generations": 0,
+    "training_updates": 0
+  }
+}
