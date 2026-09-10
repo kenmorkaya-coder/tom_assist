@@ -1,0 +1,12 @@
+{
+  "train": {
+    "count": 960,
+    "max_tokens": 2159,
+    "max_prefix": 1582
+  },
+  "valid": {
+    "count": 132,
+    "max_tokens": 2218,
+    "max_prefix": 1633
+  }
+}
