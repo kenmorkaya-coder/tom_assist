@@ -1,0 +1,815 @@
+{
+  "report": {
+    "verdict": "RED",
+    "total": 132,
+    "valid": 132,
+    "exact": 127,
+    "invented_authority": 0,
+    "paraphrase_equal": 42,
+    "contrast_distinct": 44,
+    "groups": 44,
+    "families": {
+      "quantity": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "comparator": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "polarity": {
+        "total": 6,
+        "valid": 6,
+        "exact": 5
+      },
+      "recipient": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "authority": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "unless": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "nested": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "direction": {
+        "total": 6,
+        "valid": 6,
+        "exact": 5
+      },
+      "temporal": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "revision": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "time": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "paragraph": {
+        "total": 6,
+        "valid": 6,
+        "exact": 4
+      },
+      "approval": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "nested_boolean": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "negation_scope": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "conflict": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "multi_quantity": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "unit_equivalence": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      },
+      "comparison_bounds": {
+        "total": 18,
+        "valid": 18,
+        "exact": 17
+      },
+      "notification_roles": {
+        "total": 6,
+        "valid": 6,
+        "exact": 6
+      }
+    },
+    "field_exact": {
+      "action": 132,
+      "roles": 131,
+      "modality": 132,
+      "negated": 131,
+      "condition": 128,
+      "exception": 131,
+      "complement": 132,
+      "revision": 132,
+      "time": 132,
+      "links": 132
+    },
+    "details": [
+      {
+        "id": "v15-quantity-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-quantity-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-quantity-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-quantity-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-quantity-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-quantity-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparator-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparator-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparator-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparator-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparator-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparator-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-polarity-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-polarity-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-polarity-0-2",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v15-polarity-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-polarity-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-polarity-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-recipient-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-recipient-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-recipient-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-recipient-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-recipient-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-recipient-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-authority-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-authority-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-authority-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-authority-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-authority-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-authority-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-unless-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-unless-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-unless-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-unless-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-unless-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-unless-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-nested-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-nested-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-nested-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-nested-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-nested-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-nested-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-direction-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-direction-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-direction-0-2",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v15-direction-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-direction-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-direction-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-temporal-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-temporal-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-temporal-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-temporal-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-temporal-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-temporal-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-revision-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-revision-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-revision-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-revision-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-revision-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-revision-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-time-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-time-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-time-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-time-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-time-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-time-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-paragraph-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-paragraph-0-1",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v15-paragraph-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-paragraph-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-paragraph-1-1",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v15-paragraph-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-approval-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-approval-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-approval-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-approval-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-approval-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-approval-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-nested_boolean-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-nested_boolean-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-nested_boolean-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-nested_boolean-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-nested_boolean-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-nested_boolean-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-negation_scope-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-negation_scope-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-negation_scope-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-negation_scope-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-negation_scope-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-negation_scope-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-conflict-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-conflict-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-conflict-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-conflict-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-conflict-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-conflict-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-multi_quantity-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-multi_quantity-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-multi_quantity-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-multi_quantity-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-multi_quantity-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-multi_quantity-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-unit_equivalence-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-unit_equivalence-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-unit_equivalence-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-unit_equivalence-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-unit_equivalence-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-unit_equivalence-1-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparison_bounds-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparison_bounds-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparison_bounds-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparison_bounds-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparison_bounds-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparison_bounds-1-2",
+        "exact": false,
+        "error": "semantic mismatch"
+      },
+      {
+        "id": "v15-comparison_bounds-2-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparison_bounds-2-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparison_bounds-2-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparison_bounds-3-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparison_bounds-3-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparison_bounds-3-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparison_bounds-4-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparison_bounds-4-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparison_bounds-4-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparison_bounds-5-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparison_bounds-5-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-comparison_bounds-5-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-notification_roles-0-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-notification_roles-0-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-notification_roles-0-2",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-notification_roles-1-0",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-notification_roles-1-1",
+        "exact": true,
+        "error": null
+      },
+      {
+        "id": "v15-notification_roles-1-2",
+        "exact": true,
+        "error": null
+      }
+    ],
+    "adapter_sha256": "c6a4708d9ceca6dab5d275ea0bff5ac172e392d085a4fda6b0d875e51d95a994",
+    "prediction_sha256": "ed76aaa0d5c1cda6d839b54f0fccbf31e9e6fee2f63002394de2f0a2fa8b1461",
+    "local_generations": 132,
+    "cloud_generations": 0
+  },
+  "parser_errors": {},
+  "thresholds": {
+    "valid": 1.0,
+    "exact": 0.95,
+    "family_exact": 0.9,
+    "invented_authority": 0,
+    "contrast_distinct": 1.0,
+    "paraphrase_equal": 0.95,
+    "matrix_margin": 0.05,
+    "condition_number_max": 10.0
+  },
+  "matrix_and_tree": "NOT_RUN",
+  "provenance": {
+    "verified_unix": 1789096447.903798,
+    "run": "/Users/kenmorkaya/PycharmProjects/ToM_assist/.tmp/event-graph-lora-v15-heldout-001",
+    "raw_predictions_reparsed": 132,
+    "token_ids_and_finish_reasons_verified": 132,
+    "sha256": {
+      "freeze.json": "60405e986d76e0785093ed3ea6f90bba1124b06f294f05a586aa045769343a91",
+      "heldout_predictions.jsonl": "ed76aaa0d5c1cda6d839b54f0fccbf31e9e6fee2f63002394de2f0a2fa8b1461",
+      "heldout_extraction_report.json": "770913d28845bb298c06da0a435da571afea61022ff2defbab66b9d202d17091"
+    }
+  }
+}
