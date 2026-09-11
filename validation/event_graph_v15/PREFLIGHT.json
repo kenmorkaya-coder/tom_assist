@@ -1,0 +1,6 @@
+{
+  "records": 132,
+  "max_prompt_tokens": 1643,
+  "max_gold_sequence_tokens": 2224,
+  "new_generations": 0
+}
