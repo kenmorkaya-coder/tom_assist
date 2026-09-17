@@ -465,7 +465,8 @@ it("opens exact RGM citations and explicitly saves a reviewed ToM relationship",
   const chat = vi.spyOn(backend, "chat").mockImplementation(async (_project, _method, payload) =>
     payload.action === "status" ? { ready: true, engine: "rgm", scope: "Experimental document answers." }
       : payload.action === "learn_situation" ? { duplicate: false, write_count: 381 } : {
-      status: "supported", answer: "Orchid must notify Rowan.",
+      status: "supported", answer: "Orchid must notify Rowan.", engine: "rgm+tom",
+      scope: "RGM exact evidence plus reviewed ToM structural recall.",
       sources: [{ source_id: "corpus/chunk_1", text: "🌳 Orchid must notify Rowan. Next clause.",
         provenance: { display_name: "Maintenance agreement", doc_id: "document-a", chunk_id: "chunk_1", start: 100, end: 138,
           answer_start: 102, answer_end: 127 } }],
@@ -479,6 +480,8 @@ it("opens exact RGM citations and explicitly saves a reviewed ToM relationship",
   const view = render(<NativeMemoryAnswer project={project} draft="Who must notify Rowan?" backend={backend} />);
   fireEvent.click(await screen.findByRole("button", { name: "Answer from project documents" }));
   await screen.findByRole("heading", { name: "Supported answer" });
+  expect(screen.getByText("RGM exact evidence plus reviewed ToM structural recall.")).toBeTruthy();
+  expect(screen.queryByText("Experimental document answers.")).toBeNull();
   const citation = screen.getByText("Source: Maintenance agreement · chunk_1");
   fireEvent.click(citation);
   expect(citation.closest("details")?.open).toBe(true);

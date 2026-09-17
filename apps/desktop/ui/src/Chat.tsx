@@ -767,6 +767,7 @@ type NativeAnswer = {
   status: "supported" | "partial" | "not_supported" | "ambiguous" | "blocked";
   answer: string;
   scope?: string;
+  engine?: string;
   sources: { source_id: string; text: string; provenance: {
     clause?: string; pdf_page?: number; display_name?: string; doc_id?: string; chunk_id?: string;
     start?: number; end?: number; answer_start?: number; answer_end?: number;
@@ -962,7 +963,11 @@ export function NativeMemoryAnswer({ project, draft, backend, disabled = false }
       const result = await backend.chat(project.id, "conversation.native_answer", {
         action: "answer", explicit_answer: true, project_state_version: project.state_version, question: draft,
       }) as NativeAnswer;
-      if (revision.current === ticket) setAnswer(result);
+      if (revision.current === ticket) {
+        setAnswer(result);
+        if (result.scope) setScope(result.scope);
+        if (result.engine) setEngine(result.engine);
+      }
     } catch (e) {
       if (revision.current === ticket) setError(String(e));
     } finally { if (revision.current === ticket) setBusy(false); }

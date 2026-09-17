@@ -2429,6 +2429,14 @@ does not promote those passages into a model-written answer or claim that every
 word in the request was proved. Both broad questions were rerun successfully in
 the real desktop with this result.
 
+The final UI review also exposed a stale scope label: the page still displayed
+the pre-learning sentence that ToM was not used, even though the answer payload
+correctly reported `rgm+tom`. The answer component now refreshes its engine and
+scope from each completed answer. The real desktop was rerun and now states that
+reviewed structures may reactivate persistent distributed ToM memory before
+evidence checking. Desktop tests remain 18/18; typecheck and production build
+also pass.
+
 The remaining limitation is the evidence reader's inability to quote a direct
 answer for those two broad structural requests. This no longer hides the ToM
 result or falsely says the evidence is absent. Automatic motif extraction and
