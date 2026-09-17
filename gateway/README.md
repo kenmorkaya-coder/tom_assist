@@ -119,6 +119,32 @@ later rank-fusion scores; it is retained as
 This establishes a controlled sequence-memory gain, not automatic sequence
 extraction or performance on natural project event histories.
 
+The bounded `--rgm500-cross-source-motif` follow-up then uses real project
+material. The unmodified RGM parser produced 315 native chunks from the executed
+M12 Interface Agreement and SCAW D&C Deed; native admission retained 312 unique
+chunks and rejected three exact duplicates. Two chunks in different contracts
+state the same reviewed sequence motif: written notice before a required
+meeting. For three structure-only questions, full RGM contextual retrieval with
+a twenty-record allowance returned only one of the six expected source
+occurrences and never returned both sources together. The target vector ranks
+were 13–47.
+
+That one reviewed sequence motif was learned once by the approved circa-500
+tree and bound to both RGM chunk IDs. All three question forms reopened its
+complete 381-location native slot map and returned both exact source pointers;
+the untrained tree opened no memory. This is the intended shared-memory case:
+one structural memory can connect several evidence locations, while RGM retains
+their separate text and provenance. No branch was averaged and no whole-tree
+score was calculated. Complete routed inputs, signed terminal fields, slot
+scores and activation maps remain in the 38 MB Passport archive
+`rgm500_cross_source_motif_v1/native_fields.npz`; the compact result is
+`native_rgm500_cross_source_motif_comparison`.
+
+The claim remains narrow. The motif was reviewed and supplied, automatic motif
+extraction is not tested, and the two native RGM heading chunks are the parser's
+4,003-character truncated outputs. This proves the shared structural source
+index on two real chunks; it is not yet the live app integration.
+
 The result establishes a useful integration boundary: RGM retains exact text
 and provenance, while a verified directed situation can address a distinct
 distributed ToM memory. It does not validate automatic relationship extraction.

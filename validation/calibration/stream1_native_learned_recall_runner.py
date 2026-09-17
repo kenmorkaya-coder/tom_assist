@@ -5347,6 +5347,315 @@ def rgm500_sequence_discrimination_comparison():
         indent=2), flush=True)
 
 
+def rgm500_cross_source_motif_comparison():
+    """Link two real RGM chunks through one shared learned sequence motif."""
+    import subprocess
+    from types import SimpleNamespace
+
+    sys.path.insert(0, str(ASSIST))
+    sys.path.insert(0, str(ROOT / "src"))
+    from gateway.event_graph_compiler import compile_graph
+    from gateway.native_memory import NativeEvidenceLibrary
+    from gateway.typed_event_graph import VERSION as graph_version
+    from tom_matrix import Stream1Tree
+    from tom_matrix.relations.precision_routing import capture_precision_readings, precision_route_from_readings
+
+    seal = NativeEvidenceLibrary._seal
+    key = "native_rgm500_cross_source_motif_comparison"
+    saved = json.loads(RESULT.read_text())
+    if key in saved:
+        raise FileExistsError("Preserve the frozen cross-source motif comparison")
+    historical = {name: seal(value) for name, value in saved.items()}
+    rgm_root = Path("/Users/kenmorkaya/PycharmProjects/tom_master17D")
+    rgm_files = [rgm_root / "interface/doc_ingest.py", rgm_root / "memory/rgm.py",
+        rgm_root / "interface/stm_ltm_retrieval.py", rgm_root / "state/state_types.py"]
+    rgm_hashes = {str(path.relative_to(rgm_root)): sha(path) for path in rgm_files}
+    rgm_status = subprocess.run(["git", "status", "--porcelain"], cwd=rgm_root,
+        check=True, capture_output=True, text=True).stdout
+    pdfs = [
+        dict(document_id="interface", path=Path(
+            "/Volumes/My Passport for Mac/tom_as projects/sydney_metro_wsa/SCAW Contract/"
+            "SMWSA M12 Interface Agreement - Fully Executed 2 February 2022.pdf")),
+        dict(document_id="dc", path=Path(
+            "/Volumes/My Passport for Mac/tom_as projects/sydney_metro_wsa/SCAW Contract/"
+            "SCAW D_C Deed - Executed 1 March 2022.pdf")),
+    ]
+    for item in pdfs:
+        item["sha256"] = sha(item["path"])
+
+    # Load the original RGM document parser directly.  The source repository is
+    # read-only; this uses its own heading detector and chunker without a rewrite.
+    sys.path.insert(0, str(rgm_root))
+    doc_spec = importlib.util.spec_from_file_location(
+        "rgm_native_doc_ingest_cross_source", rgm_root / "interface/doc_ingest.py")
+    ingestion = importlib.util.module_from_spec(doc_spec)
+    sys.modules[doc_spec.name] = ingestion
+    doc_spec.loader.exec_module(ingestion)
+    records = []
+    document_rows = []
+    for item in pdfs:
+        text, error = ingestion.extract_text(str(item["path"]))
+        if error:
+            raise RuntimeError(error)
+        enriched, telemetry = ingestion.detect_headings_in_plain_text(text, source_hint="pdf")
+        chunks = ingestion.chunk_markdown_by_headings(enriched)
+        document_rows.append(dict(document_id=item["document_id"], source_pdf=str(item["path"]),
+            source_pdf_sha256=item["sha256"], source_chars=len(text),
+            heading_telemetry=telemetry, native_rgm_chunks=len(chunks)))
+        for chunk in chunks:
+            records.append(dict(id=f"{item['document_id']}:{chunk.chunk_id}",
+                document_id=item["document_id"], chunk_id=chunk.chunk_id,
+                section_id=chunk.section_id, section_title=chunk.section_title,
+                start_line=chunk.start_line, end_line=chunk.end_line,
+                text=chunk.content, text_sha256=hashlib.sha256(chunk.content.encode()).hexdigest()))
+    record_index = {row["id"]: row for row in records}
+    target_ids = ["interface:section_41", "dc:section_92"]
+    sources = [record_index[source_id] for source_id in target_ids]
+    required_phrases = [
+        ("Following the issue of a notice", "Executive Group must meet"),
+        ("issues a notice under clause 31.3(a)", "parties must within 2 Business Days"),
+    ]
+    if any(not all(phrase in " ".join(source["text"].split()) for phrase in phrases)
+           for source, phrases in zip(sources, required_phrases, strict=True)):
+        raise RuntimeError("Native RGM chunks no longer contain the reviewed notice-before-meeting facts")
+
+    questions = [
+        dict(id="XM1", text=("Which procedures require a written notice, followed by a meeting, "
+            "followed by a later response?")),
+        dict(id="XM2", text=("Find project processes where an issue triggers notification, then "
+            "people meet, then decide the next action.")),
+        dict(id="XM3", text=("Where does the project use the sequence problem, notice, meeting, "
+            "response?")),
+    ]
+    run = dict(status="RUNNING", historical_sections=historical,
+        scope=("Three structure-only questions over all native RGM chunks from two real project "
+            "contracts. One reviewed notice-before-meeting motif is learned once by the approved "
+            "circa-500-branch tree and retains pointers to both supporting RGM chunks."),
+        one_changed_variable=("Add the shared learned ToM sequence motif as a structural source "
+            "index. RGM parsing, chunks, records, contextual retrieval and exact source text remain fixed."),
+        documents=document_rows, source_records=len(records), sources=[
+            {name: source[name] for name in ("id", "document_id", "chunk_id", "section_id",
+                "section_title", "start_line", "end_line", "text_sha256")} for source in sources],
+        motif=dict(kind="before", source_event="notify", target_event="meet",
+            source_ids=target_ids, source_count=len(target_ids)),
+        questions=copy.deepcopy(questions), rgm_trials=[], tom_trials=[],
+        rgm=dict(entrypoint="interface.stm_ltm_retrieval.retrieve_ltm_with_stm_triggers",
+            native_parser="interface.doc_ingest.extract_text + detect_headings_in_plain_text + chunk_markdown_by_headings",
+            max_items=20, max_chars=60000, native_configuration=True,
+            source_hashes=rgm_hashes),
+        tom=dict(input="Only the reviewed notice-before-meeting temporal-link 32x32 matrix.",
+            source_binding="One structural memory points to both exact RGM chunk IDs.",
+            whole_tree_score=False, branches_averaged=False, model_calls=0))
+
+    sys.addaudithook(audit)
+    from memory.rgm import ReflectionGatedMemory, MemoryRecord, PolicyOutcome
+    from state.state_types import MetricsSnapshot
+    from interface import stm_ltm_retrieval
+
+    def rgm_trial(question):
+        memory = ReflectionGatedMemory()
+        anchors = {}
+        duplicate_of = {}
+        checksum_ids = {}
+        for row in records:
+            record = MemoryRecord(id=row["id"], content=row["text"], content_summary=row["text"],
+                source_refs=[dict(document_id=row["document_id"], chunk_id=row["chunk_id"],
+                    section_title=row["section_title"], text_sha256=row["text_sha256"])],
+                S=.9, C=.9, H=.1, novelty_score=.5, anchor_strength=.5,
+                policy_outcome=PolicyOutcome.PERMIT)
+            accepted = memory.write_memory(record)
+            if not accepted:
+                reason = next((event.get("reason") for event in reversed(memory.state.telemetry)
+                    if event.get("event") == "write_rejected" and event.get("detail") == row["id"]), None)
+                prior = checksum_ids.get(record.checksum)
+                if reason == "checksum_duplicate" and prior is not None:
+                    duplicate_of[row["id"]] = prior
+                    continue
+                raise RuntimeError(f"RGM refused non-duplicate native chunk {row['id']}: {reason}")
+            checksum_ids[record.checksum] = row["id"]
+            anchors[row["id"]] = dict(id=row["id"], content=row["text"],
+                content_summary=row["text"], source_refs=copy.deepcopy(record.source_refs),
+                anchor_type="reference_doc", semantic_tags=[f"DOC:{row['document_id']}"],
+                anchor_strength=.5)
+        state = SimpleNamespace(memory=SimpleNamespace(anchors=anchors,
+            active_doc_ids=[item["document_id"] for item in pdfs]),
+            metrics=MetricsSnapshot(S=.9, C=.9, H=.1), branches={}, tick=0,
+            conversation_history=[], pending_interaction=None)
+        controller = SimpleNamespace(state=state, rgm=memory, continuity_id=None)
+        recalled, telemetry = stm_ltm_retrieval.retrieve_ltm_with_stm_triggers(
+            controller, stm_ltm_retrieval.compute_retrieval_triggers([], None, None),
+            max_items=20, max_chars=60000, user_text=question["text"])
+        candidates = [row["id"] for row in recalled]
+        ranking = memory.vector_store.query(question["text"], k=len(memory.state.anchors))
+        ranks = {memory_id: index + 1 for index, (memory_id, _) in enumerate(ranking)}
+        resolved_targets = {source_id: duplicate_of.get(source_id, source_id) for source_id in target_ids}
+        returned_targets = [source_id for source_id, memory_id in resolved_targets.items()
+            if memory_id in candidates]
+        return dict(question_id=question["id"], admitted_chunks=len(memory.state.anchors),
+            exact_duplicate_chunks=len(duplicate_of), candidate_ids=candidates,
+            target_vector_ranks={source_id: ranks.get(memory_id)
+                for source_id, memory_id in resolved_targets.items()},
+            returned_target_source_ids=returned_targets,
+            all_targets_returned=set(returned_targets) == set(target_ids),
+            rrf_topk_ids=telemetry.get("rrf_topk_ids", []),
+            rrf_topk_scores=telemetry.get("rrf_topk_scores", []))
+
+    for question in questions:
+        run["rgm_trials"].append(rgm_trial(question))
+
+    def motif_graph(text):
+        evidence = [dict(start=0, end=len(text), quote=text)]
+        roles = dict(actor=None, object=None, source=None, target=None,
+            recipient=None, authority=None)
+        return dict(version=graph_version, entities=[], predicates=[], conditions=[], events=[
+            dict(id="notice", action="notify", roles=copy.deepcopy(roles), modality="obligation",
+                negated=False, condition=None, exception=None, complement=None, revision=None,
+                time=None, evidence=copy.deepcopy(evidence)),
+            dict(id="meeting", action="approve", roles=copy.deepcopy(roles), modality="obligation",
+                negated=False, condition=None, exception=None, complement=None, revision=None,
+                time=None, evidence=copy.deepcopy(evidence)),
+            ], links=[dict(id="notice_before_meeting", kind="before", source="notice",
+                target="meeting", evidence=copy.deepcopy(evidence))], unresolved=[])
+
+    compiled = [compile_graph(motif_graph(text), text) for text in
+        [sources[0]["text"], sources[1]["text"]] + [question["text"] for question in questions]]
+    matrices = np.stack([np.asarray(item["loads"][2]["matrix"]) for item in compiled])
+    if not all([load["kind"] for load in item["loads"]] == ["event", "event", "link"]
+               for item in compiled):
+        raise RuntimeError("Shared motif compiler did not retain its temporal link")
+    if not all(np.array_equal(matrices[0], matrix) for matrix in matrices[1:]):
+        raise RuntimeError("Reviewed shared motif did not compile to one canonical matrix")
+
+    checkpoint = ROOT / "artifacts/runs/native_500_branch_fixture_v1/native_500_branch_fixture.pkl"
+    checkpoint_sha256 = "39377bce42eea2e3c75474c3f61013fbc49cbf23e5ebcea28676071ee7a164d1"
+    if sha(checkpoint) != checkpoint_sha256:
+        raise RuntimeError("Approved 500-branch fixture changed")
+    tree = Stream1Tree.restore(checkpoint)
+    control = Stream1Tree.restore(checkpoint)
+    start_state = tree.state_hash()
+    before = {bank: unit.updates.copy() for bank, unit in tree.paired_units.items()}
+    tree.teaching_enabled = True
+    try:
+        tree.observe(matrices[0], addresses()[0], event_id="shared-notice-before-meeting")
+    finally:
+        tree.teaching_enabled = False
+    writes = set()
+    for bank, unit in tree.paired_units.items():
+        previous = before.get(bank, np.zeros_like(unit.updates))
+        writes.update((bank, int(slot)) for slot in np.flatnonzero(unit.updates != previous))
+    if not writes:
+        raise RuntimeError("Shared ToM motif produced no native writes")
+    learned_state = tree.state_hash()
+    readings = capture_precision_readings(tree)
+    cold_readings = capture_precision_readings(control)
+    branch_order = list(readings["order"])
+    tips = [branch for branch in branch_order if not readings["children"][branch]]
+    cold_tips = [branch for branch in cold_readings["order"] if not cold_readings["children"][branch]]
+    capacity = len(next(iter(tree.paired_units.values())).occupied)
+
+    def capture(current, current_readings, current_tips, value):
+        state = current.state_hash()
+        path = precision_route_from_readings(value, current_readings)
+        _, returned, selected = current._terminal_returns(path)
+        field = np.stack([returned[branch] for branch in current_tips])
+        routed = np.stack([path.local[branch] for branch in current_readings["order"]])
+        active = np.zeros((len(current_tips), capacity), dtype=bool)
+        scores = np.zeros((len(current_tips), capacity))
+        keys = set()
+        for row, branch in enumerate(current_tips):
+            scores[row] = selected[branch]["scores"]
+            active[row, selected[branch]["active"]] = True
+            keys.update((current.paired_placement[branch], int(slot))
+                for slot in selected[branch]["active"])
+        if current.state_hash() != state or not all(np.isfinite(array).all()
+                for array in (field, routed, scores)):
+            raise RuntimeError("Shared motif capture changed state or returned invalid cells")
+        return dict(field=field, routed=routed, active=active, scores=scores, keys=keys)
+
+    source_capture = capture(tree, readings, tips, matrices[0])
+    query_captures = [capture(tree, readings, tips, matrix) for matrix in matrices[2:]]
+    cold_captures = [capture(control, cold_readings, cold_tips, matrix) for matrix in matrices[2:]]
+    if source_capture["keys"] != writes:
+        raise RuntimeError("Canonical shared motif does not reopen its complete learned slot set")
+    folder = BULK / "rgm500_cross_source_motif_v1"
+    folder.mkdir(exist_ok=True)
+    archive = folder / "native_fields.npz"
+    if archive.exists():
+        raise FileExistsError("Preserve the existing shared-motif field archive")
+    arrays = dict(branch_ids=np.asarray(branch_order),
+        parents=np.asarray([readings["parents"].get(branch) or "" for branch in branch_order]),
+        terminal_branch_ids=np.asarray(tips), motif_matrix=matrices[0],
+        source_field=source_capture["field"], source_routed=source_capture["routed"],
+        source_active=source_capture["active"], source_scores=source_capture["scores"])
+    for question, captured, cold in zip(questions, query_captures, cold_captures, strict=True):
+        for field in ("field", "routed", "active", "scores"):
+            arrays[f"query_{question['id']}_{field}"] = captured[field]
+            arrays[f"untrained_{question['id']}_{field}"] = cold[field]
+        recalled_sources = target_ids if captured["keys"] == writes else []
+        resolved = []
+        for source_id in recalled_sources:
+            source = record_index[source_id]
+            resolved.append(dict(source_id=source_id, document_id=source["document_id"],
+                chunk_id=source["chunk_id"], section_title=source["section_title"],
+                text_sha256=source["text_sha256"], exact_native_rgm_chunk=True))
+        run["tom_trials"].append(dict(question_id=question["id"],
+            complete_slot_map_matches_shared_motif=captured["keys"] == writes,
+            recalled_source_ids=recalled_sources, resolved_sources=resolved,
+            untrained_active_slots=len(cold["keys"]),
+            complete_signed_field_sha256=hashlib.sha256(captured["field"].tobytes()).hexdigest()))
+    np.savez_compressed(archive, **arrays)
+    run["tom"].update(checkpoint=str(checkpoint), checkpoint_sha256=checkpoint_sha256,
+        start_state=start_state, learned_state=learned_state, learned_branches=len(tree.nodes),
+        terminal_branches=len(tips), write_count=len(writes), tree_unchanged_during_reads=(
+            tree.state_hash() == learned_state), untrained_tree_unchanged=(control.state_hash() == start_state),
+        archive=dict(path=str(archive), bytes=archive.stat().st_size, sha256=sha(archive),
+            keys=sorted(arrays)))
+
+    run["findings"] = dict(questions=len(questions), native_rgm_chunks=len(records),
+        admitted_rgm_chunks=run["rgm_trials"][0]["admitted_chunks"],
+        duplicate_rgm_chunks=run["rgm_trials"][0]["exact_duplicate_chunks"],
+        expected_source_returns=len(questions) * len(target_ids),
+        rgm_target_source_returns=sum(len(row["returned_target_source_ids"])
+            for row in run["rgm_trials"]),
+        rgm_questions_returning_both_sources=sum(row["all_targets_returned"] for row in run["rgm_trials"]),
+        tom_target_source_returns=sum(len(row["recalled_source_ids"]) for row in run["tom_trials"]),
+        tom_questions_returning_both_sources=sum(set(row["recalled_source_ids"]) == set(target_ids)
+            for row in run["tom_trials"]),
+        exact_shared_motif_replays=sum(row["complete_slot_map_matches_shared_motif"]
+            for row in run["tom_trials"]),
+        untrained_activations=sum(row["untrained_active_slots"] for row in run["tom_trials"]),
+        result=("RGM keeps the exact native chunks, while the shared ToM sequence motif links "
+            "both source locations for structure-only questions that lexical retrieval does not surface."))
+    passed = (run["findings"]["rgm_questions_returning_both_sources"] == 0
+        and run["findings"]["tom_questions_returning_both_sources"] == len(questions)
+        and run["findings"]["exact_shared_motif_replays"] == len(questions)
+        and run["findings"]["untrained_activations"] == 0
+        and run["tom"]["tree_unchanged_during_reads"] and run["tom"]["untrained_tree_unchanged"]
+        and all(sha(item["path"]) == item["sha256"] for item in pdfs))
+    run["status"] = "COMPLETE_TOM_CROSS_SOURCE_GAIN" if passed else "COMPLETE_NO_PROVEN_GAIN"
+    run["limitations"] = [
+        "This is one reviewed two-event motif, two source chunks and three questions, not a broad benchmark.",
+        "The temporal motif was reviewed and supplied; automatic extraction of the motif is not tested.",
+        "The native RGM parser truncates these heading chunks at 4,003 characters; this test uses exactly those native outputs.",
+        "ToM returns structural source pointers. RGM remains responsible for the exact chunk text and provenance.",
+    ]
+    run["rgm_source_repository_unchanged"] = (
+        rgm_status == subprocess.run(["git", "status", "--porcelain"], cwd=rgm_root,
+            check=True, capture_output=True, text=True).stdout
+        and rgm_hashes == {str(path.relative_to(rgm_root)): sha(path) for path in rgm_files})
+    run["runner_sha256"] = sha(Path(__file__))
+    if not run["rgm_source_repository_unchanged"]:
+        raise RuntimeError("RGM source repository changed during cross-source comparison")
+    latest = json.loads(RESULT.read_text())
+    if {name: seal(value) for name, value in latest.items()} != historical:
+        raise RuntimeError("Historical result changed before cross-source comparison commit")
+    latest[key] = run
+    RESULT.write_text(json.dumps(latest, indent=2, ensure_ascii=False) + "\n")
+    print(json.dumps(dict(status=run["status"], findings=run["findings"],
+        target_ranks={row["question_id"]: row["target_vector_ranks"] for row in run["rgm_trials"]},
+        archive=run["tom"]["archive"]), indent=2), flush=True)
+
+
 def rgm500_structural_bridge(order):
     """Real RGM chunks -> verified situation graph -> native distributed memory."""
     sys.path.insert(0, str(ASSIST))
@@ -7701,6 +8010,9 @@ if __name__ == "__main__":
         sys.exit(0)
     if sys.argv[1:] == ["--rgm500-sequence-discrimination"]:
         rgm500_sequence_discrimination_comparison()
+        sys.exit(0)
+    if sys.argv[1:] == ["--rgm500-cross-source-motif"]:
+        rgm500_cross_source_motif_comparison()
         sys.exit(0)
     if len(sys.argv) == 3 and sys.argv[1] == "--rgm500-bridge":
         rgm500_bridge(sys.argv[2])
