@@ -5303,6 +5303,214 @@ def rgm500_persisted_situation_bridge():
         archive=run["archive"], peak_gib=run["peak_gib"]), indent=2), flush=True)
 
 
+def rgm500_persisted_situation_coexistence():
+    """Reload two mirrored RGM situations and test distinct ToM recall."""
+    sys.path.insert(0, str(ASSIST))
+    sys.path.insert(0, str(ROOT / "src"))
+    from gateway.event_graph_compiler import compile_graph
+    from gateway.native_memory import (NativeEvidenceLibrary, build_rgm_situation_memory,
+        read_rgm_situation_memory, rgm_role_record_receipt)
+    from gateway.typed_event_graph import VERSION as graph_version
+    from gateway.vendor.rgm17d.memory.rgm import ReflectionGatedMemory
+    from tom_matrix import Stream1Tree
+    from tom_matrix.relations.precision_routing import capture_precision_readings, precision_route_from_readings
+
+    if Path.cwd().resolve() != ROOT.resolve() or not BULK.is_dir():
+        raise RuntimeError("Native checkout and mounted Passport required")
+    key = "native_rgm500_persisted_situation_coexistence"
+    saved = json.loads(RESULT.read_text())
+    if key in saved:
+        raise FileExistsError("Preserve the existing coexistence result")
+    seal = NativeEvidenceLibrary._seal
+    historical = {name: seal(value) for name, value in saved.items()}
+    profile = json.loads((BULK / "larger_collection12/profile.json").read_text())
+    registry = {item["id"]: item for item in profile["registry"]}
+    fact_ids = ("N05", "N06")
+    sources = [registry[fact_id] for fact_id in fact_ids]
+
+    rgm = ReflectionGatedMemory()
+    source_records = []
+    for fact_id, source in zip(fact_ids, sources):
+        roles = profile["source_roles"][source["source_id"]]
+        verification = dict(status="frozen_verified",
+            method="frozen role-bound evidence selection retained in the approved source profile",
+            role_record_sha256=rgm_role_record_receipt(source, roles))
+        record = build_rgm_situation_memory(source, roles, verification)
+        if not rgm.write_memory(record):
+            raise RuntimeError(f"RGM rejected reviewed situation {fact_id}")
+        source_records.append(record)
+    serialized = rgm.serialize()
+    restored = ReflectionGatedMemory()
+    restored.restore(serialized)
+    if len(restored.state.anchors) != 2:
+        raise RuntimeError("Both RGM situations did not survive reload")
+    by_source = {}
+    for record in restored.state.anchors.values():
+        situation = read_rgm_situation_memory(record)
+        if situation["source_id"] in by_source:
+            raise RuntimeError("RGM returned duplicate source identity")
+        by_source[situation["source_id"]] = situation
+    situations = [by_source[source["source_id"]] for source in sources]
+    relations = [next(item for item in situation["relations"]
+        if item["kind"] == "triggers_replacement_cover") for situation in situations]
+    if [(item["source_label"], item["target_label"]) for item in relations] != [
+        ("TfNSW", "SM"), ("SM", "TfNSW")]:
+        raise RuntimeError("RGM changed one of the mirrored relationships")
+
+    role_results = saved["role_bound_evidence_selection"]["results"]
+    questions = []
+    for fact_id, source in zip(fact_ids, sources):
+        for suffix in ("Q1", "Q2"):
+            row = next(item for item in role_results if item["id"] == f"{fact_id}-{suffix}:main")
+            questions.append(dict(id=f"{fact_id}-{suffix}", text=row["question"],
+                roles=row["query_fields"], expected_source=source["source_id"]))
+    identities = {"SM": "project:m12/entity:sm", "TfNSW": "project:m12/entity:tfnsw"}
+
+    def graph(text, failure, cover, modality):
+        entities = []
+        for identifier, party in (("failure_party", failure), ("cover_payer", cover)):
+            start = text.find(party)
+            if party not in identities or start < 0:
+                raise ValueError("reviewed relation lacks exact input evidence")
+            entities.append(dict(id=identifier, name=identities[party],
+                mentions=[dict(start=start, end=start+len(party), quote=party)]))
+        return dict(version=graph_version, entities=entities, predicates=[], conditions=[],
+            events=[dict(id="insurance_failure_to_cover", action="cause",
+                roles=dict(actor=None, object=None, source="failure_party", target="cover_payer",
+                    recipient=None, authority=None), modality=modality, negated=False,
+                condition=None, exception=None, complement=None, revision=None, time=None,
+                evidence=[dict(start=0, end=len(text), quote=text)])], links=[], unresolved=[])
+
+    inputs = [(source["text"], relation["source_label"], relation["target_label"], "assertion")
+        for source, relation in zip(sources, relations)]
+    inputs += [(item["text"], item["roles"]["failure_party"], item["roles"]["cover_payer"], "hypothetical")
+        for item in questions]
+    compiled = [compile_graph(graph(*item), item[0]) for item in inputs]
+    matrices = np.stack([np.asarray(item["loads"][0]["matrix"]) for item in compiled])
+
+    checkpoint = ROOT / "artifacts/runs/native_500_branch_fixture_v1/native_500_branch_fixture.pkl"
+    expected_checkpoint = "39377bce42eea2e3c75474c3f61013fbc49cbf23e5ebcea28676071ee7a164d1"
+    if sha(checkpoint) != expected_checkpoint:
+        raise RuntimeError("Approved 500-branch fixture changed")
+    tree = Stream1Tree.restore(checkpoint)
+    source_writes = []
+    for index in range(2):
+        before = {bank: unit.updates.copy() for bank, unit in tree.paired_units.items()}
+        tree.teaching_enabled = True
+        try:
+            tree.observe(matrices[index], addresses()[index], event_id=f"rgm-persisted-{fact_ids[index]}")
+        finally:
+            tree.teaching_enabled = False
+        writes = set()
+        for bank, unit in tree.paired_units.items():
+            old = before.get(bank, np.zeros_like(unit.updates))
+            writes.update((bank, int(slot)) for slot in np.flatnonzero(unit.updates != old))
+        if not writes:
+            raise RuntimeError(f"Persisted RGM situation {fact_ids[index]} produced no ToM write")
+        source_writes.append(writes)
+    shared = source_writes[0] & source_writes[1]
+    if shared:
+        raise RuntimeError("Mirrored RGM situations wrote overlapping ToM slots")
+
+    learned_state = tree.state_hash()
+    readings = capture_precision_readings(tree)
+    branch_order = list(readings["order"])
+    tips = [branch for branch in branch_order if not readings["children"][branch]]
+    capacity = len(next(iter(tree.paired_units.values())).occupied)
+
+    def capture(subject, value, local_readings, local_order, local_tips, local_capacity):
+        before = subject.state_hash()
+        path = precision_route_from_readings(value, local_readings)
+        _, returned, selected = subject._terminal_returns(path)
+        field = np.stack([returned[branch] for branch in local_tips])
+        routed = np.stack([path.local[branch] for branch in local_order])
+        active = np.zeros((len(local_tips), local_capacity), dtype=bool)
+        scores = np.zeros((len(local_tips), local_capacity))
+        keys = set()
+        for row, branch in enumerate(local_tips):
+            scores[row] = selected[branch]["scores"]
+            active[row, selected[branch]["active"]] = True
+            keys.update((subject.paired_placement[branch], int(slot)) for slot in selected[branch]["active"])
+        if subject.state_hash() != before or not all(np.isfinite(item).all() for item in (field, routed, scores)):
+            raise RuntimeError("Native read changed state or returned invalid cells")
+        return dict(field=field, routed=routed, active=active, scores=scores, keys=keys)
+
+    captures = [capture(tree, value, readings, branch_order, tips, capacity) for value in matrices]
+    control_tree = Stream1Tree.restore(checkpoint)
+    control_state = control_tree.state_hash()
+    control_readings = capture_precision_readings(control_tree)
+    control_order = list(control_readings["order"])
+    control_tips = [branch for branch in control_order if not control_readings["children"][branch]]
+    control_capacity = len(next(iter(control_tree.paired_units.values())).occupied)
+    controls = [capture(control_tree, value, control_readings, control_order, control_tips,
+        control_capacity) for value in matrices[2:]]
+
+    rows = []
+    for question, observed, control in zip(questions, captures[2:], controls):
+        correct = 0 if question["expected_source"] == sources[0]["source_id"] else 1
+        wrong = 1 - correct
+        rows.append(dict(id=question["id"], expected_source=question["expected_source"],
+            active_branch_slots=len(observed["keys"]), correct_slots_open=len(observed["keys"] & source_writes[correct]),
+            wrong_slots_open=len(observed["keys"] & source_writes[wrong]),
+            foreign_slots_open=len(observed["keys"] - (source_writes[0] | source_writes[1])),
+            activation_equals_correct_source=bool(np.array_equal(observed["active"], captures[correct]["active"])),
+            activation_equals_wrong_source=bool(np.array_equal(observed["active"], captures[wrong]["active"])),
+            untrained_active_branch_slots=len(control["keys"]),
+            return_sha256=hashlib.sha256(observed["field"].tobytes()).hexdigest()))
+    if not all(row["correct_slots_open"] and not row["wrong_slots_open"]
+               and not row["foreign_slots_open"] and row["activation_equals_correct_source"]
+               and not row["activation_equals_wrong_source"] and not row["untrained_active_branch_slots"]
+               for row in rows):
+        raise RuntimeError("Persisted RGM situations did not remain distinct: " + json.dumps(rows))
+
+    folder = BULK / "rgm500_structural_bridge_v1"
+    archive = folder / "rgm_persisted_coexistence_native_fields.npz"
+    arrays = dict(branch_ids=np.asarray(branch_order), terminal_branch_ids=np.asarray(tips),
+        parents=np.asarray([readings["parents"].get(branch) or "" for branch in branch_order]),
+        control_branch_ids=np.asarray(control_order), control_terminal_branch_ids=np.asarray(control_tips),
+        control_parents=np.asarray([control_readings["parents"].get(branch) or "" for branch in control_order]),
+        event_matrices=matrices)
+    for index, observed in enumerate(captures):
+        name = f"source_{fact_ids[index]}" if index < 2 else f"query_{questions[index-2]['id']}"
+        for suffix in ("field", "routed", "active", "scores"):
+            arrays[name+"_"+suffix] = observed[suffix]
+    for question, observed in zip(questions, controls):
+        for suffix in ("field", "routed", "active", "scores"):
+            arrays[f"control_{question['id']}_"+suffix] = observed[suffix]
+    np.savez_compressed(archive, **arrays)
+
+    run = dict(status="COMPLETE_PASS",
+        scope="Two mirrored reviewed RGM situation records are persisted and reloaded together, then taught to one approved 500-branch ToM copy. Four held-out questions and an untrained-tree control test distinct coexistence. No whole-tree score.",
+        rgm=dict(record_count=2, serialized_bytes=len(serialized.encode()), persisted_and_reloaded=True,
+            sources=[dict(id=fact_id, source_id=situation["source_id"], provenance=situation["provenance"],
+                relations=situation["relations"]) for fact_id, situation in zip(fact_ids, situations)]),
+        tree=dict(starting_branches=500, learned_branches=len(tree.nodes),
+            source_write_counts=[len(item) for item in source_writes], shared_write_count=len(shared),
+            unchanged_during_reads=tree.state_hash() == learned_state,
+            untrained_control_state_unchanged=control_tree.state_hash() == control_state,
+            whole_tree_score=False, branch_order_preserved=True, full_signed_32x32_fields_preserved=True),
+        questions=rows,
+        archive=dict(path=str(archive), bytes=archive.stat().st_size, sha256=sha(archive), keys=sorted(arrays)),
+        findings=dict(question_count=len(rows), correct_only_native_activations=sum(
+            bool(row["correct_slots_open"] and not row["wrong_slots_open"]
+                 and not row["foreign_slots_open"] and not row["untrained_active_branch_slots"])
+            for row in rows),
+            conclusion="Two source-bound RGM structural records coexist in one ToM: each question opens only the slots taught by its own mirrored relationship, while the untrained tree opens none."),
+        limitations=["Both directional structures came from previously reviewed role records, not automatic RGM document parsing.",
+            "This is two mirrored insurance situations and four questions, not a general structural-memory benchmark."],
+        code_hashes={str(path.relative_to(ASSIST)): sha(path) for path in (
+            Path(__file__), ASSIST/"gateway/native_memory.py", ASSIST/"gateway/event_graph_compiler.py")},
+        peak_gib=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/2**30)
+    latest = json.loads(RESULT.read_text())
+    if {name: seal(value) for name, value in latest.items()} != historical:
+        raise RuntimeError("Historical result changed before coexistence commit")
+    latest[key] = run
+    RESULT.write_text(json.dumps(latest, indent=2, ensure_ascii=False)+"\n")
+    print(json.dumps(dict(status=run["status"], writes=run["tree"]["source_write_counts"],
+        shared=run["tree"]["shared_write_count"], questions=rows,
+        archive=run["archive"], peak_gib=run["peak_gib"]), indent=2), flush=True)
+
+
 def rgm_document_ingestion():
     """Observe the unmodified native document-ingestion path, including its losses."""
     import contextlib
@@ -7020,6 +7228,9 @@ if __name__ == "__main__":
         sys.exit(0)
     if sys.argv[1:] == ["--rgm500-persisted-situation-bridge"]:
         rgm500_persisted_situation_bridge()
+        sys.exit(0)
+    if sys.argv[1:] == ["--rgm500-persisted-situation-coexistence"]:
+        rgm500_persisted_situation_coexistence()
         sys.exit(0)
     if len(sys.argv) == 3 and sys.argv[1] == "--rgm500-structural-bridge":
         rgm500_structural_bridge(sys.argv[2])

@@ -122,6 +122,18 @@ relationship extraction. Tom 17D's current evidence validator cannot supply
 that authority because it accepts both the correct and reversed direction when
 both party names and the relation word occur in the source.
 
+The next `--rgm500-persisted-situation-coexistence` control reloads both
+mirrored RGM records together before teaching one fresh ToM copy. Clause 23.5
+writes 381 locations and clause 24.5 writes 387 different locations, with zero
+overlap. Each of the four held-out questions opens every location belonging to
+its correct relationship, none belonging to the reversed relationship, and no
+unowned location. The untrained tree again opens none. Thus multiple
+source-bound structural memories can coexist without the two directions being
+blended. Complete trained and untrained fields are retained in the 58.5 MB
+Passport archive `rgm500_structural_bridge_v1/rgm_persisted_coexistence_native_fields.npz`.
+The compact result is `native_rgm500_persisted_situation_coexistence`; peak
+process memory was 1.31 GiB.
+
 The subsequent `--rgm-document-ingestion` audit uses the actual unmodified
 `tom_master17D/interface/doc_ingest.py:ingest_any_document` on the complete
 executed M12 agreement, with native `auto` mode and default `zero_copy_strict`
