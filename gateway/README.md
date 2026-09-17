@@ -913,6 +913,13 @@ neighbourhood. With no reviewed return, the existing RGM candidate path is
 unchanged. ToM supplies persistent structural memory; RGM supplies exact text
 and provenance.
 
+If several mirrored reviewed memories return, the bounded insurance evidence
+check compares the explicitly stated failure party and replacement-cover party
+against every complete linked reimbursement clause. Document-style party
+abbreviations such as `Transport for NSW` / `TfNSW` and `Sydney Metro` / `SM`
+are matched mechanically. A unique four-role chain returns its complete exact
+clause; an ambiguous, qualified or unparsed chain fails closed.
+
 MiniLM exits before the fixed local Gemma reader loads. Gemma uses the same
 8,192-token prompt bound. The reader now caps allocation at 17 GiB, following
 the measured 15.04 GiB peak, and requires another 2 GiB of available headroom.

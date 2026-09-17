@@ -732,19 +732,38 @@ def check_rgm_replacement_chain(question, sources):
     repay. Every source relation retains its own span and subsection link.
     """
     import re
-    if not (re.search(r"\b(?:replacement|substitute)\s+(?:insurance|cover)\b", question, re.I)
+    insurance_action = re.search(
+        r"\b(?:arrang\w*|effect\w*|obtain\w*|maintain\w*)\b"
+        r"[^?.;\n]{0,80}\b(?:insurance|cover)\b", question, re.I)
+    if not ((re.search(r"\b(?:replacement|substitute)\s+(?:insurance|cover)\b", question, re.I)
+             or insurance_action)
             and re.search(r"\b(?:repay\w*|reimburse\w*|owes?)\b", question, re.I)):
         return dict(status="not_applicable")
-    if re.search(r"\b(?:not|never|unless|except|before|only|provided)\b|\d", question, re.I):
+    if re.search(r"\b(?:unless|except|before|only|provided)\b|\d", question, re.I):
         return dict(status="needs_evidence_reading",reason="additional_condition_outside_chain_grammar")
-    stop = r"(?:If|When|After|Before|Under|For|Which|Who|What|Does|Do|Is|Are|Must|Can|Should|The|Any)\b"
-    name = rf"(?!(?:{stop}))[A-Z][\w-]*(?:\s+(?!(?:{stop}))[A-Z][\w-]*){{0,3}}"
+    name = (r"(?!(?:If|When|After|Before|Under|Which|Who|What|Does|Do|Is|Are|Must|Can|Should|The|Any)\b)"
+            r"[A-Z][\w'-]*(?:\s+(?:for|of|the|[A-Z][\w'-]*)){0,5}")
     patterns = {
         "failure_party": [rf"(?P<party>{name})\s+(?:has\s+)?failed to demonstrate compliance",
-                          rf"(?P<party>{name})[’']s failure to demonstrate compliance"],
-        "cover_payer": [rf"(?P<party>{name})\s+(?:has\s+)?(?:paid for|bought|purchased)\s+(?:replacement|substitute)\s+(?:insurance|cover)"],
+                          rf"(?P<party>{name})[’']s failure to demonstrate compliance",
+                          rf"(?P<party>{name})\s+(?:does|did)\s+not\s+"
+                          rf"(?:prove|provide|show|demonstrate)\s+(?:its\s+)?(?:insurance\s+)?compliance",
+                          rf"(?P<party>{name})\s+fails?\s+to\s+"
+                          rf"(?:prove|provide|show|demonstrate)\s+(?:its\s+)?(?:insurance\s+)?compliance"],
+        "cover_payer": [rf"(?P<party>{name})\s+(?:has\s+)?(?:paid for|bought|purchased)\s+"
+                        rf"(?:replacement|substitute)\s+(?:insurance|cover)",
+                        rf"(?:can|may|could)\s+(?P<party>{name})\s+"
+                        rf"(?:arrange|effect|obtain|maintain|buy|purchase|pay for)\s+"
+                        rf"(?:(?:the|that|replacement|substitute)\s+)*(?:insurance|cover)"],
     }
     normalize = lambda s: " ".join(s.split()).casefold()
+    def party_forms(value):
+        words = re.findall(r"[A-Za-z0-9]+", value)
+        direct = "".join(words).casefold()
+        acronym = "".join(word if len(word) > 1 and word.isupper() else word[0]
+            for word in words).casefold() if words else ""
+        return {direct, acronym} - {""}
+    party_matches = lambda left, right: bool(party_forms(left) & party_forms(right))
     fields = dict(failure_party=None,cover_payer=None,repayment_from=None,repayment_to=None)
     query_spans = []
     def record(key, value, start, end):
@@ -799,7 +818,7 @@ def check_rgm_replacement_chain(question, sources):
                 or normalize(r["creditor"]) != normalize(r["receiver"])):
                 unresolved.append(dict(source_id=source["source_id"],clause=heading["clause"],reason="inconsistent_subsection_link"));continue
             values=dict(failure_party=f["party"],cover_payer=c["party"],repayment_from=r["debtor"],repayment_to=r["creditor"])
-            mismatches=[k for k,v in fields.items() if v is not None and normalize(v)!=normalize(values[k])]
+            mismatches=[k for k,v in fields.items() if v is not None and not party_matches(v,values[k])]
             chains.append(dict(source_id=source["source_id"],clause=heading["clause"],fields=values,
                 start=start,end=end,text=unit,mismatches=mismatches,
                 relation_spans=[dict(start=start+m.start(),end=start+m.end(),text=m.group()) for m in (f,c,r)]))

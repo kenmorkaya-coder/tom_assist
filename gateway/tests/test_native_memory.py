@@ -368,6 +368,24 @@ def test_rgm_replacement_chain_ambiguous_sources_and_unknown_question_are_not_fo
     assert check_rgm_replacement_chain(CHAIN_QUESTION.replace("when","only when"),[source])["status"] == "needs_evidence_reading"
 
 
+@pytest.mark.parametrize("question,expected", [
+    ("If Transport for NSW does not prove its insurance compliance after a written request, can Sydney Metro arrange the insurance itself, and who has to repay the cost?", "tfnsw"),
+    ("If Sydney Metro does not prove its insurance compliance after a written request, can Transport for NSW arrange the insurance itself, and who has to repay the cost?", "sm"),
+])
+def test_rgm_replacement_chain_distinguishes_mirrored_abbreviated_parties(question, expected):
+    from gateway.native_memory import check_rgm_replacement_chain
+    tfnsw = _replacement_chain_source(failure_party="TfNSW", cover_payer="SM",
+        repayment_from="TfNSW", repayment_to="SM")
+    tfnsw["source_id"] = "tfnsw"
+    sm = _replacement_chain_source(failure_party="SM", cover_payer="TfNSW",
+        repayment_from="SM", repayment_to="TfNSW")
+    sm["source_id"] = "sm"
+    result = check_rgm_replacement_chain(question, [tfnsw, sm])
+    assert result["status"] == "supported"
+    assert result["matches"][0]["source_id"] == expected
+    assert result["matches"][0]["mismatches"] == []
+
+
 def test_rgm_reader_chain_proof_selects_whole_condition_and_repayment_from_bound_source():
     from gateway.native_memory import read_rgm_source_evidence
     source=_replacement_chain_source();packet=_rgm_reader_packet();memory=packet["memories"][0]
