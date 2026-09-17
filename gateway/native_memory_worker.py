@@ -112,6 +112,13 @@ def native_memory_worker():
                 or any(not isinstance(item.get("source_id"), str) or not item["source_id"]
                     for item in memories)):
                 raise ValueError("reviewed ToM memories are invalid")
+            for item in memories:
+                source_ids = item.get("source_ids", [item["source_id"]])
+                if (not isinstance(source_ids, list) or not source_ids
+                    or item["source_id"] not in source_ids
+                    or len(source_ids) != len(set(source_ids))
+                    or any(not isinstance(source_id, str) or not source_id for source_id in source_ids)):
+                    raise ValueError("reviewed ToM source bindings are invalid")
             matrices = {item["memory_id"]: relationship_matrix(item) for item in memories}
             addresses = address_fields()
             state_dir = (Path(p["state_root"]) / p["project_id"]).resolve()
@@ -259,21 +266,27 @@ def native_memory_worker():
                     if not isinstance(candidates, list) or len(candidates) != len(set(candidates)):
                         raise ValueError("candidate source identities are invalid")
                     for index, item in enumerate(memories):
-                        if item["source_id"] not in candidates:
+                        source_ids = item.get("source_ids", [item["source_id"]])
+                        matched_sources = [source_id for source_id in source_ids
+                            if source_id in candidates]
+                        if not matched_sources:
                             continue
                         expected_keys = {(bank, int(slot)) for bank, slot in item["previous_write_keys"]}
                         exact_field = np.array_equal(query_field, archive["fields"][index])
                         exact_slots = (np.array_equal(query_active, archive["active_slots"][index])
                             and query_keys == expected_keys)
                         checks.append(dict(memory_id=item["memory_id"], source_id=item["source_id"],
+                            matched_source_ids=matched_sources,
                             relation_kind=item["relation_kind"],
                             same_complete_branch_cell_field=bool(exact_field),
                             same_complete_native_slot_map=bool(exact_slots)))
                         if exact_field and exact_slots:
-                            if item["source_id"] not in recalled:
-                                recalled.append(item["source_id"])
+                            for source_id in matched_sources:
+                                if source_id not in recalled:
+                                    recalled.append(source_id)
                             returns.append(dict(memory_id=item["memory_id"], source_id=item["source_id"],
-                                relation_kind=item["relation_kind"], status="exact_native_return",
+                                matched_source_ids=matched_sources, relation_kind=item["relation_kind"],
+                                status="exact_native_return",
                                 field_shape=list(query_field.shape),
                                 field_sha256=hashlib.sha256(query_field.tobytes()).hexdigest(),
                                 active_slot_count=len(query_keys)))

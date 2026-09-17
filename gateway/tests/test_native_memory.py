@@ -977,6 +977,17 @@ def test_reviewed_tom_legacy_situation_is_read_as_one_replacement_cover_memory()
         address_index=0, previous_write_keys=[["bank", 1]])]
 
 
+def test_reviewed_tom_v2_source_memory_is_catalogued_with_its_binding():
+    from gateway.native_memory import RgmDocumentService, RGM_TOM_BRIDGE_VERSION_V2
+    memory = dict(memory_id="source:reimbursement", source_id="source", text="Orchid Rowan",
+        relation_kind="reimbursement", source_party="Orchid", target_party="Rowan",
+        address_index=0, previous_write_keys=[["bank", 1]])
+    rows = [dict(encoded=dict(version=RGM_TOM_BRIDGE_VERSION_V2,
+        worker_memories=[memory]), situation=dict(source_id="source"))]
+    assert RgmDocumentService._memory_catalog(rows) == [dict(memory,
+        source_ids=["source"])]
+
+
 def test_reviewed_rgm_situation_is_persisted_taught_and_used_during_answer(tmp_path):
     from gateway.native_memory import RgmDocumentService, RGM_TOM_SITUATION_PREFIX
     library, ingested = _reviewable_rgm_library(tmp_path)
@@ -1014,6 +1025,45 @@ def test_reviewed_rgm_situation_is_persisted_taught_and_used_during_answer(tmp_p
         assert generic_trace["status"] == "no_query_structure"
         assert generic["purity"]["tree_calls"] == 0
         assert [call[0] for call in calls] == ["rgm_tom_learn", "rgm_tom_recall", "rgm_tom_recall"]
+    finally:
+        library.db.close()
+
+
+def test_multiple_rgm_sources_bind_to_one_tom_relationship_without_second_tree_write(tmp_path):
+    from gateway.native_memory import RgmDocumentService
+    library, first = _reviewable_rgm_library(tmp_path)
+    calls = []
+    service = RgmDocumentService(worker=_rgm_app_worker([]), model_identity="fixture-model",
+        tom_worker=_reviewed_tom_worker(calls), tom_profile=_reviewed_tom_profile())
+    roles = dict(failure_party="Orchid", cover_payer="Rowan",
+        repayment_from="Orchid", repayment_to="Rowan", repayment_when="on demand")
+    try:
+        initial = service.learn_situation("project", library, dict(explicit_user_action=True,
+            document_id=first["document_id"], chunk_index=0, roles=roles))
+        assert initial["write_count"] == 2
+        second_text = ("1.1 Confirmation\nThe project email confirms that if Orchid fails to demonstrate "
+            "compliance, Rowan may obtain replacement cover. Orchid must reimburse Rowan on demand.\n"
+            "1.2 Notice\nOrchid must notify Rowan of a leak within two days.")
+        second = service.ingest("project", library, dict(explicit_user_action=True,
+            display_name="Confirmation email", content=second_text, media_type="text/plain"))
+        bound = service.learn_situation("project", library, dict(explicit_user_action=True,
+            document_id=second["document_id"], chunk_index=0, roles=roles))
+        assert bound["write_count"] == 0
+        assert bound["bound_existing_relationships"] == 2
+        status = service.structural_status("project", library)
+        assert status["learned_situations"] == 2
+        assert status["learned_relationship_memories"] == 2
+
+        result = service.answer("project", library,
+            "If Orchid fails to demonstrate compliance, can Rowan obtain replacement cover?")
+        trace = result["trace"]["retrieval"]["reviewed_tom_memory"]
+        assert trace["status"] == "recalled"
+        assert trace["evidence_scope"]["selected_count"] == 2
+        assert result["purity"]["tree_calls"] == 1
+        assert [call[0] for call in calls] == ["rgm_tom_learn", "rgm_tom_recall"]
+        recall_payload = calls[-1][1]
+        assert len(recall_payload["memories"]) == 2
+        assert all(len(memory["source_ids"]) == 2 for memory in recall_payload["memories"])
     finally:
         library.db.close()
 

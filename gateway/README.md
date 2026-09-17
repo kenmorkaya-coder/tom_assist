@@ -893,15 +893,17 @@ source ranges, stale project state and unreviewed calls. Automatic relationship
 extraction remains disabled because the current parser did not preserve party
 direction reliably.
 
-The reviewed source relations are first persisted as a native RGM snapshot with
-their exact document/chunk provenance. An isolated worker teaches a separate
-structured 32×32 field for replacement cover and, when present, reimbursement
-direction into a project copy of the approved 500-branch tree. Replacement
-cover uses source→target roles; reimbursement uses actor→recipient roles. The
-current integration is deliberately bounded to six relationship memories,
-matching the six orthogonal addresses already tested. A new save must write
-non-overlapping tree locations; otherwise it is rejected. Only the newest large
-checkpoint and reference archive are retained.
+The reviewed source relations are first persisted as native RGM snapshots with
+their exact document/chunk provenance. An isolated worker teaches one structured
+32×32 ToM memory for each unique relationship. Replacement cover uses
+source→target roles; reimbursement uses actor→recipient roles. Further reviewed
+RGM sources describing the same relationship bind to that existing ToM memory;
+they do not teach the same matrix at another address. This lets one distributed
+return release several exact evidence locations without duplicating the learned
+relationship. The current integration is deliberately bounded to six unique
+relationship memories, matching the six orthogonal addresses already tested. A
+new relationship must write non-overlapping tree locations; otherwise it is
+rejected. Only the newest large checkpoint and reference archive are retained.
 
 During an answer, MiniLM/RGM still locates candidate source passages. When the
 question explicitly states either the failure→replacement-cover relationship or

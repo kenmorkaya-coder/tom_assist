@@ -1312,7 +1312,8 @@ RGM_DOCUMENT_SCOPE = "Experimental document answers: RGM retrieval and local evi
 RGM_TOM_DOCUMENT_SCOPE = ("Project document answers: RGM finds exact evidence; reviewed relationships may also "
     "reactivate their persistent distributed ToM memory before evidence is checked.")
 RGM_TOM_BRIDGE_VERSION_V1 = "tom-assist-rgm-tom-reviewed-situations/1"
-RGM_TOM_BRIDGE_VERSION = "tom-assist-rgm-tom-reviewed-situations/2"
+RGM_TOM_BRIDGE_VERSION_V2 = "tom-assist-rgm-tom-reviewed-situations/2"
+RGM_TOM_BRIDGE_VERSION = "tom-assist-rgm-tom-reviewed-situations/3"
 RGM_TOM_SITUATION_PREFIX = "rgm-tom-situation-"
 RGM_TOM_MAX_MEMORIES = 6
 RGM_TOM_BASE_CHECKPOINT_SHA256 = "39377bce42eea2e3c75474c3f61013fbc49cbf23e5ebcea28676071ee7a164d1"
@@ -1497,7 +1498,10 @@ class RgmDocumentService:
         rows = []
         for stored in library.records_with_prefix(RGM_TOM_SITUATION_PREFIX):
             encoded = stored["record"]
-            if encoded.get("version") not in (RGM_TOM_BRIDGE_VERSION_V1, RGM_TOM_BRIDGE_VERSION):
+            if encoded.get("version") not in (
+                RGM_TOM_BRIDGE_VERSION_V1, RGM_TOM_BRIDGE_VERSION_V2,
+                RGM_TOM_BRIDGE_VERSION,
+            ):
                 raise ValueError("stored reviewed situation has an unsupported version")
             rgm = ReflectionGatedMemory()
             rgm.restore(encoded["rgm_serialized"])
@@ -1522,10 +1526,70 @@ class RgmDocumentService:
                 source_party=legacy["failure_party"], target_party=legacy["cover_payer"],
                 address_index=legacy["address_index"],
                 previous_write_keys=legacy.get("previous_write_keys", []))]
-        if (not isinstance(memories, list) or not memories
+        if (not isinstance(memories, list)
+            or (not memories and encoded.get("version") != RGM_TOM_BRIDGE_VERSION)
             or len({memory.get("memory_id") for memory in memories}) != len(memories)):
             raise ValueError("stored reviewed ToM memories are invalid")
         return copy.deepcopy(memories)
+
+    @classmethod
+    def _worker_bindings(cls, row):
+        encoded = row["encoded"]
+        bindings = encoded.get("worker_bindings")
+        if bindings is None:
+            bindings = [dict(memory_id=memory["memory_id"], source_id=memory["source_id"],
+                relation_kind=memory["relation_kind"], source_party=memory["source_party"],
+                target_party=memory["target_party"]) for memory in cls._worker_memories(row)]
+        source_id = row["situation"]["source_id"]
+        required = {"memory_id", "source_id", "relation_kind", "source_party", "target_party"}
+        if (not isinstance(bindings, list) or not bindings
+            or any(not isinstance(binding, dict) or set(binding) != required
+                or binding["source_id"] != source_id for binding in bindings)
+            or len({binding["memory_id"] for binding in bindings}) != len(bindings)):
+            raise ValueError("stored reviewed ToM source bindings are invalid")
+        return copy.deepcopy(bindings)
+
+    @staticmethod
+    def _relationship_key(item):
+        def normalized(value):
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError("reviewed ToM relationship identity is invalid")
+            return " ".join(value.split()).casefold()
+        return (normalized(item.get("relation_kind")), normalized(item.get("source_party")),
+            normalized(item.get("target_party")))
+
+    @classmethod
+    def _memory_catalog(cls, rows):
+        definitions = []
+        by_id = {}
+        by_key = {}
+        for row in rows:
+            for memory in cls._worker_memories(row):
+                memory_id = memory.get("memory_id")
+                key = cls._relationship_key(memory)
+                if memory_id in by_id or key in by_key:
+                    raise ValueError("stored reviewed ToM relationship memory is duplicated")
+                by_id[memory_id] = memory
+                by_key[key] = memory_id
+                definitions.append(memory)
+        if sorted(memory.get("address_index") for memory in definitions) != list(range(len(definitions))):
+            raise ValueError("stored reviewed ToM relationship addresses are invalid")
+        sources = {memory["memory_id"]: [] for memory in definitions}
+        for row in rows:
+            for binding in cls._worker_bindings(row):
+                memory = by_id.get(binding["memory_id"])
+                if memory is None or cls._relationship_key(binding) != cls._relationship_key(memory):
+                    raise ValueError("reviewed RGM source is bound to the wrong ToM relationship")
+                source_id = binding["source_id"]
+                if source_id not in sources[binding["memory_id"]]:
+                    sources[binding["memory_id"]].append(source_id)
+        result = []
+        for memory in definitions:
+            bound = sources[memory["memory_id"]]
+            if not bound or memory["source_id"] not in bound:
+                raise ValueError("reviewed ToM relationship lost its originating RGM source")
+            result.append(dict(memory, source_ids=bound))
+        return result
 
     @staticmethod
     def _chunk_source(project_id, library, document_id, chunk_index):
@@ -1562,7 +1626,7 @@ class RgmDocumentService:
     def structural_status(self, project_id, library):
         profile = self._tom_runtime_profile(project_id, required=False)
         rows = self._situation_rows(library)
-        memories = [memory for row in rows for memory in self._worker_memories(row)]
+        memories = self._memory_catalog(rows)
         return dict(configured=profile is not None, learned_situations=len(rows),
             learned_relationship_memories=len(memories), capacity=RGM_TOM_MAX_MEMORIES,
             version=RGM_TOM_BRIDGE_VERSION,
@@ -1614,46 +1678,68 @@ class RgmDocumentService:
                 tree=rows[-1]["encoded"]["tree"] if rows else existing["record"]["tree"])
         profile = self._tom_runtime_profile(project_id)
         current = rows[-1]["encoded"]["tree"] if rows else None
-        all_memories = [memory for row in rows for memory in self._worker_memories(row)]
+        all_memories = self._memory_catalog(rows)
+        existing_by_key = {self._relationship_key(memory): memory for memory in all_memories}
         relation_specs = {
             "triggers_replacement_cover": "replacement_cover",
             "reimburses": "reimbursement",
         }
         new_memories = []
+        bindings = []
         for relation in situation["relations"]:
             kind = relation_specs.get(relation["kind"])
             if kind is None:
                 continue
-            new_memories.append(dict(
-                memory_id=source["source_id"] + ":" + kind, source_id=source["source_id"],
-                text=source["text"], relation_kind=kind,
-                source_party=relation["source_label"], target_party=relation["target_label"],
-                address_index=len(all_memories) + len(new_memories), previous_write_keys=[]))
-        if not new_memories:
+            relationship = dict(relation_kind=kind,
+                source_party=relation["source_label"], target_party=relation["target_label"])
+            key = self._relationship_key(relationship)
+            memory = existing_by_key.get(key)
+            if memory is None:
+                memory_id = "RGMREL-" + native_digest(dict(kind=key[0], source=key[1],
+                    target=key[2]))[:20]
+                if any(item["memory_id"] == memory_id for item in all_memories + new_memories):
+                    raise ValueError("reviewed ToM relationship identity collided")
+                memory = dict(memory_id=memory_id, source_id=source["source_id"],
+                    text=source["text"], **relationship,
+                    address_index=len(all_memories) + len(new_memories), previous_write_keys=[])
+                new_memories.append(memory)
+                existing_by_key[key] = memory
+            bindings.append(dict(memory_id=memory["memory_id"], source_id=source["source_id"],
+                **relationship))
+        if not bindings:
             raise ValueError("reviewed RGM situation contains no supported ToM relationship")
         if len(all_memories) + len(new_memories) > RGM_TOM_MAX_MEMORIES:
             raise ValueError("the reviewed small-tree memory is at its six-relationship test limit")
-        result = self.tom_worker("rgm_tom_learn", dict(_tom_profile=profile,
-            memories=all_memories + new_memories,
-            new_memory_ids=[memory["memory_id"] for memory in new_memories],
-            current=current))
-        returned = {memory["memory_id"]: memory for memory in result.get("new_memories", [])}
-        if (set(returned) != {memory["memory_id"] for memory in new_memories}
-            or not result.get("tree_saved")
-            or result.get("whole_tree_score") is not False
-            or result.get("all_branch_cell_coordinates_preserved") is not True):
-            raise ValueError("ToM did not confirm the complete distributed memory write")
-        for memory in new_memories:
-            memory["previous_write_keys"] = returned[memory["memory_id"]]["write_keys"]
+        result = None
+        if new_memories:
+            result = self.tom_worker("rgm_tom_learn", dict(_tom_profile=profile,
+                memories=all_memories + new_memories,
+                new_memory_ids=[memory["memory_id"] for memory in new_memories],
+                current=current))
+            returned = {memory["memory_id"]: memory for memory in result.get("new_memories", [])}
+            if (set(returned) != {memory["memory_id"] for memory in new_memories}
+                or not result.get("tree_saved")
+                or result.get("whole_tree_score") is not False
+                or result.get("all_branch_cell_coordinates_preserved") is not True):
+                raise ValueError("ToM did not confirm the complete distributed memory write")
+            for memory in new_memories:
+                memory["previous_write_keys"] = returned[memory["memory_id"]]["write_keys"]
+            tree_record = result["tree"]
+        else:
+            if current is None:
+                raise ValueError("reviewed ToM relationship binding has no learned memory")
+            returned = {}
+            tree_record = current
         encoded = dict(version=RGM_TOM_BRIDGE_VERSION, rgm_serialized=serialized,
-            situation=situation, roles=roles, worker_memories=new_memories, tree=result["tree"])
+            situation=situation, roles=roles, worker_memories=new_memories,
+            worker_bindings=bindings, tree=tree_record)
         library.retain(SimpleNamespace(id=record_id, content=source["text"], content_summary="",
             content_hash=situation["source_text_sha256"]), encoded)
         retired = []
-        if current is not None:
+        if current is not None and result is not None:
             project_state = (Path(profile["state_root"]) / project_id).resolve()
-            replacements = {Path(result["tree"]["checkpoint_path"]).resolve(),
-                Path(result["tree"]["reference_path"]).resolve()}
+            replacements = {Path(tree_record["checkpoint_path"]).resolve(),
+                Path(tree_record["reference_path"]).resolve()}
             old_paths = [Path(current["checkpoint_path"]),
                 Path(current["checkpoint_path"]).with_suffix(Path(current["checkpoint_path"]).suffix + ".json"),
                 Path(current["reference_path"])]
@@ -1664,9 +1750,12 @@ class RgmDocumentService:
                 if resolved not in replacements and old.exists():
                     old.unlink(); retired.append(str(old))
         return dict(status="learned", duplicate=False, source_id=source["source_id"],
-            relationship=situation["relations"], tree=result["tree"],
-            write_count=sum(len(memory["write_keys"]) for memory in result["new_memories"]),
-            full_field_references=[memory["reference"] for memory in result["new_memories"]],
+            relationship=situation["relations"], tree=tree_record,
+            write_count=(sum(len(memory["write_keys"]) for memory in result["new_memories"])
+                if result is not None else 0),
+            full_field_references=([memory["reference"] for memory in result["new_memories"]]
+                if result is not None else []),
+            bound_existing_relationships=len(bindings) - len(new_memories),
             retired_previous_artifacts=retired)
 
     def recall_situations(self, project_id, library, packet, question):
@@ -1685,7 +1774,7 @@ class RgmDocumentService:
         if not selected:
             return dict(status="no_candidate_situation", recalled_source_ids=[],
                 whole_tree_score=False, all_branch_cell_coordinates_compared=False)
-        memories = [memory for row in rows for memory in self._worker_memories(row)]
+        memories = self._memory_catalog(rows)
         query = reviewed_query_situation(question, memories)
         if query["status"] != "complete":
             return dict(status="no_query_structure", recalled_source_ids=[], query_structure=query,
