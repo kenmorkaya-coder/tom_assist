@@ -1609,7 +1609,8 @@ class RgmDocumentService:
             sources[source_id] = dict(source_id=source_id, text=chunk["text"],
                 text_sha256=chunk["text_sha256"], active=chunk["tombstoned_at"] is None,
                 provenance=dict(doc_id=chunk["document_id"], display_name=chunk["display_name"],
-                    chunk_index=chunk["chunk_index"], start=chunk["start"], end=chunk["end"]))
+                    chunk_id=f"chunk_{chunk['chunk_index']}", chunk_index=chunk["chunk_index"],
+                    start=chunk["start"], end=chunk["end"]))
         return sources
 
     @classmethod
@@ -2233,10 +2234,42 @@ class RgmDocumentService:
             packet, retrieval = retrieve_rgm_project_documents(library, prepared, question, vectors)
             answer_as_of = _canonical_utc_instant(as_of or datetime.now(timezone.utc).isoformat(), "answer as_of")
             structural = self.recall_situations(project_id, library, packet, question, answer_as_of)
+            authority_review = self._authority_review(library, structural)
+            if authority_review is not None:
+                presented, lines = {}, [
+                    "The available sources disagree. No controlling source has been recorded."
+                ]
+                for label, source_rows in (
+                    ("Conflicting source", authority_review["conflict_sources"]),
+                    ("Current reviewed source", authority_review["current_sources"]),
+                ):
+                    for source in source_rows:
+                        if source["source_id"] in presented:
+                            continue
+                        provenance = copy.deepcopy(source["provenance"])
+                        presented[source["source_id"]] = dict(
+                            source_id=source["source_id"], text=source["text"],
+                            provenance=provenance)
+                        title = provenance.get("display_name") or provenance["doc_id"]
+                        lines.append(f"{label} — {title} · {provenance['chunk_id']}\n{source['text']}")
+                structural["evidence_scope"] = dict(
+                    mode="all_conflicting_sources", source_ids=list(presented),
+                    candidate_count=len(packet["memories"]), selected_count=len(presented))
+                retrieval["reviewed_tom_memory"] = structural
+                reading = dict(status="ambiguous", method="unresolved_source_conflict_presented",
+                    model_calls=0, answers=[], parts=[])
+                if library.documents() != inventory or self._model_identity() != model_identity:
+                    raise ValueError("document collection changed while answering; answer discarded")
+                return dict(status="ambiguous", answer="\n\n".join(lines),
+                    sources=list(presented.values()), authority_review=authority_review,
+                    scope=RGM_DOCUMENT_SCOPE, engine="rgm",
+                    trace=dict(version=RGM_DOCUMENT_VERSION, vendor_sha256=vendor,
+                        retrieval=retrieval, reading=reading),
+                    purity=dict(tree_calls=0, training_calls=0, provider_sends=0,
+                        whole_tree_score=False, complete_distributed_return_compared=False))
             reader_memories, evidence_scope = bind_recalled_rgm_evidence(packet, structural)
             structural["evidence_scope"] = evidence_scope
             retrieval["reviewed_tom_memory"] = structural
-            authority_review = self._authority_review(library, structural)
             if reader_memories:
                 reader_packet = dict(memories=[{k: m[k] for k in ("id", "content", "evidence_reference")}
                     for m in reader_memories])
@@ -2276,9 +2309,7 @@ class RgmDocumentService:
                     trace=dict(version=RGM_DOCUMENT_VERSION, vendor_sha256=vendor, retrieval=retrieval, reading=reading),
                     purity=dict(tree_calls=tree_calls, training_calls=0, provider_sends=0,
                         whole_tree_score=False, complete_distributed_return_compared=bool(tree_calls)))
-            answer_text = ("The available source passages conflict. Record which source controls before asking again."
-                if authority_review is not None else "\n\n".join(lines))
-            return dict(status=status, answer=answer_text, sources=list(approved.values()),
+            return dict(status=status, answer="\n\n".join(lines), sources=list(approved.values()),
                 authority_review=authority_review,
                 scope=RGM_TOM_DOCUMENT_SCOPE if tree_calls else RGM_DOCUMENT_SCOPE,
                 engine="rgm+tom" if tree_calls else "rgm",

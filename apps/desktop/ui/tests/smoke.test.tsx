@@ -496,7 +496,13 @@ it("records explicit source authority when current evidence conflicts", async ()
     if (payload.action === "status") return { ready: true, engine: "rgm+tom", scope: "Project documents." };
     if (payload.action === "resolve_source_authority") return { status: "recorded", link_count: 1 };
     return {
-      status: "not_supported", answer: "Conflicting evidence needs source-authority review.", sources: [],
+      status: "ambiguous", answer: "The available sources disagree.\n\nOrchid must not reimburse Rowan.\n\nOrchid must reimburse Rowan.",
+      sources: [
+        { source_id: "SRC-new", text: "Orchid must not reimburse Rowan.",
+          provenance: { display_name: "Amendment", doc_id: "document-new", chunk_id: "chunk_0", chunk_index: 0, start: 0, end: 38 } },
+        { source_id: "SRC-old", text: "Orchid must reimburse Rowan.",
+          provenance: { display_name: "Original agreement", doc_id: "document-old", chunk_id: "chunk_2", chunk_index: 2, start: 50, end: 80 } },
+      ],
       authority_review: { status: "unresolved", can_record: true, relation_kind: "reimbursement",
         conflict_sources: [{ source_id: "SRC-new", text: "Orchid must not reimburse Rowan.",
           reason: "source explicitly negates reimbursement", active: true,
@@ -508,7 +514,9 @@ it("records explicit source authority when current evidence conflicts", async ()
   });
   render(<NativeMemoryAnswer project={project} draft="Does Orchid reimburse Rowan?" backend={backend} />);
   fireEvent.click(await screen.findByRole("button", { name: "Answer from project documents" }));
-  await screen.findByRole("heading", { name: "Not supported" });
+  await screen.findByRole("heading", { name: "Needs clarification" });
+  expect(screen.getByText("Source: Amendment · chunk_0")).toBeTruthy();
+  expect(screen.getByText("Source: Original agreement · chunk_2")).toBeTruthy();
   fireEvent.click(screen.getByLabelText("Replace Original agreement passage 3"));
   fireEvent.input(screen.getByLabelText("Source authority effective time"), {
     target: { value: "2026-09-17T00:00:00+10:00" },

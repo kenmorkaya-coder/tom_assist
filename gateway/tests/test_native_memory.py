@@ -1097,13 +1097,18 @@ def test_multiple_rgm_sources_bind_to_one_tom_relationship_without_second_tree_w
 
         blocked = service.answer("project", library, "Does Orchid reimburse Rowan?")
         blocked_trace = blocked["trace"]["retrieval"]["reviewed_tom_memory"]
-        assert blocked["status"] == "not_supported"
-        assert blocked["sources"] == []
+        assert blocked["status"] == "ambiguous"
+        assert len(blocked["sources"]) == 3
+        assert "must reimburse Rowan" in blocked["answer"]
+        assert "must not reimburse Rowan" in blocked["answer"]
         assert blocked["purity"]["tree_calls"] == 0
+        assert blocked["trace"]["reading"] == dict(status="ambiguous",
+            method="unresolved_source_conflict_presented", model_calls=0, answers=[], parts=[])
         assert blocked_trace["status"] == "source_authority_unresolved"
-        assert blocked_trace["evidence_scope"]["mode"] == "unresolved_source_authority"
-        assert blocked_trace["evidence_scope"]["selected_count"] == 0
-        assert blocked_trace["conflict_sources"] == blocked_trace["evidence_scope"]["conflict_sources"]
+        assert blocked_trace["evidence_scope"]["mode"] == "all_conflicting_sources"
+        assert blocked_trace["evidence_scope"]["selected_count"] == 3
+        assert set(blocked_trace["evidence_scope"]["source_ids"]) == {
+            source["source_id"] for source in blocked["sources"]}
         assert [call[0] for call in calls] == ["rgm_tom_learn", "rgm_tom_recall"]
 
         review = blocked["authority_review"]
@@ -1119,7 +1124,8 @@ def test_multiple_rgm_sources_bind_to_one_tom_relationship_without_second_tree_w
         assert authority["link_count"] == 1 and authority["tree_calls"] == 0
         partial = service.answer("project", library, "Does Orchid reimburse Rowan?",
             as_of="2026-09-17T00:00:00Z")
-        assert partial["status"] == "not_supported"
+        assert partial["status"] == "ambiguous"
+        assert len(partial["sources"]) == 2
         assert partial["trace"]["retrieval"]["reviewed_tom_memory"]["status"] == "source_authority_unresolved"
         completed = service.resolve_source_authority("project", library, dict(
             explicit_user_action=True, relation_kind="reimbursement",
@@ -1142,7 +1148,8 @@ def test_multiple_rgm_sources_bind_to_one_tom_relationship_without_second_tree_w
 
         not_yet_effective = service.answer("project", library, "Does Orchid reimburse Rowan?",
             as_of="2026-08-31T23:59:59Z")
-        assert not_yet_effective["status"] == "not_supported"
+        assert not_yet_effective["status"] == "ambiguous"
+        assert len(not_yet_effective["sources"]) == 3
         assert not_yet_effective["trace"]["retrieval"]["reviewed_tom_memory"]["status"] == (
             "source_authority_unresolved")
 

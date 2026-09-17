@@ -902,12 +902,13 @@ they do not teach the same matrix at another address. This lets one distributed
 return release several exact evidence locations without duplicating the learned
 relationship. A source that explicitly negates a relationship or declares
 supersession cannot be attached to the positive memory. If such evidence is in
-the current RGM candidates, ToM does not narrow the evidence set and the answer
-fails closed until source authority is resolved. The desktop then shows the
-exact conflicting and currently bound passages. An explicit user action can
-record that one exact RGM passage supersedes one or more older passages for one
-relationship, with an effective timestamp and reason. The app never infers this
-authority from filenames, dates or amendment wording. Once effective, and only
+the current RGM candidates, ToM does not narrow the evidence set. The answer
+reports that the sources disagree and presents every exact conflicting and
+currently bound passage with its provenance. No model or ToM process chooses a
+winner. An optional explicit user action can record that one exact RGM passage
+supersedes one or more older passages for one relationship, with an effective
+timestamp and reason. The app never infers this authority from filenames, dates
+or amendment wording. Once effective, and only
 when every competing reviewed source has been covered, the newer passage goes
 to evidence checking without a tree call. Older text and the ToM memory remain
 unchanged for audit. The current integration is deliberately bounded to six
