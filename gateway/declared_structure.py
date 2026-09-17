@@ -12,10 +12,13 @@ import re
 from typing import Any, Iterable, Mapping, Sequence
 
 
-DECLARED_STRUCTURE_VERSION = "tom-assist-declared-structure/1.0"
+DECLARED_STRUCTURE_VERSION = "tom-assist-declared-structure/1.1"
+SUPPORTED_DECLARED_STRUCTURE_VERSIONS = {
+    "tom-assist-declared-structure/1.0", DECLARED_STRUCTURE_VERSION,
+}
 CLAUSE_INDEX_VERSION = "tom-assist-clause-index/1.0"
 REFERENCE_RESOLUTION_VERSION = "tom-assist-reference-resolution/1.0"
-DEFINED_TERM_BINDING_VERSION = "tom-assist-defined-term-binding/1.0"
+DEFINED_TERM_BINDING_VERSION = "tom-assist-defined-term-binding/1.1"
 DECLARED_PRECEDENCE_VERSION = "tom-assist-declared-precedence/1.0"
 DEFINED_TERM_CASE_RULE = "exact-unicode-codepoints-case-sensitive-whole-surface/1.0"
 MAX_DECLARED_STRUCTURE_SOURCE_CHARS = 2_000_000
@@ -37,6 +40,13 @@ _DEFINITION_DELIMITER = re.compile(
     r"\s+(?:means|has the meaning(?: given)?(?: to that term)?(?: given)?"
     r"(?: in| under| set out| assigned)?|includes|is the process)\b",
     flags=re.IGNORECASE,
+)
+_INSTRUMENT_OPENING = re.compile(
+    r"^This (?:deed(?: poll)?|agreement)(?: \([^\n)]+\))? (?:is )?made\b",
+    re.IGNORECASE,
+)
+_STANDALONE_ATTACHMENT = re.compile(
+    r"^(?:Schedule|Exhibit|Appendix|Attachment) [A-Z0-9]{1,4}$", re.IGNORECASE,
 )
 _REFERENCE_KEYWORD = re.compile(
     r"\b(?P<keyword>clauses?|schedules?|sections?|exhibits?|appendices|attachments?)\b",
@@ -251,6 +261,7 @@ def _definition_candidates(
     text: str, headings: Sequence[Mapping[str, Any]],
 ) -> list[dict[str, Any]]:
     candidates = []
+    scopes = _definition_scopes(text)
     for block_start, block_end in _block_ranges(text, _document_start(text)):
         block = text[block_start:block_end]
         match = _DEFINITION_DELIMITER.search(block)
@@ -283,6 +294,9 @@ def _definition_candidates(
         heading = _containing_heading(headings, start)
         if heading is None or "definition" not in heading["title"].casefold():
             continue
+        scope = next(row for row in scopes if row["start"] <= start < row["end"])
+        if heading["span"]["start"] < scope["start"]:
+            continue
         candidates.append({
             "term_id": _stable_id("term", surface, start),
             "surface": surface,
@@ -291,9 +305,11 @@ def _definition_candidates(
             "_block_end": block_end,
             "defining_clause_entry_id": heading["entry_id"],
             "defining_clause_identifier": heading["identifier"],
+            "scope_id": _stable_id("scope", scope["start"]),
+            "scope_span": dict(scope),
         })
-    surfaces = [row["surface"] for row in candidates]
-    duplicates = sorted(surface for surface, count in Counter(surfaces).items() if count > 1)
+    surfaces = [(row["scope_id"], row["surface"]) for row in candidates]
+    duplicates = sorted(surface for (_, surface), count in Counter(surfaces).items() if count > 1)
     if duplicates:
         raise DeclaredStructureError(
             "duplicate exact defined-term surfaces: " + ", ".join(duplicates[:5])
@@ -312,7 +328,7 @@ def _definition_candidates(
                 if index + 1 < len(rows) else clause_end
             )
             body_start = row.pop("_delimiter_start")
-            body_end = min(next_start, clause_end)
+            body_end = min(next_start, clause_end, row["scope_span"]["end"])
             while body_end > body_start and text[body_end - 1].isspace():
                 body_end -= 1
             row.pop("_block_end")
@@ -322,6 +338,26 @@ def _definition_candidates(
             row["entry_digest"] = digest(unsigned)
             result.append(row)
     return sorted(result, key=lambda row: row["surface_span"]["start"])
+
+
+def _definition_scopes(text: str) -> list[dict[str, int]]:
+    """Partition at explicit openings only; never infer inherited definitions.
+
+    A referenced instrument remains verbatim in the definition body. Scope does
+    not resolve that reference or assert that two definitions are equivalent.
+    Numbering resets alone are insufficient evidence of an instrument boundary.
+    """
+    boundaries = {0}
+    for row in _line_rows(text, _document_start(text)):
+        logical = row["logical"]
+        if (
+            (row["indent"] <= 4 and _INSTRUMENT_OPENING.match(logical))
+            or _STANDALONE_ATTACHMENT.fullmatch(logical)
+            or (row["indent"] <= 4 and _SCHEDULE_HEADING.fullmatch(logical))
+        ):
+            boundaries.add(row["token_start"])
+    ordered = sorted(boundaries) + [len(text)]
+    return [{"start": start, "end": end} for start, end in zip(ordered, ordered[1:])]
 
 
 def _marker_level(indent: int, marker: str, base_kind: str) -> int:
@@ -633,6 +669,9 @@ def bind_defined_terms(
         for term_index in output[state]:
             term = definitions[term_index]
             start = end - len(term["surface"])
+            scope = term.get("scope_span")
+            if scope is not None and not (scope["start"] <= start < end <= scope["end"]):
+                continue
             if start > 0 and _is_word_character(text[start - 1]):
                 continue
             if end < len(text) and _is_word_character(text[end]):
@@ -792,7 +831,7 @@ def validate_declared_structure(structure: Any, text: str) -> dict[str, Any]:
     }
     if set(structure) != required:
         raise DeclaredStructureError("declared structure fields mismatch")
-    if structure["schema_version"] != DECLARED_STRUCTURE_VERSION:
+    if structure["schema_version"] not in SUPPORTED_DECLARED_STRUCTURE_VERSIONS:
         raise DeclaredStructureError("declared structure version is unsupported")
     if structure["source_text_sha256"] != text_digest(text):
         raise DeclaredStructureError("declared structure source hash mismatch")
@@ -854,14 +893,20 @@ def validate_declared_structure(structure: Any, text: str) -> dict[str, Any]:
         raise DeclaredStructureError("reference outcome counts mismatch")
 
     term_payload = structure["defined_terms"]
+    scoped = structure["schema_version"] == DECLARED_STRUCTURE_VERSION
+    expected_term_version = (
+        DEFINED_TERM_BINDING_VERSION if scoped else "tom-assist-defined-term-binding/1.0"
+    )
     if (
-        term_payload.get("version") != DEFINED_TERM_BINDING_VERSION
+        term_payload.get("version") != expected_term_version
         or term_payload["case_rule"] != DEFINED_TERM_CASE_RULE
         or term_payload["surface_forms_only_for_prompt"] is not True
     ):
         raise DeclaredStructureError("defined-term case/prompt policy mismatch")
     term_ids = set()
     for row in term_payload["terms"]:
+        if not scoped and ("scope_id" in row or "scope_span" in row):
+            raise DeclaredStructureError("legacy defined terms cannot declare scopes")
         if row["term_id"] in term_ids:
             raise DeclaredStructureError("defined-term IDs are not unique")
         term_ids.add(row["term_id"])
@@ -883,6 +928,12 @@ def validate_declared_structure(structure: Any, text: str) -> dict[str, Any]:
             raise DeclaredStructureError("defined-term binding is not exact")
     if term_payload["term_count"] != len(term_payload["terms"]) or term_payload["binding_count"] != len(term_payload["bindings"]):
         raise DeclaredStructureError("defined-term counts mismatch")
+    if scoped:
+        expected_terms = _definition_candidates(text, _preliminary_headings(text))
+        if term_payload["terms"] != expected_terms:
+            raise DeclaredStructureError("defined-term scopes or definitions do not match the source")
+        if term_payload["bindings"] != bind_defined_terms(text, expected_terms):
+            raise DeclaredStructureError("defined-term bindings do not match their source scopes")
 
     precedence = structure["declared_precedence"]
     if precedence.get("version") != DECLARED_PRECEDENCE_VERSION:

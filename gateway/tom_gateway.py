@@ -12,12 +12,14 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+import hmac
 import json
 import logging
 import os
 import re
 import shutil
 import socketserver
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -81,6 +83,10 @@ from gateway.project_glossary import (
 
 COMMIT_DYNAMICS = ["step", "rgm_write", "leaf_vec_teach", "usage_rotation", "front_row_reseat"]
 DEFAULT_SETTINGS = {"front_row_capacity": 4096, "teach_on_conflict": True}
+
+
+class DocumentTreeMigrationRequired(ValueError):
+    """Raised when retained documents need an explicit project-Tree migration."""
 
 
 def canonical_json(value: Any) -> bytes:
@@ -227,6 +233,8 @@ class ProjectRuntime:
         seed: SeedConfiguration,
         document_embedding_provider=None,
         document_index=None,
+        allow_document_index_migration: bool = False,
+        document_research_cursor_key: bytes | None = None,
     ) -> None:
         self.project_id = _safe_project_id(project_id)
         self.state_dir = state_dir.resolve()
@@ -234,14 +242,64 @@ class ProjectRuntime:
         os.chmod(self.state_dir, 0o700)
         self.runtime_sha = runtime_sha
         self.seed = seed
+        if (
+            not isinstance(document_research_cursor_key, bytes)
+            or len(document_research_cursor_key) != 32
+        ):
+            raise ValueError("document research cursor key is unavailable")
+        self.document_research_cursor_key = document_research_cursor_key
         self.document_embedding_provider = document_embedding_provider
-        if document_index is None:
-            raise ValueError("shared Tom Assist document index is required")
-        self.document_index = document_index
         self.lock = threading.RLock()
         self._idempotency_path = self.state_dir / "turn_idempotency.json"
-        self.library = PermanentLibrary(self.state_dir / "library.sqlite3")
+        index_dir = self.state_dir / "document-index"
+        index_files = (index_dir / "tree_state.json", index_dir / "receipts.sqlite3")
+        index_presence = tuple(path.exists() for path in index_files)
+        if any(index_presence) and not all(index_presence):
+            raise DocumentTreeMigrationRequired(
+                "project document Tree migration is incomplete; run the explicit migration"
+            )
+        library_path = self.state_dir / "library.sqlite3"
+        retained_document_count = 0
+        if library_path.is_file() and not all(index_presence):
+            wal_path = Path(str(library_path) + "-wal")
+            probe_mode = (
+                "?mode=ro" if wal_path.is_file() and wal_path.stat().st_size > 0
+                else "?mode=ro&immutable=1"
+            )
+            probe = sqlite3.connect(
+                library_path.resolve().as_uri() + probe_mode, uri=True,
+            )
+            try:
+                present = probe.execute(
+                    "SELECT 1 FROM sqlite_master WHERE type='table' AND name='documents'"
+                ).fetchone()
+                if present is not None:
+                    retained_document_count = int(
+                        probe.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
+                    )
+            finally:
+                probe.close()
+        if (
+            document_index is None
+            and retained_document_count > 0
+            and not all(index_presence)
+            and not allow_document_index_migration
+        ):
+            raise DocumentTreeMigrationRequired(
+                "project has retained documents but no dedicated document Tree; "
+                "run the explicit project document-Tree migration before preview"
+            )
+        self.library = PermanentLibrary(library_path)
         self._backfill_declared_document_structures()
+        if document_index is None:
+            from gateway.document_tree import ProjectDocumentTreeIndex
+            document_index = ProjectDocumentTreeIndex(
+                self.state_dir, self.project_id, self.seed, _engine_config(self.seed),
+            )
+        elif getattr(document_index, "project_id", None) != self.project_id:
+            self.library.db.close()
+            raise ValueError("project runtime refuses a foreign document Tree")
+        self.document_index = document_index
         head = self.library.head()
         self.settings = json.loads(head[3]) if head else dict(DEFAULT_SETTINGS)
         if head:
@@ -294,7 +352,9 @@ class ProjectRuntime:
         if head is None:
             self.library.set_head(self._tree_path.read_bytes(), self._rgm_path.read_bytes(),
                                   self._idempotency, self.settings)
-        self._backfill_document_index()
+        self._backfill_document_index(
+            allow_missing=allow_document_index_migration,
+        )
 
     def _backfill_declared_document_structures(self) -> None:
         """Migrate pre-WP-43 immutable documents using only their stored text."""
@@ -329,8 +389,8 @@ class ProjectRuntime:
     def _creation_metadata_path(self) -> Path:
         return self.state_dir / "creation_metadata.json"
 
-    def _backfill_document_index(self) -> None:
-        """Synchronize project metadata, then index retained pre-index documents."""
+    def _backfill_document_index(self, *, allow_missing: bool = False) -> None:
+        """Validate receipts, or explicitly migrate retained pre-index documents."""
         committed = self.document_index.project_commits(self.project_id)
         if committed:
             self.library.db.execute("BEGIN IMMEDIATE")
@@ -360,13 +420,18 @@ class ProjectRuntime:
             ]
             if not missing:
                 continue
+            if not allow_missing:
+                raise DocumentTreeMigrationRequired(
+                    "project document Tree is missing retained document receipts; "
+                    "run the explicit project document-Tree migration before preview"
+                )
             tree_bytes, receipts, analyses = self.document_index.apply_document(
                 self.project_id,
                 document_id,
                 missing,
                 self.library.document_declared_structure(document_id),
                 "backfilled",
-                "migration:tom-assist-shared-document-tree/1.0",
+                "migration:tom-assist-project-document-tree/2.0",
             )
             self.library.db.execute("BEGIN IMMEDIATE")
             try:
@@ -514,6 +579,8 @@ class ProjectRuntime:
                     "document_tree_commit_count": self.document_index.project_commit_count(
                         self.project_id
                     ),
+                    "document_tree_isolation": "dedicated_project_tree",
+                    "document_tree_seed_artifact_sha256": self.seed.artifact_sha256,
                     "document_tree_path": "document-index/tree_state.json",
                     "demotion_count": self.library.db.execute("SELECT COUNT(*) FROM demotions").fetchone()[0],
                     "demotions": events, "next_event_id": events[-1]["event_id"] if events else after}
@@ -723,6 +790,7 @@ class ProjectRuntime:
 
     def _rank_document_packet(
         self, user_text: str, k: int, max_chars: int, *, query_profile=None,
+        processing_cursor=None,
     ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
         chunks = self.library.document_chunks(active_only=True)
         if not chunks:
@@ -777,6 +845,8 @@ class ProjectRuntime:
             structural_telemetry=structural_telemetry,
             document_sources=document_sources,
             return_trace=True,
+            processing_cursor=processing_cursor,
+            cursor_auth_key=self.document_research_cursor_key,
         )
         for row in ranked:
             from gateway.document_tree import DOCUMENT_TREE_VERSION
@@ -806,7 +876,7 @@ class ProjectRuntime:
 
     def preview_rank(
         self, user_text: str, k: int, max_chars: int,
-        declared_glossary_titles=(),
+        declared_glossary_titles=(), processing_cursor=None,
     ) -> dict[str, Any]:
         """Pure ranking over last-committed state plus the draft as user_text only."""
         with self.lock:
@@ -849,7 +919,7 @@ class ProjectRuntime:
                 if len(ranked) >= k:
                     break
             ranked_documents, document_research_trace = self._rank_document_packet(
-                user_text, k, max_chars,
+                user_text, k, max_chars, processing_cursor=processing_cursor,
             )
             checkpoint_digest = self._current_checkpoint_digest()
             activation_id = canonical_digest(
@@ -1079,6 +1149,380 @@ class ProjectRuntime:
             return {"checkpoint_id": checkpoint_id, "digest": metadata["digest"], "restored": True}
 
 
+class GemmaInspection:
+    """Explicit, detached inspection. Never obtains or creates a live runtime.
+
+    Kept in the existing gateway boundary to avoid unnecessary system files.
+    Workers have separate interpreters, read-only imports, no provider and no writer.
+    """
+    ROOT = Path(__file__).resolve().parents[1]
+    STREAM = ROOT.parent / "tom_matrix_native_stream1"
+    STREAM_SHA = "906d7705e60af668c2a2ba3408d21935ff25c637a69621ef5484012eab70379c"
+    CHECKPOINT_SHA = "801c7720e5e1284446b17a8b5273d15872b844f39551c05c853bf479615ad964"
+    FINGERPRINT = "897982fd8e6584471bb859ec852c25aa3003b4cd40340fb9a8e18620d38f8470"
+    MODEL = Path.home() / ".cache/huggingface/hub/models--mlx-community--gemma-4-26b-a4b-it-4bit/snapshots/0d77464eeb233a2da68ebf9d7dc4edaac7db956d"
+    ADAPTER = ROOT / ".tmp/event-graph-lora-v14-session-001/epoch-1/adapter"
+    ADAPTER_SHA = "c6a4708d9ceca6dab5d275ea0bff5ac172e392d085a4fda6b0d875e51d95a994"
+    ADAPTER_CONFIG_SHA = "77d4e446d2d3fee1469a8cf5641e0d525a0dca1d4b4086b95d36a0c53ba4b0b5"
+    MODEL_HASHES = {
+        "model-00001-of-00003.safetensors": "683f420ee09550b8027bf0335c4202e196b37eb520b60a4bcbe8690b9e388c07",
+        "model-00002-of-00003.safetensors": "feab2873c2976fb7ed666f8462549564a29409364388e0c8f6b015729d165e15",
+        "model-00003-of-00003.safetensors": "bc607486deb1de5bc7e459932fda5c776a4f816b368feaa661bab8cfbb47e567",
+        "chat_template.jinja": "36e3a42e5cf14cd0020e72d92e1fdd9970f59b82170e421f0cbe1bb42bead3f0",
+        "config.json": "419e13a27ec359654c1ce7dd06d1a87149fd07d0c8af9f770494185e62e1b2ba",
+        "generation_config.json": "d4226bbe3117d2d253ba4609720ba82c6c4ce4627a9a6ae05387c78983ac03de",
+        "model.safetensors.index.json": "bf198c9f5ea6462addca1966e5dd669c407537a876e82cf06db9084c5c850b13",
+        "processor_config.json": "de3e580aebdc98272d4c4547daffe6525fcbae18a83a0e0bcf0d7444d4ee6f37",
+        "tokenizer.json": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+        "tokenizer_config.json": "080d9e1aff284e2f6043889cd05367966f7c7b80e025fbc0b06745e218158656",
+    }
+    SAVED_SOURCE = "Site briefing: Canal Reach D006 excavation must stop when Canal Reach D006 vibration is greater than 1.7 mm/s. Canal Reach D006 superintendent must be notified under the same condition."
+    SAVED_RAW = '{"version":"tom-assist-span-wire/1","predicates":[{"id":"p1","subject":{"token_start":10,"token_end":14},"value":"1.7","unit":"mm/s","comparator":"GT","negated":false,"evidence":[{"token_start":3,"token_end":36}]}],"conditions":[],"events":[{"id":"e1","action":"stop","roles":{"actor":null,"object":{"token_start":3,"token_end":7},"source":null,"target":null,"recipient":null,"authority":null},"modality":"obligation","negated":false,"condition":"p1","exception":null,"complement":null,"revision":null,"time":null,"evidence":[{"token_start":3,"token_end":24}]},{"id":"e2","action":"notify","roles":{"actor":null,"object":null,"source":null,"target":null,"recipient":{"token_start":24,"token_end":28},"authority":null},"modality":"obligation","negated":false,"condition":"p1","exception":null,"complement":null,"revision":null,"time":null,"evidence":[{"token_start":24,"token_end":36}]}],"links":[],"unresolved":[]}'
+    LOCK = threading.Lock()
+
+    @staticmethod
+    def file_hash(path):
+        value = hashlib.sha256()
+        with Path(path).open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                value.update(chunk)
+        return value.hexdigest()
+
+    @staticmethod
+    def collect_extraction(stream, eos_token_ids):
+        # GenerationResponse also owns a vocabulary-sized GPU probability array.
+        # Retain only text and scalar evidence, never one such array per token.
+        parts, last, count = [], None, 0
+        for chunk in stream:
+            parts.append(chunk.text)
+            count += 1
+            last = {"token": int(chunk.token), "finish_reason": chunk.finish_reason,
+                    "prompt_tokens": int(chunk.prompt_tokens),
+                    "generation_tokens": int(chunk.generation_tokens),
+                    "engine_peak_bytes": round(chunk.peak_memory * 1e9)}
+        if last is None or last["finish_reason"] != "stop" or last["token"] not in eos_token_ids:
+            raise ValueError("extraction did not reach a complete end-of-turn")
+        return {"raw": "".join(parts), "tokens": count, **last}
+
+    @classmethod
+    def package_hash(cls):
+        package = cls.STREAM / "src/tom_matrix"
+        files = {str(p.relative_to(package)): cls.file_hash(p) for p in sorted(package.rglob("*"))
+                 if p.is_file() and "__pycache__" not in p.parts and p.suffix in (".py", ".json", ".yaml", ".yml", ".toml")}
+        return hashlib.sha256(json.dumps(files, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+    @classmethod
+    def live_snapshot(cls, gateway, project):
+        # Reading files does not initialise the project's document or experience Trees.
+        directory = gateway.data_dir / "projects" / project
+        hashes = {str(p.relative_to(directory)): cls.file_hash(p) for p in sorted(directory.rglob("*"))
+                  if p.is_file() and not p.name.endswith("-shm")}
+        runtime = gateway._projects.get(project)
+        memory = None
+        if runtime is not None:
+            memory = [hashlib.sha256(part).hexdigest() for part in runtime.serialized_state_bytes()]
+        return {"files_sha256": hashlib.sha256(canonical_json(hashes)).hexdigest(),
+                "file_count": len(hashes), "in_memory_sha256": memory,
+                "scope": "active-project runtime files, including document and experience storage; SQLite shared-memory coordination excluded"}
+
+    @staticmethod
+    def resources(*, before_load=True, exclude=()):
+        """Fail closed on competing model/large Python jobs; no process is modified."""
+        import time
+        raw = subprocess.check_output(["ps", "-axo", "pid=,ppid=,rss=,comm="], text=True, timeout=10)
+        processes = [line.strip().split(None, 3) for line in raw.splitlines()]
+        own = {os.getpid(), *exclude}
+        while True:
+            expanded = own | {int(p[0]) for p in processes if len(p) == 4 and int(p[1]) in own}
+            if expanded == own:
+                break
+            own = expanded
+        reasons = []
+        for p in processes:
+            if len(p) != 4 or int(p[0]) in own:
+                continue
+            name = Path(p[3]).name.lower()
+            if name.startswith("python") or any(x in name for x in ("ollama", "llama-server", "mlx")):
+                probe = subprocess.run(["lsof", "-a", "-p", p[0], "-d", "txt", "-Fn"], capture_output=True, text=True, timeout=10)
+                if probe.returncode not in (0, 1):
+                    raise ValueError("cannot inspect competing process libraries")
+                if probe.returncode == 1 and not probe.stdout:
+                    alive = subprocess.run(["ps", "-p", p[0], "-o", "pid="], capture_output=True, text=True)
+                    if alive.stdout.strip():
+                        reasons.append(f"process {p[0]} could not be inspected")
+                if "libmlx" in probe.stdout.lower() or any(x in name for x in ("ollama", "llama-server", "mlx")) or int(p[2]) * 1024 >= 2 * 1024**3:
+                    reasons.append(f"competing model or large Python process {p[0]}")
+        vm = subprocess.check_output(["vm_stat"], text=True, timeout=10)
+        page = re.search(r"page size of (\d+) bytes", vm)
+        counts = [re.search(r"^" + key + r":\s+(\d+)", vm, re.M) for key in ("Pages free", "Pages inactive", "Pages speculative")]
+        if page is None or any(c is None for c in counts):
+            raise ValueError("memory headroom could not be measured")
+        available = int(page[1]) * sum(int(c[1]) for c in counts)
+        # Inference only, one worker at a time. Verified text tensors: 14.200 GB;
+        # V14: 0.012 GB. At 8192 tokens, float32 KV storage is at most 0.704 GiB
+        # (25 sliding 1024-token layers + 5 full layers). Add 4 GiB for temporary
+        # allocations/cache and 4 GiB system reserve, then round up to 22 GiB.
+        # This is an initial budget estimate, not a measured minimum or hard cap.
+        required = (22 if before_load else 2) * 1024**3
+        if available < required:
+            reasons.append("insufficient estimated memory headroom")
+        return {"time": time.time(), "estimated_available_bytes": available, "required_bytes": required,
+                "budget_basis": "pinned text weights + V14 + bounded attention cache + temporary allocation allowance + system reserve; inference only, no training or simultaneous Stream 1 worker",
+                "blockers": reasons, "limitation": "free + inactive + speculative pages are an estimate; this is not a system-wide lock"}
+
+    @classmethod
+    def launch_worker(cls, operation, payload):
+        import time
+        executable = (cls.ROOT.parent / "tom_sicd_gemma/.venv/bin/python" if operation == "gemma"
+                      else cls.ROOT / ".venv-gateway/bin/python")
+        code = f"import sys;sys.path.insert(0,{str(cls.ROOT)!r});from gateway.tom_gateway import GemmaInspection;GemmaInspection.worker({operation!r})"
+        env = {k: v for k, v in os.environ.items() if k in ("HOME", "PATH", "TMPDIR", "LANG")}
+        env.update(HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1", TOKENIZERS_PARALLELISM="false",
+                   PYTHONDONTWRITEBYTECODE="1", OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1")
+        child = subprocess.Popen([str(executable), "-I", "-B", "-c", code], cwd=cls.ROOT, env=env,
+                                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        deadline = time.monotonic() + 150
+        request = json.dumps(payload)
+        try:
+            while True:
+                try:
+                    out, err = child.communicate(input=request, timeout=3)
+                    break
+                except subprocess.TimeoutExpired:
+                    request = None
+                    if time.monotonic() >= deadline:
+                        raise ValueError("inspection worker timed out; no retry was started")
+                    if operation == "gemma" and cls.resources(before_load=False, exclude=(child.pid,))["blockers"]:
+                        raise ValueError("Gemma stopped because a resource conflict appeared")
+            if child.returncode:
+                raise ValueError(f"{operation} worker failed: {err[-700:]}")
+            if len(out) > 2 * 1024 * 1024:
+                raise ValueError("inspection output exceeded its bound")
+            return json.loads(out)
+        finally:
+            if child.poll() is None:
+                child.kill()
+                child.communicate()
+
+    @classmethod
+    def worker(cls, operation):
+        import contextlib
+        import time
+        payload = json.load(sys.stdin)
+        # Package imports cannot write caches, change either owner checkout or use a network.
+        def readonly(event, args):
+            if event == "open":
+                _, mode, flags = args
+                if (isinstance(mode, str) and any(c in mode for c in "wax+")) or (isinstance(flags, int) and flags & (os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC | os.O_APPEND)):
+                    raise PermissionError("inspection worker is read-only")
+            if event in ("os.mkdir", "os.remove", "os.rename", "os.rmdir", "os.symlink", "os.chmod", "socket.connect", "subprocess.Popen"):
+                raise PermissionError("inspection worker refuses " + event)
+        sys.addaudithook(readonly)
+        started = time.monotonic()
+        with contextlib.redirect_stdout(sys.stderr):
+            if operation == "gemma":
+                import importlib.metadata
+                versions = {n: importlib.metadata.version(n) for n in ("mlx", "mlx-lm", "transformers")}
+                if versions != {"mlx": "0.31.1", "mlx-lm": "0.31.2", "transformers": "5.5.3"}:
+                    raise ValueError("Gemma runtime versions changed")
+                for name, expected in cls.MODEL_HASHES.items():
+                    if cls.file_hash(cls.MODEL / name) != expected:
+                        raise ValueError("pinned model file changed: " + name)
+                if cls.file_hash(cls.ADAPTER / "adapters.safetensors") != cls.ADAPTER_SHA or cls.file_hash(cls.ADAPTER / "adapter_config.json") != cls.ADAPTER_CONFIG_SHA:
+                    raise ValueError("selected V14 adapter changed")
+                from gateway.event_graph_span_extractor import prompt
+                from mlx_lm import load, stream_generate
+                from mlx_lm.sample_utils import make_sampler
+                import mlx.core as mx
+                mx.random.seed(7)
+                mx.reset_peak_memory()
+                model, tokenizer = load(str(cls.MODEL), adapter_path=str(cls.ADAPTER))
+                memory = {"loaded_active_bytes": mx.get_active_memory(),
+                          "load_peak_bytes": mx.get_peak_memory()}
+                text = tokenizer.apply_chat_template([{"role": "user", "content": prompt(payload["text"])}],
+                    tokenize=False, add_generation_prompt=True, enable_thinking=False)
+                if len(tokenizer.encode(text, add_special_tokens=False)) > 4096:
+                    raise ValueError("input exceeds the inspection token limit; select a shorter passage")
+                result = cls.collect_extraction(
+                    stream_generate(model, tokenizer, prompt=text, max_tokens=4096, sampler=make_sampler(temp=0.0)),
+                    tokenizer.eos_token_ids)
+                import resource
+                memory.update(engine_peak_bytes=mx.get_peak_memory(), cache_bytes_at_completion=mx.get_cache_memory(),
+                              process_peak_resident_bytes=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+                              scope="MLX active allocation peak and macOS process peak resident bytes; not whole-system memory")
+                result.update(versions=versions, model_files_sha256=cls.MODEL_HASHES,
+                              local_generations=1, memory=memory)
+            elif operation == "stream1":
+                import pickle
+                import numpy as np
+                if cls.package_hash() != cls.STREAM_SHA:
+                    raise ValueError("Stream 1 source identity changed; contract review required")
+                package = cls.STREAM / "src/tom_matrix"
+                if any(n == "tom_matrix" or n.startswith("tom_matrix.") for n in sys.modules):
+                    raise ValueError("a tom_matrix package was already imported")
+                sys.path.insert(0, str(cls.STREAM / "src"))
+                from tom_matrix.core.migration import load_legacy
+                from tom_matrix.relations.matched_recall import Recall
+                from gateway.typed_event_graph import digest
+                checkpoint = cls.STREAM / "data/checkpoints/paired16_initial.pkl"
+                tree = load_legacy(checkpoint, expected_sha256=cls.CHECKPOINT_SHA)
+                if tree.fingerprint() != cls.FINGERPRINT or type(tree).query is not Recall.query:
+                    raise ValueError("Stream 1 checkpoint or query implementation mismatch")
+                imported = {name: str(Path(mod.__file__).resolve()) for name, mod in sys.modules.items()
+                            if (name == "tom_matrix" or name.startswith("tom_matrix.")) and getattr(mod, "__file__", None)}
+                if any(not Path(path).is_relative_to(package) for path in imported.values()):
+                    raise ValueError("wrong tom_matrix implementation loaded")
+                if not 0 < len(payload["loads"]) <= 32:
+                    raise ValueError("inspection requires 1–32 ordered loads")
+                frame = tree.readings["frames"][tree.readings["root"]]
+                before = hashlib.sha256(pickle.dumps(tree, protocol=5)).hexdigest()
+                answers = []
+                for index, load in enumerate(payload["loads"]):
+                    x = np.asarray(load["matrix"], dtype=np.float64)
+                    if x.shape != (32, 32) or not np.isfinite(x).all() or abs(float(np.linalg.norm(x)) - 1) > 1e-12:
+                        raise ValueError("expected the unchanged signed, unit-Frobenius 32×32 compiler load")
+                    if digest(x.ravel().tolist()) != load["matrix_sha256"]:
+                        raise ValueError("load identity mismatch")
+                    if not np.allclose(frame.to_global(frame.to_local(x)), x, rtol=0, atol=1e-12):
+                        raise ValueError("global/local frame round-trip failed")
+                    y, trace = tree.query(x, details=True)
+                    after = hashlib.sha256(pickle.dumps(tree, protocol=5)).hexdigest()
+                    if before != after or y.shape != (32, 32) or not np.isfinite(y).all():
+                        raise ValueError("query changed state or returned an invalid matrix")
+                    answers.append({"load_id": load["id"], "sequence_index": index,
+                                    "input_sha256": load["matrix_sha256"], "matrix": y.tolist(),
+                                    "response_sha256": digest(y.ravel().tolist()), "trace": trace})
+                if cls.package_hash() != cls.STREAM_SHA or cls.file_hash(checkpoint) != cls.CHECKPOINT_SHA:
+                    raise ValueError("runtime or checkpoint changed during inspection")
+                result = {"responses": answers, "state_before": before, "state_after": after,
+                          "state_unchanged": True, "checkpoint_sha256": cls.CHECKPOINT_SHA,
+                          "package_sha256": cls.STREAM_SHA, "package_path": str(package),
+                          "python_executable": sys.executable, "python_version": sys.version,
+                          "numpy_version": np.__version__,
+                          "query_implementation": "tom_matrix.relations.matched_recall.Recall.query",
+                          "frame": "global input/output; local = source.T @ global @ target",
+                          "normalization": "compiler unit Frobenius; passed unchanged; native routing retains amplitude",
+                          "operation": "independent query for each ordered event/link load; no aggregation or feedback",
+                          "interpretation": "unavailable: this checkpoint's learning has not been verified for the compiler encoding",
+                          "occupied_banks": int(tree.occupied.sum()), "observations": tree.observations}
+            else:
+                raise ValueError("unsupported worker operation")
+        result["elapsed_ms"] = round((time.monotonic() - started) * 1000, 2)
+        print(json.dumps(result, allow_nan=False, default=lambda value: value.tolist()), flush=True)
+
+    @classmethod
+    def inspect(cls, gateway, payload):
+        import time
+        from gateway.event_graph_span_extractor import parse_output
+        from gateway.event_graph_span_wire import bind
+        from gateway.event_graph_compiler import compile_graph, VERSION as compiler_version
+        if payload.get("opt_in") is not True or payload.get("explicit_inspect") is not True:
+            raise ValueError("explicit experimental inspection required")
+        project = _safe_project_id(payload.get("project_id"))
+        result = {"version": "tom-assist-gemma-inspection/1", "project_id": project,
+                  "stages": [], "purity": {}, "semantic_review": "required",
+                  "quality_limits": "Saved wiring evidence is not held-out success. V12/V15 held-out failures remain exposed. V22 rejected; V23 evaluation incomplete; V14 retained.",
+                  "identities": {"model": str(cls.MODEL), "adapter_id": "v14-4380", "adapter_sha256": cls.ADAPTER_SHA,
+                                 "compiler": compiler_version, "compiler_sha256": cls.file_hash(cls.ROOT / "gateway/event_graph_compiler.py"),
+                                 "parser_sha256": cls.file_hash(cls.ROOT / "gateway/event_graph_span_extractor.py"),
+                                 "stream1_package_sha256": cls.STREAM_SHA, "stream1_checkpoint_sha256": cls.CHECKPOINT_SHA}}
+        if not cls.LOCK.acquire(blocking=False):
+            raise ValueError("another inspection is already running")
+        stage = "input"
+        started = phase = time.monotonic()
+        before = None
+        def passed(name, reason):
+            nonlocal phase
+            result["stages"].append({"stage": name, "status": "passed", "reason": reason,
+                                     "elapsed_ms": round((time.monotonic()-phase)*1000, 2)})
+            phase = time.monotonic()
+        try:
+            before = cls.live_snapshot(gateway, project)
+            source = dict(payload.get("source") or {})
+            mode = payload.get("extraction_mode")
+            if payload.get("adapter_id") != "v14-4380":
+                raise ValueError("explicitly select the retained V14 adapter")
+            if mode == "saved":
+                if source.get("kind") != "saved_example":
+                    raise ValueError("saved extraction belongs only to its saved source")
+                source = {"kind": "saved_example", "id": "v8-dev-6-0", "text": cls.SAVED_SOURCE,
+                          "version": hashlib.sha256(cls.SAVED_SOURCE.encode()).hexdigest(), "start": 0, "end": len(cls.SAVED_SOURCE)}
+            elif mode != "gemma" or source.get("kind") not in ("draft", "state_object"):
+                raise ValueError("choose a saved example, draft or active-project passage")
+            full = source.get("text")
+            start, end = source.get("start"), source.get("end")
+            if not isinstance(full, str) or not 0 < len(full) <= 16000 or type(start) is not int or type(end) is not int or not 0 <= start < end <= len(full) or end-start > 4000:
+                raise ValueError("select 1–4000 characters from the bounded original source")
+            text = full[start:end]
+            result["source"] = {**source, "full_text": full, "text": text, "offset_unit": "Unicode code points",
+                                "sha256": hashlib.sha256(text.encode()).hexdigest(), "project_state_version": payload.get("project_state_version")}
+            passed(stage, "Exact selected source retained; interpretation remains a proposal")
+            stage = "extraction"
+            if mode == "saved":
+                extraction = {"raw": cls.SAVED_RAW, "local_generations": 0, "origin": "saved V14 output, v8-dev-6-0; exposed development example"}
+            else:
+                resources = cls.resources()
+                result["resources"] = resources
+                if resources["blockers"]:
+                    raise ValueError("Local Gemma did not start: " + "; ".join(resources["blockers"]))
+                extraction = cls.launch_worker("gemma", {"text": text})
+            result["extraction"] = extraction
+            extraction["raw_sha256"] = hashlib.sha256(extraction["raw"].encode()).hexdigest()
+            passed(stage, "Saved extraction replayed" if mode == "saved" else "Pinned local Gemma extraction completed")
+            stage = "validation"
+            # Use the same parser as evaluation, disclosing its exact normalization.
+            stripped = extraction["raw"].strip()
+            fenced = re.fullmatch(r"```(?:json)?[ \t]*\r?\n(.*)\r?\n```", stripped, re.DOTALL)
+            def unique_fields(pairs):
+                value = {}
+                for key, item in pairs:
+                    if key in value:
+                        raise ValueError("duplicate extraction field: " + key)
+                    value[key] = item
+                return value
+            original = bind(json.loads(fenced.group(1) if fenced else stripped, object_pairs_hook=unique_fields), text)
+            graph = parse_output(extraction["raw"], text)
+            result.update(graph=graph, original_bound_graph=original,
+                          normalization={"changed": original != graph,
+                            "policy": "existing parser: inverse negated comparators and Boolean alias canonicalization; original and normalized graphs both shown"})
+            if graph["unresolved"]:
+                raise ValueError("Unresolved extraction: " + "; ".join(r["reason"] for r in graph["unresolved"]))
+            if not graph["events"]:
+                raise ValueError("No supported requirement or relationship was extracted")
+            passed(stage, "Structure and source spans valid; semantic review still required")
+            stage = "compilation"
+            compiled = compile_graph(graph, text)
+            if len(compiled["loads"]) > 32:
+                raise ValueError("more than 32 loads; select a smaller passage")
+            result["compiled"] = compiled
+            passed(stage, f"{len(compiled['loads'])} ordered signed 32×32 event/link loads; no pooling")
+            stage = "runtime"
+            if payload.get("query_stream1") is True:
+                if payload.get("checkpoint_id") != "paired16-initial":
+                    raise ValueError("explicitly select the trusted sixteen-branch experiment checkpoint")
+                result["runtime"] = cls.launch_worker("stream1", {"loads": compiled["loads"]})
+                passed(stage, "Isolated Stream 1 queries completed; interpretation unavailable")
+            else:
+                result["stages"].append({"stage": stage, "status": "not_requested", "reason": "Stream 1 query requires a separate explicit selection"})
+        except Exception as error:
+            result["stages"].append({"stage": stage, "status": "blocked", "reason": str(error), "elapsed_ms": round((time.monotonic()-phase)*1000, 2)})
+        finally:
+            if before is not None:
+                try:
+                    after = cls.live_snapshot(gateway, project)
+                    result["purity"]["live_runtime"] = {"before": before, "after": after, "unchanged": before == after,
+                        "note": "A concurrent live change makes this observation inconclusive; this path performs no live writes"}
+                except Exception as error:
+                    result["purity"]["live_runtime"] = {"unchanged": None, "reason": str(error)}
+            result["elapsed_ms"] = round((time.monotonic()-started)*1000, 2)
+            cls.LOCK.release()
+        completed = {row["stage"] for row in result["stages"]}
+        for name in ("input", "extraction", "validation", "compilation", "runtime"):
+            if name not in completed:
+                result["stages"].append({"stage": name, "status": "not_run", "reason": "An earlier stage stopped"})
+        return result
+
+
 class TomGateway:
     def __init__(
         self,
@@ -1088,15 +1532,30 @@ class TomGateway:
         seed_artifact: Path | None = None,
         mechanics_profile: Path | None = None,
         document_embedding_provider=None,
+        stream1_document_indexes=None,
     ) -> None:
         self.data_dir = data_dir.expanduser().resolve()
         self.tom_master = tom_master.expanduser().resolve()
         self.document_embedding_provider = document_embedding_provider
+        # Explicit caller-owned native sessions. This route never creates a
+        # ProjectRuntime or falls back to the historical document index.
+        self.stream1_document_indexes = dict(stream1_document_indexes or {})
         sys.dont_write_bytecode = True  # Imports must not write caches in frozen upstream.
         self.data_dir.mkdir(parents=True, exist_ok=True)
         os.chmod(self.data_dir, 0o700)
         bootstrap = self.data_dir / "runtime-bootstrap"
         bootstrap.mkdir(parents=True, exist_ok=True)
+        cursor_key_path = bootstrap / "document-research-cursor.key"
+        if cursor_key_path.is_file():
+            self._document_research_cursor_master_key = cursor_key_path.read_bytes()
+        else:
+            self._document_research_cursor_master_key = os.urandom(32)
+            _atomic_write(
+                cursor_key_path, self._document_research_cursor_master_key,
+            )
+            os.chmod(cursor_key_path, 0o600)
+        if len(self._document_research_cursor_master_key) != 32:
+            raise ValueError("document research cursor key is invalid")
         # Force all upstream scratch/cache writes into Tom Assist's state root and
         # force the deterministic local stub provider. The gateway never permits
         # an inherited provider configuration to create a network LLM call.
@@ -1125,6 +1584,15 @@ class TomGateway:
             mechanics_profile_sha256=_sha256_file(mechanics_profile_path),
             mechanics_parameters=mechanics_parameters,
         )
+        actual_seed_sha256 = (
+            _sha256_file(seed_artifact_path)
+            if seed_artifact_path.is_file() else "missing"
+        )
+        if actual_seed_sha256 != self.seed.artifact_sha256:
+            raise ValueError(
+                "document Tree seed digest mismatch: "
+                f"expected {self.seed.artifact_sha256}, got {actual_seed_sha256}"
+            )
         if str(self.tom_master) not in sys.path:
             sys.path.insert(0, str(self.tom_master))
         self.runtime_sha = _actual_sha(self.tom_master)
@@ -1136,10 +1604,6 @@ class TomGateway:
         from gateway.oauth_provider import OAuthProvider
         self.oauth_provider = OAuthProvider()
         self._probe_imports()
-        from gateway.document_tree import SharedDocumentTreeIndex
-        self.document_index = SharedDocumentTreeIndex(
-            self.data_dir, self.seed, _engine_config(self.seed),
-        )
 
     @staticmethod
     def _probe_imports() -> None:
@@ -1163,17 +1627,156 @@ class TomGateway:
                 self._projects[project_id] = runtime
             return runtime
 
-    def create_project_runtime(self, project_id: str, state_dir: Path):
+    def create_project_runtime(
+        self, project_id: str, state_dir: Path, *,
+        allow_document_index_migration: bool = False,
+    ):
         return ProjectRuntime(
             project_id,
             state_dir,
             self.runtime_sha,
             self.seed,
             self.document_embedding_provider,
-            self.document_index,
+            allow_document_index_migration=allow_document_index_migration,
+            document_research_cursor_key=self.document_research_cursor_key(project_id),
         )
 
+    def document_research_cursor_key(self, project_id: Any) -> bytes:
+        project_id = _safe_project_id(project_id)
+        return hmac.new(
+            self._document_research_cursor_master_key,
+            project_id.encode("utf-8"),
+            hashlib.sha256,
+        ).digest()
+
+    def migrate_project_document_tree(self, project_id: Any) -> dict[str, Any]:
+        """Explicitly build/repair one project's dedicated document Tree.
+
+        This operation is deliberately separate from preview, diagnostics and
+        ordinary project opening. The permanent source inventory is the
+        migration authority; the legacy shared index, when present, is retained
+        unchanged as recoverable historical evidence.
+        """
+        project_id = _safe_project_id(project_id)
+        with self._projects_lock:
+            if project_id in self._projects:
+                runtime = self._projects[project_id]
+                return {
+                    "status": "already_ready",
+                    "project_id": project_id,
+                    "document_tree": runtime.document_index.head_metadata(),
+                    "metadata_changes": [],
+                    "declared_structure_changes": [],
+                }
+            from gateway.runtime_archive import finalize_pending
+            project_root = self.data_dir / "projects" / project_id
+            finalize_pending(project_root)
+            state_dir = project_root / "tom"
+            library_path = state_dir / "library.sqlite3"
+            if not library_path.is_file():
+                raise ValueError("project permanent library does not exist")
+
+            def inventory(database: sqlite3.Connection):
+                documents = database.execute(
+                    "SELECT document_id,content_sha256,byte_length,tombstoned_at "
+                    "FROM documents ORDER BY document_id"
+                ).fetchall()
+                chunks = database.execute(
+                    "SELECT document_id,chunk_index,analysis_digest,load_signature_json "
+                    "FROM document_chunks ORDER BY document_id,chunk_index"
+                ).fetchall()
+                structures = database.execute(
+                    "SELECT document_id,structure_digest FROM document_declared_structures "
+                    "ORDER BY document_id"
+                ).fetchall()
+                return documents, chunks, structures
+
+            before_db = sqlite3.connect(library_path)
+            try:
+                before_documents, before_chunks, before_structures = inventory(before_db)
+            finally:
+                before_db.close()
+            experience_before = {
+                name: path.read_bytes()
+                for name, path in (
+                    ("tree_state.json", state_dir / "tree_state.json"),
+                    ("rgm_state.json", state_dir / "rgm_state.json"),
+                )
+                if path.is_file()
+            }
+            seed_before = _sha256_file(self.seed.artifact_path)
+            legacy_root = self.data_dir / "document-index"
+            legacy_before = {
+                path.name: _sha256_file(path)
+                for path in sorted(legacy_root.glob("*"))
+                if path.is_file()
+            }
+            runtime = self.create_project_runtime(
+                project_id, state_dir, allow_document_index_migration=True,
+            )
+            after_documents, after_chunks, after_structures = inventory(runtime.library.db)
+            if after_documents != before_documents:
+                raise ValueError("document Tree migration changed permanent source identity")
+            before_chunk_ids = [(row[0], int(row[1])) for row in before_chunks]
+            after_chunk_ids = [(row[0], int(row[1])) for row in after_chunks]
+            if after_chunk_ids != before_chunk_ids:
+                raise ValueError("document Tree migration changed permanent chunk identity")
+            if seed_before != _sha256_file(self.seed.artifact_path):
+                raise ValueError("document Tree migration changed the canonical seed")
+            for name, data in experience_before.items():
+                if (state_dir / name).read_bytes() != data:
+                    raise ValueError("document Tree migration changed the experience Tree")
+            legacy_after = {
+                path.name: _sha256_file(path)
+                for path in sorted(legacy_root.glob("*"))
+                if path.is_file()
+            }
+            if legacy_after != legacy_before:
+                raise ValueError("document Tree migration changed the legacy shared index")
+            metadata_changes = [
+                {
+                    "document_id": after[0],
+                    "chunk_index": int(after[1]),
+                    "analysis_digest_before": before[2],
+                    "analysis_digest_after": after[2],
+                    "load_signature_added": before[3] is None and after[3] is not None,
+                }
+                for before, after in zip(before_chunks, after_chunks)
+                if before != after
+            ]
+            before_structure_map = {row[0]: row[1] for row in before_structures}
+            after_structure_map = {row[0]: row[1] for row in after_structures}
+            declared_structure_changes = [
+                {
+                    "document_id": document_id,
+                    "structure_digest_before": before_structure_map.get(document_id),
+                    "structure_digest_after": after_structure_map.get(document_id),
+                }
+                for document_id in sorted(
+                    set(before_structure_map) | set(after_structure_map)
+                )
+                if before_structure_map.get(document_id) != after_structure_map.get(document_id)
+            ]
+            self._projects[project_id] = runtime
+            return {
+                "status": "migrated",
+                "migration_version": "tom-assist-project-document-tree-migration/1.0",
+                "project_id": project_id,
+                "document_count": len(after_documents),
+                "chunk_count": len(after_chunks),
+                "declared_structure_count_before": len(before_structures),
+                "declared_structure_count_after": len(after_structures),
+                "metadata_changes": metadata_changes,
+                "declared_structure_changes": declared_structure_changes,
+                "source_inventory_unchanged": True,
+                "experience_tree_unchanged": True,
+                "canonical_seed_unchanged": True,
+                "legacy_shared_index_preserved": legacy_after == legacy_before,
+                "document_tree": runtime.document_index.head_metadata(),
+            }
+
     def capabilities(self) -> dict[str, Any]:
+        from gateway.document_tree import DOCUMENT_TREE_VERSION
         return {
             "runtime_version": self.runtime_sha,
             "state_format_version": STATE_FORMAT_VERSION,
@@ -1207,6 +1810,8 @@ class TomGateway:
             "document_structural_parsing": False,
             "document_packet_admission": True,
             "document_packet_admission_version": DOCUMENT_PACKET_ADMISSION_VERSION,
+            "document_tree_version": DOCUMENT_TREE_VERSION,
+            "document_tree_isolation": "dedicated_per_project",
             "supports_document_declared_structure": True,
             "document_declared_structure_version": DECLARED_STRUCTURE_VERSION,
             "parser_glossary_enabled": False,
@@ -1221,6 +1826,39 @@ class TomGateway:
     def handle(self, method: str, path: str, payload: dict[str, Any] | None = None) -> tuple[int, dict[str, Any]]:
         payload = payload or {}
         try:
+            if method == "POST" and path == "/document/native-memory/answer":
+                project_id = _safe_project_id(payload.get("project_id"))
+                action = payload.get("action", "answer")
+                if action not in ("status", "answer"):
+                    raise ValueError("unsupported native answer action")
+                if action == "answer" and payload.get("explicit_answer") is not True:
+                    raise ValueError("explicit local answer action required")
+                service = getattr(self, "native_memory_service", None)
+                profile = os.environ.get("TOM_ASSIST_NATIVE_MEMORY_PROFILE")
+                if service is None and profile:
+                    # Only an operator-configured profile can attach a frozen tree.
+                    # The request cannot supply a checkpoint or another project's sources.
+                    from gateway.native_memory import NativeMemoryService
+                    with self._projects_lock:
+                        service = getattr(self, "native_memory_service", None)
+                        if service is None:
+                            service = NativeMemoryService.from_profile(Path(profile))
+                            self.native_memory_service = service
+                if service is None:
+                    if action == "status":
+                        return 200, {"ready": False, "scope": "No learned document collection is attached to this project."}
+                    return 503, {"error": "no learned document collection is attached to this project"}
+                if action == "status":
+                    return 200, service.status(project_id)
+                return 200, service.answer(project_id, payload.get("question"))
+            if method == "POST" and path == "/document/stream1/retrieve":
+                project_id = _safe_project_id(payload.get("project_id"))
+                index = getattr(self, "stream1_document_indexes", {}).get(project_id)
+                if index is None:
+                    return 503, {"error": "no prepared Stream 1 document session for this project"}
+                return 200, index.retrieve(payload.get("question"))
+            if method == "POST" and path == "/inspection/gemma":
+                return 200, GemmaInspection.inspect(self, payload)
             if method == "GET" and path == "/provider/status":
                 return 200, self.oauth_provider.status()
             if method == "POST" and path == "/provider/complete":
@@ -1235,6 +1873,10 @@ class TomGateway:
                 return 200, {"status": "ok", "gateway_version": GATEWAY_VERSION, "runtime_version": self.runtime_sha, "pinned_sha_match": self.pinned_sha_match}
             if method == "GET" and path == "/capabilities":
                 return 200, self.capabilities()
+            if method == "POST" and path == "/document/research/intent":
+                return 200, parse_research_intent(
+                    str(payload.get("user_text") or "")
+                )
             if method == "POST" and path == "/archive/runtime/export":
                 from gateway.runtime_archive import export_snapshot
                 return 200, export_snapshot(self, _safe_project_id(payload.get("project_id")), payload["directory"])
@@ -1253,6 +1895,7 @@ class TomGateway:
                 return 200, self.project(payload.get("project_id")).preview_rank(
                     str(payload.get("user_text") or ""), k, max_chars,
                     payload.get("declared_glossary_titles") or [],
+                    payload.get("document_research_cursor"),
                 )
             if method == "POST" and path == "/turn/commit":
                 key = str(payload.get("idempotency_key") or "")
@@ -1272,6 +1915,10 @@ class TomGateway:
                     payload.get("display_name"), payload.get("content"),
                     payload.get("media_type"),
                 )
+            if method == "POST" and path == "/document/tree/migrate":
+                if payload.get("explicit_user_action") is not True:
+                    raise ValueError("document Tree migration requires an explicit user action")
+                return 200, self.migrate_project_document_tree(payload.get("project_id"))
             if method == "POST" and path == "/document/list":
                 return 200, {"documents": self.project(
                     payload.get("project_id")

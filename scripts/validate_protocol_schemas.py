@@ -72,8 +72,8 @@ def main() -> None:
             raise AssertionError(f"invalid source ID accepted: {source_id}")
 
     methods = schemas["core-methods.schema.json"]["enum"]
-    if len(methods) != 47 or len(methods) != len(set(methods)):
-        raise AssertionError(f"expected 47 unique core methods, got {len(methods)}")
+    if len(methods) != 49 or len(methods) != len(set(methods)) or not {"inspection.gemma", "conversation.native_answer"} <= set(methods):
+        raise AssertionError(f"expected 49 unique core methods including native answers, got {len(methods)}")
     print(
         f"validated {len(MAPPING)} fixtures, {len(methods)} core methods, "
         f"and source-id/1.1 ({len(VALID_SOURCE_IDS)} valid, "

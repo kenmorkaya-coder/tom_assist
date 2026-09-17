@@ -12,7 +12,7 @@ import re
 from typing import Any, Mapping, Sequence
 
 
-DOCUMENT_RESEARCH_TRACE_VERSION = "tom-assist-document-research-trace/1.1"
+DOCUMENT_RESEARCH_TRACE_VERSION = "tom-assist-document-research-trace/1.7"
 DOCUMENT_RESEARCH_INTENT_VERSION = "tom-assist-document-research-intent/1.0"
 MAX_COMPOSITE_EVIDENCE_UNIT_CHARS = 2_400
 
@@ -33,7 +33,7 @@ def parse_research_intent(query: str) -> dict[str, Any]:
         if re.search(pattern, folded):
             actors.append(role)
     pre_start = bool(re.search(
-        r"\b(?:before|prior|pre[- ]?start|prerequisite|commenc\w*|start\w*)\b",
+        r"\b(?:before|prior|pre[- ]?start|prerequisites?|commenc\w*|start\w*)\b",
         folded,
     ))
     broad = bool(
@@ -167,7 +167,7 @@ def _span(row: Mapping[str, Any]) -> tuple[int, int]:
 def evidence_unit_for_position(
     source: Mapping[str, Any], absolute_position: int,
 ) -> dict[str, Any] | None:
-    """Choose an authored composite duty unit without cutting a child duty."""
+    """Choose the nearest authored unit that retains its governing duty frame."""
     structure = source.get("declared_structure")
     if not isinstance(structure, Mapping):
         return None
@@ -182,25 +182,147 @@ def evidence_unit_for_position(
         return None
     candidates.sort(key=lambda row: (_span(row)[1] - _span(row)[0], _span(row)[0]))
     selected = candidates[0]
-    # A nested leaf often expresses only item (ii) of one compound obligation.
-    # Promote exactly one authored parent when it remains a bounded subclause.
-    parent = by_id.get(str(selected.get("parent_entry_id") or ""))
-    if (
-        selected.get("kind") == "subclause"
-        and isinstance(parent, Mapping)
-        and parent.get("kind") in {"clause", "subclause"}
-        and _span(parent)[1] - _span(parent)[0] <= MAX_COMPOSITE_EVIDENCE_UNIT_CHARS
-    ):
+    relation_entry = dict(selected)
+    source_text = str(source.get("content") or "")
+    duty_frame = re.compile(
+        r"\b(?:the\s+)?(?:SCAW\s+)?(?:Contractor|Principal|parties|party)\b"
+        r"(?!['’]s).{0,900}?\b(?:must|shall|may\s+not|will\s+not|"
+        r"will\s+(?:also\s+)?be\s+required\s+to|"
+        r"(?:is|are)\s+(?:not\s+obliged|required)\s+to)\b",
+        re.IGNORECASE | re.DOTALL,
+    )
+    path_leads = []
+    # A nested item often contains the timing phrase but not the condition,
+    # actor or modal that governs it.  Preserve only exact authored parent
+    # lead-ins on the path to that item; unrelated siblings are never copied.
+    while selected.get("kind") == "subclause":
+        selected_start, selected_end = _span(selected)
+        prefix_end = min(selected_end, absolute_position + 400)
+        parent = by_id.get(str(selected.get("parent_entry_id") or ""))
+        if not isinstance(parent, Mapping) or parent.get("kind") not in {
+            "clause", "subclause",
+        }:
+            break
+        parent_start, parent_end = _span(parent)
+        children = [
+            row for row in by_id.values()
+            if str(row.get("parent_entry_id") or "")
+            == str(parent.get("entry_id") or "")
+        ]
+        lead_end = min(
+            (int(row["span"]["start"]) for row in children),
+            default=parent_end,
+        )
+        if parent_start < lead_end <= selected_start:
+            path_leads.append({
+                "start": parent_start,
+                "end": lead_end,
+                "role": "governing_parent_lead",
+                "entry_id": str(parent.get("entry_id") or ""),
+                "identifier": str(parent.get("identifier") or ""),
+            })
+            if duty_frame.search(source_text[parent_start:lead_end]):
+                if parent_end - parent_start <= MAX_COMPOSITE_EVIDENCE_UNIT_CHARS:
+                    return {
+                        "entry_id": str(parent.get("entry_id") or ""),
+                        "identifier": str(parent.get("identifier") or ""),
+                        "kind": str(parent.get("kind") or ""),
+                        "relation_entry_id": str(relation_entry.get("entry_id") or ""),
+                        "relation_identifier": str(relation_entry.get("identifier") or ""),
+                        "start": parent_start,
+                        "end": parent_end,
+                        "char_count": parent_end - parent_start,
+                        "oversize": False,
+                        "source_segments": [{
+                            "start": parent_start,
+                            "end": parent_end,
+                            "role": "governing_parent_unit",
+                            "entry_id": str(parent.get("entry_id") or ""),
+                            "identifier": str(parent.get("identifier") or ""),
+                        }],
+                    }
+                relation_start, relation_end = _span(relation_entry)
+                segments = sorted(
+                    [
+                        *path_leads,
+                        {
+                            "start": relation_start,
+                            "end": relation_end,
+                            "role": "relation_unit",
+                            "entry_id": str(relation_entry.get("entry_id") or ""),
+                            "identifier": str(relation_entry.get("identifier") or ""),
+                        },
+                    ],
+                    key=lambda row: (row["start"], row["end"], row["role"]),
+                )
+                char_count = (
+                    sum(row["end"] - row["start"] for row in segments)
+                    + 2 * max(0, len(segments) - 1)
+                )
+                return {
+                    "entry_id": str(relation_entry.get("entry_id") or ""),
+                    "identifier": str(relation_entry.get("identifier") or ""),
+                    "kind": str(relation_entry.get("kind") or ""),
+                    "relation_entry_id": str(relation_entry.get("entry_id") or ""),
+                    "relation_identifier": str(relation_entry.get("identifier") or ""),
+                    "start": relation_start,
+                    "end": relation_end,
+                    "char_count": char_count,
+                    "oversize": char_count > MAX_COMPOSITE_EVIDENCE_UNIT_CHARS,
+                    "source_segments": segments,
+                }
+        if duty_frame.search(source_text[selected_start:prefix_end]):
+            if path_leads:
+                relation_start, relation_end = _span(relation_entry)
+                segments = sorted(
+                    [
+                        *path_leads,
+                        {
+                            "start": relation_start,
+                            "end": relation_end,
+                            "role": "relation_unit",
+                            "entry_id": str(relation_entry.get("entry_id") or ""),
+                            "identifier": str(relation_entry.get("identifier") or ""),
+                        },
+                    ],
+                    key=lambda row: (row["start"], row["end"], row["role"]),
+                )
+                char_count = (
+                    sum(row["end"] - row["start"] for row in segments)
+                    + 2 * max(0, len(segments) - 1)
+                )
+                return {
+                    "entry_id": str(relation_entry.get("entry_id") or ""),
+                    "identifier": str(relation_entry.get("identifier") or ""),
+                    "kind": str(relation_entry.get("kind") or ""),
+                    "relation_entry_id": str(relation_entry.get("entry_id") or ""),
+                    "relation_identifier": str(relation_entry.get("identifier") or ""),
+                    "start": relation_start,
+                    "end": relation_end,
+                    "char_count": char_count,
+                    "oversize": char_count > MAX_COMPOSITE_EVIDENCE_UNIT_CHARS,
+                    "source_segments": segments,
+                }
+            break
         selected = dict(parent)
     start, end = _span(selected)
     return {
         "entry_id": str(selected.get("entry_id") or ""),
         "identifier": str(selected.get("identifier") or ""),
         "kind": str(selected.get("kind") or ""),
+        "relation_entry_id": str(relation_entry.get("entry_id") or ""),
+        "relation_identifier": str(relation_entry.get("identifier") or ""),
         "start": start,
         "end": end,
         "char_count": end - start,
         "oversize": end - start > MAX_COMPOSITE_EVIDENCE_UNIT_CHARS,
+        "source_segments": [{
+            "start": start,
+            "end": end,
+            "role": "authored_unit",
+            "entry_id": str(selected.get("entry_id") or ""),
+            "identifier": str(selected.get("identifier") or ""),
+        }],
     }
 
 

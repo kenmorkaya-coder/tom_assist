@@ -173,6 +173,8 @@ async fn chat_request(
     if !matches!(
         envelope.method,
         Method::ProviderStatus
+            | Method::GemmaInspect
+            | Method::NativeMemoryAnswer
             | Method::ConversationList
             | Method::ConversationCreate
             | Method::ConversationGet

@@ -1,0 +1,9 @@
+# V17 causal-binding diagnostic
+
+Compare the retained 4,380-step adapter with the rejected 5,172-step adapter on 72 frozen authored development cases, before deciding any additional training. There are six causal syntaxes, four entity pairs (including neutral names and overlapping names), and three variants per group: canonical, paraphrase, reversed causal roles. Both adapters see exactly the same inputs with greedy decoding and the unchanged source-span prompt and parser.
+
+Report exact and valid counts per syntax, paraphrase agreement, contrast discrimination, and case-level recoveries/regressions. Check exact source/target identity as well as full semantic graph. No aggregate threshold can promote a checkpoint here: retain the previously selected 4,380-step adapter. These synthetic cases are diagnostic development data, including the exposed regression syntax, and are not fresh held-out evidence. V12/V15 remain RED. No training or downstream run is part of this protocol.
+
+Verify the inherited freeze chain, both adapters, corpus and source hashes. After inference reparse all saved raw outputs, recompute reports and verify token IDs/finish reasons before reporting. Preserve failures without silently restarting. A baseline failure shared across syntax families supports a broader curriculum defect; regressions concentrated in one syntax support targeted role-binding investigation. Neither outcome alone identifies learning rate, sampling, or optimizer reset as the cause. If both adapters answer everything correctly, record that the diagnostic did not reproduce the defect and do not claim improvement.
+
+After this comparison, propose the smallest evidence-supported training change. Before any eventual generalisation claim, use another untouched held-out battery; do not recycle these cases or exposed V12/V15 as held-out.

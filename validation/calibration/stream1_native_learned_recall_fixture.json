@@ -1,0 +1,180 @@
+{
+  "schema": "tom-assist.native-learned-recall.v1",
+  "facts": [
+    {
+      "id": "F01",
+      "family": "utility_extra_cost",
+      "clause": "18(d)",
+      "source": {
+        "start": 152854,
+        "end": 153272,
+        "text": "Where the design and construction requirements of existing service or utility\n             relocations are extended or modified to meet the requirements of either party,\n             including extensions or modifications in respect of depth or length, the parties agree\n             that the additional design and construction costs for such extensions or modifications\n             will be shared between the parties.",
+        "pdf_page": 49,
+        "fully_containing_chunks": [
+          269
+        ],
+        "overlapping_chunks": [
+          269
+        ]
+      },
+      "unseen_queries": [
+        "If either party needs a longer or deeper utility relocation, who pays the extra design and construction costs?",
+        "What does the deed say about sharing costs when service relocation requirements are changed to meet either party needs?"
+      ]
+    },
+    {
+      "id": "F02",
+      "family": "baseline_report_cost",
+      "clause": "16.3(c)(ii)",
+      "source": {
+        "start": 145316,
+        "end": 145458,
+        "text": "SM must reimburse TfNSW for 50% of the reasonable costs incurred by TfNSW\n                     in procuring the Baseline Contamination Report.",
+        "pdf_page": 47,
+        "fully_containing_chunks": [
+          259
+        ],
+        "overlapping_chunks": [
+          259
+        ]
+      },
+      "unseen_queries": [
+        "TfNSW has paid to procure the Baseline Contamination Report. What must SM reimburse?",
+        "What proportion of the reasonable Baseline Contamination Report procurement costs is SM responsible for paying to TfNSW?"
+      ]
+    },
+    {
+      "id": "F03",
+      "family": "metro_maintenance_plan",
+      "clause": "20(d)",
+      "source": {
+        "start": 155737,
+        "end": 155962,
+        "text": "SM will develop a draft operations and maintenance plan for any part of the Sydney\n             Metro Western Sydney Airport that, after Completion of the SSTOM Works, requires\n             access through land owned by TfNSW.",
+        "pdf_page": 50,
+        "fully_containing_chunks": [
+          273
+        ],
+        "overlapping_chunks": [
+          273
+        ]
+      },
+      "unseen_queries": [
+        "After SSTOM completion, access to part of the metro is through TfNSW land. Who must prepare the operations and maintenance plan?",
+        "What must SM draft for Sydney Metro Western Sydney Airport facilities reached through TfNSW-owned land after the SSTOM works are complete?"
+      ]
+    },
+    {
+      "id": "F04",
+      "family": "written_waiver",
+      "clause": "31.7(b)",
+      "source": {
+        "start": 212057,
+        "end": 212285,
+        "text": "Except as expressly provided in this Deed, any waiver or consent given by any party\n             under this Deed will only be effective and binding on that party if it is given or\n             confirmed in writing by that party.",
+        "pdf_page": 68,
+        "fully_containing_chunks": [
+          349
+        ],
+        "overlapping_chunks": [
+          349,
+          350
+        ]
+      },
+      "unseen_queries": [
+        "How must a party give or confirm a waiver or consent for it to take effect, unless the deed expressly says otherwise?",
+        "What makes a waiver or consent binding on the party that gives it?"
+      ]
+    },
+    {
+      "id": "F05",
+      "family": "assignment_consent",
+      "clause": "31.10(a)",
+      "source": {
+        "start": 214178,
+        "end": 214293,
+        "text": "A party must not Assign its interest under this Deed without the prior consent of the\n               other parties.",
+        "pdf_page": 69,
+        "fully_containing_chunks": [
+          352,
+          353
+        ],
+        "overlapping_chunks": [
+          352,
+          353
+        ]
+      },
+      "unseen_queries": [
+        "A party wants to assign its interest in the deed. What approval must it obtain first?",
+        "Is assignment of a party interest allowed without the other parties prior consent?"
+      ]
+    },
+    {
+      "id": "F06",
+      "family": "indemnity_payment",
+      "clause": "31.12(c)",
+      "source": {
+        "start": 216151,
+        "end": 216249,
+        "text": "A party must pay on demand any amount it must pay under any indemnity in this\n               Deed.",
+        "pdf_page": 69,
+        "fully_containing_chunks": [
+          355
+        ],
+        "overlapping_chunks": [
+          355
+        ]
+      },
+      "unseen_queries": [
+        "An amount is payable under an indemnity in the deed. When must the party pay it?",
+        "How promptly must a party pay once an indemnity amount is demanded?"
+      ]
+    }
+  ],
+  "teaching": "One native observe(document_clause_matrix, opaque_evidence_address_matrix) per fact; no query used in teaching; source excerpts frozen before run.",
+  "address_seed": 20260916,
+  "address_code": "Six orthonormal rank-one signed 32x32 matrices from two independent QR bases, positive QR diagonal convention. Arbitrary evidence pointers, no semantic cell labels.",
+  "rounds": 1,
+  "shuffle": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    0
+  ],
+  "native_root": "/Users/kenmorkaya/PycharmProjects/tom_matrix_native_stream1",
+  "source_checkpoint": "data/stream1_local_fast_slow_v1/source/original_re2.pkl.gz",
+  "source_sha256": "6c085ad308bb75757c29664709dc7c6808e647e715b597b487401762bc5afe82",
+  "checkpoint_scope": "Historical 4002-branch native source, not blank growth and not earlier 4066-branch response-only snapshot. Shared baseline for every arm; no teaching on these new addresses.",
+  "encoder": "Local MiniLM fixed256 padding, no truncation; normalized384, zero pad1024, native orthonormal Hadamard32x32.",
+  "grade": {
+    "cosine_min": 0.9,
+    "error_max": 0.4,
+    "norm_min": 0.75,
+    "norm_max": 1.25,
+    "margin_min": 0.75
+  },
+  "grade_scope": "Report both nearest opaque ID and strict matrix-return fidelity; nearest ID alone does not establish learned recall.",
+  "controls": [
+    "baseline_no_new_facts",
+    "six_isolated_single_fact_copies",
+    "joint_sequential_six_facts",
+    "rotated_outcome_association",
+    "restore_baseline_paired_memory_only",
+    "native_checkpoint_save_restore",
+    "two_unseen_phrasings_per_fact"
+  ],
+  "limits": {
+    "max_observations": 18,
+    "max_seconds": 2400,
+    "max_peak_gib": 8,
+    "no_threshold_tuning": true
+  },
+  "storage": {
+    "compact": "validation/runs",
+    "bulk": "/Volumes/My Passport for Mac/tom_assist_test_results/native_learned_recall"
+  },
+  "source_pdf": null,
+  "frozen_sha256": "80d6fdd9ff69cd798d7a01b09c14d36f1ee1fb99f0b56ea1352614a75ee46525"
+}

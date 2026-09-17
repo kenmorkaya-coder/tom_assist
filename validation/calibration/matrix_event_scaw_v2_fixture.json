@@ -1,0 +1,46 @@
+{
+  "version": "tom-assist-matrix-event-scaw-fixture/2.0",
+  "purpose": "Four-generation follow-up after v1: deterministic relation-span disambiguation and explicit null-endpoint question examples, with all evidence checks unchanged.",
+  "external_corpus": {
+    "path": "/private/tmp/tom-assist-wp42-scaw-corpus-prep-a9dda3b6/SCAW_SHORTLIST_TEXT_CORRECTED.json",
+    "sha256": "5c019f0be5401b6edea28f1d4a1f467f646bc0e077be8e206a6b50230962889e",
+    "source_pdf_sha256": "sha256:a9dda3b6376d27bd76a01adc4a7692838b4271a9967c53f69fa6883dafc14f99",
+    "passage_ids": ["SCAW-013", "SCAW-019"]
+  },
+  "models": {
+    "minilm_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "gemma_revision": "0d77464eeb233a2da68ebf9d7dc4edaac7db956d"
+  },
+  "local_generation_limit": 4,
+  "fixed_k": [1, 2],
+  "tree": {"leaf_capacity": 1, "beam_width": 1},
+  "matrix": {
+    "size": 32,
+    "source_target_weight": 1.0,
+    "relation_weight": 0.5,
+    "context_weight": 0.25,
+    "projection": "splitmix64-rademacher-jl-384-to-32/1.0",
+    "projection_seed": 539362568,
+    "views": ["full", "source_context", "context_target"]
+  },
+  "queries": [
+    {
+      "id": "SCAW-Q-LONG-SERVICE-DIRECT",
+      "family": "long_service_prestart",
+      "text": "What must the SCAW Contractor do about the long service levy before commencing construction work?",
+      "relevant_passage_ids": ["SCAW-013"]
+    },
+    {
+      "id": "SCAW-Q-ARTEFACT-DIRECT",
+      "family": "artefact_response",
+      "text": "What must the SCAW Contractor do if an Artefact is found?",
+      "relevant_passage_ids": ["SCAW-019"]
+    }
+  ],
+  "diagnostic_expectations": {
+    "all_four_sources_attempted_once": true,
+    "no_retry": true,
+    "no_fuzzy_binding": true,
+    "report_retrieval_without_pass_threshold": true
+  }
+}

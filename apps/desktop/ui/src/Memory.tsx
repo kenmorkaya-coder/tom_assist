@@ -32,8 +32,17 @@ export function Memory({
   const [report, setReport] = useState<MemoryReport>();
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [error, setError] = useState("");
+  const [canImport, setCanImport] = useState(false);
+  const [sourcePath, setSourcePath] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState("");
+  const [revision, setRevision] = useState(0);
   useEffect(() => {
     let current = true;
+    setCanImport(false);
+    void backend.chat(projectId, "conversation.native_answer", { action: "status" })
+      .then((state) => { if (current) setCanImport((state as { engine?: string }).engine === "rgm"); })
+      .catch(() => {});
     void Promise.all([backend.diagnostics(projectId), backend.documents(projectId)])
       .then(([diagnostics, rows]) => {
         if (!current) return;
@@ -44,7 +53,19 @@ export function Memory({
     return () => {
       current = false;
     };
-  }, [projectId, backend]);
+  }, [projectId, backend, revision]);
+
+  async function importDocument() {
+    setImporting(true); setError(""); setImportResult("");
+    try {
+      const result = await backend.chat(projectId, "document.ingest", {
+        explicit_user_action: true, source_path: sourcePath.trim(),
+      }) as { display_name: string; chunk_count: number; duplicate: boolean };
+      setImportResult(`${result.duplicate ? "Already imported" : "Imported"}: ${result.display_name} · ${result.chunk_count} passages`);
+      setRevision((value) => value + 1);
+    } catch (reason) { setError(String(reason)); }
+    finally { setImporting(false); }
+  }
 
   return (
     <section class="memory-view" aria-label="Project memory">
@@ -53,6 +74,17 @@ export function Memory({
         searched from another project.
       </p>
       {error && <p role="alert">{error}</p>}
+      {canImport && <section aria-label="Import project document">
+        <h3>Import a document</h3>
+        <p>PDF, text or Markdown. The file stays on this computer.</p>
+        <label>Full file path<input aria-label="Document file path" value={sourcePath}
+          onInput={(event) => setSourcePath(event.currentTarget.value)} disabled={importing} /></label>
+        <button disabled={importing || !sourcePath.trim()} onClick={() => void importDocument()}>
+          {importing ? "Importing document…" : "Import document"}
+        </button>
+        {importing && <p role="status">Reading the document and preparing its passages.</p>}
+        {importResult && <p role="status">{importResult}</p>}
+      </section>}
       <div class="memory-shelves">
         <article>
           <span>Front shelf</span>

@@ -34,10 +34,9 @@ pub fn commit_captured_exchange(
     if let Some(receipt) = store.runtime_commit_for_sent(&sent.id)? {
         return Ok(Some(receipt));
     }
-    if evaluation.result != "PASS"
-        && evaluation.intervention_ids.is_empty()
-        && !store.reviewed_exchange_accepted(&sent.id)?
-    {
+    // Evaluation is observation, never owner consent. Every production capture path
+    // must persist an explicit acceptance before five-dynamics experience can change.
+    if !store.response_experience_accepted(&evaluation.id, &sent.id)? {
         return Ok(None);
     }
     let mut dismissed = false;

@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": ["schema_version", "source_text_sha256", "clause_index", "references", "defined_terms", "declared_precedence", "causation", "structure_digest"],
   "properties": {
-    "schema_version": {"const": "tom-assist-declared-structure/1.0"},
+    "schema_version": {"enum": ["tom-assist-declared-structure/1.0", "tom-assist-declared-structure/1.1"]},
     "source_text_sha256": {"$ref": "#/$defs/digest"},
     "clause_index": {
       "type": "object",
@@ -47,7 +47,7 @@
       "additionalProperties": false,
       "required": ["version", "case_rule", "surface_forms_only_for_prompt", "terms", "term_count", "bindings", "binding_count"],
       "properties": {
-        "version": {"const": "tom-assist-defined-term-binding/1.0"},
+        "version": {"enum": ["tom-assist-defined-term-binding/1.0", "tom-assist-defined-term-binding/1.1"]},
         "case_rule": {"const": "exact-unicode-codepoints-case-sensitive-whole-surface/1.0"},
         "surface_forms_only_for_prompt": {"const": true},
         "terms": {
@@ -89,6 +89,17 @@
     },
     "structure_digest": {"$ref": "#/$defs/digest"}
   },
+  "allOf": [{
+    "if": {"properties": {"schema_version": {"const": "tom-assist-declared-structure/1.1"}}},
+    "then": {"properties": {"defined_terms": {"properties": {
+      "version": {"const": "tom-assist-defined-term-binding/1.1"},
+      "terms": {"items": {"required": ["scope_id", "scope_span"]}}
+    }}}},
+    "else": {"properties": {"defined_terms": {"properties": {
+      "version": {"const": "tom-assist-defined-term-binding/1.0"},
+      "terms": {"items": {"not": {"anyOf": [{"required": ["scope_id"]}, {"required": ["scope_span"]}]}}}
+    }}}}
+  }],
   "$defs": {
     "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "span": {
@@ -140,6 +151,8 @@
         "surface_span": {"$ref": "#/$defs/span"},
         "defining_clause_entry_id": {"type": "string", "pattern": "^address-[0-9a-f]{24}$"},
         "defining_clause_identifier": {"type": "string", "minLength": 1, "maxLength": 160},
+        "scope_id": {"type": "string", "pattern": "^scope-[0-9a-f]{24}$"},
+        "scope_span": {"$ref": "#/$defs/span"},
         "definition_span": {"$ref": "#/$defs/span"},
         "definition_body": {"type": "string", "minLength": 1, "maxLength": 400000},
         "entry_digest": {"$ref": "#/$defs/digest"}

@@ -14,7 +14,8 @@ import shutil
 import sqlite3
 import uuid
 
-FORMAT = "tom-assist-runtime-archive/1"
+FORMAT = "tom-assist-runtime-archive/2"
+SUPPORTED_FORMATS = frozenset({"tom-assist-runtime-archive/1", FORMAT})
 
 
 def digest_file(path):
@@ -49,7 +50,7 @@ def validate_snapshot(gateway, root):
     from gateway.tom_gateway import canonical_digest, DEFAULT_SETTINGS
     entries = files_in(root)
     manifest = json.loads((root / "runtime-manifest.json").read_bytes())
-    if manifest["format"] != FORMAT or manifest["runtime_version"] != gateway.runtime_sha:
+    if manifest["format"] not in SUPPORTED_FORMATS or manifest["runtime_version"] != gateway.runtime_sha:
         raise ValueError("runtime archive format/pin mismatch")
     if manifest["seed_artifact_sha256"] != gateway.seed.artifact_sha256 or manifest["mechanics_profile_sha256"] != gateway.seed.mechanics_profile_sha256:
         raise ValueError("runtime archive seed/physics profile mismatch")
@@ -62,12 +63,24 @@ def validate_snapshot(gateway, root):
         path = PurePosixPath(name)
         if path.is_absolute() or ".." in path.parts or "\\" in name or name not in entries:
             raise ValueError("unsafe runtime archive path")
-        if name not in ("library.sqlite3", "creation_metadata.json") and not re.fullmatch(r"checkpoints/[0-9a-f-]{36}/(tree_state|rgm_state|commit_state|metadata)\.json", name):
+        if name not in (
+            "library.sqlite3",
+            "creation_metadata.json",
+            "document-index/tree_state.json",
+            "document-index/receipts.sqlite3",
+        ) and not re.fullmatch(r"checkpoints/[0-9a-f-]{36}/(tree_state|rgm_state|commit_state|metadata)\.json", name):
             raise ValueError("unexpected runtime archive file")
         if digest_file(entries[name]) != digest:
             raise ValueError(f"runtime archive checksum mismatch: {name}")
     if not {"library.sqlite3", "creation_metadata.json"} <= set(expected):
         raise ValueError("runtime archive is incomplete")
+    document_index_files = {
+        "document-index/tree_state.json", "document-index/receipts.sqlite3",
+    }
+    if manifest["format"] == FORMAT and not document_index_files <= set(expected):
+        raise ValueError("runtime archive omits the project document Tree")
+    if document_index_files & set(expected) and not document_index_files <= set(expected):
+        raise ValueError("runtime archive has an incomplete project document Tree")
     metadata = json.loads((root / "creation_metadata.json").read_bytes())
     if metadata["project_id"] != manifest["project_id"]:
         raise ValueError("runtime archive project mismatch")
@@ -259,7 +272,7 @@ def validate_snapshot(gateway, root):
                     raise ValueError("document chunks do not overlap and cover their source")
             if ("table", "document_declared_structures") in objects:
                 from gateway.declared_structure import (
-                    DECLARED_STRUCTURE_VERSION,
+                    SUPPORTED_DECLARED_STRUCTURE_VERSIONS,
                     validate_declared_structure,
                 )
                 structured_documents = set()
@@ -272,7 +285,7 @@ def validate_snapshot(gateway, root):
                         raise ValueError("invalid document declared-structure provenance")
                     structure = json.loads(encoded)
                     if (
-                        version != DECLARED_STRUCTURE_VERSION
+                        version not in SUPPORTED_DECLARED_STRUCTURE_VERSIONS
                         or structure.get("schema_version") != version
                         or structure.get("structure_digest") != structure_digest
                     ):
@@ -281,6 +294,56 @@ def validate_snapshot(gateway, root):
                     structured_documents.add(document_id)
                 if structured_documents != set(documents):
                     raise ValueError("document declared-structure inventory mismatch")
+        if document_index_files <= set(expected):
+            from gateway.document_tree import DOCUMENT_TREE_VERSION, bytes_digest
+            tree_bytes = (root / "document-index/tree_state.json").read_bytes()
+            tree_data = json.loads(tree_bytes)
+            receipts = readonly_db(root / "document-index/receipts.sqlite3")
+            try:
+                if receipts.execute("PRAGMA quick_check").fetchone() != ("ok",):
+                    raise ValueError("project document Tree receipt integrity check failed")
+                tables = {
+                    row[0] for row in receipts.execute(
+                        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+                    )
+                }
+                if tables != {"tree_head", "chunk_commits", "activation_events"}:
+                    raise ValueError("project document Tree receipt schema mismatch")
+                heads = receipts.execute(
+                    "SELECT tree,tree_digest,seed_artifact_sha256,mechanism_version,"
+                    "tick,branch_count FROM tree_head"
+                ).fetchall()
+                if len(heads) != 1:
+                    raise ValueError("project document Tree head missing/ambiguous")
+                saved, digest, seed_sha, version, tick, branch_count = heads[0]
+                if (
+                    bytes(saved) != tree_bytes
+                    or bytes_digest(tree_bytes) != digest
+                    or seed_sha != gateway.seed.artifact_sha256
+                    or version != DOCUMENT_TREE_VERSION
+                    or int(tree_data.get("tick", -1)) != tick
+                    or len(tree_data.get("branches", [])) != branch_count
+                ):
+                    raise ValueError("project document Tree lineage mismatch")
+                receipt_rows = receipts.execute(
+                    "SELECT project_id,document_id,chunk_index,text_sha256,"
+                    "analysis_digest FROM chunk_commits ORDER BY document_id,chunk_index"
+                ).fetchall()
+                library_rows = db.execute(
+                    "SELECT ?1,c.document_id,c.chunk_index,c.text_sha256,c.analysis_digest "
+                    "FROM document_chunks c ORDER BY c.document_id,c.chunk_index",
+                    (manifest["project_id"],),
+                ).fetchall() if ("table", "document_chunks") in objects else []
+                if receipt_rows != library_rows:
+                    raise ValueError("project document Tree receipts do not match its permanent library")
+                foreign = receipts.execute(
+                    "SELECT 1 FROM activation_events WHERE project_id<>? LIMIT 1",
+                    (manifest["project_id"],),
+                ).fetchone()
+                if foreign is not None:
+                    raise ValueError("project document Tree contains foreign-project events")
+            finally:
+                receipts.close()
         for folder in (root / "checkpoints").glob("*"):
             expected_files = {"tree_state.json", "rgm_state.json", "commit_state.json", "metadata.json"}
             if {p.name for p in folder.iterdir()} != expected_files:
@@ -300,7 +363,7 @@ def export_snapshot(gateway, project_id, destination):
     from gateway.tom_gateway import canonical_json, canonical_digest
     runtime = gateway.project(project_id)
     root = Path(destination)
-    with runtime.lock:
+    with runtime.lock, runtime.document_index.lock:
         root.mkdir(mode=0o700, parents=True, exist_ok=False)
         target = sqlite3.connect(root / "library.sqlite3")
         try:
@@ -310,6 +373,19 @@ def export_snapshot(gateway, project_id, destination):
             target.close()
         os.chmod(root / "library.sqlite3", 0o600)
         shutil.copy2(runtime._creation_metadata_path, root / "creation_metadata.json")
+        document_index = root / "document-index"
+        document_index.mkdir(mode=0o700)
+        (document_index / "tree_state.json").write_bytes(
+            runtime.document_index.durable_tree_bytes()
+        )
+        receipt_target = sqlite3.connect(document_index / "receipts.sqlite3")
+        try:
+            runtime.document_index.db.backup(receipt_target)
+            receipt_target.execute("PRAGMA journal_mode=DELETE")
+        finally:
+            receipt_target.close()
+        os.chmod(document_index / "tree_state.json", 0o600)
+        os.chmod(document_index / "receipts.sqlite3", 0o600)
         checkpoints = runtime.state_dir / "checkpoints"
         if checkpoints.exists():
             files_in(checkpoints)  # Refuse links, do not follow them during copy.
@@ -378,9 +454,15 @@ def import_snapshot(gateway, action, directory, context):
         validate_snapshot(gateway, stage / "tom")  # Recheck the copied bytes.
         factory = getattr(gateway, "create_project_runtime", None)
         probe = (
-            factory(project_id, stage / "tom")
+            factory(
+                project_id, stage / "tom",
+                allow_document_index_migration=True,
+            )
             if callable(factory)
-            else ProjectRuntime(project_id, stage / "tom", gateway.runtime_sha, gateway.seed)
+            else ProjectRuntime(
+                project_id, stage / "tom", gateway.runtime_sha, gateway.seed,
+                allow_document_index_migration=True,
+            )
         )
         try:
             expected = probe.library.head()
@@ -388,6 +470,7 @@ def import_snapshot(gateway, action, directory, context):
                 raise ValueError("runtime restore is not byte-identical")
         finally:
             probe.library.db.close()
+            probe.document_index.db.close()
         _atomic_write(stage / "tom/recovery-intent.json", canonical_json(intent))
         return intent
     token = context.get("token", "")

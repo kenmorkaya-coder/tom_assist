@@ -23,12 +23,25 @@ impl Gateway {
             .join("../..")
             .canonicalize()
             .unwrap();
+        // This suite verifies orchestration, provenance and context admission.
+        // Keep its document vectors deterministic instead of requiring a local
+        // MiniLM installation or silently changing the production fallback.
+        let bootstrap = concat!(
+            "from pathlib import Path\n",
+            "import sys\n",
+            "sys.path.insert(0, sys.argv[3])\n",
+            "from gateway.tom_gateway import TomGateway, serve\n",
+            "from gateway.tests.test_document_ingestion import FixtureEmbeddingProvider\n",
+            "serve(Path(sys.argv[1]), TomGateway(Path(sys.argv[2]), document_embedding_provider=FixtureEmbeddingProvider()))\n",
+        );
         let child = Command::new(root.join(".venv-gateway/bin/python"))
-            .arg(root.join("gateway/tom_gateway.py"))
-            .arg("--socket")
+            .arg("-B")
+            .arg("-c")
+            .arg(bootstrap)
             .arg(socket)
-            .arg("--data-dir")
             .arg(data)
+            .arg(&root)
+            .current_dir(&root)
             .env("PYTHONDONTWRITEBYTECODE", "1")
             .stdout(Stdio::null())
             .stderr(Stdio::inherit())
@@ -149,8 +162,267 @@ fn prepare(s: &AssistService, id: &str, draft: &str) -> Value {
     )
     .unwrap()
 }
+
+#[test]
+fn gemma_inspection_compiles_without_provider_or_project_commit() {
+    let harness = Harness::new();
+    let fixture = Fixture::default();
+    let calls = fixture.calls.clone();
+    let service = harness.service(fixture);
+    let before = harness.observer().current_state("chat-project").unwrap();
+    let payload = json!({
+        "project_id":"chat-project", "project_state_version":before.state_version,
+        "opt_in":true, "explicit_inspect":true, "adapter_id":"v14-4380",
+        "extraction_mode":"saved", "source":{"kind":"saved_example"},
+        "query_stream1":false
+    });
+    let envelope = serde_json::from_value(json!({
+        "protocol":"tom-assist/1.0", "request_id":"inspection", "idempotency_key":"inspection",
+        "actor":{"type":"desktop","instance_id":"inspection"},
+        "project_id":"chat-project", "method":"inspection.gemma", "payload":payload, "sent_at":AT
+    }))
+    .unwrap();
+    let response = service.handle_envelope(envelope);
+    assert!(response.ok, "{:?}", response.error);
+    let result = response.payload.unwrap();
+    assert_eq!(
+        result["compiled"]["loads"].as_array().unwrap().len(),
+        2,
+        "{result}"
+    );
+    assert_eq!(result["runtime"], Value::Null);
+    assert_eq!(
+        result["stages"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|stage| stage["stage"] == "runtime")
+            .unwrap()["status"],
+        "not_requested"
+    );
+    assert_eq!(result["purity"]["live_runtime"]["unchanged"], true);
+    assert_eq!(result["purity"]["ledger"]["unchanged"], true);
+    assert_eq!(
+        harness.observer().current_state("chat-project").unwrap(),
+        before
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), 0);
+    let mut invalid = payload.clone();
+    invalid["source"] = json!({"kind":"state_object","id":"foreign-object","version":"unknown"});
+    assert!(service.inspect_gemma("chat-project", &invalid).is_err());
+    invalid = payload.clone();
+    invalid["opt_in"] = json!(false);
+    assert!(service.inspect_gemma("chat-project", &invalid).is_err());
+    invalid = payload;
+    invalid["project_state_version"] = json!(before.state_version + 1);
+    assert!(service.inspect_gemma("chat-project", &invalid).is_err());
+}
 fn send_payload(p: &Value) -> Value {
     json!({"exchange_id":p["id"],"confirmed_prompt_hash":p["prompt_hash"],"explicit_send":true})
+}
+
+#[test]
+fn native_document_answers_require_explicit_action_and_registered_project_memory() {
+    let harness = Harness::new();
+    let fixture = Fixture::default();
+    let calls = fixture.calls.clone();
+    let service = harness.service(fixture);
+    let before = harness.observer().current_state("chat-project").unwrap();
+    let status = service
+        .native_memory_answer("chat-project", &json!({"action":"status"}))
+        .unwrap();
+    assert_eq!(status["ready"], false);
+    assert!(
+        service
+            .native_memory_answer(
+                "chat-project",
+                &json!({
+                    "question":"Who pays?", "project_state_version":before.state_version
+                })
+            )
+            .is_err()
+    );
+    assert!(service.native_memory_answer("chat-project", &json!({
+        "question":"Who pays?", "explicit_answer":true, "project_state_version":before.state_version + 1
+    })).is_err());
+    assert!(service.native_memory_answer("chat-project", &json!({
+        "question":"Who pays?", "explicit_answer":true, "project_state_version":before.state_version
+    })).is_err());
+    assert_eq!(
+        harness.observer().current_state("chat-project").unwrap(),
+        before
+    );
+    assert_eq!(calls.load(Ordering::SeqCst), 0);
+}
+
+#[test]
+#[ignore = "Opt-in frozen local native-memory battery; requires Passport and TOM_ASSIST_NATIVE_MEMORY_PROFILE"]
+fn native_memory_frozen_heldout_answers_through_service() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../..")
+        .canonicalize()
+        .unwrap();
+    let fixture_path = root.join("validation/calibration/stream1_native_memory_e2e_fixture.json");
+    let mut fixture: Value = serde_json::from_slice(&std::fs::read(fixture_path).unwrap()).unwrap();
+    let frozen_hash = fixture
+        .as_object_mut()
+        .unwrap()
+        .remove("frozen_sha256")
+        .unwrap();
+    let report_path = root.join("validation/runs/stream1-native-learned-recall.json");
+    let mut report: Value = serde_json::from_slice(&std::fs::read(&report_path).unwrap()).unwrap();
+    assert_eq!(
+        frozen_hash,
+        report["native_memory_end_to_end"]["fixture_sha256"]
+    );
+    assert_eq!(fixture, report["native_memory_end_to_end"]["fixture"]);
+    assert!(
+        report["native_memory_end_to_end"]["heldout_first_pass"].is_null(),
+        "Never overwrite held-out results"
+    );
+    let save_results = |value: &Value| {
+        // Update only this experiment. Rust's default JSON float reader can round
+        // historical telemetry by one unit in its last place when rewriting it.
+        use std::io::Write;
+        let mut child = Command::new(root.join(".venv-gateway/bin/python"))
+            .args(["-c", "import json,sys;from pathlib import Path;p=Path(sys.argv[1]);r=json.loads(p.read_text());r['native_memory_end_to_end']=json.load(sys.stdin);p.write_text(json.dumps(r,indent=2)+'\\n')"])
+            .arg(&report_path).stdin(Stdio::piped()).spawn().unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(&serde_json::to_vec(&value["native_memory_end_to_end"]).unwrap())
+            .unwrap();
+        assert!(child.wait().unwrap().success());
+    };
+    let profile_path =
+        std::env::var("TOM_ASSIST_NATIVE_MEMORY_PROFILE").expect("explicit local profile required");
+    let profile: Value = serde_json::from_slice(&std::fs::read(profile_path).unwrap()).unwrap();
+    assert_eq!(profile["project_id"], "chat-project");
+    let h = Harness::new();
+    let service =
+        AssistService::with_gateway(Store::open(&h.database).unwrap(), h.gateway.1.clone());
+    let before = h.observer().current_state("chat-project").unwrap();
+    assert_eq!(
+        service
+            .native_memory_answer("chat-project", &json!({"action":"status"}))
+            .unwrap()["ready"],
+        true
+    );
+    report["native_memory_end_to_end"]["status"] = json!("HELDOUT_RUNNING");
+    report["native_memory_end_to_end"]["heldout_first_pass"] = json!([]);
+    for case in fixture["cases"].as_array().unwrap() {
+        let id = case["id"].as_str().unwrap();
+        // Only the question enters the real application RPC; labels are evaluated afterward.
+        let envelope = serde_json::from_value(json!({
+            "protocol":"tom-assist/1.0", "request_id":format!("native-heldout-{id}"),
+            "idempotency_key":format!("native-heldout-{id}"), "method":"conversation.native_answer",
+            "actor":{"type":"desktop", "instance_id":"native-heldout"}, "project_id":"chat-project",
+            "payload":{"project_id":"chat-project", "action":"answer", "explicit_answer":true, "project_state_version":before.state_version,
+                "question":case["question"]}, "sent_at":AT
+        })).unwrap();
+        let response = service.handle_envelope(envelope);
+        let wire = serde_json::to_value(response).unwrap();
+        let answer = &wire["payload"];
+        let mut actual: Vec<String> = answer["sources"]
+            .as_array()
+            .unwrap_or(&vec![])
+            .iter()
+            .filter_map(|s| s["id"].as_str().map(str::to_owned))
+            .collect();
+        let mut expected: Vec<String> = case["evaluation_only"]["expected_facts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_str().unwrap().to_owned())
+            .collect();
+        actual.sort();
+        expected.sort();
+        let passed = wire["ok"] == true
+            && answer["status"] == case["evaluation_only"]["expected_status"]
+            && actual == expected;
+        eprintln!(
+            "{id}: status={} facts={actual:?} expected={expected:?} pass={passed}",
+            answer["status"]
+        );
+        report["native_memory_end_to_end"]["heldout_first_pass"].as_array_mut().unwrap().push(json!({
+            "case":case, "wire_response":wire, "evaluation":{"passed":passed, "actual_facts":actual}
+        }));
+        save_results(&report);
+        assert_eq!(h.observer().current_state("chat-project").unwrap(), before);
+        // Infrastructure faults need diagnosis before starting further model work.
+        assert_eq!(
+            wire["ok"], true,
+            "Application transport failed; results preserved"
+        );
+        if answer["status"] == "blocked" {
+            assert_eq!(
+                answer["trace"]["failure"]["stage"], "evidence_and_wording",
+                "Access or native infrastructure failed; diagnose before further inference"
+            );
+        }
+    }
+    report["native_memory_end_to_end"]["status"] = json!("HELDOUT_FIRST_PASS_COMPLETE");
+    report["native_memory_end_to_end"]["isolated_app_review_directory"] = json!(h._tmp.path());
+    save_results(&report);
+    // Keep only this small isolated ledger for a desktop rendering check.
+    drop(service);
+    let _retained = h._tmp.keep();
+}
+
+#[test]
+fn ordinary_document_preview_keeps_source_and_provenance_within_standard_ceiling() {
+    let h = Harness::new();
+    let fixture = Fixture::default();
+    let calls = fixture.calls.clone();
+    let service = h.service(fixture);
+    let before = h.observer().current_state("chat-project").unwrap();
+    let question = "When is the inspection report due, and who receives it?";
+    prepare(&service, "before-document", question);
+    let empty_run = h
+        .observer()
+        .latest_context_run("chat-project")
+        .unwrap()
+        .unwrap();
+    let empty_trace: Value = serde_json::from_str(&empty_run.candidate_trace_json).unwrap();
+    assert_eq!(empty_trace["admission"]["budget_tokens"], 500);
+
+    let source = "The inspector must issue the inspection report within ten business days to the project owner and the works manager. The report must identify the reviewed drawings, inspection date, outstanding defects and corrective actions. The works manager must retain the report with the project inspection register and record when the owner receives it. If the report identifies defects, the contractor must address those defects and arrange a further inspection. The inspector must explain any rejection in writing and send those reasons to the same recipients. The project owner must retain both the original report and any subsequent correction.";
+    let document = h.gateway.1.ingest_document(json!({
+        "project_id":"chat-project", "display_name":"Inspection reporting requirements and distribution schedule.txt",
+        "content":source, "media_type":"text/plain", "explicit_user_action":true
+    })).unwrap();
+    let preview = prepare(&service, "with-document", question);
+    let run = h
+        .observer()
+        .latest_context_run("chat-project")
+        .unwrap()
+        .unwrap();
+    let trace: Value = serde_json::from_str(&run.candidate_trace_json).unwrap();
+    assert_eq!(trace["admission"]["budget_tokens"], 1_200);
+    assert!(run.estimated_tokens <= 1_200);
+    assert!(
+        run.packet_text.contains("within ten business days"),
+        "{}",
+        run.packet_text
+    );
+    assert!(
+        run.packet_text
+            .contains("project owner and the works manager")
+    );
+    assert!(
+        run.packet_text
+            .contains(document["document_id"].as_str().unwrap())
+    );
+    assert!(run.packet_text.contains("source segments"));
+    assert!(
+        preview["prompt"]
+            .as_str()
+            .unwrap()
+            .contains(&run.packet_text)
+    );
+    assert_eq!(h.observer().current_state("chat-project").unwrap(), before);
+    assert_eq!(calls.load(Ordering::SeqCst), 0);
 }
 
 #[test]
@@ -448,7 +720,7 @@ fn self_report_rejects_forgery_invented_evidence_invalid_json_and_lost_reply_wit
         };
         let s = report_service(&h, &f, true);
         let exchange = format!("bad-report-{n}");
-        let p = prepare(&s, &exchange, "Describe the structure.");
+        let p = prepare(&s, &exchange, &format!("Describe structure case {n}."));
         s.conversation_send("chat-project", &send_payload(&p), AT)
             .unwrap();
         let r = s
@@ -619,6 +891,16 @@ fn stale_native_state_requires_explicit_review_acceptance_then_commits_once() {
         h.gateway.1.memory_diagnostics("chat-project", 0).unwrap(),
         before
     );
+    assert_eq!(
+        h.observer()
+            .audit_records("chat-project")
+            .unwrap()
+            .iter()
+            .filter(|event| event.category == "EXCHANGE_ACCEPTED_BY_USER")
+            .count(),
+        1,
+        "repeated acceptance is one persisted user decision"
+    );
     assert_eq!(f.calls.load(Ordering::SeqCst), 1);
     let stale = prepare(&s, "stale-native", "Reject before contacting provider.");
     let mut changed = decision("Another owner decision", "active");
@@ -688,6 +970,24 @@ fn conflict_holds_experience_until_every_user_finding_resolution() {
         )
         .unwrap();
     }
+    assert!(
+        store
+            .runtime_commit_for_sent("conflict:user")
+            .unwrap()
+            .is_none(),
+        "resolving findings does not accept the response for the owner"
+    );
+    let accepted = s
+        .conversation_evaluate(
+            "chat-project",
+            &json!({"exchange_id":"conflict","accept_reviewed":true}),
+            AT,
+        )
+        .unwrap();
+    assert_eq!(
+        accepted["exchanges"][0]["exchange"]["accepted_review"],
+        true
+    );
     let receipt = store
         .runtime_commit_for_sent("conflict:user")
         .unwrap()
@@ -727,8 +1027,13 @@ fn explicit_send_full_governance_commit_history_restart_and_archive() {
     let row = &view["exchanges"][0];
     assert_eq!(row["exchange"]["status"], "completed");
     assert_eq!(row["evaluation"]["result"], "PASS");
-    assert!(row["commit"].is_object());
-    assert_eq!(row["commit"]["engine_tick_after"], 4708);
+    assert!(row["commit"].is_null());
+    assert_eq!(row["exchange"]["accepted_review"], false);
+    assert_eq!(
+        h.gateway.1.memory_diagnostics("chat-project", 0).unwrap(),
+        before,
+        "PASS is retained for review but cannot bend the experience tree"
+    );
     assert_eq!(
         fixture.prompts.lock().unwrap()[0],
         p["prompt"].as_str().unwrap()
@@ -746,6 +1051,38 @@ fn explicit_send_full_governance_commit_history_restart_and_archive() {
         .unwrap();
     s.conversation_evaluate("chat-project", &json!({"exchange_id":"first"}), AT)
         .unwrap();
+    assert!(
+        h.observer()
+            .runtime_commit_for_sent("first:user")
+            .unwrap()
+            .is_none(),
+        "evaluation retries do not imply owner acceptance"
+    );
+    let view = s
+        .conversation_evaluate(
+            "chat-project",
+            &json!({"exchange_id":"first","accept_reviewed":true}),
+            AT,
+        )
+        .unwrap();
+    assert_eq!(view["exchanges"][0]["exchange"]["accepted_review"], true);
+    assert!(view["exchanges"][0]["commit"].is_object());
+    assert_eq!(view["exchanges"][0]["commit"]["engine_tick_after"], 4708);
+    s.conversation_evaluate(
+        "chat-project",
+        &json!({"exchange_id":"first","accept_reviewed":true}),
+        AT,
+    )
+    .unwrap();
+    assert_eq!(
+        h.observer()
+            .audit_records("chat-project")
+            .unwrap()
+            .iter()
+            .filter(|event| event.category == "EXCHANGE_ACCEPTED_BY_USER")
+            .count(),
+        1
+    );
     assert_eq!(fixture.calls.load(Ordering::SeqCst), 1);
     let committed = h.gateway.1.memory_diagnostics("chat-project", 0).unwrap();
     let next = prepare(&s, "second", "Follow up locally.");
@@ -1033,19 +1370,27 @@ fn live_oauth_one_disposable_exchange() {
         "live-once",
         "Reply with exactly: Ready. No tools, no explanation.",
     );
-    let view = s
+    let initial = s
         .conversation_send("chat-project", &send_payload(&p), AT)
         .unwrap();
     assert!(
-        view["exchanges"][0]["exchange"]["response_text"]
+        initial["exchanges"][0]["exchange"]["response_text"]
             .as_str()
             .is_some_and(|s| !s.is_empty())
     );
-    assert!(view["exchanges"][0]["evaluation"].is_object());
-    assert_eq!(view["exchanges"][0]["evaluation"]["result"], "PASS");
+    assert!(initial["exchanges"][0]["evaluation"].is_object());
+    assert_eq!(initial["exchanges"][0]["evaluation"]["result"], "PASS");
+    assert!(initial["exchanges"][0]["commit"].is_null());
+    let view = s
+        .conversation_evaluate(
+            "chat-project",
+            &json!({"exchange_id":"live-once","accept_reviewed":true}),
+            AT,
+        )
+        .unwrap();
     assert!(
         view["exchanges"][0]["commit"].is_object(),
-        "live acceptance must have a five-dynamics receipt"
+        "explicit live acceptance must have a five-dynamics receipt"
     );
     let head = h.gateway.1.memory_diagnostics("chat-project", 0).unwrap();
     drop(s);

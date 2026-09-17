@@ -1,0 +1,677 @@
+{
+  "schema": "tom-assist.frozen-retrieval-battery.v1",
+  "status": "frozen_before_routing",
+  "name": "36 additional held-out retrieval queries",
+  "rule": {
+    "version": "native-stable-cells-fullnorm-v1",
+    "training_queries": 4,
+    "mask": "all four raw native query values strictly positive OR all four strictly negative, at identical branch,row,column",
+    "scoring": "sum(mask * Q * C) / (full_field_norm(Q) * frozen_full_field_norm(C))",
+    "zero_policy": "zero is excluded; no magnitude threshold",
+    "branches": 4066,
+    "matrix_shape": [
+      32,
+      32
+    ],
+    "source_norms": "Reuse original complete candidate field norms, frozen before this mask study. No subset norm fitting.",
+    "query_norm": "Full-field query norm only; it is common to all candidates and does not affect candidate rank. This is a direct norm calculation, not fitted calibration.",
+    "tie_break": "stable descending score, original passage index for exact ties",
+    "passages": 501,
+    "tree_state": "179e4000795d29ccf2da3d64e375fdd69a0ff3e38cdeb7bf703635354385e633",
+    "parent_run_sha256": "87165eaebe14e392b8b1873d179f88dbca7dc83841159ee4a8371e295d8b4626",
+    "random_seeds": [
+      1701,
+      1702,
+      1703
+    ],
+    "random_control": "Three masks per query, uniformly sampled within each branch with the exact stable-mask count, same full-field norms.",
+    "forbidden_changes": [
+      "mask thresholds",
+      "branch ordering",
+      "tree mechanics",
+      "passage text",
+      "chunking",
+      "score fitting",
+      "reranking"
+    ]
+  },
+  "rule_sha256": "1a032543d977dc04a5df47b5362587c1f4f1cd8aca7fb9959f27af7f0d678b21",
+  "candidate_archive": "/Volumes/My Passport for Mac/TomAssist/stream1-full-document-retrieval-20260915.npz",
+  "routing_archive": "/Volumes/My Passport for Mac/TomAssist/stream1-response-fields-20260915.npz",
+  "candidate_count": 501,
+  "reference_query_count": 48,
+  "evaluation_query_count": 36,
+  "family_count": 12,
+  "families": [
+    {
+      "id": "B01",
+      "name": "m12_damage",
+      "clause": "14.2(a)",
+      "reference_queries": [
+        {
+          "id": "B01-R1",
+          "text": "After SMWSA activities damage the M12, what notification and consultation must SM undertake?"
+        },
+        {
+          "id": "B01-R2",
+          "text": "What does SM have to do when its project activities cause damage to the M12?"
+        },
+        {
+          "id": "B01-R3",
+          "text": "What are SM duties to TfNSW immediately after M12 damage caused by SMWSA activities?"
+        },
+        {
+          "id": "B01-R4",
+          "text": "Following M12 damage arising from SMWSA activities, what communication steps and deadlines apply to SM?"
+        }
+      ],
+      "heldout_queries": [
+        {
+          "id": "B01-H1",
+          "text": "SMWSA work has damaged part of the M12. What must SM tell TfNSW, and when must they discuss the damage?"
+        },
+        {
+          "id": "B01-H2",
+          "text": "Under the damage procedure, how quickly must SM notify and consult TfNSW about harm to the M12 from SMWSA activities?"
+        },
+        {
+          "id": "B01-H3",
+          "text": "What notice and follow-up discussion are required from SM if SMWSA activities damage the M12?"
+        }
+      ],
+      "expected_evidence": {
+        "start": 126391,
+        "end": 126812,
+        "text": "If any damage occurs to any part of the M12 from or arising out of the SMWSA\n             Activities, SM must:\n\n             (i)     immediately notify TfNSW; and\n\n             (ii)    promptly and no later than 5 Business Days following such damage consult\n                     with TfNSW to discuss the nature and extent of any damage and any potential\n                     impacts to the M12 as a result of any damage.",
+        "pdf_page": 41,
+        "fully_containing_chunks": [
+          234
+        ],
+        "overlapping_chunks": [
+          234
+        ]
+      }
+    },
+    {
+      "id": "B02",
+      "name": "metro_damage",
+      "clause": "15.2(a)",
+      "reference_queries": [
+        {
+          "id": "B02-R1",
+          "text": "After M12 activities damage Sydney Metro Western Sydney Airport, what notification and consultation must TfNSW undertake?"
+        },
+        {
+          "id": "B02-R2",
+          "text": "What does TfNSW have to do when M12 activities cause damage to the metro project?"
+        },
+        {
+          "id": "B02-R3",
+          "text": "What communication duties does TfNSW owe SM following damage to the metro arising from M12 activities?"
+        },
+        {
+          "id": "B02-R4",
+          "text": "What notice and consultation deadlines apply to TfNSW after M12 activities damage Sydney Metro Western Sydney Airport?"
+        }
+      ],
+      "heldout_queries": [
+        {
+          "id": "B02-H1",
+          "text": "M12 work has damaged part of the metro. What must TfNSW tell SM, and when must they discuss the damage?"
+        },
+        {
+          "id": "B02-H2",
+          "text": "How quickly must TfNSW notify and consult SM about damage to Sydney Metro Western Sydney Airport caused by M12 activities?"
+        },
+        {
+          "id": "B02-H3",
+          "text": "What notice and follow-up discussion are required from TfNSW when M12 activities damage the metro?"
+        }
+      ],
+      "expected_evidence": {
+        "start": 135423,
+        "end": 135895,
+        "text": "If any damage occurs to any part of Sydney Metro Western Sydney Airport from or\n             arising out of the M12 Activities, TfNSW must:\n\n             (i)     immediately notify SM; and\n\n             (ii)    promptly and no later than 5 Business Days following such damage consult\n                     with SM to discuss the nature and extent of any damage and any potential\n                     impacts to Sydney Metro Western Sydney Airport as a result of any damage.",
+        "pdf_page": 44,
+        "fully_containing_chunks": [
+          246
+        ],
+        "overlapping_chunks": [
+          246,
+          247
+        ]
+      }
+    },
+    {
+      "id": "B03",
+      "name": "existing_contamination",
+      "clause": "16.3(a)(i)",
+      "reference_queries": [
+        {
+          "id": "B03-R1",
+          "text": "What must each party provide concerning existing contamination data, and by when?"
+        },
+        {
+          "id": "B03-R2",
+          "text": "When must SM and TfNSW exchange contamination data that has not already been supplied?"
+        },
+        {
+          "id": "B03-R3",
+          "text": "What is the deadline for providing outstanding existing contamination data to the other party?"
+        },
+        {
+          "id": "B03-R4",
+          "text": "What exchange of existing contamination records is required after the deed is made?"
+        }
+      ],
+      "heldout_queries": [
+        {
+          "id": "B03-H1",
+          "text": "What must SM and TfNSW do with existing contamination data they have not yet shared, and when is it due?"
+        },
+        {
+          "id": "B03-H2",
+          "text": "How soon after the date of the deed must the parties hand over previously unprovided contamination data?"
+        },
+        {
+          "id": "B03-H3",
+          "text": "What information must each party give the other under the initial existing-contamination-data requirement?"
+        }
+      ],
+      "expected_evidence": {
+        "start": 143300,
+        "end": 143672,
+        "text": "(Existing Contamination Data) within 10 Business Days after the date of\n                    this Deed:\n\n                    (A)    SM will provide TfNSW; and\n\n                    (B)    TfNSW will provide SM,\n\n                    with copies of all Existing Contamination Data not provided to TfNSW or SM\n                    (as applicable) prior to the date of this Deed;",
+        "pdf_page": 46,
+        "fully_containing_chunks": [
+          257
+        ],
+        "overlapping_chunks": [
+          256,
+          257
+        ]
+      }
+    },
+    {
+      "id": "B04",
+      "name": "utility_extra_cost",
+      "clause": "18(d)",
+      "reference_queries": [
+        {
+          "id": "B04-R1",
+          "text": "Who bears the additional costs when utility relocation requirements are extended or modified for a party?"
+        },
+        {
+          "id": "B04-R2",
+          "text": "How are extra design and construction costs allocated when utility relocations must meet changed requirements?"
+        },
+        {
+          "id": "B04-R3",
+          "text": "What happens to costs when an existing utility relocation is made deeper or longer to satisfy a party?"
+        },
+        {
+          "id": "B04-R4",
+          "text": "How must the parties deal with additional costs from changes to service or utility relocation requirements?"
+        }
+      ],
+      "heldout_queries": [
+        {
+          "id": "B04-H1",
+          "text": "If either party needs a longer or deeper utility relocation, who pays the extra design and construction costs?"
+        },
+        {
+          "id": "B04-H2",
+          "text": "What does the deed say about sharing costs when service relocation requirements are changed to meet either party needs?"
+        },
+        {
+          "id": "B04-H3",
+          "text": "Who is responsible for the added costs of extending or modifying the design and construction of a utility relocation?"
+        }
+      ],
+      "expected_evidence": {
+        "start": 152854,
+        "end": 153272,
+        "text": "Where the design and construction requirements of existing service or utility\n             relocations are extended or modified to meet the requirements of either party,\n             including extensions or modifications in respect of depth or length, the parties agree\n             that the additional design and construction costs for such extensions or modifications\n             will be shared between the parties.",
+        "pdf_page": 49,
+        "fully_containing_chunks": [
+          269
+        ],
+        "overlapping_chunks": [
+          269
+        ]
+      }
+    },
+    {
+      "id": "B05",
+      "name": "tfnsw_land_access",
+      "clause": "19.2(b)",
+      "reference_queries": [
+        {
+          "id": "B05-R1",
+          "text": "What must SM do to allow access to TfNSW land made landlocked by the project acquisitions?"
+        },
+        {
+          "id": "B05-R2",
+          "text": "Who negotiates access rights for TfNSW-owned land that becomes landlocked by the works acquisitions?"
+        },
+        {
+          "id": "B05-R3",
+          "text": "What is SM obligation concerning access licences for landlocked land owned by TfNSW?"
+        },
+        {
+          "id": "B05-R4",
+          "text": "How is access to be arranged when acquisitions for the projects leave TfNSW land landlocked?"
+        }
+      ],
+      "heldout_queries": [
+        {
+          "id": "B05-H1",
+          "text": "Project acquisitions have cut off access to TfNSW-owned land. What must SM do?"
+        },
+        {
+          "id": "B05-H2",
+          "text": "What duty does SM have to negotiate access rights when TfNSW land becomes landlocked?"
+        },
+        {
+          "id": "B05-H3",
+          "text": "How does the deed address access to land owned by TfNSW that is landlocked by the acquisitions?"
+        }
+      ],
+      "expected_evidence": {
+        "start": 154411,
+        "end": 154717,
+        "text": "SM will negotiate in good faith to grant access licences or similar rights where\n             required and on terms to be agreed by SM, to permit access to land owned by TfNSW\n             which has become landlocked by the acquisitions necessary to complete the SMWSA\n             Works and the M12 Works.",
+        "pdf_page": 50,
+        "fully_containing_chunks": [
+          271
+        ],
+        "overlapping_chunks": [
+          271,
+          272
+        ]
+      }
+    },
+    {
+      "id": "B06",
+      "name": "sm_land_access",
+      "clause": "19.2(c)",
+      "reference_queries": [
+        {
+          "id": "B06-R1",
+          "text": "What must TfNSW do to allow access to SM land made landlocked by the project acquisitions?"
+        },
+        {
+          "id": "B06-R2",
+          "text": "Who negotiates access rights for SM-owned land that becomes landlocked by the works acquisitions?"
+        },
+        {
+          "id": "B06-R3",
+          "text": "What is TfNSW obligation concerning access licences for landlocked land owned by SM?"
+        },
+        {
+          "id": "B06-R4",
+          "text": "How is access to be arranged when acquisitions for the projects leave SM land landlocked?"
+        }
+      ],
+      "heldout_queries": [
+        {
+          "id": "B06-H1",
+          "text": "Project acquisitions have cut off access to SM-owned land. What must TfNSW do?"
+        },
+        {
+          "id": "B06-H2",
+          "text": "What duty does TfNSW have to negotiate access rights when SM land becomes landlocked?"
+        },
+        {
+          "id": "B06-H3",
+          "text": "How does the deed address access to land owned by SM that is landlocked by the acquisitions?"
+        }
+      ],
+      "expected_evidence": {
+        "start": 154732,
+        "end": 155041,
+        "text": "TfNSW will negotiate in good faith to grant access licences or similar rights where\n             required and on terms to be agreed by TfNSW, to permit access to land owned by\n             SM which has become landlocked by the acquisitions necessary to complete the\n             SMWSA Works and the M12 Works.",
+        "pdf_page": 50,
+        "fully_containing_chunks": [
+          272
+        ],
+        "overlapping_chunks": [
+          272
+        ]
+      }
+    },
+    {
+      "id": "B07",
+      "name": "baseline_report_cost",
+      "clause": "16.3(c)(ii)",
+      "reference_queries": [
+        {
+          "id": "B07-R1",
+          "text": "Who reimburses whom for the costs of procuring the Baseline Contamination Report, and what share is payable?"
+        },
+        {
+          "id": "B07-R2",
+          "text": "What contribution must SM make towards TfNSW costs of obtaining the Baseline Contamination Report?"
+        },
+        {
+          "id": "B07-R3",
+          "text": "How are the reasonable costs of procuring the Baseline Contamination Report shared?"
+        },
+        {
+          "id": "B07-R4",
+          "text": "What reimbursement does the deed require for obtaining the baseline contamination report?"
+        }
+      ],
+      "heldout_queries": [
+        {
+          "id": "B07-H1",
+          "text": "TfNSW has paid to procure the Baseline Contamination Report. What must SM reimburse?"
+        },
+        {
+          "id": "B07-H2",
+          "text": "What proportion of the reasonable Baseline Contamination Report procurement costs is SM responsible for paying to TfNSW?"
+        },
+        {
+          "id": "B07-H3",
+          "text": "Under the report-cost provision, which party reimburses the other and how much of the reasonable cost is covered?"
+        }
+      ],
+      "expected_evidence": {
+        "start": 145316,
+        "end": 145458,
+        "text": "SM must reimburse TfNSW for 50% of the reasonable costs incurred by TfNSW\n                     in procuring the Baseline Contamination Report.",
+        "pdf_page": 47,
+        "fully_containing_chunks": [
+          259
+        ],
+        "overlapping_chunks": [
+          259
+        ]
+      }
+    },
+    {
+      "id": "B08",
+      "name": "metro_maintenance_plan",
+      "clause": "20(d)",
+      "reference_queries": [
+        {
+          "id": "B08-R1",
+          "text": "Who prepares the maintenance plan for metro parts requiring access through TfNSW land after completion of the SSTOM works?"
+        },
+        {
+          "id": "B08-R2",
+          "text": "What plan must SM develop for metro operation and maintenance involving TfNSW-owned land after SSTOM completion?"
+        },
+        {
+          "id": "B08-R3",
+          "text": "Who is responsible for drafting an operations and maintenance plan where the metro needs access through TfNSW property after the SSTOM works are complete?"
+        },
+        {
+          "id": "B08-R4",
+          "text": "What planning obligation arises for SM where metro assets need access across TfNSW land following SSTOM completion?"
+        }
+      ],
+      "heldout_queries": [
+        {
+          "id": "B08-H1",
+          "text": "After SSTOM completion, access to part of the metro is through TfNSW land. Who must prepare the operations and maintenance plan?"
+        },
+        {
+          "id": "B08-H2",
+          "text": "What must SM draft for Sydney Metro Western Sydney Airport facilities reached through TfNSW-owned land after the SSTOM works are complete?"
+        },
+        {
+          "id": "B08-H3",
+          "text": "Who develops the draft maintenance and operating plan for metro assets requiring access through TfNSW property following SSTOM completion?"
+        }
+      ],
+      "expected_evidence": {
+        "start": 155737,
+        "end": 155962,
+        "text": "SM will develop a draft operations and maintenance plan for any part of the Sydney\n             Metro Western Sydney Airport that, after Completion of the SSTOM Works, requires\n             access through land owned by TfNSW.",
+        "pdf_page": 50,
+        "fully_containing_chunks": [
+          273
+        ],
+        "overlapping_chunks": [
+          273
+        ]
+      }
+    },
+    {
+      "id": "B09",
+      "name": "extra_asset_information",
+      "clause": "26.1(b)",
+      "reference_queries": [
+        {
+          "id": "B09-R1",
+          "text": "May either party provide additional asset information beyond what was requested?"
+        },
+        {
+          "id": "B09-R2",
+          "text": "Can a party voluntarily share further asset information relevant to the works or activities?"
+        },
+        {
+          "id": "B09-R3",
+          "text": "What permission does the deed give for disclosing asset information that the other party did not request?"
+        },
+        {
+          "id": "B09-R4",
+          "text": "Is a party allowed to supply more asset information than the information specifically requested?"
+        }
+      ],
+      "heldout_queries": [
+        {
+          "id": "B09-H1",
+          "text": "Can SM or TfNSW give the other party extra asset information it considers should be available, even if not requested?"
+        },
+        {
+          "id": "B09-H2",
+          "text": "What does the deed allow about voluntarily disclosing further asset information for the project works and activities?"
+        },
+        {
+          "id": "B09-H3",
+          "text": "Does the information-sharing provision permit a party to supply additional asset information beyond a request?"
+        }
+      ],
+      "expected_evidence": {
+        "start": 191631,
+        "end": 191940,
+        "text": "Subject to clause 26.1(c), either party may disclose to the other party such further\n             Asset Information (in addition to that requested) it considers should be made\n             available for the purposes of the SMWSA Works, SMWSA Activities, M12 Works or\n             M12 Activities (as relevant).",
+        "pdf_page": 61,
+        "fully_containing_chunks": [
+          322
+        ],
+        "overlapping_chunks": [
+          322,
+          323
+        ]
+      }
+    },
+    {
+      "id": "B10",
+      "name": "written_waiver",
+      "clause": "31.7(b)",
+      "reference_queries": [
+        {
+          "id": "B10-R1",
+          "text": "What form must a waiver or consent take to bind the party giving it?"
+        },
+        {
+          "id": "B10-R2",
+          "text": "When is a party waiver or consent effective and binding under the deed?"
+        },
+        {
+          "id": "B10-R3",
+          "text": "Does a waiver or consent need to be recorded or confirmed in writing to be binding?"
+        },
+        {
+          "id": "B10-R4",
+          "text": "What formal requirement applies to a waiver or consent given under the deed?"
+        }
+      ],
+      "heldout_queries": [
+        {
+          "id": "B10-H1",
+          "text": "How must a party give or confirm a waiver or consent for it to take effect, unless the deed expressly says otherwise?"
+        },
+        {
+          "id": "B10-H2",
+          "text": "What makes a waiver or consent binding on the party that gives it?"
+        },
+        {
+          "id": "B10-H3",
+          "text": "Is verbal consent or a verbal waiver alone sufficient under the general waiver provision?"
+        }
+      ],
+      "expected_evidence": {
+        "start": 212057,
+        "end": 212285,
+        "text": "Except as expressly provided in this Deed, any waiver or consent given by any party\n             under this Deed will only be effective and binding on that party if it is given or\n             confirmed in writing by that party.",
+        "pdf_page": 68,
+        "fully_containing_chunks": [
+          349
+        ],
+        "overlapping_chunks": [
+          349,
+          350
+        ]
+      }
+    },
+    {
+      "id": "B11",
+      "name": "assignment_consent",
+      "clause": "31.10(a)",
+      "reference_queries": [
+        {
+          "id": "B11-R1",
+          "text": "What permission must a party obtain before assigning its interest in the deed?"
+        },
+        {
+          "id": "B11-R2",
+          "text": "Can a party assign its interest without first obtaining consent from the others?"
+        },
+        {
+          "id": "B11-R3",
+          "text": "What is required before a party transfers its interest by assignment?"
+        },
+        {
+          "id": "B11-R4",
+          "text": "Whose consent is needed before assigning an interest under the deed?"
+        }
+      ],
+      "heldout_queries": [
+        {
+          "id": "B11-H1",
+          "text": "A party wants to assign its interest in the deed. What approval must it obtain first?"
+        },
+        {
+          "id": "B11-H2",
+          "text": "Is assignment of a party interest allowed without the other parties prior consent?"
+        },
+        {
+          "id": "B11-H3",
+          "text": "What restriction does the deed place on assigning an interest to someone else?"
+        }
+      ],
+      "expected_evidence": {
+        "start": 214178,
+        "end": 214293,
+        "text": "A party must not Assign its interest under this Deed without the prior consent of the\n               other parties.",
+        "pdf_page": 69,
+        "fully_containing_chunks": [
+          352,
+          353
+        ],
+        "overlapping_chunks": [
+          352,
+          353
+        ]
+      }
+    },
+    {
+      "id": "B12",
+      "name": "indemnity_payment",
+      "clause": "31.12(c)",
+      "reference_queries": [
+        {
+          "id": "B12-R1",
+          "text": "When must an amount owing under an indemnity be paid?"
+        },
+        {
+          "id": "B12-R2",
+          "text": "What is the payment timing for sums payable under a deed indemnity?"
+        },
+        {
+          "id": "B12-R3",
+          "text": "When is a party required to pay an indemnity amount?"
+        },
+        {
+          "id": "B12-R4",
+          "text": "What triggers the obligation to pay money due under an indemnity?"
+        }
+      ],
+      "heldout_queries": [
+        {
+          "id": "B12-H1",
+          "text": "An amount is payable under an indemnity in the deed. When must the party pay it?"
+        },
+        {
+          "id": "B12-H2",
+          "text": "How promptly must a party pay once an indemnity amount is demanded?"
+        },
+        {
+          "id": "B12-H3",
+          "text": "What payment deadline does the general indemnity clause impose?"
+        }
+      ],
+      "expected_evidence": {
+        "start": 216151,
+        "end": 216249,
+        "text": "A party must pay on demand any amount it must pay under any indemnity in this\n               Deed.",
+        "pdf_page": 69,
+        "fully_containing_chunks": [
+          355
+        ],
+        "overlapping_chunks": [
+          355
+        ]
+      }
+    }
+  ],
+  "protocol": {
+    "mask": "Exactly four reference query fields per family, all same nonzero sign at identical native coordinates. Freeze one mask and three branch-count-matched random masks per family before scoring any of its three evaluation queries.",
+    "split": "Three evaluation phrasings per family never participate in mask construction. Reference and evaluation texts are fully listed and frozen before routing.",
+    "score": "sum(mask * Q * C) / (full_field_norm(Q) * frozen_full_field_norm(C))",
+    "tie_break": "stable descending score, original passage index for exact ties",
+    "controls": "All cells and three fixed matched random masks; identical original full-field norms for all methods. Seeds 1701,1702,1703 with family index. No tuning after results.",
+    "success": "Top1 and Top3 complete expected-evidence containment, all36 individual ranks and per-family results. Exact original passage IDs; all eligible chunks accepted when evidence occurs in more than one.",
+    "regression": "Earlier ten queries retain their existing results and are excluded from the new36 denominator.",
+    "gate": "32/36 was mentioned by the owner conditionally but was not located in repository specifications or fixtures. It is an unverified reference target, not an established acceptance gate. Report whether reached without claiming app completion.",
+    "no_changes": [
+      "tree",
+      "passages",
+      "chunking",
+      "mask rule",
+      "scaling rule",
+      "thresholds",
+      "reranking"
+    ],
+    "coverage": "All12 expected spans are fully contained in at least one indexed passage before scoring. No case replacement after scores.",
+    "storage": "Complete new response fields above100MB on Passport. Compact fixtures, diagnostics and PNG images in ToM_assist designated validation folders.",
+    "limitation": "12 question families from the same contract, 3 correlated held-out phrasings each; four supplied paraphrases are required. This does not test automatic paraphrase generation or arbitrary new single-query deployment."
+  },
+  "coverage_probe": {
+    "status": "not_scored_separate_index_coverage_diagnostic",
+    "clause": "16.3(a)(iii)",
+    "question": "After receiving a detailed site investigation from their contractor, what must each party provide to the other and by when?",
+    "problem": "Passage257 contains the deadline and SM-to-TfNSW obligation; passage258 contains both directions but omits the deadline. No single indexed passage contains the full joint answer.",
+    "passages": [
+      257,
+      258
+    ],
+    "discovered_before_scoring": true,
+    "disposition": "Kept as a separate coverage finding. It was replaced during unscored battery design by the independently answerable baseline-report cost-sharing question. Chunking was not altered."
+  },
+  "frozen_sha256": "4eb6f603219d0bba5e53e69e1ffadbf9d2eb3f27fc13e2de683e8fbddbfe8e18"
+}

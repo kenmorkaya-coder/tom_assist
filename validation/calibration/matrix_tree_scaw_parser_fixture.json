@@ -1,0 +1,98 @@
+{
+  "version": "tom-assist-matrix-tree-scaw-parser-fixture/1.0",
+  "purpose": "Frozen real-prose diagnostic of the existing local Gemma structural parser feeding the 32x32 matrix Tree. Contract text remains outside Git.",
+  "external_corpus": {
+    "path": "/private/tmp/tom-assist-wp42-scaw-corpus-prep-a9dda3b6/SCAW_SHORTLIST_TEXT_CORRECTED.json",
+    "sha256": "5c019f0be5401b6edea28f1d4a1f467f646bc0e077be8e206a6b50230962889e",
+    "source_pdf_sha256": "sha256:a9dda3b6376d27bd76a01adc4a7692838b4271a9967c53f69fa6883dafc14f99",
+    "passage_count": 41,
+    "expected_parser_chunk_attempts": 66
+  },
+  "models": {
+    "minilm_revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "gemma_revision": "0d77464eeb233a2da68ebf9d7dc4edaac7db956d"
+  },
+  "generation_limit": 76,
+  "fixed_k": [1, 3, 5],
+  "tree": {
+    "leaf_capacity": 2,
+    "beam_width": 2
+  },
+  "matrix": {
+    "size": 32,
+    "source_target_weight": 1.0,
+    "relation_weight": 0.5,
+    "context_weight": 0.25,
+    "projection": "splitmix64-rademacher-jl-384-to-32/1.0",
+    "projection_seed": 539362568
+  },
+  "queries": [
+    {
+      "id": "SCAW-Q-LONG-SERVICE-DIRECT",
+      "family": "long_service_prestart",
+      "text": "What must the SCAW Contractor do about the long service levy before commencing construction work?",
+      "relevant_passage_ids": ["SCAW-013"]
+    },
+    {
+      "id": "SCAW-Q-LONG-SERVICE-PARAPHRASE",
+      "family": "long_service_prestart",
+      "text": "Which levy payment and proof are required before building activities begin?",
+      "relevant_passage_ids": ["SCAW-013"]
+    },
+    {
+      "id": "SCAW-Q-REMEDIATION-DIRECT",
+      "family": "remediation_precondition",
+      "text": "What conditions must be satisfied before the SCAW Contractor may commence offsite disposal remediation activities?",
+      "relevant_passage_ids": ["SCAW-022"]
+    },
+    {
+      "id": "SCAW-Q-REMEDIATION-PARAPHRASE",
+      "family": "remediation_precondition",
+      "text": "When is the contractor allowed to start remediation involving offsite disposal?",
+      "relevant_passage_ids": ["SCAW-022"]
+    },
+    {
+      "id": "SCAW-Q-ARTEFACT-DIRECT",
+      "family": "artefact_response",
+      "text": "What must the SCAW Contractor do if an Artefact is found?",
+      "relevant_passage_ids": ["SCAW-019"]
+    },
+    {
+      "id": "SCAW-Q-ARTEFACT-PARAPHRASE",
+      "family": "artefact_response",
+      "text": "Who must be notified and how must an archaeological find be protected?",
+      "relevant_passage_ids": ["SCAW-019"]
+    },
+    {
+      "id": "SCAW-Q-AMENDMENT-DIRECT",
+      "family": "deed_amendment",
+      "text": "How may the deed be amended, varied or replaced?",
+      "relevant_passage_ids": ["SCAW-039"]
+    },
+    {
+      "id": "SCAW-Q-AMENDMENT-PARAPHRASE",
+      "family": "deed_amendment",
+      "text": "What formal agreement is required to change this contract?",
+      "relevant_passage_ids": ["SCAW-039"]
+    },
+    {
+      "id": "SCAW-Q-TRAFFIC-DIRECT",
+      "family": "traffic_control",
+      "text": "What is the SCAW Contractor responsible for when its activities affect road or pedestrian traffic?",
+      "relevant_passage_ids": ["SCAW-008"]
+    },
+    {
+      "id": "SCAW-Q-TRAFFIC-PARAPHRASE",
+      "family": "traffic_control",
+      "text": "Which duties apply to managing and protecting vehicles and pedestrians affected by the work?",
+      "relevant_passage_ids": ["SCAW-008"]
+    }
+  ],
+  "diagnostic_expectations": {
+    "all_parser_chunks_must_be_attempted": true,
+    "unclassified_failures_must_be_zero": true,
+    "report_recall_without_pass_threshold": true,
+    "tree_must_examine_fewer_than_all_passages": true,
+    "restart_must_be_byte_exact": true
+  }
+}

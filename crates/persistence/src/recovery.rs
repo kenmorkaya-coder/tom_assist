@@ -29,6 +29,7 @@ const TABLES: &[&str] = &[
     "chat_conversations",
     "provider_exchanges",
     "provider_self_reports",
+    "experience_acceptances",
 ];
 const FORMAT: &str = "tom-assist-recovery/2";
 
@@ -54,6 +55,7 @@ mod compatibility_tests {
         ledger.tables.remove("chat_conversations");
         ledger.tables.remove("provider_exchanges");
         ledger.tables.remove("provider_self_reports");
+        ledger.tables.remove("experience_acceptances");
         let restored = Store::open_memory().unwrap();
         restored.insert_recovery_ledger(&ledger, false).unwrap();
         assert_eq!(
@@ -226,16 +228,24 @@ impl Store {
             .filter(|t| {
                 !matches!(
                     *t,
-                    "chat_conversations" | "provider_exchanges" | "provider_self_reports"
+                    "chat_conversations"
+                        | "provider_exchanges"
+                        | "provider_self_reports"
+                        | "experience_acceptances"
                 )
             })
             .collect();
         let wp21: std::collections::BTreeSet<_> = TABLES
             .iter()
             .copied()
-            .filter(|t| *t != "provider_self_reports")
+            .filter(|t| !matches!(*t, "provider_self_reports" | "experience_acceptances"))
             .collect();
-        if actual != expected && actual != legacy && actual != wp21 {
+        let pre_acceptance: std::collections::BTreeSet<_> = TABLES
+            .iter()
+            .copied()
+            .filter(|t| *t != "experience_acceptances")
+            .collect();
+        if actual != expected && actual != legacy && actual != wp21 && actual != pre_acceptance {
             return Err(integrity("archive table inventory mismatch"));
         }
         for table in TABLES {
