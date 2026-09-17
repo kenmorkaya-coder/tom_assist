@@ -1,0 +1,441 @@
+{
+  "schema_version": 1,
+  "baseline_id": "compiler-evaluation-20260909",
+  "kind": "post-training-and-partial-heldout-exposure-source-lock",
+  "created_utc": "2026-09-09T09:13:49.049075+00:00",
+  "parent_commit": "edde67f36c8b3d97d2cb40bd2cec210a29743562",
+  "branch": "codex/gemma-lora-typed-event-graph",
+  "remote": "git@github.com:kenmorkaya-coder/tom_assist.git",
+  "self_commit_sha": "recorded in subsequent receipt, not self-referential",
+  "files": {
+    ".gitignore": {
+      "sha256": "7f077089af56810ec3cf1cd9e072e30d042545375346326421d2dc95eebf1ece",
+      "bytes": 404
+    },
+    "docs/COMPILER_BASELINE_CHECKLIST.md": {
+      "sha256": "c2794a5f9c6359648350d400a56fab3bc60203e57a7df9f2707689dc38616769",
+      "bytes": 4348
+    },
+    "docs/COMPILER_PROVENANCE_RECORD.md": {
+      "sha256": "e1393ce70e76b356bf2c6fe2a7a0af56cbff656cdcd6586a650193071de071ec",
+      "bytes": 2326
+    },
+    "docs/COMPILER_TYPED_REPAIR_REVIEW_2026-09-09.md": {
+      "sha256": "fcab6bd1eab4b79aa2889b32c4e4aee68edfdca03a37e6f3cc7930c4f5bc2bb0",
+      "bytes": 10400
+    },
+    "docs/EVENT_GRAPH_LORA_EXPERIMENT.md": {
+      "sha256": "538ac9076a3255d8fbad9587b2ddcb1d0fbd2b645a392c74993703031868b7f8",
+      "bytes": 4842
+    },
+    "docs/PROJECT_IDENTITY_COMPILER_REVIEW_2026-09-09.md": {
+      "sha256": "f96ca2cbe9370ff738fc35654588bbdd3135e8bbdf8f1a5d5a7e78ae94e11421",
+      "bytes": 6676
+    },
+    "gateway/__init__.py": {
+      "sha256": "ad45fc5315b9f0fba495038ff12275d78575f5b011a10ea46df72b62befb1e9e",
+      "bytes": 42
+    },
+    "gateway/declared_structure.py": {
+      "sha256": "d73454a4654d7c0ce8a6265081a4a200c96e2ddcda656a43b8aa635090744f85",
+      "bytes": 40790
+    },
+    "gateway/dense_load17.py": {
+      "sha256": "f1edcdf7a929ef839505e64647b1197a42ae94a96f0bc0ea74ca0eea54dc59e1",
+      "bytes": 28794
+    },
+    "gateway/document_embedding_worker.py": {
+      "sha256": "63ed13f2b791d272d3346b24e0cbf78940b2be31333f77d9cd9b0936e5837a27",
+      "bytes": 4621
+    },
+    "gateway/document_ingestion.py": {
+      "sha256": "b8a24c4ceef9a38a79fb829af2343327b50b7019a490103f1e542c69c66301d9",
+      "bytes": 60889
+    },
+    "gateway/document_research.py": {
+      "sha256": "2d6d512772578a8cc0da26dde5608a65f4eaedaec2b05c5cb81a15ffaf6cfa10",
+      "bytes": 11777
+    },
+    "gateway/document_tree.py": {
+      "sha256": "9c37655f96746e9fdd55f4f1e1ce986a348650002fb3709cf483615b323f0528",
+      "bytes": 26663
+    },
+    "gateway/event_graph_compiler.py": {
+      "sha256": "c613c68c3f73669683eb47738d49c74ea88810991487e2c0e74ca04c1dd5ee33",
+      "bytes": 3153
+    },
+    "gateway/event_graph_extractor.py": {
+      "sha256": "b9249169a7f6e3597a117f8b9e04b0ae37b6afa3ed419c112e03d19564a7c0da",
+      "bytes": 4630
+    },
+    "gateway/event_graph_extractor_v2.py": {
+      "sha256": "1855df2bbd0e7fde985e63a2a4d2ca30a340b3a2f602de5ade68ad534c695413",
+      "bytes": 734
+    },
+    "gateway/evidence_gateway.py": {
+      "sha256": "46886992f9732c71182d8ad8dab0744e75344412c5ec1531056df85a558f9f58",
+      "bytes": 30500
+    },
+    "gateway/front_row.py": {
+      "sha256": "b4e8b8b9f1ef6cf177e65a3bb78152b61589220824545926ac755e01de11fa0a",
+      "bytes": 4745
+    },
+    "gateway/gemma_matrix_event_worker.py": {
+      "sha256": "efae4ed26cefc1928c468da5d290bec96ce5160b2ce5399130af63eda2ea476a",
+      "bytes": 4760
+    },
+    "gateway/gemma_structure_worker.py": {
+      "sha256": "19112027910b8ebc23f72b33ed2b8bca342713b82b91c8bf0203bfa7f073ad10",
+      "bytes": 9536
+    },
+    "gateway/gpt_matrix_event_parser.py": {
+      "sha256": "75cdabfed1efc361d74c52072d6f5ea598f78848fe4e132115310ac3617e59be",
+      "bytes": 2925
+    },
+    "gateway/gpt_structure_parser.py": {
+      "sha256": "3cc0f6f3c1dae5b3fee2fd1084117e4656d042596841763dae22d975cd7ed560",
+      "bytes": 3576
+    },
+    "gateway/guardrail_resonance.py": {
+      "sha256": "31295bc9f81a9b2f6c02807516b695bdc4c96455ced5123b71999aba26cacd70",
+      "bytes": 3009
+    },
+    "gateway/matrix_event_provider.py": {
+      "sha256": "ffa296b0debab7c9f759f3ccff0071443bb3b9b0fb9dc3c25810319b54b80df0",
+      "bytes": 5722
+    },
+    "gateway/matrix_events.py": {
+      "sha256": "5c684c746d4b6ec8488946b8eaf6ff8bb88878f368db0fb06633e4a2acc68363",
+      "bytes": 15719
+    },
+    "gateway/oauth_provider.py": {
+      "sha256": "64c450124f52b3631c43ec503461f94022568237ca2111337876dfcdea9434b7",
+      "bytes": 8550
+    },
+    "gateway/permanent_library.py": {
+      "sha256": "3851076cad483795be135f37748ae7c6db90bf3a395fa273f876e59bcad70916",
+      "bytes": 21700
+    },
+    "gateway/project_glossary.py": {
+      "sha256": "d2003f7198965105f04ebb36136be48833793eb9fc5858449bbfc76d3dc1fbc0",
+      "bytes": 7912
+    },
+    "gateway/project_identity_matrix_compiler.py": {
+      "sha256": "b1196abeec0f8d492d62f7c1aaba024cc324e47c39553c15d3189717967ef221",
+      "bytes": 4453
+    },
+    "gateway/runtime_archive.py": {
+      "sha256": "e4c1409e55484a64917c89f7bc26bc0c4c2b19612d76a7730b85dde95fd0d53f",
+      "bytes": 23216
+    },
+    "gateway/semantic_chunks.py": {
+      "sha256": "43a93146e531d5f9ddb3ed4021f084b86bfad4974a746f6478164c42c7c41a3d",
+      "bytes": 13271
+    },
+    "gateway/shadow_retrieval.py": {
+      "sha256": "21c1ff5a77b2c64e2f82bcc0634768af291a07d7ae0ea47aa79ea7fbf3f3d5d4",
+      "bytes": 17699
+    },
+    "gateway/structural_analysis.py": {
+      "sha256": "edb0f9a211702df6ea62c9656a9318674f59cbb0c96ae6966d9fff5c4ce68a75",
+      "bytes": 93361
+    },
+    "gateway/structural_preview.py": {
+      "sha256": "754d84072167718989f3230d9b1b94c6bc3c4310460f2871dd2c45bbb8599d6f",
+      "bytes": 3930
+    },
+    "gateway/structure_failures.py": {
+      "sha256": "47deb2173417b8e770732b2185185d4a024e72909b9bb53b0e686242ac611b90",
+      "bytes": 36563
+    },
+    "gateway/structure_provider.py": {
+      "sha256": "91b0d3cc14dbbfafbb07b12296ddf720d07b509e432156fb6f704c3a4a4743a5",
+      "bytes": 11336
+    },
+    "gateway/structure_worker.py": {
+      "sha256": "eaf37941392f574e74b4345bced7feda4c34ed5767c39d439f4134bfa4f3ab0a",
+      "bytes": 15200
+    },
+    "gateway/tests/test_event_graph_gate_controls.py": {
+      "sha256": "4d8bcd0e594eefabae651da0c45c36adf1ecb5ec8f93891ab5057eea6ac7cba2",
+      "bytes": 3384
+    },
+    "gateway/tests/test_event_graph_output_parser_v2.py": {
+      "sha256": "93276e621a21a6fef06a07d62ffa58686bec1b8da7291fd991eeec025ab76c4d",
+      "bytes": 1304
+    },
+    "gateway/tests/test_event_graph_v1.py": {
+      "sha256": "b27a718a8f36f1413d9d090608312ba54032c55bc366eb7ead4e3a42e0ee6813",
+      "bytes": 5256
+    },
+    "gateway/tests/test_gpt_matrix_event_parser.py": {
+      "sha256": "034be96d1ca916716a11f8b07bf26dab3bf0b8656b2f835d1262fa35a4e07692",
+      "bytes": 1980
+    },
+    "gateway/tests/test_matrix_events.py": {
+      "sha256": "c88fe3549bcf8075cde7ac8b489c8b5a94c325ffd2d01329cc0e597c74e7f857",
+      "bytes": 5979
+    },
+    "gateway/tests/test_project_identity_matrix_compiler.py": {
+      "sha256": "2123d680e7eb0743fe152f07c6a0c1431d852113f4aac0a1a51ffd1a548692d6",
+      "bytes": 3230
+    },
+    "gateway/tests/test_typed_matrix_compiler.py": {
+      "sha256": "a1948a09a315bc0bb61b3bc7ff6412dde9bcf593c9b7d6135480dcc31a85ce12",
+      "bytes": 6150
+    },
+    "gateway/tom_gateway.py": {
+      "sha256": "171cc85ab16040791d2cf2c2c6db10df1aa2edda8437b7a7e6bff1b051b5e837",
+      "bytes": 71917
+    },
+    "gateway/typed_event_graph.py": {
+      "sha256": "114c5aa6e8fd3aec8cec8b9c01e95ad6cc9cb74e522a91a755ae74b699a16969",
+      "bytes": 9963
+    },
+    "gateway/typed_matrix_compiler.py": {
+      "sha256": "03bc7e98f45856a066455bfe2756d9ccaeaafd597b6527182b2125ce863c2dd7",
+      "bytes": 16118
+    },
+    "validation/analyze_event_graph_failures.py": {
+      "sha256": "38afbb72a275644aaac216c93fcd5e5c87aabcefd4a479ee889917f507cfee15",
+      "bytes": 2931
+    },
+    "validation/calibration/MATRIX_TREE_32SQ_PREREGISTRATION.md": {
+      "sha256": "7a24c224cb1c9e25d3a245eb3830f2624c164f6f5e1450811c951d6aa668891f",
+      "bytes": 1595
+    },
+    "validation/calibration/PROJECT_IDENTITY_COMPILER_V1_DESIGN.md": {
+      "sha256": "777af5192ac0aa8fee4234f4631137312cb081a876a5dd77e44242330d9c49d1",
+      "bytes": 4210
+    },
+    "validation/calibration/TYPED_COMPILER_REPAIR_V1_DESIGN.md": {
+      "sha256": "9133d3fcd768a6652d5069ae337a354412f80e1ff2f75907612e7b17adc8b6b9",
+      "bytes": 3807
+    },
+    "validation/calibration/matrix_event_scaw_runner.py": {
+      "sha256": "cc13d19636dc602f531f4576f7a82e58ab39112a86a331013e0b13dbc4dd85dd",
+      "bytes": 17418
+    },
+    "validation/calibration/matrix_tree_32sq_fixture.json": {
+      "sha256": "8ad95a36318e6e4e0e29fc43b950e097da70857ff6e1230dfe370a24b00d3a4f",
+      "bytes": 14080
+    },
+    "validation/calibration/matrix_tree_32sq_runner.py": {
+      "sha256": "9c8b835c2cd2841f3d27657df9fc2a52b177484bbbb52ca6d95a6db21ee48507",
+      "bytes": 18547
+    },
+    "validation/calibration/project_identity_compiler_runner.py": {
+      "sha256": "6b47b8dde81f7ec9cb623fdb19c4a9b9eb22837d51e5e1a44e9b33fea2de0e9f",
+      "bytes": 19884
+    },
+    "validation/calibration/typed_compiler_repair_holdout.py": {
+      "sha256": "5acf5b38a7ed87939f87d077632ae47ca130ce83371a13d1db4112a6de417cf9",
+      "bytes": 6414
+    },
+    "validation/calibration/typed_compiler_repair_runner.py": {
+      "sha256": "7820bac93f21adf3a614782e45cf1a418b408b8d622df353a55b1a7bec6a3526",
+      "bytes": 14717
+    },
+    "validation/event_graph_v1/PREREGISTRATION.md": {
+      "sha256": "666467f156a51ef16b0b652047927402e2832541b329c0e6598598b15e692a96",
+      "bytes": 6853
+    },
+    "validation/event_graph_v1/build_corpus.py": {
+      "sha256": "0ea0c97911c4d5e18ee7587f7623054256f4c43094814d3f1afefe61c0e876a2",
+      "bytes": 17120
+    },
+    "validation/event_graph_v1/build_schema.py": {
+      "sha256": "b5107f2086e51e27c000504c0ed892b23951b544d487249ea248438f38e21ef7",
+      "bytes": 2772
+    },
+    "validation/event_graph_v1/data/dev.jsonl": {
+      "sha256": "b3f91c5c3e5036bb2b2b7691bb7a2a2007a7d495b31fb6e1966cdb8367d94d1b",
+      "bytes": 189100
+    },
+    "validation/event_graph_v1/data/heldout.jsonl": {
+      "sha256": "e0758f9b17bb8bb8fb4506c2ceb2b4ee804991cbf52be9d9046f6b21009a67ea",
+      "bytes": 201210
+    },
+    "validation/event_graph_v1/data/train.jsonl": {
+      "sha256": "4b65b0fae3ad3e3382fd869166f60d9a3390d7787b04455152eead89877f0601",
+      "bytes": 741006
+    },
+    "validation/event_graph_v1/experiment.py": {
+      "sha256": "fc20ec521e39a014761429d44bc61aeb965fd92a30ece986998df52accc25b62",
+      "bytes": 13823
+    },
+    "validation/event_graph_v1/schema.json": {
+      "sha256": "3ab2fc6777e891ee4ee2544fe49939d62864a74ed5c77e40a345da4e74e8a192",
+      "bytes": 10730
+    },
+    "validation/event_graph_v1/training/train.jsonl": {
+      "sha256": "109f0582b1836bb4ff251ca712c6a75d87bfc25ab05c28ed54ed290900a66831",
+      "bytes": 2014202
+    },
+    "validation/event_graph_v1/training/valid.jsonl": {
+      "sha256": "a9cd5acac8772438409568e449c2e243d920e05fdf71a711529b207473806856",
+      "bytes": 507728
+    },
+    "validation/tests/test_compiler_baseline_verifier.py": {
+      "sha256": "5682b5adbffaad01b1a449eb3c6dd3348ee99468719a6a4019de4b37a0f4df27",
+      "bytes": 2028
+    },
+    "validation/tests/test_matrix_tree_32sq_fixture.py": {
+      "sha256": "30065ecbb336a8ba6e1b3423685f4db09488e68759c3cafeaa129ca20b8d0697",
+      "bytes": 1617
+    },
+    "validation/verify_compiler_baseline.py": {
+      "sha256": "0942be7eeafa23fc9f41bdd5ba169f81ab832a1aca3ab6bc2791b4d5aa2fea1c",
+      "bytes": 2030
+    }
+  },
+  "claim_boundaries": [
+    "Two different numerical compilers are preserved; graph compiler does not inherit MiniLM typed/identity results.",
+    "No inference, model-result inspection, Tree operation, product acceptance or gate change performed for this lock.",
+    "Clean-checkout build tests do not establish extraction or retrieval performance.",
+    "Historical replay needs designated external assets and historical source snapshots; no new end-to-end replay claimed."
+  ],
+  "lora_v1": {
+    "owner_task": "Compiler gemma lora train",
+    "run_location": "/Users/kenmorkaya/PycharmProjects/ToM_assist/.tmp/event-graph-lora-v1-run-001",
+    "original_freeze_sha256": "358e2a7271e2d6abce32dc54bc2ec28ea4315a9ec6355bfbd866e92cf3a968ac",
+    "original_freeze": {
+      "version": 1,
+      "created_unix": 1788942924.853875,
+      "training": {
+        "seed": 7,
+        "train": true,
+        "test": false,
+        "fine_tune_type": "lora",
+        "num_layers": 8,
+        "batch_size": 1,
+        "iters": 128,
+        "val_batches": 4,
+        "learning_rate": 0.0001,
+        "steps_per_report": 1,
+        "steps_per_eval": 32,
+        "save_every": 32,
+        "max_seq_length": 4096,
+        "grad_checkpoint": true,
+        "mask_prompt": true,
+        "lora_parameters": {
+          "rank": 8,
+          "dropout": 0,
+          "scale": 16,
+          "keys": [
+            "self_attn.q_proj",
+            "self_attn.v_proj"
+          ]
+        }
+      },
+      "files": {
+        "gateway/typed_event_graph.py": "114c5aa6e8fd3aec8cec8b9c01e95ad6cc9cb74e522a91a755ae74b699a16969",
+        "gateway/event_graph_compiler.py": "c613c68c3f73669683eb47738d49c74ea88810991487e2c0e74ca04c1dd5ee33",
+        "gateway/event_graph_extractor.py": "b9249169a7f6e3597a117f8b9e04b0ae37b6afa3ed419c112e03d19564a7c0da",
+        "gateway/tests/test_event_graph_v1.py": "b27a718a8f36f1413d9d090608312ba54032c55bc366eb7ead4e3a42e0ee6813",
+        "validation/event_graph_v1/PREREGISTRATION.md": "666467f156a51ef16b0b652047927402e2832541b329c0e6598598b15e692a96",
+        "validation/event_graph_v1/build_corpus.py": "0ea0c97911c4d5e18ee7587f7623054256f4c43094814d3f1afefe61c0e876a2",
+        "validation/event_graph_v1/build_schema.py": "b5107f2086e51e27c000504c0ed892b23951b544d487249ea248438f38e21ef7",
+        "validation/event_graph_v1/data/dev.jsonl": "b3f91c5c3e5036bb2b2b7691bb7a2a2007a7d495b31fb6e1966cdb8367d94d1b",
+        "validation/event_graph_v1/data/heldout.jsonl": "e0758f9b17bb8bb8fb4506c2ceb2b4ee804991cbf52be9d9046f6b21009a67ea",
+        "validation/event_graph_v1/data/train.jsonl": "4b65b0fae3ad3e3382fd869166f60d9a3390d7787b04455152eead89877f0601",
+        "validation/event_graph_v1/experiment.py": "fc20ec521e39a014761429d44bc61aeb965fd92a30ece986998df52accc25b62",
+        "validation/event_graph_v1/schema.json": "3ab2fc6777e891ee4ee2544fe49939d62864a74ed5c77e40a345da4e74e8a192",
+        "validation/event_graph_v1/training/train.jsonl": "109f0582b1836bb4ff251ca712c6a75d87bfc25ab05c28ed54ed290900a66831",
+        "validation/event_graph_v1/training/valid.jsonl": "a9cd5acac8772438409568e449c2e243d920e05fdf71a711529b207473806856"
+      },
+      "model": {
+        "chat_template.jinja": "36e3a42e5cf14cd0020e72d92e1fdd9970f59b82170e421f0cbe1bb42bead3f0",
+        "config.json": "419e13a27ec359654c1ce7dd06d1a87149fd07d0c8af9f770494185e62e1b2ba",
+        "generation_config.json": "d4226bbe3117d2d253ba4609720ba82c6c4ce4627a9a6ae05387c78983ac03de",
+        "model-00001-of-00003.safetensors": "683f420ee09550b8027bf0335c4202e196b37eb520b60a4bcbe8690b9e388c07",
+        "model-00002-of-00003.safetensors": "feab2873c2976fb7ed666f8462549564a29409364388e0c8f6b015729d165e15",
+        "model-00003-of-00003.safetensors": "bc607486deb1de5bc7e459932fda5c776a4f816b368feaa661bab8cfbb47e567",
+        "model.safetensors.index.json": "bf198c9f5ea6462addca1966e5dd669c407537a876e82cf06db9084c5c850b13",
+        "processor_config.json": "de3e580aebdc98272d4c4547daffe6525fcbae18a83a0e0bcf0d7444d4ee6f37",
+        "tokenizer.json": "cc8d3a0ce36466ccc1278bf987df5f71db1719b9ca6b4118264f45cb627bfe0f",
+        "tokenizer_config.json": "080d9e1aff284e2f6043889cd05367966f7c7b80e025fbc0b06745e218158656"
+      },
+      "counts": {
+        "train": 432,
+        "dev": 108,
+        "heldout": 108
+      },
+      "thresholds": {
+        "valid": 1,
+        "exact": 0.95,
+        "family_exact": 0.9,
+        "invented_authority": 0,
+        "contrast_distinct": 1,
+        "paraphrase_equal": 0.95,
+        "matrix_margin": 0.05,
+        "condition_number_max": 10
+      }
+    },
+    "freeze_utc": "2026-09-09T08:35:24.853875+00:00",
+    "training_start_utc": "2026-09-09T08:36:02.693374+00:00",
+    "training_end_utc": "2026-09-09T08:44:15.881954+00:00",
+    "adapter_sha256": "7f6243e30ce007911a7e9615b4897ef676ff453cd0c947c13bac38bcf0b181f7",
+    "iterations": 128,
+    "runtime": {
+      "python": "3.12.7",
+      "machine": "arm64",
+      "packages": {
+        "mlx": "0.31.1",
+        "mlx-lm": "0.31.2",
+        "transformers": "5.5.3",
+        "tokenizers": "0.22.2",
+        "numpy": "2.4.4"
+      }
+    },
+    "heldout_inference_already_completed": true,
+    "partial_output_already_inspected": true,
+    "first_inspection_utc": null,
+    "aggregate_report_read_by_training_owner": false,
+    "aggregate_status_source": "owner task coordination reply; not report contents",
+    "report_inspection_paused": true,
+    "v2_confirmation_requires_fresh_heldout": true,
+    "frozen_v1_sources_match_git_index": true
+  },
+  "external_historical_records": [
+    {
+      "location": "/Users/kenmorkaya/PycharmProjects/ToM_assist/validation/runs/typed-compiler-repair-20260909-v1/FREEZE.json",
+      "sha256": "1a67b612d2cc6959dac14fa6208444a8dbc8d49d7ec4b3d51454e012617021f8",
+      "bytes": 2074,
+      "historical_freeze_id": "c9ffa71a935565b178ffbdb19f36912feb4e4117baf34167c16630a33f60932f"
+    },
+    {
+      "location": "/Users/kenmorkaya/PycharmProjects/ToM_assist/validation/runs/project-identity-compiler-20260909-v1b/FREEZE.json",
+      "sha256": "29541dc71722f04aa8c76a1fd94c28a0c87c2edc3d05b27643cec1b5a60a22d9",
+      "bytes": 2264,
+      "historical_freeze_id": "bb6e1bc492f68f608c3cd374846675c0961a99b120e9ebd4afec304f8f240eeb"
+    },
+    {
+      "location": "/Volumes/My Passport for Mac/TomAssist/compiler-discrimination-20260909-run-001/MANIFEST.json",
+      "sha256": "68e90050238a96add1bcbdf8cb076a9514017ddae902c6b1d72c73a173fc3731",
+      "bytes": 1520,
+      "historical_freeze_id": "803560b22f846d6f313f5417c3c75798dcd6238f2b5aa2616e73e7ab7ced2704"
+    }
+  ],
+  "historical_dependency_differences": {
+    "gateway/document_ingestion.py": {
+      "historical_sha256": "992ccc41408004369a08d5ec79ee853ec4f668f59166567ee3544f17077b01b2",
+      "git_baseline_sha256": "b8a24c4ceef9a38a79fb829af2343327b50b7019a490103f1e542c69c66301d9",
+      "worktree_sha256": "992ccc41408004369a08d5ec79ee853ec4f668f59166567ee3544f17077b01b2"
+    }
+  },
+  "exclusions": [
+    "LoRA weights/checkpoints",
+    "model caches",
+    "Passport evidence bundles",
+    "large external datasets",
+    "temporary outputs",
+    "unrelated uncommitted production app edits"
+  ],
+  "reproduction": {
+    "local_model_assets_required": true,
+    "external_historical_assets_required": true,
+    "historical_runner_path_policy": "Preserve designated local paths and freeze checks; use original source snapshots for original run replay.",
+    "future_run_policy": "Use a clean checkout of the pushed SHA, verify this manifest, register fresh confirmation data for v2, and record model/adapter hashes before evaluation."
+  }
+}

@@ -255,6 +255,7 @@ impl Store {
         connection.execute_batch(include_str!("../migrations/004_recovery.sql"))?;
         connection.execute_batch(include_str!("../migrations/005_conversations.sql"))?;
         connection.execute_batch(include_str!("../migrations/006_self_reports.sql"))?;
+        connection.execute_batch(include_str!("../migrations/007_experience_acceptances.sql"))?;
         Ok(Self { connection, path })
     }
 
@@ -267,6 +268,7 @@ impl Store {
         connection.execute_batch(include_str!("../migrations/004_recovery.sql"))?;
         connection.execute_batch(include_str!("../migrations/005_conversations.sql"))?;
         connection.execute_batch(include_str!("../migrations/006_self_reports.sql"))?;
+        connection.execute_batch(include_str!("../migrations/007_experience_acceptances.sql"))?;
         Ok(Self {
             connection,
             path: PathBuf::from(":memory:"),

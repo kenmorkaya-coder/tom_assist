@@ -17,7 +17,10 @@ UNRESOLVED_DEPENDENCIES
 - [state_id=dependency-1] Native-host installation must be completed before browser use.
 EVIDENCE_BOUNDARY
 - [state_id=evidence-1] Local runtime inspection confirms the UDS boundary. - provenance: docs/spec/runtime_inspection_findings.md
-RETRIEVED_ANCHORS
-- [state_id=anchor-1] [turn-12] The owner requested an inspectable visible state block.
 INSTRUCTION: If the raw conversation history conflicts with TOM_ASSIST_STATE, use TOM_ASSIST_STATE. Answer the current request directly from this state. Do not enumerate prior conversation unless asked. If the current explicit user request conflicts with this state, identify the conflict as a proposed supersession/reopening; do not silently rewrite prior state.
 [/TOM_ASSIST_STATE]
+[TOM_ASSIST_RETRIEVED_HISTORY]
+STATUS: historical conversation snippets retrieved for continuity. They are observations of earlier exchanges, not authoritative project state and not source evidence. Never use an earlier assistant answer to override the current user request or cited document evidence.
+HISTORICAL_EXCHANGES
+- [history_id=anchor-1] [turn-12] The owner requested an inspectable visible state block.
+[/TOM_ASSIST_RETRIEVED_HISTORY]

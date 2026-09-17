@@ -1,0 +1,1646 @@
+{
+  "comparison": {
+    "status": "DEVELOPMENT_COMPARISON_ONLY",
+    "selected_epoch": 1,
+    "selected_cumulative_steps": 2640,
+    "exact_gain_records": 7,
+    "reference": "reused v9 epoch 1 on identical development data and protocol",
+    "checkpoints": [
+      {
+        "epoch": 0,
+        "cumulative_steps": 1440,
+        "total": 132,
+        "valid": 132,
+        "exact": 123,
+        "invented_authority": 0,
+        "paraphrase_equal": 43,
+        "contrast_distinct": 44,
+        "parser_errors": {}
+      },
+      {
+        "epoch": 1,
+        "cumulative_steps": 2640,
+        "total": 132,
+        "valid": 132,
+        "exact": 130,
+        "invented_authority": 0,
+        "paraphrase_equal": 42,
+        "contrast_distinct": 44,
+        "parser_errors": {}
+      }
+    ],
+    "fresh_heldout": "NOT_RUN",
+    "matrix_and_tree": "NOT_RUN",
+    "completed_unix": 1789037665.3999171
+  },
+  "reports": [
+    {
+      "total": 132,
+      "valid": 132,
+      "exact": 123,
+      "invented_authority": 0,
+      "paraphrase_equal": 43,
+      "contrast_distinct": 44,
+      "groups": 44,
+      "families": {
+        "quantity": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "comparator": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "polarity": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "recipient": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "authority": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "unless": {
+          "total": 6,
+          "valid": 6,
+          "exact": 5
+        },
+        "nested": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "direction": {
+          "total": 6,
+          "valid": 6,
+          "exact": 4
+        },
+        "temporal": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "revision": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "time": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "paragraph": {
+          "total": 6,
+          "valid": 6,
+          "exact": 3
+        },
+        "approval": {
+          "total": 6,
+          "valid": 6,
+          "exact": 4
+        },
+        "nested_boolean": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "negation_scope": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "conflict": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "multi_quantity": {
+          "total": 6,
+          "valid": 6,
+          "exact": 5
+        },
+        "unit_equivalence": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "comparison_bounds": {
+          "total": 18,
+          "valid": 18,
+          "exact": 18
+        },
+        "notification_roles": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        }
+      },
+      "field_exact": {
+        "action": 132,
+        "roles": 125,
+        "modality": 132,
+        "negated": 132,
+        "condition": 130,
+        "exception": 131,
+        "complement": 132,
+        "revision": 132,
+        "time": 132,
+        "links": 132
+      },
+      "details": [
+        {
+          "id": "v8-dev-0-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-0-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-0-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-1-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-1-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-1-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-2-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-2-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-2-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-3-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-3-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-3-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-4-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-4-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-4-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-5-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-5-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-5-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-6-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-6-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-6-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-7-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-7-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-7-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-8-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-8-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-8-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-9-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-9-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-9-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-10-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-10-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-10-2",
+          "exact": false,
+          "error": "semantic mismatch"
+        },
+        {
+          "id": "v8-dev-11-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-11-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-11-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-12-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-12-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-12-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-13-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-13-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-13-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-14-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-14-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-14-2",
+          "exact": false,
+          "error": "semantic mismatch"
+        },
+        {
+          "id": "v8-dev-15-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-15-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-15-2",
+          "exact": false,
+          "error": "semantic mismatch"
+        },
+        {
+          "id": "v8-dev-16-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-16-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-16-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-17-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-17-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-17-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-18-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-18-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-18-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-19-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-19-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-19-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-20-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-20-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-20-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-21-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-21-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-21-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-22-0",
+          "exact": false,
+          "error": "semantic mismatch"
+        },
+        {
+          "id": "v8-dev-22-1",
+          "exact": false,
+          "error": "semantic mismatch"
+        },
+        {
+          "id": "v8-dev-22-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-23-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-23-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-23-2",
+          "exact": false,
+          "error": "semantic mismatch"
+        },
+        {
+          "id": "v8-dev-24-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-24-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-24-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-25-0",
+          "exact": false,
+          "error": "semantic mismatch"
+        },
+        {
+          "id": "v8-dev-25-1",
+          "exact": false,
+          "error": "semantic mismatch"
+        },
+        {
+          "id": "v8-dev-25-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-26-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-26-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-26-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-27-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-27-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-27-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-28-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-28-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-28-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-29-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-29-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-29-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-30-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-30-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-30-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-31-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-31-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-31-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-32-0",
+          "exact": false,
+          "error": "semantic mismatch"
+        },
+        {
+          "id": "v8-dev-32-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-32-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-33-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-33-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-33-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-34-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-34-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-34-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-35-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-35-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-35-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-36-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-36-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-36-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-37-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-37-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-37-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-38-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-38-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-38-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-39-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-39-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-39-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-40-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-40-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-40-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-41-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-41-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-41-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-42-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-42-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-42-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-43-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-43-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-43-2",
+          "exact": true,
+          "error": null
+        }
+      ],
+      "development_thresholds_met": false,
+      "status": "DEVELOPMENT_ONLY_NOT_HELDOUT_GATE",
+      "parser_errors": {},
+      "epoch": 0,
+      "cumulative_steps": 1440,
+      "adapter_sha256": "c7623ad87676467d2b78ec91377e6b1ebfa3a1d900dd2404a4419328fdb1359c",
+      "prediction_sha256": "9054c2eb4e2a4eb81149e5d192c6c866f0e1db7e0d87726ed38317b391cd587e",
+      "local_generations": 132,
+      "cloud_generations": 0,
+      "baseline_reused": true,
+      "new_generations": 0,
+      "source_report": "/Users/kenmorkaya/PycharmProjects/ToM_assist/.tmp/event-graph-lora-v9-session-001/epoch-1/dev_report.json"
+    },
+    {
+      "total": 132,
+      "valid": 132,
+      "exact": 130,
+      "invented_authority": 0,
+      "paraphrase_equal": 42,
+      "contrast_distinct": 44,
+      "groups": 44,
+      "families": {
+        "quantity": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "comparator": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "polarity": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "recipient": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "authority": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "unless": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "nested": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "direction": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "temporal": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "revision": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "time": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "paragraph": {
+          "total": 6,
+          "valid": 6,
+          "exact": 5
+        },
+        "approval": {
+          "total": 6,
+          "valid": 6,
+          "exact": 5
+        },
+        "nested_boolean": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "negation_scope": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "conflict": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "multi_quantity": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "unit_equivalence": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "comparison_bounds": {
+          "total": 18,
+          "valid": 18,
+          "exact": 18
+        },
+        "notification_roles": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        }
+      },
+      "field_exact": {
+        "action": 132,
+        "roles": 130,
+        "modality": 132,
+        "negated": 132,
+        "condition": 132,
+        "exception": 132,
+        "complement": 132,
+        "revision": 132,
+        "time": 132,
+        "links": 132
+      },
+      "details": [
+        {
+          "id": "v8-dev-0-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-0-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-0-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-1-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-1-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-1-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-2-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-2-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-2-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-3-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-3-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-3-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-4-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-4-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-4-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-5-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-5-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-5-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-6-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-6-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-6-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-7-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-7-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-7-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-8-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-8-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-8-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-9-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-9-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-9-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-10-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-10-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-10-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-11-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-11-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-11-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-12-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-12-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-12-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-13-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-13-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-13-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-14-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-14-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-14-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-15-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-15-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-15-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-16-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-16-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-16-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-17-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-17-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-17-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-18-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-18-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-18-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-19-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-19-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-19-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-20-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-20-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-20-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-21-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-21-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-21-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-22-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-22-1",
+          "exact": false,
+          "error": "semantic mismatch"
+        },
+        {
+          "id": "v8-dev-22-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-23-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-23-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-23-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-24-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-24-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-24-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-25-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-25-1",
+          "exact": false,
+          "error": "semantic mismatch"
+        },
+        {
+          "id": "v8-dev-25-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-26-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-26-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-26-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-27-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-27-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-27-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-28-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-28-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-28-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-29-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-29-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-29-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-30-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-30-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-30-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-31-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-31-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-31-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-32-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-32-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-32-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-33-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-33-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-33-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-34-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-34-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-34-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-35-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-35-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-35-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-36-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-36-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-36-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-37-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-37-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-37-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-38-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-38-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-38-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-39-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-39-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-39-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-40-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-40-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-40-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-41-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-41-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-41-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-42-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-42-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-42-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-43-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-43-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-43-2",
+          "exact": true,
+          "error": null
+        }
+      ],
+      "development_thresholds_met": false,
+      "status": "DEVELOPMENT_ONLY_NOT_HELDOUT_GATE",
+      "parser_errors": {},
+      "epoch": 1,
+      "cumulative_steps": 2640,
+      "adapter_sha256": "1e499d9c11bf411938229404a4fbe4c682e0abc4572648af902152c6e7107201",
+      "prediction_sha256": "125a2d9704e5039f8b9ff31db492e6da046c8fa9ee66a628d1cc30c666e1006a",
+      "local_generations": 132,
+      "cloud_generations": 0
+    }
+  ],
+  "provenance": {
+    "run": "/Users/kenmorkaya/PycharmProjects/ToM_assist/.tmp/event-graph-lora-v10-session-001",
+    "verified_unix": 1789038631.3633301,
+    "sha256": {
+      "epoch-0/dev_report.json": "693f843e85b6d760466a5721e8c349ba925ca45a5670029f150cc5d7845f64b7",
+      "epoch-0/dev_predictions.jsonl": "9054c2eb4e2a4eb81149e5d192c6c866f0e1db7e0d87726ed38317b391cd587e",
+      "epoch-0/adapter": "c7623ad87676467d2b78ec91377e6b1ebfa3a1d900dd2404a4419328fdb1359c",
+      "epoch-1/dev_report.json": "dabfdde633c175d896438a2d0714a2afd5dd72b2b73529160772d22e0516a91b",
+      "epoch-1/dev_predictions.jsonl": "125a2d9704e5039f8b9ff31db492e6da046c8fa9ee66a628d1cc30c666e1006a",
+      "epoch-1/adapter": "1e499d9c11bf411938229404a4fbe4c682e0abc4572648af902152c6e7107201",
+      "freeze.json": "bd02d91001e4c0325937f6de288fd697592b576ed5e778712ce62f572985b87a",
+      "session_complete.json": "acc900e5ced59ada94595a1091d1df3d2145f7acc15ba38cf38dbde358e9fc01",
+      "epoch-1/training_complete.json": "d4868fc3c15106be02bdf67a107dea55b014dc64b0681a03f7e290fbbfd25a57"
+    },
+    "raw_predictions_reparsed": 264,
+    "token_ids_and_finish_reasons_verified": 264
+  }
+}

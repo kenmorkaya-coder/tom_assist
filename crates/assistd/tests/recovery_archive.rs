@@ -106,6 +106,7 @@ fn complete_archive_restores_wal_ledger_runtime_and_exactly_once_lineage() {
         complete: true,
         created_at: "2026-08-31T00:00:03Z".into(),
         latency_ms: 0,
+        accept_for_experience: true,
     };
     service.evaluate_turn(evaluate.clone()).unwrap();
     source.1.save_checkpoint("archive-project").unwrap();

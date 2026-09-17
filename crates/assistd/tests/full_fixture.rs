@@ -109,6 +109,7 @@ fn fixture_lineage_survives_response_intervention_user_gate_and_restart() {
             complete: true,
             created_at: "2026-08-10T00:00:03Z".into(),
             latency_ms: 1,
+            accept_for_experience: false,
         })
         .unwrap();
     assert_eq!(evaluation.result, EvaluationState::Conflict);

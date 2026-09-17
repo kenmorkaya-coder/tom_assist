@@ -20,6 +20,7 @@ export interface ExtensionService {
   prepare(projectId: string, draft: string): Promise<PacketPreview>;
   markSent(projectId: string, draft: string, packetDigest: string): Promise<void>;
   evaluate(projectId: string, turn: ProviderTurn, packetDigest: string): Promise<EvaluationBadge>;
+  accept(projectId: string, turn: ProviderTurn, packetDigest: string): Promise<EvaluationBadge>;
   capture(projectId: string, kind: string, text: string): Promise<void>;
 }
 
@@ -33,6 +34,7 @@ export interface GateSnapshot {
   warning?: string;
   badge?: EvaluationBadge;
   capturedTurns: number;
+  experienceAccepted?: boolean;
 }
 
 type Listener = (snapshot: GateSnapshot) => void;
@@ -44,6 +46,7 @@ export class PromptGateController {
   private resolveSubmission?: (decision: SubmitDecision) => void;
   private stopSubmit?: Unsubscribe;
   private stopTurns?: Unsubscribe;
+  private lastEvaluation?: { turn: ProviderTurn; packetDigest: string };
 
   constructor(private readonly adapter: ProviderAdapter, private readonly service: ExtensionService) {}
 
@@ -108,7 +111,23 @@ export class PromptGateController {
     const { projectId, preview } = this.snapshotValue;
     if (!projectId || !preview) return;
     const badge = await this.service.evaluate(projectId, turn, preview.packetDigest);
-    this.update({ badge, capturedTurns: this.snapshotValue.capturedTurns + 1 });
+    this.lastEvaluation = { turn, packetDigest: preview.packetDigest };
+    this.update({ badge, experienceAccepted: false, capturedTurns: this.snapshotValue.capturedTurns + 1 });
+  }
+
+  async acceptResponse(): Promise<void> {
+    const projectId = this.snapshotValue.projectId;
+    if (!projectId || !this.lastEvaluation || this.snapshotValue.experienceAccepted) return;
+    try {
+      const badge = await this.service.accept(
+        projectId,
+        this.lastEvaluation.turn,
+        this.lastEvaluation.packetDigest,
+      );
+      this.update({ badge, experienceAccepted: true, warning: undefined });
+    } catch (error) {
+      this.update({ warning: `Experience not committed: ${String(error)}` });
+    }
   }
 
   destroy(): void { this.stopSubmit?.(); this.stopTurns?.(); this.listeners.clear(); }

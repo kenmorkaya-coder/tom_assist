@@ -1,0 +1,31 @@
+{
+  "created_unix": 1788986747.4160252,
+  "selected_cumulative_steps": 992,
+  "files": {
+    "validation/event_graph_v6/PREREGISTRATION.md": "fc459d3e7dfb560193efe59ba3483f2e7841adce673d1e6b6ef7022e5e3c6f03",
+    "validation/event_graph_v6/build_corpus.py": "68a4ffc178b70cd6d6ffd6ef5797fe738c7d709de72ec73c3527d39384979f5b",
+    "validation/event_graph_v6/heldout.jsonl": "a9bbfe37c2bfef49223770877762c94915765f1cdb950c930979c9208a65164b",
+    "validation/event_graph_v6/experiment.py": "46e1088c9eb7a6a359e81c9d6bb077840ba918035549c0e9747da04cc3a73c8e",
+    "gateway/tests/test_event_graph_fresh_holdout.py": "c90f0c27907e5bf02a27be476e36f8d44e09bbb1b393cece9ad23c3f59020b7c",
+    "validation/runs/event-graph-lora-v5-session-001/RESULT.json": "def1312851aff3faf47e61497cb3573b9079c639b5b5d5719ef8cf8006a235c1"
+  },
+  "session_freeze_sha256": "e780fda0524ecf6ae08d3bfe8ed13bbfd9a83c1d713b40c37e73421deec2b7b5",
+  "adapter_sha256": "f6246e49effd62e1913786eab24bcfeb7db1283f227cb7f16f9a4ca9ec6929c7",
+  "thresholds": {
+    "valid": 1.0,
+    "exact": 0.95,
+    "family_exact": 0.9,
+    "invented_authority": 0,
+    "contrast_distinct": 1.0,
+    "paraphrase_equal": 0.95,
+    "matrix_margin": 0.05,
+    "condition_number_max": 10.0
+  },
+  "counts": {
+    "records": 132,
+    "unique_sources": 132,
+    "groups": 44
+  },
+  "prior_source_overlap": 0,
+  "training": "NOT_RUN"
+}

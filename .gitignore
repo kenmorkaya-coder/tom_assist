@@ -12,3 +12,12 @@ __pycache__/
 *.sock
 apps/extension/.keys/
 apps/desktop/src-tauri/gen/
+
+# Compiler experiments: code/contracts belong in Git, run artifacts do not.
+validation/runs/typed-compiler-repair-*/
+validation/runs/project-identity-compiler-*/
+validation/event_graph_v1/runs/
+*.safetensors
+*.ckpt
+*.pt
+*.pth

@@ -1,0 +1,337 @@
+{
+  "status": "POST_HOC_DIAGNOSTIC_ONLY",
+  "frozen_result_unchanged": true,
+  "parser_errors": {
+    "quote occurrence absent": 5,
+    "unreferenced graph content": 2,
+    "Expecting property name enclosed in double quotes: line 1 column 1327 (char 1326)": 1
+  },
+  "valid_semantic_mismatches": 8,
+  "details": [
+    {
+      "id": "v6-authority-0-2",
+      "source": "Mica 05-1 superintendent deputy issues the following requirement: a stop for Mica 05-1 excavation is mandatory when Mica 05-1 vibration is above 3.83 mm/s.",
+      "semantic_differences": [
+        {
+          "event_index": 0,
+          "differences": {
+            "roles": {
+              "expected": {
+                "actor": null,
+                "object": "Mica 05-1 excavation",
+                "source": null,
+                "target": null,
+                "recipient": null,
+                "authority": "Mica 05-1 superintendent deputy"
+              },
+              "actual": {
+                "actor": null,
+                "object": "Mica 05-1 excavation",
+                "source": null,
+                "target": null,
+                "recipient": null,
+                "authority": "superintendent deputy"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "v6-authority-1-2",
+      "source": "Juniper 05-2 superintendent deputy issues the following requirement: a stop for Juniper 05-2 excavation is mandatory when Juniper 05-2 vibration is above 8.47 mm/s.",
+      "semantic_differences": [
+        {
+          "event_index": 0,
+          "differences": {
+            "roles": {
+              "expected": {
+                "actor": null,
+                "object": "Juniper 05-2 excavation",
+                "source": null,
+                "target": null,
+                "recipient": null,
+                "authority": "Juniper 05-2 superintendent deputy"
+              },
+              "actual": {
+                "actor": null,
+                "object": "Juniper 05-2 excavation",
+                "source": null,
+                "target": null,
+                "recipient": null,
+                "authority": "superintendent deputy"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "v6-direction-1-1",
+      "source": "Juniper 08-2 dewatering is what causes Juniper 08-2 settlement.",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v6-temporal-1-0",
+      "source": "Juniper 09-2 inspection crew must inspect Juniper 09-2 pump; the inspection is to take place before the permitted continuation of Juniper 09-2 dewatering.",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v6-temporal-1-2",
+      "source": "Juniper 09-2 inspection crew must inspect Juniper 09-2 pump; the inspection is to take place after the permitted continuation of Juniper 09-2 dewatering.",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v6-time-0-0",
+      "source": "The date assigned to the mandatory inspection of Mica 11-1 pump by Mica 11-1 inspection crew is 2031-04-11.",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v6-time-0-2",
+      "source": "The date assigned to the mandatory inspection of Mica 11-1 pump by Mica 11-1 inspection crew is 2031-04-12.",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v6-paragraph-0-0",
+      "source": "With Mica 12-1 vibration below 3.83 mm/s, continued operation of Mica 12-1 excavation is allowed. A rise in that same reading above 3.83 mm/s requires Mica 12-1 excavation to stop; it also requires notification to Mica 12-1 superintendent. The permitted upper rate for Mica 12-1 discharge is 11.6 L/min.",
+      "semantic_differences": [
+        {
+          "event_index": 3,
+          "differences": {
+            "roles": {
+              "expected": {
+                "actor": null,
+                "object": "Mica 12-1 discharge",
+                "source": null,
+                "target": null,
+                "recipient": null,
+                "authority": null
+              },
+              "actual": {
+                "actor": null,
+                "object": "Mica 12-1 excavation",
+                "source": null,
+                "target": null,
+                "recipient": null,
+                "authority": null
+              }
+            },
+            "condition": {
+              "expected": {
+                "subject": "Mica 12-1 discharge",
+                "comparator": "LE",
+                "quantity": {
+                  "numerator": 29,
+                  "denominator": 150000,
+                  "unit": "m3/s"
+                },
+                "negated": false
+              },
+              "actual": {
+                "subject": "Mica 12-1 excavation",
+                "comparator": "LE",
+                "quantity": {
+                  "numerator": 29,
+                  "denominator": 150000,
+                  "unit": "m3/s"
+                },
+                "negated": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "v6-paragraph-0-2",
+      "source": "With Mica 12-1 vibration below 3.83 mm/s, continued operation of Mica 12-1 excavation is allowed. A rise in that same reading above 3.83 mm/s requires Mica 12-1 excavation to stop; it also requires notification to Mica 12-1 superintendent. The permitted upper rate for Mica 12-1 discharge is 18.9 L/min.",
+      "semantic_differences": [
+        {
+          "event_index": 3,
+          "differences": {
+            "roles": {
+              "expected": {
+                "actor": null,
+                "object": "Mica 12-1 discharge",
+                "source": null,
+                "target": null,
+                "recipient": null,
+                "authority": null
+              },
+              "actual": {
+                "actor": null,
+                "object": "Mica 12-1 excavation",
+                "source": null,
+                "target": null,
+                "recipient": null,
+                "authority": null
+              }
+            },
+            "condition": {
+              "expected": {
+                "subject": "Mica 12-1 discharge",
+                "comparator": "LE",
+                "quantity": {
+                  "numerator": 63,
+                  "denominator": 200000,
+                  "unit": "m3/s"
+                },
+                "negated": false
+              },
+              "actual": {
+                "subject": "Mica 12-1 excavation",
+                "comparator": "LE",
+                "quantity": {
+                  "numerator": 63,
+                  "denominator": 200000,
+                  "unit": "m3/s"
+                },
+                "negated": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "v6-unit_equivalence-0-0",
+      "source": "A reading of Mica 18-1 water level strictly over 3.83 m makes stopping Mica 18-1 excavation obligatory.",
+      "semantic_differences": [
+        {
+          "event_index": 0,
+          "differences": {
+            "condition": {
+              "expected": {
+                "subject": "Mica 18-1 water level",
+                "comparator": "GT",
+                "quantity": {
+                  "numerator": 383,
+                  "denominator": 100,
+                  "unit": "m"
+                },
+                "negated": false
+              },
+              "actual": {
+                "subject": "water level",
+                "comparator": "GT",
+                "quantity": {
+                  "numerator": 383,
+                  "denominator": 100,
+                  "unit": "m"
+                },
+                "negated": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "v6-unit_equivalence-0-2",
+      "source": "A reading of Mica 18-1 water level strictly over 5.02 m makes stopping Mica 18-1 excavation obligatory.",
+      "semantic_differences": [
+        {
+          "event_index": 0,
+          "differences": {
+            "condition": {
+              "expected": {
+                "subject": "Mica 18-1 water level",
+                "comparator": "GT",
+                "quantity": {
+                  "numerator": 251,
+                  "denominator": 50,
+                  "unit": "m"
+                },
+                "negated": false
+              },
+              "actual": {
+                "subject": "water level",
+                "comparator": "GT",
+                "quantity": {
+                  "numerator": 251,
+                  "denominator": 50,
+                  "unit": "m"
+                },
+                "negated": false
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "v6-notification_roles-0-0",
+      "source": "Mica 20-1 engineer gives this instruction to Mica 20-1 crew: when Mica 20-1 vibration exceeds 3.83 mm/s, stop Mica 20-1 excavation and send notification to Mica 20-1 superintendent.",
+      "parser_error": "unreferenced graph content"
+    },
+    {
+      "id": "v6-notification_roles-0-2",
+      "source": "Mica 20-1 superintendent gives this instruction to Mica 20-1 crew: when Mica 20-1 vibration exceeds 3.83 mm/s, stop Mica 20-1 excavation and send notification to Mica 20-1 engineer.",
+      "semantic_differences": [
+        {
+          "event_index": 0,
+          "differences": {
+            "roles": {
+              "expected": {
+                "actor": "Mica 20-1 crew",
+                "object": "Mica 20-1 excavation",
+                "source": null,
+                "target": null,
+                "recipient": null,
+                "authority": "Mica 20-1 superintendent"
+              },
+              "actual": {
+                "actor": null,
+                "object": "Mica 20-1 excavation",
+                "source": null,
+                "target": null,
+                "recipient": null,
+                "authority": "Mica 20-1 superintendent"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "v6-notification_roles-1-0",
+      "source": "Juniper 20-2 engineer gives this instruction to Juniper 20-2 crew: when Juniper 20-2 vibration exceeds 8.47 mm/s, stop Juniper 20-2 excavation and send notification to Juniper 20-2 superintendent.",
+      "parser_error": "unreferenced graph content"
+    },
+    {
+      "id": "v6-notification_roles-1-1",
+      "source": "The requirement issued by Juniper 20-2 engineer says that Juniper 20-2 crew must stop Juniper 20-2 excavation and notify Juniper 20-2 superintendent if Juniper 20-2 vibration exceeds 8.47 mm/s.",
+      "parser_error": "Expecting property name enclosed in double quotes: line 1 column 1327 (char 1326)"
+    },
+    {
+      "id": "v6-notification_roles-1-2",
+      "source": "Juniper 20-2 superintendent gives this instruction to Juniper 20-2 crew: when Juniper 20-2 vibration exceeds 8.47 mm/s, stop Juniper 20-2 excavation and send notification to Juniper 20-2 engineer.",
+      "semantic_differences": [
+        {
+          "event_index": 0,
+          "differences": {
+            "roles": {
+              "expected": {
+                "actor": "Juniper 20-2 crew",
+                "object": "Juniper 20-2 excavation",
+                "source": null,
+                "target": null,
+                "recipient": null,
+                "authority": "Juniper 20-2 superintendent"
+              },
+              "actual": {
+                "actor": null,
+                "object": "Juniper 20-2 excavation",
+                "source": null,
+                "target": null,
+                "recipient": null,
+                "authority": "Juniper 20-2 superintendent"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "authority_metric_note": "The two scorer-labelled invented_authority counts are qualified-name mismatches: superintendent deputy omits the site identifier. They are not evidence that an entirely absent issuing person was introduced."
+}

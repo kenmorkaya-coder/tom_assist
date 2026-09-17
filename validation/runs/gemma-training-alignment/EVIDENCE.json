@@ -1,0 +1,30 @@
+{
+  "recorded_utc": "2026-09-09T09:46:50.149448+00:00",
+  "status": "ALIGNMENT_VERIFIED_NOT_EXTRACTION_VERDICT",
+  "old_text_prefix_equal": false,
+  "old_token_prefix_equal": false,
+  "native_inference_suffix": "<|turn>model\n<|channel>thought\n<channel|>",
+  "old_supervised_suffix_at_mask": "-assist-event-graph/1",
+  "aligned_splits": {
+    "train": {
+      "verified": 480,
+      "max_tokens": 1677
+    },
+    "valid": {
+      "verified": 132,
+      "max_tokens": 1693
+    }
+  },
+  "actual_training_tokenizer_check": "Completed before training; see training.log",
+  "tests_passed": 135,
+  "v4_freeze_sha256": "0ca792d4a42b9e629e13960bfe39bf43737c25c3afefa9d7a634d676accc5f13",
+  "aborted_v3": {
+    "recorded_unix": 1788946897.76932,
+    "status": "ABORTED_INFRASTRUCTURE",
+    "last_reported_step": 80,
+    "exit_code": 143,
+    "heldout_started": false,
+    "reason": "Native supervised and inference response prefixes differ; prompt mask skips part of JSON answer. Restart fresh with verified alignment.",
+    "verdict": null
+  }
+}

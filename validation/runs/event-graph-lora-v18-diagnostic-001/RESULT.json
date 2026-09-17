@@ -1,0 +1,2014 @@
+{
+  "reports": [
+    {
+      "total": 60,
+      "valid": 60,
+      "exact": 48,
+      "families": {
+        "anchor": {
+          "total": 12,
+          "valid": 12,
+          "exact": 8
+        },
+        "rename_site": {
+          "total": 12,
+          "valid": 12,
+          "exact": 12
+        },
+        "distinct_prefixes": {
+          "total": 12,
+          "valid": 12,
+          "exact": 7
+        },
+        "short_names": {
+          "total": 12,
+          "valid": 12,
+          "exact": 12
+        },
+        "wording": {
+          "total": 12,
+          "valid": 12,
+          "exact": 9
+        }
+      },
+      "details": [
+        {
+          "id": "v18-anchor-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-0-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-0-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-0-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-0-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-0-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-1-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-1-0",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-1-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-1-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-2-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-2-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-2-0",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-2-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-2-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-2-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-3-0",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-3-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-3-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-3-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-3-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-3-2",
+          "exact": true,
+          "valid": true
+        }
+      ],
+      "groups": 20,
+      "paraphrase_equal": 12,
+      "contrast_distinct": 18,
+      "epoch": 0,
+      "cumulative_steps": 4380,
+      "prediction_sha256": "6925dfe8f6bb0fcd9d208ec1592205d6fc972bdf2338a4a54585828766a50efa",
+      "adapter_sha256": "c6a4708d9ceca6dab5d275ea0bff5ac172e392d085a4fda6b0d875e51d95a994"
+    },
+    {
+      "total": 60,
+      "valid": 60,
+      "exact": 46,
+      "families": {
+        "anchor": {
+          "total": 12,
+          "valid": 12,
+          "exact": 5
+        },
+        "rename_site": {
+          "total": 12,
+          "valid": 12,
+          "exact": 12
+        },
+        "distinct_prefixes": {
+          "total": 12,
+          "valid": 12,
+          "exact": 7
+        },
+        "short_names": {
+          "total": 12,
+          "valid": 12,
+          "exact": 12
+        },
+        "wording": {
+          "total": 12,
+          "valid": 12,
+          "exact": 10
+        }
+      },
+      "details": [
+        {
+          "id": "v18-anchor-0-0",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-0-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-0-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-0-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-0-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-0-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-1-0",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-1-0",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-1-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-2-0",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-2-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-2-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-2-0",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-2-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-2-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-2-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-3-0",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-anchor-3-2",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-rename_site-3-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-distinct_prefixes-3-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-short_names-3-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v18-wording-3-2",
+          "exact": true,
+          "valid": true
+        }
+      ],
+      "groups": 20,
+      "paraphrase_equal": 12,
+      "contrast_distinct": 17,
+      "epoch": 1,
+      "cumulative_steps": 5172,
+      "prediction_sha256": "fc93fa6dd0bf368b330acb2fd39a234d3b24cc1121a4f2665081c73c7abf3ef4",
+      "adapter_sha256": "d4ea9b4ef390022945c90dbe4efc1cdcc5c33b3441d9a18a356ed2684c4e4a5a"
+    }
+  ],
+  "transitions": {
+    "regressed": 4,
+    "persistent": 10,
+    "unchanged_correct": 44,
+    "recovered": 2
+  },
+  "canonical_comparison": [
+    {
+      "id": "v18-anchor-0-0",
+      "anchor_index": 0,
+      "family": "anchor",
+      "source": "The process bringing about Marsh Gallery D00-K groundwater pumping is Marsh Gallery D00-K ground settlement.",
+      "exact": [
+        true,
+        false
+      ],
+      "transition": "regressed",
+      "differences": [
+        [],
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Marsh Gallery D00-K ground settlement",
+            "actual": "Marsh Gallery D00-K groundwater pumping is Marsh Gallery D00-K ground settlement"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Marsh Gallery D00-K groundwater pumping",
+            "actual": "Marsh Gallery D00-K ground settlement"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": false,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-rename_site-0-0",
+      "anchor_index": 0,
+      "family": "rename_site",
+      "source": "The process bringing about Silver Court R00-M groundwater pumping is Silver Court R00-M ground settlement.",
+      "exact": [
+        true,
+        true
+      ],
+      "transition": "unchanged_correct",
+      "differences": [
+        [],
+        []
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": true,
+          "target": true
+        }
+      ]
+    },
+    {
+      "id": "v18-distinct_prefixes-0-0",
+      "anchor_index": 0,
+      "family": "distinct_prefixes",
+      "source": "The process bringing about Silver Court R00-M groundwater pumping is Marsh Gallery D00-K ground settlement.",
+      "exact": [
+        true,
+        true
+      ],
+      "transition": "unchanged_correct",
+      "differences": [
+        [],
+        []
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": true,
+          "target": true
+        }
+      ]
+    },
+    {
+      "id": "v18-short_names-0-0",
+      "anchor_index": 0,
+      "family": "short_names",
+      "source": "The process bringing about Process B0 is Process A0.",
+      "exact": [
+        true,
+        true
+      ],
+      "transition": "unchanged_correct",
+      "differences": [
+        [],
+        []
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": true,
+          "target": true
+        }
+      ]
+    },
+    {
+      "id": "v18-wording-0-0",
+      "anchor_index": 0,
+      "family": "wording",
+      "source": "Marsh Gallery D00-K groundwater pumping is caused by Marsh Gallery D00-K ground settlement.",
+      "exact": [
+        true,
+        true
+      ],
+      "transition": "unchanged_correct",
+      "differences": [
+        [],
+        []
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": true,
+          "target": true
+        }
+      ]
+    },
+    {
+      "id": "v18-anchor-1-0",
+      "anchor_index": 1,
+      "family": "anchor",
+      "source": "The process bringing about Flint Tunnel D01-K groundwater pumping is Flint Tunnel D01-K ground settlement.",
+      "exact": [
+        true,
+        false
+      ],
+      "transition": "regressed",
+      "differences": [
+        [],
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Flint Tunnel D01-K ground settlement",
+            "actual": "Flint Tunnel D01-K groundwater pumping is Flint Tunnel D01-K ground settlement"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Flint Tunnel D01-K groundwater pumping",
+            "actual": "Flint Tunnel D01-K ground settlement"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": false,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-rename_site-1-0",
+      "anchor_index": 1,
+      "family": "rename_site",
+      "source": "The process bringing about Silver Court R01-M groundwater pumping is Silver Court R01-M ground settlement.",
+      "exact": [
+        true,
+        true
+      ],
+      "transition": "unchanged_correct",
+      "differences": [
+        [],
+        []
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": true,
+          "target": true
+        }
+      ]
+    },
+    {
+      "id": "v18-distinct_prefixes-1-0",
+      "anchor_index": 1,
+      "family": "distinct_prefixes",
+      "source": "The process bringing about Silver Court R01-M groundwater pumping is Flint Tunnel D01-K ground settlement.",
+      "exact": [
+        false,
+        false
+      ],
+      "transition": "persistent",
+      "differences": [
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Flint Tunnel D01-K ground settlement",
+            "actual": "Silver Court R01-M groundwater pumping"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Silver Court R01-M groundwater pumping",
+            "actual": "Flint Tunnel D01-K ground settlement"
+          }
+        ],
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Flint Tunnel D01-K ground settlement",
+            "actual": "Silver Court R01-M groundwater pumping"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Silver Court R01-M groundwater pumping",
+            "actual": "Flint Tunnel D01-K ground settlement"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": false,
+          "target": false
+        },
+        {
+          "source": false,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-short_names-1-0",
+      "anchor_index": 1,
+      "family": "short_names",
+      "source": "The process bringing about Process B1 is Process A1.",
+      "exact": [
+        true,
+        true
+      ],
+      "transition": "unchanged_correct",
+      "differences": [
+        [],
+        []
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": true,
+          "target": true
+        }
+      ]
+    },
+    {
+      "id": "v18-wording-1-0",
+      "anchor_index": 1,
+      "family": "wording",
+      "source": "Flint Tunnel D01-K groundwater pumping is caused by Flint Tunnel D01-K ground settlement.",
+      "exact": [
+        true,
+        true
+      ],
+      "transition": "unchanged_correct",
+      "differences": [
+        [],
+        []
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": true,
+          "target": true
+        }
+      ]
+    },
+    {
+      "id": "v18-anchor-2-0",
+      "anchor_index": 2,
+      "family": "anchor",
+      "source": "The process bringing about Flint Tunnel D03-K groundwater pumping is Flint Tunnel D03-K ground settlement.",
+      "exact": [
+        true,
+        false
+      ],
+      "transition": "regressed",
+      "differences": [
+        [],
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Flint Tunnel D03-K ground settlement",
+            "actual": "Flint Tunnel D03-K groundwater pumping"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Flint Tunnel D03-K groundwater pumping",
+            "actual": "Flint Tunnel D03-K ground settlement"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": false,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-rename_site-2-0",
+      "anchor_index": 2,
+      "family": "rename_site",
+      "source": "The process bringing about Silver Court R02-M groundwater pumping is Silver Court R02-M ground settlement.",
+      "exact": [
+        true,
+        true
+      ],
+      "transition": "unchanged_correct",
+      "differences": [
+        [],
+        []
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": true,
+          "target": true
+        }
+      ]
+    },
+    {
+      "id": "v18-distinct_prefixes-2-0",
+      "anchor_index": 2,
+      "family": "distinct_prefixes",
+      "source": "The process bringing about Silver Court R02-M groundwater pumping is Flint Tunnel D03-K ground settlement.",
+      "exact": [
+        false,
+        false
+      ],
+      "transition": "persistent",
+      "differences": [
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Flint Tunnel D03-K ground settlement",
+            "actual": "Silver Court R02-M groundwater pumping"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Silver Court R02-M groundwater pumping",
+            "actual": "Flint Tunnel D03-K ground settlement"
+          }
+        ],
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Flint Tunnel D03-K ground settlement",
+            "actual": "Silver Court R02-M groundwater pumping"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Silver Court R02-M groundwater pumping",
+            "actual": "Flint Tunnel D03-K ground settlement"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": false,
+          "target": false
+        },
+        {
+          "source": false,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-short_names-2-0",
+      "anchor_index": 2,
+      "family": "short_names",
+      "source": "The process bringing about Process B2 is Process A2.",
+      "exact": [
+        true,
+        true
+      ],
+      "transition": "unchanged_correct",
+      "differences": [
+        [],
+        []
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": true,
+          "target": true
+        }
+      ]
+    },
+    {
+      "id": "v18-wording-2-0",
+      "anchor_index": 2,
+      "family": "wording",
+      "source": "Flint Tunnel D03-K groundwater pumping is caused by Flint Tunnel D03-K ground settlement.",
+      "exact": [
+        true,
+        true
+      ],
+      "transition": "unchanged_correct",
+      "differences": [
+        [],
+        []
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": true,
+          "target": true
+        }
+      ]
+    },
+    {
+      "id": "v18-anchor-3-0",
+      "anchor_index": 3,
+      "family": "anchor",
+      "source": "Unit Delta flow brings about Unit Delta flow restriction.",
+      "exact": [
+        false,
+        false
+      ],
+      "transition": "persistent",
+      "differences": [
+        [
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Unit Delta flow restriction",
+            "actual": "Unit Delta flow brings about Unit Delta flow restriction"
+          }
+        ],
+        [
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Unit Delta flow restriction",
+            "actual": "Unit Delta flow brings about Unit Delta flow restriction"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": false
+        },
+        {
+          "source": true,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-rename_site-3-0",
+      "anchor_index": 3,
+      "family": "rename_site",
+      "source": "Silver Court R03-M flow brings about Silver Court R03-M flow restriction.",
+      "exact": [
+        true,
+        true
+      ],
+      "transition": "unchanged_correct",
+      "differences": [
+        [],
+        []
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": true,
+          "target": true
+        }
+      ]
+    },
+    {
+      "id": "v18-distinct_prefixes-3-0",
+      "anchor_index": 3,
+      "family": "distinct_prefixes",
+      "source": "Unit Delta flow brings about Silver Court R03-M flow restriction.",
+      "exact": [
+        true,
+        true
+      ],
+      "transition": "unchanged_correct",
+      "differences": [
+        [],
+        []
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": true,
+          "target": true
+        }
+      ]
+    },
+    {
+      "id": "v18-short_names-3-0",
+      "anchor_index": 3,
+      "family": "short_names",
+      "source": "Process A3 brings about Process B3.",
+      "exact": [
+        true,
+        true
+      ],
+      "transition": "unchanged_correct",
+      "differences": [
+        [],
+        []
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": true,
+          "target": true
+        }
+      ]
+    },
+    {
+      "id": "v18-wording-3-0",
+      "anchor_index": 3,
+      "family": "wording",
+      "source": "Unit Delta flow causes Unit Delta flow restriction.",
+      "exact": [
+        true,
+        true
+      ],
+      "transition": "unchanged_correct",
+      "differences": [
+        [],
+        []
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": true,
+          "target": true
+        }
+      ]
+    }
+  ],
+  "details": [
+    {
+      "id": "v18-anchor-0-0",
+      "anchor_index": 0,
+      "family": "anchor",
+      "source": "The process bringing about Marsh Gallery D00-K groundwater pumping is Marsh Gallery D00-K ground settlement.",
+      "exact": [
+        true,
+        false
+      ],
+      "transition": "regressed",
+      "differences": [
+        [],
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Marsh Gallery D00-K ground settlement",
+            "actual": "Marsh Gallery D00-K groundwater pumping is Marsh Gallery D00-K ground settlement"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Marsh Gallery D00-K groundwater pumping",
+            "actual": "Marsh Gallery D00-K ground settlement"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": false,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-anchor-0-1",
+      "anchor_index": 0,
+      "family": "anchor",
+      "source": "Marsh Gallery D00-K groundwater pumping results from Marsh Gallery D00-K ground settlement.",
+      "exact": [
+        false,
+        false
+      ],
+      "transition": "persistent",
+      "differences": [
+        [
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Marsh Gallery D00-K groundwater pumping",
+            "actual": "Marsh Gallery D00-"
+          }
+        ],
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Marsh Gallery D00-K ground settlement",
+            "actual": "Marsh Gallery D00-K groundwater pumping results from Marsh Gallery D00-K ground settlement"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Marsh Gallery D00-K groundwater pumping",
+            "actual": "Marsh Gallery D00-K groundwater pumping results from Marsh Gallery D00-K ground settlement"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": false
+        },
+        {
+          "source": false,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-distinct_prefixes-0-1",
+      "anchor_index": 0,
+      "family": "distinct_prefixes",
+      "source": "Silver Court R00-M groundwater pumping results from Marsh Gallery D00-K ground settlement.",
+      "exact": [
+        false,
+        false
+      ],
+      "transition": "persistent",
+      "differences": [
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Marsh Gallery D00-K ground settlement",
+            "actual": "Silver Court R00-M groundwater pumping results from Marsh Gallery D00-K ground settlement"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Silver Court R00-M groundwater pumping",
+            "actual": "Marsh Gallery D00-K ground settlement"
+          }
+        ],
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Marsh Gallery D00-K ground settlement",
+            "actual": "Silver Court R00-M groundwater pumping results from Marsh Gallery D00-K ground settlement"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Silver Court R00-M groundwater pumping",
+            "actual": "Marsh Gallery D00-K ground settlement"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": false,
+          "target": false
+        },
+        {
+          "source": false,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-wording-0-1",
+      "anchor_index": 0,
+      "family": "wording",
+      "source": "Marsh Gallery D00-K groundwater pumping results from Marsh Gallery D00-K ground settlement.",
+      "exact": [
+        false,
+        false
+      ],
+      "transition": "persistent",
+      "differences": [
+        [
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Marsh Gallery D00-K groundwater pumping",
+            "actual": "Marsh Gallery D00-"
+          }
+        ],
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Marsh Gallery D00-K ground settlement",
+            "actual": "Marsh Gallery D00-K groundwater pumping results from Marsh Gallery D00-K ground settlement"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Marsh Gallery D00-K groundwater pumping",
+            "actual": "Marsh Gallery D00-K groundwater pumping results from Marsh Gallery D00-K ground settlement"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": false
+        },
+        {
+          "source": false,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-anchor-1-0",
+      "anchor_index": 1,
+      "family": "anchor",
+      "source": "The process bringing about Flint Tunnel D01-K groundwater pumping is Flint Tunnel D01-K ground settlement.",
+      "exact": [
+        true,
+        false
+      ],
+      "transition": "regressed",
+      "differences": [
+        [],
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Flint Tunnel D01-K ground settlement",
+            "actual": "Flint Tunnel D01-K groundwater pumping is Flint Tunnel D01-K ground settlement"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Flint Tunnel D01-K groundwater pumping",
+            "actual": "Flint Tunnel D01-K ground settlement"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": false,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-anchor-1-1",
+      "anchor_index": 1,
+      "family": "anchor",
+      "source": "Flint Tunnel D01-K groundwater pumping results from Flint Tunnel D01-K ground settlement.",
+      "exact": [
+        false,
+        true
+      ],
+      "transition": "recovered",
+      "differences": [
+        [
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Flint Tunnel D01-K groundwater pumping",
+            "actual": "Flint Tunnel D01-K"
+          }
+        ],
+        []
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": false
+        },
+        {
+          "source": true,
+          "target": true
+        }
+      ]
+    },
+    {
+      "id": "v18-distinct_prefixes-1-0",
+      "anchor_index": 1,
+      "family": "distinct_prefixes",
+      "source": "The process bringing about Silver Court R01-M groundwater pumping is Flint Tunnel D01-K ground settlement.",
+      "exact": [
+        false,
+        false
+      ],
+      "transition": "persistent",
+      "differences": [
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Flint Tunnel D01-K ground settlement",
+            "actual": "Silver Court R01-M groundwater pumping"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Silver Court R01-M groundwater pumping",
+            "actual": "Flint Tunnel D01-K ground settlement"
+          }
+        ],
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Flint Tunnel D01-K ground settlement",
+            "actual": "Silver Court R01-M groundwater pumping"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Silver Court R01-M groundwater pumping",
+            "actual": "Flint Tunnel D01-K ground settlement"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": false,
+          "target": false
+        },
+        {
+          "source": false,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-distinct_prefixes-1-1",
+      "anchor_index": 1,
+      "family": "distinct_prefixes",
+      "source": "Silver Court R01-M groundwater pumping results from Flint Tunnel D01-K ground settlement.",
+      "exact": [
+        false,
+        false
+      ],
+      "transition": "persistent",
+      "differences": [
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Flint Tunnel D01-K ground settlement",
+            "actual": "Silver Court R01-M groundwater pumping"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Silver Court R01-M groundwater pumping",
+            "actual": "Flint Tunnel D01-K ground settlement"
+          }
+        ],
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Flint Tunnel D01-K ground settlement",
+            "actual": "Silver Court R01-M groundwater pumping results from Flint Tunnel D01-K ground settlement"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Silver Court R01-M groundwater pumping",
+            "actual": "Flint Tunnel D01-K ground settlement"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": false,
+          "target": false
+        },
+        {
+          "source": false,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-wording-1-1",
+      "anchor_index": 1,
+      "family": "wording",
+      "source": "Flint Tunnel D01-K groundwater pumping results from Flint Tunnel D01-K ground settlement.",
+      "exact": [
+        false,
+        true
+      ],
+      "transition": "recovered",
+      "differences": [
+        [
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Flint Tunnel D01-K groundwater pumping",
+            "actual": "Flint Tunnel D01-K"
+          }
+        ],
+        []
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": false
+        },
+        {
+          "source": true,
+          "target": true
+        }
+      ]
+    },
+    {
+      "id": "v18-anchor-2-0",
+      "anchor_index": 2,
+      "family": "anchor",
+      "source": "The process bringing about Flint Tunnel D03-K groundwater pumping is Flint Tunnel D03-K ground settlement.",
+      "exact": [
+        true,
+        false
+      ],
+      "transition": "regressed",
+      "differences": [
+        [],
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Flint Tunnel D03-K ground settlement",
+            "actual": "Flint Tunnel D03-K groundwater pumping"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Flint Tunnel D03-K groundwater pumping",
+            "actual": "Flint Tunnel D03-K ground settlement"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": false,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-anchor-2-1",
+      "anchor_index": 2,
+      "family": "anchor",
+      "source": "Flint Tunnel D03-K groundwater pumping results from Flint Tunnel D03-K ground settlement.",
+      "exact": [
+        false,
+        false
+      ],
+      "transition": "persistent",
+      "differences": [
+        [
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Flint Tunnel D03-K groundwater pumping",
+            "actual": "Flint Tunnel D03-"
+          }
+        ],
+        [
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Flint Tunnel D03-K groundwater pumping",
+            "actual": "Flint Tunnel D03-"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": false
+        },
+        {
+          "source": true,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-distinct_prefixes-2-0",
+      "anchor_index": 2,
+      "family": "distinct_prefixes",
+      "source": "The process bringing about Silver Court R02-M groundwater pumping is Flint Tunnel D03-K ground settlement.",
+      "exact": [
+        false,
+        false
+      ],
+      "transition": "persistent",
+      "differences": [
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Flint Tunnel D03-K ground settlement",
+            "actual": "Silver Court R02-M groundwater pumping"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Silver Court R02-M groundwater pumping",
+            "actual": "Flint Tunnel D03-K ground settlement"
+          }
+        ],
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Flint Tunnel D03-K ground settlement",
+            "actual": "Silver Court R02-M groundwater pumping"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Silver Court R02-M groundwater pumping",
+            "actual": "Flint Tunnel D03-K ground settlement"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": false,
+          "target": false
+        },
+        {
+          "source": false,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-distinct_prefixes-2-1",
+      "anchor_index": 2,
+      "family": "distinct_prefixes",
+      "source": "Silver Court R02-M groundwater pumping results from Flint Tunnel D03-K ground settlement.",
+      "exact": [
+        false,
+        false
+      ],
+      "transition": "persistent",
+      "differences": [
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Flint Tunnel D03-K ground settlement",
+            "actual": "Silver Court R02-M groundwater pumping"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Silver Court R02-M groundwater pumping",
+            "actual": "Flint Tunnel D03-K ground settlement"
+          }
+        ],
+        [
+          {
+            "path": ".events[0].roles.source",
+            "expected": "Flint Tunnel D03-K ground settlement",
+            "actual": "Silver Court R02-M groundwater pumping"
+          },
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Silver Court R02-M groundwater pumping",
+            "actual": "Flint Tunnel D03-K ground settlement"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": false,
+          "target": false
+        },
+        {
+          "source": false,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-wording-2-1",
+      "anchor_index": 2,
+      "family": "wording",
+      "source": "Flint Tunnel D03-K groundwater pumping results from Flint Tunnel D03-K ground settlement.",
+      "exact": [
+        false,
+        false
+      ],
+      "transition": "persistent",
+      "differences": [
+        [
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Flint Tunnel D03-K groundwater pumping",
+            "actual": "Flint Tunnel D03-"
+          }
+        ],
+        [
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Flint Tunnel D03-K groundwater pumping",
+            "actual": "Flint Tunnel D03-"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": false
+        },
+        {
+          "source": true,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-anchor-3-0",
+      "anchor_index": 3,
+      "family": "anchor",
+      "source": "Unit Delta flow brings about Unit Delta flow restriction.",
+      "exact": [
+        false,
+        false
+      ],
+      "transition": "persistent",
+      "differences": [
+        [
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Unit Delta flow restriction",
+            "actual": "Unit Delta flow brings about Unit Delta flow restriction"
+          }
+        ],
+        [
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Unit Delta flow restriction",
+            "actual": "Unit Delta flow brings about Unit Delta flow restriction"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": false
+        },
+        {
+          "source": true,
+          "target": false
+        }
+      ]
+    },
+    {
+      "id": "v18-anchor-3-2",
+      "anchor_index": 3,
+      "family": "anchor",
+      "source": "Unit Delta flow restriction brings about Unit Delta flow.",
+      "exact": [
+        true,
+        false
+      ],
+      "transition": "regressed",
+      "differences": [
+        [],
+        [
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Unit Delta flow",
+            "actual": "Unit Delta flow restriction brings about Unit Delta flow"
+          }
+        ]
+      ],
+      "role_exact": [
+        {
+          "source": true,
+          "target": true
+        },
+        {
+          "source": true,
+          "target": false
+        }
+      ]
+    }
+  ],
+  "anchor_reproduction": [
+    {
+      "epoch": 0,
+      "anchor_index": 0,
+      "prior_id": "v16-dev-direction-0-2",
+      "semantic_match": true,
+      "raw_match": true,
+      "token_match": true,
+      "finish_match": true
+    },
+    {
+      "epoch": 0,
+      "anchor_index": 1,
+      "prior_id": "v16-dev-direction-1-2",
+      "semantic_match": true,
+      "raw_match": true,
+      "token_match": true,
+      "finish_match": true
+    },
+    {
+      "epoch": 0,
+      "anchor_index": 2,
+      "prior_id": "v16-dev-direction-3-2",
+      "semantic_match": true,
+      "raw_match": true,
+      "token_match": true,
+      "finish_match": true
+    },
+    {
+      "epoch": 0,
+      "anchor_index": 3,
+      "prior_id": "v17-active-3-1",
+      "semantic_match": true,
+      "raw_match": true,
+      "token_match": true,
+      "finish_match": true
+    },
+    {
+      "epoch": 1,
+      "anchor_index": 0,
+      "prior_id": "v16-dev-direction-0-2",
+      "semantic_match": true,
+      "raw_match": true,
+      "token_match": true,
+      "finish_match": true
+    },
+    {
+      "epoch": 1,
+      "anchor_index": 1,
+      "prior_id": "v16-dev-direction-1-2",
+      "semantic_match": true,
+      "raw_match": true,
+      "token_match": true,
+      "finish_match": true
+    },
+    {
+      "epoch": 1,
+      "anchor_index": 2,
+      "prior_id": "v16-dev-direction-3-2",
+      "semantic_match": true,
+      "raw_match": true,
+      "token_match": true,
+      "finish_match": true
+    },
+    {
+      "epoch": 1,
+      "anchor_index": 3,
+      "prior_id": "v17-active-3-1",
+      "semantic_match": true,
+      "raw_match": true,
+      "token_match": true,
+      "finish_match": true
+    }
+  ],
+  "provenance": {
+    "run": "/Users/kenmorkaya/PycharmProjects/ToM_assist/.tmp/event-graph-lora-v18-diagnostic-001",
+    "verified_unix": 1789109216.6940238,
+    "raw_predictions_reparsed": 120,
+    "token_ids_and_finish_reasons_verified": 120,
+    "sha256": {
+      "epoch-0.jsonl": "6925dfe8f6bb0fcd9d208ec1592205d6fc972bdf2338a4a54585828766a50efa",
+      "epoch-0-report.json": "5373e9f76f9ec0ac5ba29eaa51626a69b52ff1b03d3dec84a911b6233daac614",
+      "epoch-0/adapter": "c6a4708d9ceca6dab5d275ea0bff5ac172e392d085a4fda6b0d875e51d95a994",
+      "epoch-1.jsonl": "fc93fa6dd0bf368b330acb2fd39a234d3b24cc1121a4f2665081c73c7abf3ef4",
+      "epoch-1-report.json": "71a4480e6dec2ac8cb15b965e68b221bcaf67befb3bd718380fa9310e2345ae0",
+      "epoch-1/adapter": "d4ea9b4ef390022945c90dbe4efc1cdcc5c33b3441d9a18a356ed2684c4e4a5a",
+      "/Users/kenmorkaya/PycharmProjects/ToM_assist/.tmp/event-graph-lora-v16-session-001/epoch-0/dev_predictions.jsonl": "08c04fe9fd30f36b88065cf81380a5fe19aabbc899c1c0274b1e5a6bb6fdabbc",
+      "/Users/kenmorkaya/PycharmProjects/ToM_assist/.tmp/event-graph-lora-v17-diagnostic-001/epoch-0.jsonl": "c39fec303bf5d3868a5890537f680c50c91a07110e2e6fe27f2e967d3d65505b",
+      "/Users/kenmorkaya/PycharmProjects/ToM_assist/.tmp/event-graph-lora-v16-session-001/epoch-1/dev_predictions.jsonl": "aed4498b7a9e6328e0e85911c80949746e138d99658e716b509f2f82540d7ec0",
+      "/Users/kenmorkaya/PycharmProjects/ToM_assist/.tmp/event-graph-lora-v17-diagnostic-001/epoch-1.jsonl": "5d71941198b31bb2ad748cf512d9b53b0719de197e6785c637c220a9ae6da544",
+      "freeze.json": "57d0c6429d55410eff062facf8aa5239b00191c8147186eb8c34b97d61bad8e2",
+      "diagnostic.jsonl": "d3ecf8da290189322b68a0f266aceed76b0d2a9ec92af229b398a81c198d1606",
+      "complete.json": "bf669718aa90bb3a501234410179091f12d50e0715e3e48ea5830222ab3a7169"
+    }
+  },
+  "selected_cumulative_steps": 4380,
+  "heldout": "NOT_RUN",
+  "matrix_and_tree": "NOT_RUN"
+}

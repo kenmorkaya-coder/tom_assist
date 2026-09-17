@@ -339,6 +339,9 @@ fn run() -> Result<Value, Box<dyn std::error::Error>> {
         complete: true,
         created_at: input.created_at.clone(),
         latency_ms: 0,
+        // A frozen pilot run represents an owner-authorised accepted history.
+        // Ordinary product evaluation leaves this false until a user action.
+        accept_for_experience: true,
     })?;
     let observer = Store::open(&database)?;
     let state = observer.current_state(&input.project_id)?;

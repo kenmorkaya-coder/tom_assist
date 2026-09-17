@@ -1,0 +1,522 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "span": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end",
+        "quote"
+      ],
+      "properties": {
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "quote": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        }
+      }
+    },
+    "annotation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "evidence"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/span"
+          },
+          "minItems": 1,
+          "maxItems": 128
+        }
+      }
+    },
+    "entity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "mentions"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "mentions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/span"
+          },
+          "minItems": 1,
+          "maxItems": 128
+        }
+      }
+    },
+    "predicate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "subject",
+        "comparator",
+        "value",
+        "unit",
+        "negated",
+        "evidence"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "comparator": {
+          "enum": [
+            "LT",
+            "LE",
+            "EQ",
+            "NE",
+            "GE",
+            "GT"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "maxLength": 80,
+          "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$"
+        },
+        "unit": {
+          "enum": [
+            "L",
+            "m3",
+            "L/min",
+            "L/s",
+            "m3/s",
+            "mm/s",
+            "m/s",
+            "mm",
+            "m",
+            "g",
+            "kg",
+            "s",
+            "min"
+          ]
+        },
+        "negated": {
+          "type": "boolean"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/span"
+          },
+          "minItems": 1,
+          "maxItems": 128
+        }
+      }
+    },
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "operator",
+        "args",
+        "evidence"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "operator": {
+          "enum": [
+            "all",
+            "any",
+            "not"
+          ]
+        },
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "minItems": 1,
+          "maxItems": 128
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/span"
+          },
+          "minItems": 1,
+          "maxItems": 128
+        }
+      }
+    },
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "action",
+        "roles",
+        "modality",
+        "negated",
+        "condition",
+        "exception",
+        "complement",
+        "revision",
+        "time",
+        "evidence"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "action": {
+          "enum": [
+            "stop",
+            "continue",
+            "notify",
+            "discharge",
+            "approve",
+            "inspect",
+            "cause",
+            "use",
+            "replace"
+          ]
+        },
+        "roles": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "actor",
+            "object",
+            "source",
+            "target",
+            "recipient",
+            "authority"
+          ],
+          "properties": {
+            "actor": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "object": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "source": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "target": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "recipient": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "authority": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1024
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "modality": {
+          "enum": [
+            "obligation",
+            "permission",
+            "assertion",
+            "hypothetical"
+          ]
+        },
+        "negated": {
+          "type": "boolean"
+        },
+        "condition": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "exception": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "complement": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1024
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "revision": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/annotation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "time": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/annotation"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/span"
+          },
+          "minItems": 1,
+          "maxItems": 128
+        }
+      }
+    },
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "source",
+        "target",
+        "evidence"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "kind": {
+          "enum": [
+            "before",
+            "after",
+            "supersedes",
+            "conflicts",
+            "causes",
+            "depends_on"
+          ]
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/span"
+          },
+          "minItems": 1,
+          "maxItems": 128
+        }
+      }
+    },
+    "unresolved": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reason",
+        "evidence"
+      ],
+      "properties": {
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/span"
+          },
+          "minItems": 1,
+          "maxItems": 128
+        }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "entities",
+    "predicates",
+    "conditions",
+    "events",
+    "links",
+    "unresolved"
+  ],
+  "properties": {
+    "version": {
+      "const": "tom-assist-event-graph/1"
+    },
+    "entities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/entity"
+      },
+      "minItems": 0,
+      "maxItems": 128
+    },
+    "predicates": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/predicate"
+      },
+      "minItems": 0,
+      "maxItems": 128
+    },
+    "conditions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/condition"
+      },
+      "minItems": 0,
+      "maxItems": 128
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/event"
+      },
+      "minItems": 0,
+      "maxItems": 128
+    },
+    "links": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/link"
+      },
+      "minItems": 0,
+      "maxItems": 128
+    },
+    "unresolved": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/unresolved"
+      },
+      "minItems": 0,
+      "maxItems": 128
+    }
+  }
+}

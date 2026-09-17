@@ -21,6 +21,7 @@ export class FakeDesktopBackend implements DesktopBackend {
   private sessions = new Map<string, ConversationView>();
   private projectDocuments = new Map<string, ProjectDocument[]>();
   connected = true; // Test-only transport, never an OAuth client.
+  includeMissingSource = true;
 
   async oauthStatus() {
     return {
@@ -43,6 +44,12 @@ export class FakeDesktopBackend implements DesktopBackend {
     method: ChatMethod,
     payload: Record<string, unknown>,
   ): Promise<unknown> {
+    if (method === "conversation.native_answer") {
+      if (payload.action === "status") return { ready: false };
+      throw new Error("Learned document answers need the real local gateway.");
+    }
+    if (method === "inspection.gemma")
+      throw new Error("Experimental inspection needs the real local gateway; this preview backend does not run models.");
     if (method === "provider.status")
       return {
         connected: this.connected,
@@ -90,6 +97,7 @@ export class FakeDesktopBackend implements DesktopBackend {
         prompt_hash: "fixture-hash",
         packet_digest: "fixture-packet",
         status: "prepared",
+        accepted_review: false,
         context_preview: {
           sections: [
             {
@@ -116,20 +124,30 @@ export class FakeDesktopBackend implements DesktopBackend {
                   evidence_id: "document-fixture:chunk:4",
                   clause_identifier: "4.2",
                   conditionality: ["project_wide"],
+                  requirement_components: [{ source_start: 100, source_end: 140 }],
                   packet_admitted: true,
                 },
                 {
                   evidence_id: "document-fixture:chunk:8",
                   clause_identifier: "8.1",
                   conditionality: ["activity_conditional"],
+                  requirement_components: [{ source_start: 300, source_end: 340 }],
                   packet_admitted: false,
                   packet_exclusion_reason: "packet-budget",
                 },
               ],
-              missing_sources: [
-                { named_identifier: "Schedule Z", reason_code: "MISSING_REFERENCED_SOURCE" },
-              ],
-              exhaustiveness: "limited_by_missing_referenced_sources",
+              missing_sources: this.includeMissingSource
+                ? [{ named_identifier: "Schedule Z", reason_code: "MISSING_REFERENCED_SOURCE" }]
+                : [],
+              exhaustiveness: this.includeMissingSource
+                ? "limited_by_missing_referenced_sources"
+                : "complete_within_tree_ranked_active_project_inventory",
+            },
+            processing_coverage: {
+              policy: "tree_native_comprehensive_batches",
+              examined_count: 1466,
+              unexamined_count: 0,
+              included_authored_unit_count: 2,
             },
           },
         },
@@ -154,7 +172,15 @@ export class FakeDesktopBackend implements DesktopBackend {
         result: "PASS",
         turn_id: `${row.exchange.id}:assistant`,
       };
-      row.commit = { receipt: "fixture" };
+    }
+    if (method === "conversation.evaluate") {
+      const row = view.exchanges.find(
+        (e) => e.exchange.id === payload.exchange_id,
+      )!;
+      if (payload.accept_reviewed === true) {
+        row.exchange.accepted_review = true;
+        row.commit ??= { receipt: "fixture" };
+      }
     }
     return structuredClone(view);
   }

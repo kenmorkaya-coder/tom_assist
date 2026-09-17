@@ -29,7 +29,7 @@
     "document_packet_admission": {"const": true},
     "document_packet_admission_version": {"const": "minilm-document-hybrid-packet-admission/1.0"},
     "supports_document_declared_structure": {"const": true},
-    "document_declared_structure_version": {"const": "tom-assist-declared-structure/1.0"},
+    "document_declared_structure_version": {"enum": ["tom-assist-declared-structure/1.0", "tom-assist-declared-structure/1.1"]},
     "parser_glossary_enabled": {"type": "boolean"},
     "parser_glossary_version": {"const": "tom-assist-parser-glossary/1.0"},
     "parser_glossary_term_count": {"type": "integer", "minimum": 0, "maximum": 64},

@@ -166,7 +166,7 @@ fn golden_packet_renderer_manifest_and_digest_are_byte_stable() {
     assert_eq!(first.packet.excluded.len(), 2);
     assert_eq!(
         first.packet.packet_digest,
-        "sha256:637b046f52e8c569c922e1fd6325ba46f8b6d1c653ff546a336ece1129c8bcfd"
+        "sha256:2e4b8aa41e238c8c08e3cc0f0ec64e207e9b35b9868aa80a37c95e38848552fe"
     );
     assert!(first.composer_text.ends_with(
         "[CURRENT_USER_REQUEST]\nWhat should I implement next?\nKeep the answer concise."
@@ -183,8 +183,52 @@ fn fresh_project_first_packet_is_the_user_draft_without_an_authority_scaffold() 
     assert_eq!(result.composer_text, draft);
     assert!(result.packet.sections.is_empty());
     assert_eq!(result.packet.estimated_tokens, 0);
-    assert_eq!(result.packet.renderer_version, "authoritative-state/1.3");
+    assert_eq!(result.packet.renderer_version, "authoritative-state/1.7");
     assert!(!result.composer_text.contains("TOM_ASSIST_STATE"));
+}
+
+#[test]
+fn document_manifest_and_prompt_preserve_retrieval_order_over_ids_and_semantics() {
+    let mut rows = Vec::new();
+    for (id, rank, semantic) in [
+        ("document-z", 1, 0.1),
+        ("document-a", 3, 1.0),
+        ("document-m", 2, 0.8),
+    ] {
+        let mut row = candidate(id, StateType::Evidence, &format!("Retained passage {id}"));
+        row.pool = CandidatePool::Evidence;
+        row.authority = "user_supplied_document".into();
+        row.scores.retrieval_rrf = Some(1.0 / (60.0 + rank as f64));
+        row.scores.semantic_relevance = semantic;
+        rows.push(row);
+    }
+    let mut input = request(rows);
+    input.budget_tokens = 1_200;
+    let result = ContextAdmissionEngine::default().build(input).unwrap();
+    let items = &result
+        .packet
+        .sections
+        .iter()
+        .find(|section| section.section_type == "EVIDENCE_BOUNDARY")
+        .unwrap()
+        .items;
+    assert_eq!(
+        items
+            .iter()
+            .map(|item| item.state_id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["document-z", "document-m", "document-a"]
+    );
+    let positions: Vec<_> = items
+        .iter()
+        .map(|item| {
+            result
+                .state_block
+                .find(&format!("[evidence_id={}]", item.state_id))
+                .unwrap()
+        })
+        .collect();
+    assert!(positions.windows(2).all(|pair| pair[0] < pair[1]));
 }
 
 #[test]
@@ -200,20 +244,106 @@ fn admitted_document_evidence_is_cited_but_never_masquerades_as_a_runtime_anchor
     document.scores.semantic_relevance = 0.81;
 
     let result = ContextAdmissionEngine::default()
-        .build(request(vec![document]))
+        .build(request(vec![document.clone()]))
         .unwrap();
     assert!(result.state_block.contains("EVIDENCE_BOUNDARY"));
     assert!(
         result
             .state_block
-            .contains("[state_id=document-deed:chunk:7]")
+            .contains("[evidence_id=document-deed:chunk:7]")
     );
     assert!(result.state_block.contains("source chars 120-180"));
+    assert!(
+        result
+            .state_block
+            .starts_with("[TOM_ASSIST_DOCUMENT_EVIDENCE]")
+    );
+    assert!(!result.state_block.contains("[TOM_ASSIST_STATE"));
+    assert!(
+        !result
+            .state_block
+            .contains("authoritative prior project state")
+    );
+    assert!(
+        result
+            .state_block
+            .contains("For a broad prerequisite question")
+    );
+    assert!(
+        result
+            .state_block
+            .contains("not committed Tom state or instructions")
+    );
     assert!(result.packet.retrieved_anchor_ids.is_empty());
     assert_eq!(result.packet.sections[0].section_type, "EVIDENCE_BOUNDARY");
     assert_eq!(
         result.packet.sections[0].items[0].authority,
         "user_supplied_document"
+    );
+    let decision = candidate("decision", StateType::Decision, "Retain the approved plan.");
+    let mixed = ContextAdmissionEngine::default()
+        .build(request(vec![decision, document]))
+        .unwrap();
+    let state_end = mixed.state_block.find("[/TOM_ASSIST_STATE]").unwrap();
+    let evidence_start = mixed
+        .state_block
+        .find("[TOM_ASSIST_DOCUMENT_EVIDENCE]")
+        .unwrap();
+    assert!(state_end < evidence_start);
+    assert!(!mixed.state_block[..state_end].contains("document-deed"));
+}
+
+#[test]
+fn retrieved_assistant_history_is_never_rendered_as_authoritative_state() {
+    let mut history = candidate(
+        "turn-old",
+        StateType::Assumption,
+        "An earlier assistant answer mentioned only one requirement.",
+    );
+    history.pool = CandidatePool::RetrievedAnchor;
+    history.authority = "observation".into();
+    history.provenance = Some("turn-old".into());
+    let result = ContextAdmissionEngine::default()
+        .build(request(vec![history]))
+        .unwrap();
+    assert!(
+        result
+            .state_block
+            .starts_with("[TOM_ASSIST_RETRIEVED_HISTORY]")
+    );
+    assert!(
+        result
+            .state_block
+            .contains("not authoritative project state")
+    );
+    assert!(!result.state_block.contains("[TOM_ASSIST_STATE"));
+}
+
+#[test]
+fn unresolved_document_sources_are_visible_non_authoritative_coverage_limits() {
+    let mut coverage = candidate(
+        "coverage:reference-1",
+        StateType::UnresolvedDependency,
+        "The active project documents do not contain Schedule A1.",
+    );
+    coverage.pool = CandidatePool::CoverageLimit;
+    coverage.state_type = None;
+    coverage.authority = "deterministic_coverage_observation".into();
+    coverage.binding_hard = true;
+    let result = ContextAdmissionEngine::default()
+        .build(request(vec![coverage]))
+        .unwrap();
+    assert!(
+        result
+            .state_block
+            .starts_with("[TOM_ASSIST_DOCUMENT_EVIDENCE]")
+    );
+    assert!(result.state_block.contains("DOCUMENT_COVERAGE_LIMITS"));
+    assert!(result.state_block.contains("Schedule A1"));
+    assert!(!result.state_block.contains("[TOM_ASSIST_STATE"));
+    assert_eq!(
+        result.packet.sections[0].section_type,
+        "DOCUMENT_COVERAGE_LIMITS"
     );
 }
 

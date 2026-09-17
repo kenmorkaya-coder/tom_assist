@@ -1,0 +1,4887 @@
+{
+  "baseline": {
+    "development": {
+      "total": 192,
+      "valid": 192,
+      "exact": 191,
+      "invented_authority": 0,
+      "paraphrase_equal": 63,
+      "contrast_distinct": 64,
+      "groups": 64,
+      "families": {
+        "quantity": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "comparator": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "polarity": {
+          "total": 18,
+          "valid": 18,
+          "exact": 18
+        },
+        "recipient": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "authority": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "unless": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "nested": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "direction": {
+          "total": 18,
+          "valid": 18,
+          "exact": 18
+        },
+        "temporal": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "revision": {
+          "total": 18,
+          "valid": 18,
+          "exact": 18
+        },
+        "time": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "paragraph": {
+          "total": 30,
+          "valid": 30,
+          "exact": 29
+        },
+        "approval": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "nested_boolean": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "negation_scope": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "conflict": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "multi_quantity": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "unit_equivalence": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        },
+        "comparison_bounds": {
+          "total": 18,
+          "valid": 18,
+          "exact": 18
+        },
+        "notification_roles": {
+          "total": 6,
+          "valid": 6,
+          "exact": 6
+        }
+      },
+      "field_exact": {
+        "action": 191,
+        "roles": 192,
+        "modality": 192,
+        "negated": 192,
+        "condition": 192,
+        "exception": 192,
+        "complement": 192,
+        "revision": 192,
+        "time": 192,
+        "links": 192
+      },
+      "details": [
+        {
+          "id": "v8-dev-0-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-0-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-0-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-1-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-1-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-1-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-2-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-2-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-2-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-3-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-3-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-3-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-4-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-4-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-4-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-5-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-5-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-5-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-6-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-6-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-6-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-7-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-7-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-7-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-8-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-8-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-8-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-9-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-9-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-9-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-10-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-10-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-10-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-11-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-11-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-11-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-12-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-12-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-12-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-13-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-13-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-13-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-14-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-14-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-14-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-15-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-15-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-15-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-16-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-16-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-16-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-17-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-17-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-17-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-18-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-18-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-18-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-19-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-19-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-19-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-20-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-20-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-20-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-21-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-21-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-21-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-22-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-22-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-22-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-23-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-23-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-23-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-24-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-24-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-24-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-25-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-25-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-25-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-26-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-26-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-26-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-27-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-27-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-27-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-28-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-28-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-28-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-29-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-29-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-29-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-30-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-30-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-30-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-31-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-31-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-31-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-32-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-32-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-32-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-33-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-33-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-33-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-34-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-34-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-34-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-35-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-35-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-35-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-36-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-36-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-36-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-37-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-37-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-37-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-38-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-38-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-38-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-39-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-39-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-39-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-40-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-40-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-40-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-41-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-41-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-41-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-42-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-42-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-42-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-43-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-43-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v8-dev-43-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-revision-0-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-revision-0-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-revision-0-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-revision-1-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-revision-1-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-revision-1-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-revision-2-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-revision-2-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-revision-2-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-revision-3-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-revision-3-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-revision-3-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-paragraph-0-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-paragraph-0-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-paragraph-0-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-paragraph-1-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-paragraph-1-1",
+          "exact": false,
+          "error": "semantic mismatch"
+        },
+        {
+          "id": "v13-dev-paragraph-1-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-paragraph-2-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-paragraph-2-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-paragraph-2-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-paragraph-3-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-paragraph-3-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v13-dev-paragraph-3-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-polarity-0-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-polarity-0-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-polarity-0-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-polarity-1-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-polarity-1-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-polarity-1-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-polarity-2-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-polarity-2-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-polarity-2-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-polarity-3-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-polarity-3-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-polarity-3-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-direction-0-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-direction-0-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-direction-0-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-direction-1-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-direction-1-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-direction-1-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-direction-2-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-direction-2-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-direction-2-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-direction-3-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-direction-3-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-direction-3-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-paragraph-0-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-paragraph-0-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-paragraph-0-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-paragraph-1-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-paragraph-1-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-paragraph-1-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-paragraph-2-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-paragraph-2-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-paragraph-2-2",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-paragraph-3-0",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-paragraph-3-1",
+          "exact": true,
+          "error": null
+        },
+        {
+          "id": "v16-dev-paragraph-3-2",
+          "exact": true,
+          "error": null
+        }
+      ],
+      "development_thresholds_met": true,
+      "status": "DEVELOPMENT_ONLY_NOT_HELDOUT_GATE",
+      "parser_errors": {},
+      "original_132": {
+        "total": 132,
+        "exact": 132,
+        "valid": 132,
+        "invented_authority": 0
+      },
+      "extension_24": {
+        "total": 24,
+        "exact": 23,
+        "valid": 24,
+        "invented_authority": 0
+      },
+      "new_36": {
+        "total": 36,
+        "exact": 36,
+        "valid": 36,
+        "invented_authority": 0
+      }
+    },
+    "diagnostic": {
+      "total": 56,
+      "exact": 47,
+      "valid": 56,
+      "details": [
+        {
+          "id": "v18-anchor-0-0",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-anchor-0-1",
+          "exact": false,
+          "roles": {
+            "source": true,
+            "target": false
+          }
+        },
+        {
+          "id": "v18-anchor-0-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-rename_site-0-0",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-rename_site-0-1",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-rename_site-0-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-distinct_prefixes-0-0",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-distinct_prefixes-0-1",
+          "exact": false,
+          "roles": {
+            "source": false,
+            "target": false
+          }
+        },
+        {
+          "id": "v18-distinct_prefixes-0-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-short_names-0-0",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-short_names-0-1",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-short_names-0-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-wording-0-0",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-wording-0-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-anchor-1-0",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-anchor-1-1",
+          "exact": false,
+          "roles": {
+            "source": true,
+            "target": false
+          }
+        },
+        {
+          "id": "v18-anchor-1-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-rename_site-1-0",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-rename_site-1-1",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-rename_site-1-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-distinct_prefixes-1-0",
+          "exact": false,
+          "roles": {
+            "source": false,
+            "target": false
+          }
+        },
+        {
+          "id": "v18-distinct_prefixes-1-1",
+          "exact": false,
+          "roles": {
+            "source": false,
+            "target": false
+          }
+        },
+        {
+          "id": "v18-distinct_prefixes-1-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-short_names-1-0",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-short_names-1-1",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-short_names-1-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-wording-1-0",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-wording-1-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-anchor-2-0",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-anchor-2-1",
+          "exact": false,
+          "roles": {
+            "source": true,
+            "target": false
+          }
+        },
+        {
+          "id": "v18-anchor-2-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-rename_site-2-0",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-rename_site-2-1",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-rename_site-2-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-distinct_prefixes-2-0",
+          "exact": false,
+          "roles": {
+            "source": false,
+            "target": false
+          }
+        },
+        {
+          "id": "v18-distinct_prefixes-2-1",
+          "exact": false,
+          "roles": {
+            "source": false,
+            "target": false
+          }
+        },
+        {
+          "id": "v18-distinct_prefixes-2-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-short_names-2-0",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-short_names-2-1",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-short_names-2-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-wording-2-0",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-wording-2-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-anchor-3-0",
+          "exact": false,
+          "roles": {
+            "source": true,
+            "target": false
+          }
+        },
+        {
+          "id": "v18-anchor-3-1",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-anchor-3-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-rename_site-3-0",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-rename_site-3-1",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-rename_site-3-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-distinct_prefixes-3-0",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-distinct_prefixes-3-1",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-distinct_prefixes-3-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-short_names-3-0",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-short_names-3-1",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-short_names-3-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-wording-3-0",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        },
+        {
+          "id": "v18-wording-3-2",
+          "exact": true,
+          "roles": {
+            "source": true,
+            "target": true
+          }
+        }
+      ]
+    }
+  },
+  "reports": {
+    "control": {
+      "development": {
+        "total": 192,
+        "valid": 184,
+        "exact": 184,
+        "invented_authority": 0,
+        "paraphrase_equal": 60,
+        "contrast_distinct": 60,
+        "groups": 64,
+        "families": {
+          "quantity": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "comparator": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "polarity": {
+            "total": 18,
+            "valid": 18,
+            "exact": 18
+          },
+          "recipient": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "authority": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "unless": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "nested": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "direction": {
+            "total": 18,
+            "valid": 18,
+            "exact": 18
+          },
+          "temporal": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "revision": {
+            "total": 18,
+            "valid": 10,
+            "exact": 10
+          },
+          "time": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "paragraph": {
+            "total": 30,
+            "valid": 30,
+            "exact": 30
+          },
+          "approval": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "nested_boolean": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "negation_scope": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "conflict": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "multi_quantity": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "unit_equivalence": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "comparison_bounds": {
+            "total": 18,
+            "valid": 18,
+            "exact": 18
+          },
+          "notification_roles": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          }
+        },
+        "field_exact": {
+          "action": 184,
+          "roles": 184,
+          "modality": 184,
+          "negated": 184,
+          "condition": 184,
+          "exception": 184,
+          "complement": 184,
+          "revision": 184,
+          "time": 184,
+          "links": 184
+        },
+        "details": [
+          {
+            "id": "v8-dev-0-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-0-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-0-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-1-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-1-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-1-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-2-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-2-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-2-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-3-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-3-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-3-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-4-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-4-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-4-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-5-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-5-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-5-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-6-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-6-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-6-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-7-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-7-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-7-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-8-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-8-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-8-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-9-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-9-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-9-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-10-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-10-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-10-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-11-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-11-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-11-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-12-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-12-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-12-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-13-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-13-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-13-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-14-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-14-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-14-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-15-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-15-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-15-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-16-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-16-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-16-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-17-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-17-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-17-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-18-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-18-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-18-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-19-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-19-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-19-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-20-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-20-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-20-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-21-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-21-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-21-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-22-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-22-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-22-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-23-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-23-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-23-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-24-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-24-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-24-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-25-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-25-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-25-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-26-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-26-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-26-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-27-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-27-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-27-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-28-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-28-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-28-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-29-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-29-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-29-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-30-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-30-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-30-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-31-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-31-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-31-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-32-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-32-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-32-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-33-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-33-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-33-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-34-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-34-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-34-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-35-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-35-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-35-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-36-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-36-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-36-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-37-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-37-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-37-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-38-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-38-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-38-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-39-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-39-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-39-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-40-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-40-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-40-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-41-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-41-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-41-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-42-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-42-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-42-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-43-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-43-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-43-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-revision-0-0",
+            "exact": false,
+            "error": "'graph'"
+          },
+          {
+            "id": "v13-dev-revision-0-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-revision-0-2",
+            "exact": false,
+            "error": "'graph'"
+          },
+          {
+            "id": "v13-dev-revision-1-0",
+            "exact": false,
+            "error": "'graph'"
+          },
+          {
+            "id": "v13-dev-revision-1-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-revision-1-2",
+            "exact": false,
+            "error": "'graph'"
+          },
+          {
+            "id": "v13-dev-revision-2-0",
+            "exact": false,
+            "error": "'graph'"
+          },
+          {
+            "id": "v13-dev-revision-2-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-revision-2-2",
+            "exact": false,
+            "error": "'graph'"
+          },
+          {
+            "id": "v13-dev-revision-3-0",
+            "exact": false,
+            "error": "'graph'"
+          },
+          {
+            "id": "v13-dev-revision-3-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-revision-3-2",
+            "exact": false,
+            "error": "'graph'"
+          },
+          {
+            "id": "v13-dev-paragraph-0-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-0-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-0-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-1-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-1-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-1-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-2-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-2-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-2-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-3-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-3-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-3-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-0-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-0-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-0-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-1-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-1-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-1-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-2-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-2-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-2-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-3-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-3-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-3-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-0-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-0-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-0-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-1-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-1-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-1-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-2-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-2-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-2-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-3-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-3-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-3-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-0-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-0-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-0-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-1-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-1-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-1-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-2-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-2-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-2-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-3-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-3-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-3-2",
+            "exact": true,
+            "error": null
+          }
+        ],
+        "development_thresholds_met": false,
+        "status": "DEVELOPMENT_ONLY_NOT_HELDOUT_GATE",
+        "parser_errors": {
+          "invalid source token span": 8
+        },
+        "original_132": {
+          "total": 132,
+          "exact": 132,
+          "valid": 132,
+          "invented_authority": 0
+        },
+        "extension_24": {
+          "total": 24,
+          "exact": 16,
+          "valid": 16,
+          "invented_authority": 0
+        },
+        "new_36": {
+          "total": 36,
+          "exact": 36,
+          "valid": 36,
+          "invented_authority": 0
+        }
+      },
+      "diagnostic": {
+        "total": 56,
+        "exact": 50,
+        "valid": 56,
+        "details": [
+          {
+            "id": "v18-anchor-0-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-0-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-0-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-0-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-0-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-0-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-0-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-0-1",
+            "exact": false,
+            "roles": {
+              "source": false,
+              "target": false
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-0-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-0-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-0-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-0-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-wording-0-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-wording-0-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-1-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-1-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-1-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-1-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-1-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-1-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-1-0",
+            "exact": false,
+            "roles": {
+              "source": false,
+              "target": false
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-1-1",
+            "exact": false,
+            "roles": {
+              "source": false,
+              "target": false
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-1-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-1-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-1-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-1-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-wording-1-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-wording-1-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-2-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-2-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-2-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-2-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-2-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-2-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-2-0",
+            "exact": false,
+            "roles": {
+              "source": false,
+              "target": false
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-2-1",
+            "exact": false,
+            "roles": {
+              "source": false,
+              "target": false
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-2-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-2-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-2-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-2-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-wording-2-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-wording-2-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-3-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-3-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-3-2",
+            "exact": false,
+            "roles": {
+              "source": true,
+              "target": false
+            }
+          },
+          {
+            "id": "v18-rename_site-3-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-3-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-3-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-3-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-3-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-3-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-3-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-3-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-3-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-wording-3-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-wording-3-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          }
+        ]
+      },
+      "prediction_sha256": "ce9ede6765857cf6626989cb56d05817f9be90eeb81ddaf982e5e61ce2018729",
+      "adapter_sha256": "578932eed0f6975748602926c085a618fbdb40cf2d2e611e2208e52423b86a53"
+    },
+    "revision_replay": {
+      "development": {
+        "total": 192,
+        "valid": 188,
+        "exact": 187,
+        "invented_authority": 0,
+        "paraphrase_equal": 60,
+        "contrast_distinct": 61,
+        "groups": 64,
+        "families": {
+          "quantity": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "comparator": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "polarity": {
+            "total": 18,
+            "valid": 18,
+            "exact": 18
+          },
+          "recipient": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "authority": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "unless": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "nested": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "direction": {
+            "total": 18,
+            "valid": 18,
+            "exact": 18
+          },
+          "temporal": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "revision": {
+            "total": 18,
+            "valid": 14,
+            "exact": 14
+          },
+          "time": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "paragraph": {
+            "total": 30,
+            "valid": 30,
+            "exact": 29
+          },
+          "approval": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "nested_boolean": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "negation_scope": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "conflict": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "multi_quantity": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "unit_equivalence": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          },
+          "comparison_bounds": {
+            "total": 18,
+            "valid": 18,
+            "exact": 18
+          },
+          "notification_roles": {
+            "total": 6,
+            "valid": 6,
+            "exact": 6
+          }
+        },
+        "field_exact": {
+          "action": 187,
+          "roles": 188,
+          "modality": 188,
+          "negated": 188,
+          "condition": 188,
+          "exception": 188,
+          "complement": 188,
+          "revision": 188,
+          "time": 188,
+          "links": 188
+        },
+        "details": [
+          {
+            "id": "v8-dev-0-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-0-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-0-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-1-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-1-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-1-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-2-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-2-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-2-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-3-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-3-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-3-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-4-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-4-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-4-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-5-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-5-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-5-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-6-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-6-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-6-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-7-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-7-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-7-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-8-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-8-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-8-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-9-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-9-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-9-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-10-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-10-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-10-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-11-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-11-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-11-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-12-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-12-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-12-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-13-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-13-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-13-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-14-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-14-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-14-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-15-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-15-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-15-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-16-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-16-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-16-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-17-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-17-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-17-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-18-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-18-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-18-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-19-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-19-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-19-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-20-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-20-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-20-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-21-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-21-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-21-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-22-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-22-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-22-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-23-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-23-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-23-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-24-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-24-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-24-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-25-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-25-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-25-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-26-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-26-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-26-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-27-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-27-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-27-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-28-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-28-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-28-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-29-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-29-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-29-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-30-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-30-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-30-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-31-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-31-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-31-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-32-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-32-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-32-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-33-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-33-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-33-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-34-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-34-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-34-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-35-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-35-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-35-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-36-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-36-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-36-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-37-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-37-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-37-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-38-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-38-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-38-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-39-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-39-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-39-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-40-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-40-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-40-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-41-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-41-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-41-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-42-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-42-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-42-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-43-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-43-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v8-dev-43-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-revision-0-0",
+            "exact": false,
+            "error": "'graph'"
+          },
+          {
+            "id": "v13-dev-revision-0-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-revision-0-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-revision-1-0",
+            "exact": false,
+            "error": "'graph'"
+          },
+          {
+            "id": "v13-dev-revision-1-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-revision-1-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-revision-2-0",
+            "exact": false,
+            "error": "'graph'"
+          },
+          {
+            "id": "v13-dev-revision-2-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-revision-2-2",
+            "exact": false,
+            "error": "'graph'"
+          },
+          {
+            "id": "v13-dev-revision-3-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-revision-3-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-revision-3-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-0-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-0-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-0-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-1-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-1-1",
+            "exact": false,
+            "error": "semantic mismatch"
+          },
+          {
+            "id": "v13-dev-paragraph-1-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-2-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-2-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-2-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-3-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-3-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v13-dev-paragraph-3-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-0-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-0-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-0-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-1-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-1-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-1-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-2-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-2-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-2-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-3-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-3-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-polarity-3-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-0-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-0-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-0-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-1-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-1-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-1-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-2-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-2-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-2-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-3-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-3-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-direction-3-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-0-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-0-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-0-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-1-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-1-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-1-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-2-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-2-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-2-2",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-3-0",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-3-1",
+            "exact": true,
+            "error": null
+          },
+          {
+            "id": "v16-dev-paragraph-3-2",
+            "exact": true,
+            "error": null
+          }
+        ],
+        "development_thresholds_met": false,
+        "status": "DEVELOPMENT_ONLY_NOT_HELDOUT_GATE",
+        "parser_errors": {
+          "invalid source token span": 4
+        },
+        "original_132": {
+          "total": 132,
+          "exact": 132,
+          "valid": 132,
+          "invented_authority": 0
+        },
+        "extension_24": {
+          "total": 24,
+          "exact": 19,
+          "valid": 20,
+          "invented_authority": 0
+        },
+        "new_36": {
+          "total": 36,
+          "exact": 36,
+          "valid": 36,
+          "invented_authority": 0
+        }
+      },
+      "diagnostic": {
+        "total": 56,
+        "exact": 43,
+        "valid": 56,
+        "details": [
+          {
+            "id": "v18-anchor-0-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-0-1",
+            "exact": false,
+            "roles": {
+              "source": true,
+              "target": false
+            }
+          },
+          {
+            "id": "v18-anchor-0-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-0-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-0-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-0-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-0-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-0-1",
+            "exact": false,
+            "roles": {
+              "source": false,
+              "target": false
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-0-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-0-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-0-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-0-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-wording-0-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-wording-0-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-1-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-1-1",
+            "exact": false,
+            "roles": {
+              "source": true,
+              "target": false
+            }
+          },
+          {
+            "id": "v18-anchor-1-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-1-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-1-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-1-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-1-0",
+            "exact": false,
+            "roles": {
+              "source": false,
+              "target": false
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-1-1",
+            "exact": false,
+            "roles": {
+              "source": false,
+              "target": false
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-1-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-1-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-1-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-1-2",
+            "exact": false,
+            "roles": {
+              "source": false,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-wording-1-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-wording-1-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-2-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-2-1",
+            "exact": false,
+            "roles": {
+              "source": true,
+              "target": false
+            }
+          },
+          {
+            "id": "v18-anchor-2-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-2-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-2-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-2-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-2-0",
+            "exact": false,
+            "roles": {
+              "source": false,
+              "target": false
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-2-1",
+            "exact": false,
+            "roles": {
+              "source": false,
+              "target": false
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-2-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-2-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-2-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-2-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-wording-2-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-wording-2-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-3-0",
+            "exact": false,
+            "roles": {
+              "source": true,
+              "target": false
+            }
+          },
+          {
+            "id": "v18-anchor-3-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-anchor-3-2",
+            "exact": false,
+            "roles": {
+              "source": true,
+              "target": false
+            }
+          },
+          {
+            "id": "v18-rename_site-3-0",
+            "exact": false,
+            "roles": {
+              "source": false,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-3-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-rename_site-3-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-3-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-3-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-distinct_prefixes-3-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-3-0",
+            "exact": false,
+            "roles": {
+              "source": false,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-3-1",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-short_names-3-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-wording-3-0",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          },
+          {
+            "id": "v18-wording-3-2",
+            "exact": true,
+            "roles": {
+              "source": true,
+              "target": true
+            }
+          }
+        ]
+      },
+      "prediction_sha256": "4c70025ec0e4a0e23cca905a25af8c948590853cfe42f670800937c81606b0eb",
+      "adapter_sha256": "2fcaae7f92677953ab2bd38ae7c9dc2e4ddd22ec2934c0ff30b9fc615f8a15d6"
+    }
+  },
+  "anchors": {
+    "baseline": [
+      {
+        "id": "v18-anchor-0-0",
+        "exact": true,
+        "roles": {
+          "source": true,
+          "target": true
+        }
+      },
+      {
+        "id": "v18-anchor-1-0",
+        "exact": true,
+        "roles": {
+          "source": true,
+          "target": true
+        }
+      },
+      {
+        "id": "v18-anchor-2-0",
+        "exact": true,
+        "roles": {
+          "source": true,
+          "target": true
+        }
+      },
+      {
+        "id": "v18-anchor-3-0",
+        "exact": false,
+        "roles": {
+          "source": true,
+          "target": false
+        }
+      }
+    ],
+    "control": [
+      {
+        "id": "v18-anchor-0-0",
+        "exact": true,
+        "roles": {
+          "source": true,
+          "target": true
+        }
+      },
+      {
+        "id": "v18-anchor-1-0",
+        "exact": true,
+        "roles": {
+          "source": true,
+          "target": true
+        }
+      },
+      {
+        "id": "v18-anchor-2-0",
+        "exact": true,
+        "roles": {
+          "source": true,
+          "target": true
+        }
+      },
+      {
+        "id": "v18-anchor-3-0",
+        "exact": true,
+        "roles": {
+          "source": true,
+          "target": true
+        }
+      }
+    ],
+    "revision_replay": [
+      {
+        "id": "v18-anchor-0-0",
+        "exact": true,
+        "roles": {
+          "source": true,
+          "target": true
+        }
+      },
+      {
+        "id": "v18-anchor-1-0",
+        "exact": true,
+        "roles": {
+          "source": true,
+          "target": true
+        }
+      },
+      {
+        "id": "v18-anchor-2-0",
+        "exact": true,
+        "roles": {
+          "source": true,
+          "target": true
+        }
+      },
+      {
+        "id": "v18-anchor-3-0",
+        "exact": false,
+        "roles": {
+          "source": true,
+          "target": false
+        }
+      }
+    ]
+  },
+  "revisions": [
+    {
+      "id": "v13-dev-revision-0-0",
+      "exact": false,
+      "error": "'graph'"
+    },
+    {
+      "id": "v13-dev-revision-0-2",
+      "exact": true,
+      "error": null
+    },
+    {
+      "id": "v13-dev-revision-1-0",
+      "exact": false,
+      "error": "'graph'"
+    },
+    {
+      "id": "v13-dev-revision-1-2",
+      "exact": true,
+      "error": null
+    },
+    {
+      "id": "v13-dev-revision-2-0",
+      "exact": false,
+      "error": "'graph'"
+    },
+    {
+      "id": "v13-dev-revision-2-2",
+      "exact": false,
+      "error": "'graph'"
+    },
+    {
+      "id": "v13-dev-revision-3-0",
+      "exact": true,
+      "error": null
+    },
+    {
+      "id": "v13-dev-revision-3-2",
+      "exact": true,
+      "error": null
+    }
+  ],
+  "criteria": {
+    "eight_revisions_exact": false,
+    "original132": true,
+    "prior156": false,
+    "dev192": false,
+    "diagnostic50": false,
+    "anchor_roles": false
+  },
+  "meets_pilot_requirements": false,
+  "selected_cumulative_steps": 4380,
+  "provenance": {
+    "run": "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v20-pilot-001",
+    "verified_unix": 1789168072.4311051,
+    "raw_predictions_reparsed": 496,
+    "new_outputs": 248,
+    "identical_sample_order": true,
+    "all96_sampled_once": true,
+    "config_difference_only_output_path": true,
+    "sha256": {
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v19-pilot-001/control/report.json": "8614212bca7db4169f89b4c43a3be36fced8ea0cff10e88c2ef5ef90670d205f",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v19-pilot-001/control/predictions.jsonl": "ce9ede6765857cf6626989cb56d05817f9be90eeb81ddaf982e5e61ce2018729",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v19-pilot-001/control/training_complete.json": "c8b2023de30b19f00369f988c33e51a5c4650c49fb58210b666754c3cc78c06a",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v19-pilot-001/control/training_started.json": "687612476333b64006eb334a38b6a72810b672930ea72c478ec7a74b3701233d",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v19-pilot-001/control/alignment.json": "9c07aacc59a8ee9a867af4c687050f0cd0d3250dbfed5d92b0fbeb4ea9c695b1",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v19-pilot-001/control/sampled_ids.jsonl": "8db21556fba9ddc573b1853439a3a2f6f9149ee983be17d903385e5033c299de",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v19-pilot-001/control/adapter/adapters.safetensors": "578932eed0f6975748602926c085a618fbdb40cf2d2e611e2208e52423b86a53",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v19-pilot-001/control/adapter/adapter_config.json": "37baa884f2e2d4bc1973deb3d78045d950f15ba435adab54f7a7327cbcb1e869",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v20-pilot-001/revision_replay/report.json": "2cb13a3b64b0f7e69d45ee52d1a696577be07011dec9a25d48fc3f85d62c06e9",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v20-pilot-001/revision_replay/predictions.jsonl": "4c70025ec0e4a0e23cca905a25af8c948590853cfe42f670800937c81606b0eb",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v20-pilot-001/revision_replay/training_complete.json": "88da2ad9ef30d958eaf2b58d63b003b82413281077270e2911750c979686cc06",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v20-pilot-001/revision_replay/training_started.json": "cc88ca07e97a7fcf9434a3e22d1d3f0f54934dd29a6b2205a2714539755543a5",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v20-pilot-001/revision_replay/alignment.json": "9c07aacc59a8ee9a867af4c687050f0cd0d3250dbfed5d92b0fbeb4ea9c695b1",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v20-pilot-001/revision_replay/sampled_ids.jsonl": "8db21556fba9ddc573b1853439a3a2f6f9149ee983be17d903385e5033c299de",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v20-pilot-001/revision_replay/adapter/adapters.safetensors": "2fcaae7f92677953ab2bd38ae7c9dc2e4ddd22ec2934c0ff30b9fc615f8a15d6",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v20-pilot-001/revision_replay/adapter/adapter_config.json": "3cbcb2fd912424f31d0fd856b7ee97f2cf98e772f28be0b3e930496bfe1b808d",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v20-pilot-001/freeze.json": "dafc9ae3e20918ef5e5fb7de08f93f996cef722bed3e6d72a5846d891a1d1f34",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v20-pilot-001/baseline.json": "cf3e9254a5486278934c20477ce185457730959e3bb590e78304aee775b92d0a",
+      "/Volumes/My Passport for Mac/gemmatraining/event-graph-lora-v20-pilot-001/complete.json": "0fe63f0064012542522a8c1e3ced5cad2fcce13f0688e5d7e5dc113cd5cf6889"
+    }
+  }
+}

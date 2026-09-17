@@ -1,0 +1,864 @@
+{
+  "reports": [
+    {
+      "total": 72,
+      "valid": 72,
+      "exact": 71,
+      "families": {
+        "active": {
+          "total": 12,
+          "valid": 12,
+          "exact": 11
+        },
+        "passive": {
+          "total": 12,
+          "valid": 12,
+          "exact": 12
+        },
+        "cause_cleft": {
+          "total": 12,
+          "valid": 12,
+          "exact": 12
+        },
+        "process_cleft": {
+          "total": 12,
+          "valid": 12,
+          "exact": 12
+        },
+        "result": {
+          "total": 12,
+          "valid": 12,
+          "exact": 12
+        },
+        "effect": {
+          "total": 12,
+          "valid": 12,
+          "exact": 12
+        }
+      },
+      "details": [
+        {
+          "id": "v17-active-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-0-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-2-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-3-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v17-active-3-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-0-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-2-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-3-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-0-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-2-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-3-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-0-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-2-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-3-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-0-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-2-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-3-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-0-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-2-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-3-2",
+          "exact": true,
+          "valid": true
+        }
+      ],
+      "groups": 24,
+      "paraphrase_equal": 23,
+      "contrast_distinct": 24,
+      "epoch": 0,
+      "cumulative_steps": 4380,
+      "prediction_sha256": "c39fec303bf5d3868a5890537f680c50c91a07110e2e6fe27f2e967d3d65505b",
+      "adapter_sha256": "c6a4708d9ceca6dab5d275ea0bff5ac172e392d085a4fda6b0d875e51d95a994"
+    },
+    {
+      "total": 72,
+      "valid": 72,
+      "exact": 71,
+      "families": {
+        "active": {
+          "total": 12,
+          "valid": 12,
+          "exact": 11
+        },
+        "passive": {
+          "total": 12,
+          "valid": 12,
+          "exact": 12
+        },
+        "cause_cleft": {
+          "total": 12,
+          "valid": 12,
+          "exact": 12
+        },
+        "process_cleft": {
+          "total": 12,
+          "valid": 12,
+          "exact": 12
+        },
+        "result": {
+          "total": 12,
+          "valid": 12,
+          "exact": 12
+        },
+        "effect": {
+          "total": 12,
+          "valid": 12,
+          "exact": 12
+        }
+      },
+      "details": [
+        {
+          "id": "v17-active-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-0-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-2-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-active-3-1",
+          "exact": false,
+          "valid": true
+        },
+        {
+          "id": "v17-active-3-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-0-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-2-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-passive-3-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-0-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-2-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-cause_cleft-3-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-0-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-2-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-process_cleft-3-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-0-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-2-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-result-3-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-0-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-0-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-0-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-1-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-1-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-1-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-2-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-2-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-2-2",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-3-0",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-3-1",
+          "exact": true,
+          "valid": true
+        },
+        {
+          "id": "v17-effect-3-2",
+          "exact": true,
+          "valid": true
+        }
+      ],
+      "groups": 24,
+      "paraphrase_equal": 23,
+      "contrast_distinct": 24,
+      "epoch": 1,
+      "cumulative_steps": 5172,
+      "prediction_sha256": "5d71941198b31bb2ad748cf512d9b53b0719de197e6785c637c220a9ae6da544",
+      "adapter_sha256": "d4ea9b4ef390022945c90dbe4efc1cdcc5c33b3441d9a18a356ed2684c4e4a5a"
+    }
+  ],
+  "transitions": {
+    "unchanged_correct": 71,
+    "persistent": 1
+  },
+  "details": [
+    {
+      "id": "v17-active-3-1",
+      "family": "active",
+      "source": "Unit Delta flow brings about Unit Delta flow restriction.",
+      "transition": "persistent",
+      "differences": [
+        [
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Unit Delta flow restriction",
+            "actual": "Unit Delta flow brings about Unit Delta flow restriction"
+          }
+        ],
+        [
+          {
+            "path": ".events[0].roles.target",
+            "expected": "Unit Delta flow restriction",
+            "actual": "Unit Delta flow brings about Unit Delta flow restriction"
+          }
+        ]
+      ]
+    }
+  ],
+  "provenance": {
+    "run": "/Users/kenmorkaya/PycharmProjects/ToM_assist/.tmp/event-graph-lora-v17-diagnostic-001",
+    "verified_unix": 1789107527.674019,
+    "raw_predictions_reparsed": 144,
+    "token_ids_and_finish_reasons_verified": 144,
+    "sha256": {
+      "epoch-0.jsonl": "c39fec303bf5d3868a5890537f680c50c91a07110e2e6fe27f2e967d3d65505b",
+      "epoch-0-report.json": "686b7e36806c89bc5a8e48e2c72751ef9d709cb1a289c6d463fd390b04bbf4c2",
+      "epoch-0/adapter": "c6a4708d9ceca6dab5d275ea0bff5ac172e392d085a4fda6b0d875e51d95a994",
+      "epoch-1.jsonl": "5d71941198b31bb2ad748cf512d9b53b0719de197e6785c637c220a9ae6da544",
+      "epoch-1-report.json": "d8b3d709ac9e2203abf779fb0062700ede73cb01d9bc1c2ad5fc4afc41824b5c",
+      "epoch-1/adapter": "d4ea9b4ef390022945c90dbe4efc1cdcc5c33b3441d9a18a356ed2684c4e4a5a",
+      "freeze.json": "b532bb521c94e0a85916a16b63f18bcb68ea9dc1e795d055fafd8c43dd8a1930",
+      "diagnostic.jsonl": "3bbce764a6d1461b89202f685778bcbc4ffcc849206a0a9050f495fdbeeb3b9a",
+      "complete.json": "92261f086ba78d83a049ccf14e680cbae20d24fdf9f7669c0962e55245874da7"
+    }
+  },
+  "selected_cumulative_steps": 4380,
+  "heldout": "NOT_RUN",
+  "matrix_and_tree": "NOT_RUN"
+}

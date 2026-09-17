@@ -1,0 +1,18 @@
+{
+  "recorded_utc": "2026-09-09T23:57:29.978735+00:00",
+  "artifact_sha256": {
+    "validation/event_graph_diagnostics/audit_runtime.py": "70d061eb1c9a5d71c8bf569e73a59ab5e937d499775996e154c7268c3daa1a93",
+    "validation/event_graph_diagnostics/audit_structure.py": "883de43c00b0adf78673e2bd4b001fadfa9df45fe285afdae6887e0f392069bd",
+    "gateway/event_graph_span_wire.py": "5fdc8187e6418c6673dc71472708a940264403305d94c83252cecf7a6e331cc9",
+    "gateway/tests/test_event_graph_span_wire.py": "c81f251432ee3c0aa09e13152fd0edf44d3d082e6861f494baac9f04d7a36050",
+    "validation/event_graph_v3/data/train.jsonl": "e80beaccfce57c23c6b0b6abdd075808a7acd9dc1031b09f649f247aa445c945",
+    "validation/event_graph_v3/data/dev.jsonl": "6fcd79d46ffca5b89a2d90d23746a3c5569ff8f07da4be5962b688277bf78321",
+    "validation/event_graph_v3/training/train.jsonl": "2cc6641624a8f87ddd7728249a062505272ecf703f4c2e23d4da78f41fb6714f",
+    "validation/event_graph_v3/training/valid.jsonl": "09a1e3c60a1b1d513fadbe9411621886a507db741d76d0c7f66aba7d5c991cb9",
+    ".tmp/event-graph-lora-v7-session-001/epoch-1/dev_predictions.jsonl": "0a55bec35eb6c2fecd720f47aeba642ae88a497e070757bbde4daca456d6d120",
+    "validation/event_graph_v6/heldout.jsonl": "a9bbfe37c2bfef49223770877762c94915765f1cdb950c930979c9208a65164b"
+  },
+  "tests_passed": 99,
+  "new_generations": 0,
+  "training_updates": 0
+}

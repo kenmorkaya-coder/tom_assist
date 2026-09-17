@@ -1,0 +1,81 @@
+[
+  {
+    "id": "v13-dev-paragraph-1-1",
+    "family": "paragraph",
+    "transition": "recovered",
+    "source": "Continuation of Maple Portal D01 foundation works is permitted for Maple Portal D01 velocity monitor under 3.28 mm/s. When that measurement is over 3.28 mm/s, Maple Portal D01 foundation works must stop; notification to Maple Portal D01 duty inspector is required by the same trigger. Maple Portal D01 outlet flow may operate at no more than 223 L/min.",
+    "differences": [
+      [
+        {
+          "path": ".events[3].action",
+          "expected": "discharge",
+          "actual": "use"
+        }
+      ],
+      []
+    ]
+  },
+  {
+    "id": "v16-dev-direction-0-2",
+    "family": "direction",
+    "transition": "regressed",
+    "source": "The process bringing about Marsh Gallery D00-K groundwater pumping is Marsh Gallery D00-K ground settlement.",
+    "differences": [
+      [],
+      [
+        {
+          "path": ".events[0].roles.source",
+          "expected": "Marsh Gallery D00-K ground settlement",
+          "actual": "Marsh Gallery D00-K groundwater pumping is Marsh Gallery D00-K ground settlement"
+        },
+        {
+          "path": ".events[0].roles.target",
+          "expected": "Marsh Gallery D00-K groundwater pumping",
+          "actual": "Marsh Gallery D00-K ground settlement"
+        }
+      ]
+    ]
+  },
+  {
+    "id": "v16-dev-direction-1-2",
+    "family": "direction",
+    "transition": "regressed",
+    "source": "The process bringing about Flint Tunnel D01-K groundwater pumping is Flint Tunnel D01-K ground settlement.",
+    "differences": [
+      [],
+      [
+        {
+          "path": ".events[0].roles.source",
+          "expected": "Flint Tunnel D01-K ground settlement",
+          "actual": "Flint Tunnel D01-K groundwater pumping is Flint Tunnel D01-K ground settlement"
+        },
+        {
+          "path": ".events[0].roles.target",
+          "expected": "Flint Tunnel D01-K groundwater pumping",
+          "actual": "Flint Tunnel D01-K ground settlement"
+        }
+      ]
+    ]
+  },
+  {
+    "id": "v16-dev-direction-3-2",
+    "family": "direction",
+    "transition": "regressed",
+    "source": "The process bringing about Flint Tunnel D03-K groundwater pumping is Flint Tunnel D03-K ground settlement.",
+    "differences": [
+      [],
+      [
+        {
+          "path": ".events[0].roles.source",
+          "expected": "Flint Tunnel D03-K ground settlement",
+          "actual": "Flint Tunnel D03-K groundwater pumping"
+        },
+        {
+          "path": ".events[0].roles.target",
+          "expected": "Flint Tunnel D03-K groundwater pumping",
+          "actual": "Flint Tunnel D03-K ground settlement"
+        }
+      ]
+    ]
+  }
+]

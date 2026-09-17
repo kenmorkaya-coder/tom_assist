@@ -246,11 +246,13 @@ impl Store {
         self.connection.execute("UPDATE provider_exchanges SET status=?3,response_text=COALESCE(?4,response_text),error_code=?5 WHERE project_id=?1 AND id=?2",params![project,id,status,response,error])?;
         Ok(())
     }
-    pub fn accept_reviewed_exchange(&self, project: &str, id: &str) -> Result<()> {
-        self.connection.execute("UPDATE provider_exchanges SET accepted_review=1 WHERE project_id=?1 AND id=?2 AND response_text IS NOT NULL",params![project,id])?;
-        Ok(())
+    pub fn accept_reviewed_exchange(&self, project: &str, id: &str) -> Result<bool> {
+        Ok(self.connection.execute(
+            "UPDATE provider_exchanges SET accepted_review=1 WHERE project_id=?1 AND id=?2 AND response_text IS NOT NULL AND accepted_review=0",
+            params![project,id],
+        )? == 1)
     }
-    pub fn reviewed_exchange_accepted(&self, sent_id: &str) -> Result<bool> {
+    pub fn conversation_exchange_acceptance(&self, sent_id: &str) -> Result<Option<bool>> {
         Ok(self
             .connection
             .query_row(
@@ -258,8 +260,82 @@ impl Store {
                 [sent_id],
                 |r| r.get::<_, bool>(0),
             )
-            .optional()?
-            .unwrap_or(false))
+            .optional()?)
+    }
+    pub fn accept_response_for_experience(
+        &self,
+        evaluation: &ResponseEvaluationRecord,
+        accepted_at: &str,
+    ) -> Result<(bool, Option<String>)> {
+        if evaluation.result == "INCOMPLETE" {
+            return Err(StoreError::Integrity(
+                "an incomplete response cannot be accepted as experience".into(),
+            ));
+        }
+        let response = self
+            .turn(&evaluation.turn_id)?
+            .ok_or_else(|| StoreError::Integrity("evaluated response turn missing".into()))?;
+        let sent = self
+            .sent_turn_for_packet(&evaluation.project_id, &evaluation.packet_digest)?
+            .ok_or_else(|| StoreError::Integrity("sent turn for evaluation missing".into()))?;
+        if response.project_id != evaluation.project_id
+            || response.role != "assistant"
+            || response.completeness != "complete"
+            || sent.project_id != evaluation.project_id
+            || sent.role != "user"
+        {
+            return Err(StoreError::Integrity(
+                "experience acceptance lineage mismatch".into(),
+            ));
+        }
+        let exchange_id = self
+            .connection
+            .query_row(
+                "SELECT id FROM provider_exchanges WHERE project_id=?1 AND id || ':assistant'=?2",
+                params![evaluation.project_id, evaluation.turn_id],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()?;
+        let tx = self.connection.unchecked_transaction()?;
+        let inserted = tx.execute(
+            "INSERT OR IGNORE INTO experience_acceptances(evaluation_id,project_id,response_turn_id,sent_turn_id,accepted_at) VALUES(?1,?2,?3,?4,?5)",
+            params![evaluation.id,evaluation.project_id,evaluation.turn_id,sent.id,accepted_at],
+        )? == 1;
+        if !inserted {
+            let existing: Option<(String, String)> = tx
+                .query_row(
+                    "SELECT evaluation_id,response_turn_id FROM experience_acceptances WHERE sent_turn_id=?1",
+                    [&sent.id],
+                    |row| Ok((row.get(0)?, row.get(1)?)),
+                )
+                .optional()?;
+            if existing.as_ref() != Some(&(evaluation.id.clone(), evaluation.turn_id.clone())) {
+                return Err(StoreError::Integrity(
+                    "sent turn already accepted with a different response".into(),
+                ));
+            }
+        }
+        if let Some(id) = &exchange_id {
+            tx.execute(
+                "UPDATE provider_exchanges SET accepted_review=1 WHERE project_id=?1 AND id=?2 AND response_text IS NOT NULL",
+                params![evaluation.project_id,id],
+            )?;
+        }
+        tx.commit()?;
+        Ok((inserted, exchange_id))
+    }
+    pub fn response_experience_accepted(&self, evaluation_id: &str, sent_id: &str) -> Result<bool> {
+        let recorded = self.connection.query_row(
+            "SELECT EXISTS(SELECT 1 FROM experience_acceptances WHERE evaluation_id=?1 AND sent_turn_id=?2)",
+            params![evaluation_id,sent_id],
+            |row| row.get::<_, bool>(0),
+        )?;
+        if recorded {
+            return Ok(true);
+        }
+        // Preserve an explicit acceptance recorded by an older app if its
+        // runtime commit had not completed before this migration landed.
+        Ok(self.conversation_exchange_acceptance(sent_id)? == Some(true))
     }
     pub fn conversation_view(&self, project: &str, id: &str) -> Result<Value> {
         let session = self.conversation(project, id)?.ok_or_else(|| {

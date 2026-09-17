@@ -1,0 +1,246 @@
+{
+  "status": "POST_HOC_DIAGNOSTIC_ONLY",
+  "original_gate_unchanged": true,
+  "recorded_utc": "2026-09-09T10:46:02.838177+00:00",
+  "bare_json_outputs": 132,
+  "parser_failure_counts": {
+    "quote occurrence absent": 25,
+    "unsupported action, modality or negation": 4
+  },
+  "valid_semantic_mismatches": 12,
+  "semantic_field_mismatch_rows": {
+    "exception": 3,
+    "roles": 8,
+    "modality": 5,
+    "action": 4,
+    "condition": 4
+  },
+  "unique_source_strings": 120,
+  "details": [
+    {
+      "id": "v3-heldout-quantity-0-0",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-quantity-0-1",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-quantity-0-2",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-comparator-0-0",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-comparator-0-1",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-comparator-0-2",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-polarity-0-0",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-polarity-0-1",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-polarity-0-2",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-polarity-1-2",
+      "semantic_fields": [
+        "exception"
+      ],
+      "source_order_mismatch": false,
+      "source": "Plateau excavation shall not halt whenever Plateau vibration exceeds 6.7 mm/s."
+    },
+    {
+      "id": "v3-heldout-authority-0-0",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-authority-0-2",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-authority-1-0",
+      "semantic_fields": [
+        "roles"
+      ],
+      "source_order_mismatch": false,
+      "source": "Plateau superintendent directs that Plateau excavation shall halt upon Plateau vibration rising above 6.7 mm/s."
+    },
+    {
+      "id": "v3-heldout-authority-1-2",
+      "semantic_fields": [
+        "roles"
+      ],
+      "source_order_mismatch": false,
+      "source": "Plateau superintendent alternate directs that Plateau excavation shall halt upon Plateau vibration rising above 6.7 mm/s."
+    },
+    {
+      "id": "v3-heldout-unless-0-1",
+      "semantic_fields": [
+        "exception"
+      ],
+      "source_order_mismatch": false,
+      "source": "Work instruction: Estuary excavation is allowed to carry on, except where Estuary vibration registers above 2.9 mm/s."
+    },
+    {
+      "id": "v3-heldout-unless-1-1",
+      "semantic_fields": [
+        "exception"
+      ],
+      "source_order_mismatch": false,
+      "source": "Work instruction: Plateau excavation is allowed to carry on, except where Plateau vibration registers above 6.7 mm/s."
+    },
+    {
+      "id": "v3-heldout-direction-1-2",
+      "semantic_fields": [
+        "modality"
+      ],
+      "source_order_mismatch": false,
+      "source": "Plateau settlement is responsible for causing Plateau dewatering."
+    },
+    {
+      "id": "v3-heldout-temporal-0-0",
+      "parser_error": "unsupported action, modality or negation"
+    },
+    {
+      "id": "v3-heldout-temporal-0-2",
+      "parser_error": "unsupported action, modality or negation"
+    },
+    {
+      "id": "v3-heldout-temporal-1-0",
+      "parser_error": "unsupported action, modality or negation"
+    },
+    {
+      "id": "v3-heldout-temporal-1-1",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-temporal-1-2",
+      "parser_error": "unsupported action, modality or negation"
+    },
+    {
+      "id": "v3-heldout-revision-1-2",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-paragraph-0-0",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-paragraph-0-1",
+      "semantic_fields": [
+        "action",
+        "condition",
+        "modality",
+        "roles"
+      ],
+      "source_order_mismatch": true,
+      "source": "Work instruction: Estuary excavation is permitted to carry on so long as Estuary vibration stays below 2.9 mm/s. Should that measurement rise above 2.9 mm/s, Estuary excavation shall halt and a notification must be delivered to Estuary superintendent. The permitted rate for Estuary discharge is no greater than 2.9 L/min."
+    },
+    {
+      "id": "v3-heldout-paragraph-0-2",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-paragraph-1-0",
+      "semantic_fields": [
+        "action",
+        "condition",
+        "modality",
+        "roles"
+      ],
+      "source_order_mismatch": true,
+      "source": "Plateau excavation is permitted to carry on so long as Plateau vibration stays below 6.7 mm/s. Should that measurement rise above 6.7 mm/s, Plateau excavation shall halt and a notification must be delivered to Plateau superintendent. The permitted rate for Plateau discharge is no greater than 6.7 L/min."
+    },
+    {
+      "id": "v3-heldout-paragraph-1-1",
+      "semantic_fields": [
+        "action",
+        "condition",
+        "modality",
+        "roles"
+      ],
+      "source_order_mismatch": true,
+      "source": "Work instruction: Plateau excavation is permitted to carry on so long as Plateau vibration stays below 6.7 mm/s. Should that measurement rise above 6.7 mm/s, Plateau excavation shall halt and a notification must be delivered to Plateau superintendent. The permitted rate for Plateau discharge is no greater than 6.7 L/min."
+    },
+    {
+      "id": "v3-heldout-paragraph-1-2",
+      "semantic_fields": [
+        "action",
+        "condition",
+        "modality",
+        "roles"
+      ],
+      "source_order_mismatch": true,
+      "source": "Plateau excavation is permitted to carry on so long as Plateau vibration stays below 6.7 mm/s. Should that measurement rise above 6.7 mm/s, Plateau excavation shall halt and a notification must be delivered to Plateau superintendent. The permitted rate for Plateau discharge is no greater than 9.0 L/min."
+    },
+    {
+      "id": "v3-heldout-approval-0-1",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-approval-0-2",
+      "semantic_fields": [
+        "roles"
+      ],
+      "source_order_mismatch": false,
+      "source": "Permission for Estuary excavation to carry on has one exception: should Estuary superintendent alternate approve halting it, the permission does not apply."
+    },
+    {
+      "id": "v3-heldout-approval-1-2",
+      "semantic_fields": [
+        "roles"
+      ],
+      "source_order_mismatch": false,
+      "source": "Permission for Plateau excavation to carry on has one exception: should Plateau superintendent alternate approve halting it, the permission does not apply."
+    },
+    {
+      "id": "v3-heldout-negation_scope-0-2",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-multi_quantity-0-0",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-multi_quantity-0-1",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-unit_equivalence-0-0",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-unit_equivalence-0-1",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-comparison_bounds-0-0",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-notification_roles-0-0",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-notification_roles-0-1",
+      "parser_error": "quote occurrence absent"
+    },
+    {
+      "id": "v3-heldout-notification_roles-0-2",
+      "parser_error": "quote occurrence absent"
+    }
+  ],
+  "scorer_diagnostic_limitation": "Frozen aggregate details overwrite parser failures with KeyError graph; original saved predictions retain the actual errors used here. Denominators and verdict are unchanged."
+}

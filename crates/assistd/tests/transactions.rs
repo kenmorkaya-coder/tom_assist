@@ -147,6 +147,29 @@ fn production_exchange_commits_manifest_once_and_defers_conflict_teaching() {
     assert!(evaluated.ok, "{evaluated:?}");
     assert_eq!(evaluated.payload.unwrap()["result"], "PASS");
     let observer = Store::open(&database).unwrap();
+    assert!(
+        observer
+            .runtime_commit_for_sent("sent-user")
+            .unwrap()
+            .is_none(),
+        "capturing and evaluating PASS is not owner acceptance"
+    );
+    let mut accepted_evaluation = evaluation.clone();
+    accepted_evaluation.payload["accept_for_experience"] = json!(true);
+    let accepted = service.handle_envelope(accepted_evaluation.clone());
+    assert!(accepted.ok, "{accepted:?}");
+    let repeated_acceptance = service.handle_envelope(accepted_evaluation);
+    assert!(repeated_acceptance.ok, "{repeated_acceptance:?}");
+    assert_eq!(
+        observer
+            .audit_records("project-a")
+            .unwrap()
+            .iter()
+            .filter(|event| event.category == "RESPONSE_ACCEPTED_BY_USER")
+            .count(),
+        1,
+        "explicit response acceptance is durable and idempotent"
+    );
     let receipt = observer
         .runtime_commit_for_sent("sent-user")
         .unwrap()
@@ -266,12 +289,13 @@ fn production_exchange_commits_manifest_once_and_defers_conflict_teaching() {
     send.payload["user_draft"] = json!(conflict_draft);
     send.payload["turn_id"] = json!("sent-conflict");
     assert!(restarted.handle_envelope(send).ok);
-    let conflict = restarted.handle_envelope(evaluation_envelope(
+    let conflict_evaluation = evaluation_envelope(
         conflict_digest,
         "assistant-conflict",
         "Use obsolete pipeline for the release.",
         4,
-    ));
+    );
+    let conflict = restarted.handle_envelope(conflict_evaluation.clone());
     assert!(conflict.ok, "{conflict:?}");
     let result = conflict.payload.unwrap();
     assert_eq!(result["result"], "CONFLICT");
@@ -296,6 +320,17 @@ fn production_exchange_commits_manifest_once_and_defers_conflict_teaching() {
         assert!(resolved.ok, "{resolved:?}");
         assert!(restarted.handle_envelope(resolution).ok);
     }
+    assert!(
+        observer
+            .runtime_commit_for_sent("sent-conflict")
+            .unwrap()
+            .is_none(),
+        "finding resolution is not owner acceptance"
+    );
+    let mut accepted_conflict = conflict_evaluation;
+    accepted_conflict.payload["accept_for_experience"] = json!(true);
+    let accepted = restarted.handle_envelope(accepted_conflict);
+    assert!(accepted.ok, "{accepted:?}");
     let receipt = observer
         .runtime_commit_for_sent("sent-conflict")
         .unwrap()
@@ -477,7 +512,7 @@ fn prepare_is_snapshot_bound_and_send_is_idempotent() {
     let service = service();
     let prepared = prepare(&service, "Keep the transaction pure.");
     assert_eq!(prepared.packet.project_state_version, 0);
-    assert_eq!(prepared.packet.renderer_version, "authoritative-state/1.3");
+    assert_eq!(prepared.packet.renderer_version, "authoritative-state/1.7");
     let request = SendTurnRequest {
         project_id: "project-a".into(),
         packet_digest: prepared.packet.packet_digest.clone(),
@@ -541,6 +576,7 @@ fn evaluate_binds_response_to_packet_and_marks_incomplete_capture() {
             complete: false,
             created_at: "2026-08-10T00:00:06Z".into(),
             latency_ms: 2,
+            accept_for_experience: false,
         })
         .unwrap();
     assert_eq!(result.result, EvaluationState::Incomplete);

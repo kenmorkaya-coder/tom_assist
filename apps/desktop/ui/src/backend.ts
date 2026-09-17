@@ -38,7 +38,10 @@ export interface OAuthConnectionStatus {
   capabilities?: Record<string, unknown>;
 }
 export type ChatMethod =
+  | "document.ingest"
   | "provider.status"
+  | "inspection.gemma"
+  | "conversation.native_answer"
   | "conversation.list"
   | "conversation.create"
   | "conversation.get"
