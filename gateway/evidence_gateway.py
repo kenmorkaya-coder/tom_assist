@@ -662,7 +662,7 @@ class EvidenceTomGateway(base.TomGateway):
             try:
                 project_id = base._safe_project_id(payload.get("project_id"))
                 action = payload.get("action", "answer")
-                if action not in {"status", "answer", "learn_situation", "resolve_source_authority"}:
+                if action not in {"status", "answer", "review_candidates", "learn_situation", "resolve_source_authority"}:
                     raise ValueError("unsupported document answer action")
                 if action == "answer" and payload.get("explicit_answer") is not True:
                     raise ValueError("explicit local answer action required")
@@ -685,6 +685,8 @@ class EvidenceTomGateway(base.TomGateway):
                         engine="rgm+tom" if structural["learned_situations"] else "rgm",
                         scope=RGM_TOM_DOCUMENT_SCOPE if structural["learned_situations"] else RGM_DOCUMENT_SCOPE,
                         structural_memory=structural)
+                if action == "review_candidates":
+                    return 200, service.review_candidates(library)
                 if action == "learn_situation":
                     return 200, service.learn_situation(project_id, library, payload)
                 if action == "resolve_source_authority":

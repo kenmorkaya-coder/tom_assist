@@ -2531,3 +2531,28 @@ and the live project loaded all four older bridge records unchanged.
 This change improves the exact-source admission check only. It does not alter
 the tree, automatically teach detected passages or collapse a distributed ToM
 return. The relevant gateway suite passes 251 tests.
+
+#### Explicit review queue for detected structures
+
+The Memory screen now has a **Structures to review** action. It scans only the
+active authenticated RGM chunks and lists each locally complete
+failure/substitute-action/cost-recovery candidate with its exact passage and
+the three phrases that triggered the candidate. Scanning is read-only: it makes
+zero tree calls and cannot teach a memory. Each passage has its own explicit
+Save action; the gateway repeats the source-local validation before it writes or
+binds any ToM memory.
+
+The integration diagnostic exposed a separate storage problem before the user
+interface was wired: a source passage was keyed only by source identity, so it
+could hold either its reviewed insurance relationship or its reviewed event
+chain, but not both. Reviewed records are now keyed by source identity plus the
+reviewed structure identity. A controlled check stored both structure types
+from one exact passage as separate records and retained four distinct ToM
+relationships. A second, conflicting set of party roles for that same source is
+still rejected.
+
+On the live project the read-only scan inspected four active chunks and returned
+the two expected passages. Both were correctly marked as already reviewed. It
+reported zero tree calls and no automatic learning. The full relevant gateway
+suite passes 252 tests; the desktop suite passes 19 tests, TypeScript checking
+passes, and the production interface build passes.

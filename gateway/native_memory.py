@@ -2143,6 +2143,45 @@ class RgmDocumentService:
             automatic_extraction=False, whole_tree_score=False,
             state=(rows[-1]["encoded"]["tree"] if rows else None))
 
+    def review_candidates(self, library):
+        """List bounded source-local motif candidates without teaching ToM."""
+        rows = self._situation_rows(library)
+        reviewed = {(row["situation"]["source_id"], native_digest(
+            dict(roles=row["encoded"].get("roles"),
+                temporal_motif=row["encoded"].get("temporal_motif"))))
+            for row in rows}
+        reviewed_by_source = {}
+        for row in rows:
+            source_id = row["situation"]["source_id"]
+            reviewed_by_source[source_id] = reviewed_by_source.get(source_id, 0) + 1
+        motif_digest = native_digest(dict(roles=None,
+            temporal_motif=FAILURE_STEP_IN_COST_MOTIF))
+        chunks = library.document_chunks(active_only=True)
+        candidates = []
+        for chunk in chunks:
+            text = chunk["text"]
+            if hashlib.sha256(text.encode()).hexdigest() != chunk["text_sha256"]:
+                raise ValueError("retained RGM source text changed")
+            matches = _failure_step_in_cost_matches(text)
+            if matches is None:
+                continue
+            source_id = rgm_candidate_source_id(dict(evidence_reference=dict(
+                doc_id=chunk["document_id"], start=chunk["start"], end=chunk["end"])))
+            candidates.append(dict(
+                candidate_id="RGMCAND-" + native_digest(dict(
+                    source_id=source_id, motif=FAILURE_STEP_IN_COST_MOTIF))[:20],
+                source_id=source_id, document_id=chunk["document_id"],
+                display_name=chunk["display_name"], chunk_id=f"chunk_{chunk['chunk_index']}",
+                chunk_index=chunk["chunk_index"], text=text,
+                temporal_motif=copy.deepcopy(FAILURE_STEP_IN_COST_MOTIF),
+                events=[dict(kind=name, start=match.start(), end=match.end(),
+                    text=match.group()) for name, match in matches.items()],
+                reviewed=(source_id, motif_digest) in reviewed,
+                reviewed_structure_count=reviewed_by_source.get(source_id, 0)))
+        return dict(status="ready", candidates=candidates,
+            scanned_chunks=len(chunks),
+            automatic_learning=False, tree_calls=0)
+
     def learn_situation(self, project_id, library, payload):
         if not NativeMemoryService._inference_lock.acquire(blocking=False):
             raise ValueError("another local document operation is running")
@@ -2187,18 +2226,26 @@ class RgmDocumentService:
         serialized = rgm.serialize()
         restored = ReflectionGatedMemory(); restored.restore(serialized)
         situation = read_rgm_situation_memory(next(iter(restored.state.anchors.values())))
-        record_id = RGM_TOM_SITUATION_PREFIX + source["source_id"]
-        existing = library.get(record_id)
         rows = self._situation_rows(library)
-        if existing is not None:
-            if (existing["content"] != source["text"]
-                or existing["record"].get("situation") != situation
-                or existing["record"].get("roles") != roles
-                or existing["record"].get("temporal_motif") != temporal_motif):
-                raise ValueError("this source chunk already has a different reviewed relationship")
+        structure_digest = native_digest(dict(roles=roles, temporal_motif=temporal_motif))
+        duplicate = next((row for row in rows
+            if row["situation"]["source_id"] == source["source_id"]
+            and row["content"] == source["text"]
+            and row["situation"] == situation
+            and row["encoded"].get("roles") == roles
+            and row["encoded"].get("temporal_motif") == temporal_motif), None)
+        if duplicate is not None:
             return dict(status="learned", duplicate=True, source_id=source["source_id"],
                 relationship=situation["relations"],
-                tree=rows[-1]["encoded"]["tree"] if rows else existing["record"]["tree"])
+                tree=rows[-1]["encoded"]["tree"])
+        if (temporal_motif is None and any(
+            row["situation"]["source_id"] == source["source_id"]
+            and row["encoded"].get("temporal_motif") is None for row in rows)):
+            raise ValueError("this source chunk already has a different reviewed relationship")
+        record_id = (RGM_TOM_SITUATION_PREFIX + source["source_id"] + "-"
+            + structure_digest[:20])
+        if library.get(record_id) is not None:
+            raise ValueError("reviewed source structure identity collided")
         profile = self._tom_runtime_profile(project_id)
         current = rows[-1]["encoded"]["tree"] if rows else None
         all_memories = self._memory_catalog(rows)

@@ -569,3 +569,47 @@ it("imports a local document only after an explicit action", async () => {
     explicit_user_action: true, source_path: "/Volumes/Passport/Agreement.pdf",
   });
 });
+
+it("lists source-local structure candidates and teaches only after review", async () => {
+  const { Memory } = await import("../src/Memory");
+  const backend = new FakeDesktopBackend();
+  const project = await backend.seedDemo();
+  vi.spyOn(backend, "diagnostics").mockResolvedValue({ memory: {} });
+  vi.spyOn(backend, "documents").mockResolvedValue([{
+    document_id: "document-a", display_name: "Agreement.pdf", content_sha256: "a".repeat(64),
+    byte_length: 500, media_type: "application/pdf", chunking_version: "rgm",
+    embedding_version: "minilm", ingested_tick: 1, tombstoned_at: null, chunk_count: 1,
+  }]);
+  const motif = { relation_kind: "sequence", source_event: "failure",
+    intermediate_event: "substitute_action", target_event: "cost_recovery" } as const;
+  const chat = vi.spyOn(backend, "chat").mockImplementation(async (_id, _method, payload) => {
+    if (payload.action === "status") return { ready: true, engine: "rgm+tom",
+      structural_memory: { configured: true, learned_situations: 0, capacity: 6 } };
+    if (payload.action === "review_candidates") return { candidates: [{
+      candidate_id: "RGMCAND-a", source_id: "SRC-a", document_id: "document-a",
+      display_name: "Agreement.pdf", chunk_id: "chunk_0", chunk_index: 0,
+      text: "Orchid fails. Rowan acts. The cost is a debt due.", temporal_motif: motif,
+      events: [
+        { kind: "failure", start: 7, end: 12, text: "fails" },
+        { kind: "substitute_action", start: 20, end: 24, text: "acts" },
+        { kind: "cost_recovery", start: 40, end: 48, text: "debt due" },
+      ], reviewed: false, reviewed_structure_count: 1,
+    }] };
+    if (payload.action === "learn_situation") return { duplicate: false, write_count: 0 };
+    throw new Error("unexpected action");
+  });
+  render(<Memory projectId={project.id} backend={backend} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Find structures to review" }));
+  await screen.findByText(/Detected: failure/);
+  expect(chat.mock.calls.filter((call) => call[2].action === "learn_situation")).toHaveLength(0);
+  expect(screen.getByText(/already has 1 other reviewed structure/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", {
+    name: "Save failure → substitute action → cost recovery",
+  }));
+  await screen.findByText("Linked this passage to the existing distributed ToM memories.");
+  expect(chat).toHaveBeenCalledWith(project.id, "conversation.native_answer", {
+    action: "learn_situation", explicit_user_action: true,
+    document_id: "document-a", chunk_index: 0, temporal_motif: motif,
+  });
+  expect(screen.getByRole("button", { name: "Already reviewed in ToM" })).toBeTruthy();
+});

@@ -911,6 +911,9 @@ def test_rgm_endpoint_uses_project_library_without_initializing_tree(tmp_path, m
     def call(**payload): return gateway.handle("POST", "/document/native-memory/answer", dict(project_id="project", **payload))
     status, ready = call(action="status")
     assert status == 200 and ready["ready"] and ready["engine"] == "rgm"
+    status, review = call(action="review_candidates")
+    assert status == 200 and review["automatic_learning"] is False
+    assert review["tree_calls"] == 0 and review["candidates"] == []
     assert call(action="answer", question="Who reports leaks?")[0] == 400
     status, result = call(action="answer", explicit_answer=True, question="Who reports leaks?")
     assert status == 200 and result["status"] == "supported"
@@ -1354,6 +1357,45 @@ def test_reviewed_failure_step_in_cost_preserves_legacy_receipt_offsets():
         event_offsets={name: [match.start(), match.end()] for name, match in matches.items()}))
     assert rgm_temporal_motif_receipt(
         dict(source_id="SRC-existing", text=text), FAILURE_STEP_IN_COST_MOTIF) == expected
+
+
+def test_one_rgm_source_can_retain_two_reviewed_structures_and_candidate_status(tmp_path):
+    from gateway.native_memory import (FAILURE_STEP_IN_COST_MOTIF, RGM_TOM_SITUATION_PREFIX,
+        RgmDocumentService)
+    from gateway.permanent_library import PermanentLibrary
+    library = PermanentLibrary(tmp_path / "multi-structure-source.sqlite3")
+    calls = []
+    service = RgmDocumentService(worker=_rgm_app_worker([]), model_identity="fixture-model",
+        tom_worker=_reviewed_tom_worker(calls), tom_profile=_reviewed_tom_profile())
+    text = ("If Orchid fails to demonstrate compliance, Rowan may effect and maintain that "
+        "insurance and pay such premiums. Any amount paid will be a debt due from Orchid, "
+        "and Orchid must reimburse Rowan on demand.")
+    try:
+        document = service.ingest("project", library, dict(explicit_user_action=True,
+            display_name="Insurance procedure", content=text, media_type="text/plain"))
+        before = service.review_candidates(library)
+        assert before["scanned_chunks"] == 1 and before["tree_calls"] == 0
+        assert len(before["candidates"]) == 1
+        assert before["candidates"][0]["reviewed"] is False
+        roles = dict(failure_party="Orchid", cover_payer="Rowan",
+            repayment_from="Orchid", repayment_to="Rowan", repayment_when="on demand")
+        first = service.learn_situation("project", library, dict(explicit_user_action=True,
+            document_id=document["document_id"], chunk_index=0, roles=roles))
+        second_payload = dict(explicit_user_action=True, document_id=document["document_id"],
+            chunk_index=0, temporal_motif=FAILURE_STEP_IN_COST_MOTIF)
+        second = service.learn_situation("project", library, second_payload)
+        assert first["write_count"] == 2 and second["write_count"] == 2
+        assert service.learn_situation("project", library, second_payload)["duplicate"]
+        rows = library.records_with_prefix(RGM_TOM_SITUATION_PREFIX)
+        assert len(rows) == 2 and len({row["record_id"] for row in rows}) == 2
+        after = service.review_candidates(library)
+        assert after["candidates"][0]["reviewed"] is True
+        assert after["candidates"][0]["reviewed_structure_count"] == 2
+        assert len(service._situation_rows(library)) == 2
+        assert len(service._memory_catalog(service._situation_rows(library))) == 4
+        assert [call[0] for call in calls] == ["rgm_tom_learn", "rgm_tom_learn"]
+    finally:
+        library.db.close()
 
 
 def test_reviewed_failure_step_in_cost_chain_recalls_sources_without_rgm_candidate(tmp_path):

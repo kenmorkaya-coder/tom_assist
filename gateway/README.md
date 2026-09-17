@@ -1015,6 +1015,13 @@ wording. Nearby failure/debt clauses without substitute performance were
 rejected. This remains a bounded admission check for an explicitly reviewed
 motif; it does not automatically teach every detected passage.
 
+Memory now exposes a read-only **Structures to review** scan for that bounded
+motif. It lists the exact RGM passage and the three matched event phrases. The
+scan makes no tree call. Each candidate requires a separate explicit Save
+action, and the server repeats the source-local validation before teaching or
+binding it. One source passage may retain different reviewed structure types;
+it may not retain two conflicting versions of the same party relationship.
+
 During an answer, MiniLM/RGM still locates candidate source passages. When the
 question explicitly states a supported insurance relationship or an admitted
 event sequence, its reviewed structure is resolved from the query alone. Each

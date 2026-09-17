@@ -12,6 +12,25 @@ interface MemoryReport {
   document_chunk_count?: number;
 }
 
+type StructureCandidate = {
+  candidate_id: string;
+  source_id: string;
+  document_id: string;
+  display_name: string;
+  chunk_id: string;
+  chunk_index: number;
+  text: string;
+  temporal_motif: {
+    relation_kind: "sequence";
+    source_event: "failure";
+    intermediate_event: "substitute_action";
+    target_event: "cost_recovery";
+  };
+  events: { kind: string; start: number; end: number; text: string }[];
+  reviewed: boolean;
+  reviewed_structure_count: number;
+};
+
 function count(value: number | undefined) {
   return Number.isFinite(value) ? Number(value).toLocaleString() : "—";
 }
@@ -37,6 +56,10 @@ export function Memory({
   const [sourcePath, setSourcePath] = useState("");
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState("");
+  const [candidates, setCandidates] = useState<StructureCandidate[]>();
+  const [candidateScanBusy, setCandidateScanBusy] = useState(false);
+  const [savingCandidate, setSavingCandidate] = useState("");
+  const [candidateMessage, setCandidateMessage] = useState("");
   const [revision, setRevision] = useState(0);
   useEffect(() => {
     let current = true;
@@ -70,6 +93,38 @@ export function Memory({
       setRevision((value) => value + 1);
     } catch (reason) { setError(String(reason)); }
     finally { setImporting(false); }
+  }
+
+  async function findStructureCandidates() {
+    setCandidateScanBusy(true); setError(""); setCandidateMessage("");
+    try {
+      const result = await backend.chat(projectId, "conversation.native_answer", {
+        action: "review_candidates",
+      }) as { candidates: StructureCandidate[] };
+      setCandidates(result.candidates);
+    } catch (reason) { setError(String(reason)); }
+    finally { setCandidateScanBusy(false); }
+  }
+
+  async function saveStructureCandidate(candidate: StructureCandidate) {
+    setSavingCandidate(candidate.candidate_id); setError(""); setCandidateMessage("");
+    try {
+      const result = await backend.chat(projectId, "conversation.native_answer", {
+        action: "learn_situation", explicit_user_action: true,
+        document_id: candidate.document_id, chunk_index: candidate.chunk_index,
+        temporal_motif: candidate.temporal_motif,
+      }) as { duplicate?: boolean; write_count?: number };
+      setCandidates((current) => current?.map((item) => item.candidate_id === candidate.candidate_id
+        ? { ...item, reviewed: true, reviewed_structure_count: item.reviewed_structure_count + (result.duplicate ? 0 : 1) }
+        : item));
+      setCandidateMessage(result.duplicate
+        ? "This exact structure was already reviewed."
+        : result.write_count === 0
+          ? "Linked this passage to the existing distributed ToM memories."
+          : `Saved this structure across ${Number(result.write_count ?? 0).toLocaleString()} ToM memory locations.`);
+      setRevision((value) => value + 1);
+    } catch (reason) { setError(String(reason)); }
+    finally { setSavingCandidate(""); }
   }
 
   return (
@@ -120,6 +175,36 @@ export function Memory({
           <p>Saved in the small ToM tree only after an explicit source review.</p>
         </article>}
       </div>
+      {canImport && documents.length > 0 && <section aria-label="Review detected document structures">
+        <h3>Structures to review</h3>
+        <p>Find passages that locally state: a required action fails, another party acts, and the cost is recovered. Nothing is saved in ToM until you review a passage and press Save.</p>
+        <button disabled={candidateScanBusy || Boolean(savingCandidate)}
+          onClick={() => void findStructureCandidates()}>
+          {candidateScanBusy ? "Checking document passages…" : "Find structures to review"}
+        </button>
+        {candidates && !candidates.length && <p role="status">No matching procedures were found.</p>}
+        {!!candidates?.length && <div class="memory-documents">
+          {candidates.map((candidate) => <article key={candidate.candidate_id}>
+            <div>
+              <h4>{candidate.display_name} · {candidate.chunk_id}</h4>
+              <p>Detected: {candidate.events.map((event) =>
+                `${event.kind.replaceAll("_", " ")} “${event.text.replaceAll(/\s+/g, " ")}”`).join(" → ")}</p>
+              {candidate.reviewed_structure_count > 0 && !candidate.reviewed
+                && <p>This passage already has {candidate.reviewed_structure_count} other reviewed structure{candidate.reviewed_structure_count === 1 ? "" : "s"}. This one can be stored separately.</p>}
+              <details><summary>Review exact passage</summary>
+                <p style={{ whiteSpace: "pre-wrap" }}>{candidate.text}</p>
+              </details>
+              <button disabled={candidate.reviewed || Boolean(savingCandidate)}
+                onClick={() => void saveStructureCandidate(candidate)}>
+                {candidate.reviewed ? "Already reviewed in ToM"
+                  : savingCandidate === candidate.candidate_id ? "Saving reviewed structure…"
+                    : "Save failure → substitute action → cost recovery"}
+              </button>
+            </div>
+          </article>)}
+        </div>}
+        {candidateMessage && <p role="status">{candidateMessage}</p>}
+      </section>}
       <h3>Permanent project documents</h3>
       {documents.length ? (
         <div class="memory-documents">
