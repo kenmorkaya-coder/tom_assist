@@ -893,19 +893,22 @@ source ranges, stale project state and unreviewed calls. Automatic relationship
 extraction remains disabled because the current parser did not preserve party
 direction reliably.
 
-The reviewed source relation is first persisted as a native RGM snapshot with
-its exact document/chunk provenance. An isolated worker then teaches the same
-structured 32×32 field used by the validated calibration into a project copy of
-the approved 500-branch tree. The current integration is deliberately bounded
-to six reviewed situations, matching the six orthogonal addresses already
-tested. A new save must write non-overlapping tree locations; otherwise it is
-rejected. Only the newest large checkpoint and reference archive are retained.
+The reviewed source relations are first persisted as a native RGM snapshot with
+their exact document/chunk provenance. An isolated worker teaches a separate
+structured 32×32 field for replacement cover and, when present, reimbursement
+direction into a project copy of the approved 500-branch tree. Replacement
+cover uses source→target roles; reimbursement uses actor→recipient roles. The
+current integration is deliberately bounded to six relationship memories,
+matching the six orthogonal addresses already tested. A new save must write
+non-overlapping tree locations; otherwise it is rejected. Only the newest large
+checkpoint and reference archive are retained.
 
 During an answer, MiniLM/RGM still locates candidate source passages. When the
-question explicitly states the failing party and the party obtaining replacement
-cover, those names are resolved to identities already retained in the reviewed
-RGM memories. The relationship is compiled into one 32×32 field and routed
-through the saved tree once. The worker compares the complete returned
+question explicitly states either the failure→replacement-cover relationship or
+the debtor→reimbursement-recipient relationship, those names are resolved to
+identities already retained in the reviewed RGM memories. The relationship type
+and direction are compiled into one 32×32 field and routed through the saved
+tree once. The worker compares the complete returned
 branch-position-preserving signed field and exact native slot map with the
 candidate memories. It does not replay every candidate's teaching input, average
 branches or compute a whole-tree score.

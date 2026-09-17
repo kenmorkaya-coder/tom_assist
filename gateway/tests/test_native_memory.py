@@ -394,17 +394,32 @@ def test_rgm_replacement_chain_distinguishes_mirrored_abbreviated_parties(questi
 ])
 def test_reviewed_query_situation_resolves_mirrored_aliases_without_source_evidence(question, expected):
     from gateway.native_memory import reviewed_query_situation
-    situations = [dict(failure_party="TfNSW", cover_payer="SM"),
-        dict(failure_party="SM", cover_payer="TfNSW")]
-    result = reviewed_query_situation(question, situations)
+    memories = [dict(relation_kind="replacement_cover", source_party="TfNSW", target_party="SM"),
+        dict(relation_kind="replacement_cover", source_party="SM", target_party="TfNSW")]
+    result = reviewed_query_situation(question, memories)
     assert result["status"] == "complete"
-    assert result["fields"] == expected
+    assert result["fields"] == dict(relation_kind="replacement_cover",
+        source_party=expected["failure_party"], target_party=expected["cover_payer"])
+
+
+@pytest.mark.parametrize("question,expected", [
+    ("Does Transport for NSW reimburse Sydney Metro?", ("TfNSW", "SM")),
+    ("Which clause says Sydney Metro repays Transport for NSW?", ("SM", "TfNSW")),
+])
+def test_reviewed_query_situation_resolves_repayment_type_and_direction(question, expected):
+    from gateway.native_memory import reviewed_query_situation
+    memories = [dict(relation_kind="reimbursement", source_party="TfNSW", target_party="SM"),
+        dict(relation_kind="reimbursement", source_party="SM", target_party="TfNSW")]
+    result = reviewed_query_situation(question, memories)
+    assert result["status"] == "complete"
+    assert result["fields"] == dict(relation_kind="reimbursement",
+        source_party=expected[0], target_party=expected[1])
 
 
 def test_reviewed_query_situation_refuses_incomplete_or_unrelated_wording():
     from gateway.native_memory import reviewed_query_situation
-    situations = [dict(failure_party="TfNSW", cover_payer="SM"),
-        dict(failure_party="SM", cover_payer="TfNSW")]
+    situations = [dict(relation_kind="replacement_cover", source_party="TfNSW", target_party="SM"),
+        dict(relation_kind="replacement_cover", source_party="SM", target_party="TfNSW")]
     for question in ("Who reimburses whom?", "If Alpha fails, can Beta arrange cover?"):
         assert reviewed_query_situation(question, situations)["status"] == "incomplete"
 
@@ -919,20 +934,28 @@ def _reviewed_tom_worker(calls, *, damage=None):
     def worker(operation, payload):
         calls.append((operation, payload))
         if operation == "rgm_tom_learn":
-            source_id = payload["new_source_id"]
-            sequence = len(payload["situations"])
-            return dict(source_id=source_id, tree_saved=True,
+            new_ids = payload["new_memory_ids"]
+            source_id = payload["memories"][-1]["source_id"]
+            sequence = len(payload["memories"])
+            return dict(tree_saved=True,
                 tree=dict(sequence=sequence, state_hash=f"state-{sequence}",
                     checkpoint_path=f"/Volumes/Fixture/tom-assist/project/tree-{sequence}.pkl",
                     checkpoint_sha256=f"checkpoint-{sequence}",
                     reference_path=f"/Volumes/Fixture/tom-assist/project/references-{sequence}.npz",
                     reference_sha256=f"references-{sequence}", branch_count=507,
                     terminal_branch_count=254),
-                write_keys=[[f"bank-{sequence}", 0]],
-                reference=dict(field_shape=[254, 32, 32], field_sha256=f"field-{sequence}"),
+                new_memories=[dict(memory_id=memory_id, source_id=source_id,
+                    relation_kind=next(m["relation_kind"] for m in payload["memories"]
+                        if m["memory_id"] == memory_id),
+                    write_keys=[[f"bank-{index}", 0]],
+                    reference=dict(field_shape=[254, 32, 32], field_sha256=f"field-{index}"))
+                    for index, memory_id in enumerate(new_ids, 1)],
                 whole_tree_score=False, all_branch_cell_coordinates_preserved=True)
         if operation == "rgm_tom_recall":
-            assert payload["query_situation"] == dict(failure_party="Orchid", cover_payer="Rowan")
+            assert payload["query_situation"] in (
+                dict(relation_kind="replacement_cover", source_party="Orchid", target_party="Rowan"),
+                dict(relation_kind="reimbursement", source_party="Orchid", target_party="Rowan"),
+            )
             return dict(status="recalled", recalled_source_ids=payload["candidate_source_ids"],
                 returns=[dict(source_id=source_id, status="exact_native_return",
                     field_shape=[254, 32, 32], field_sha256="field", active_slot_count=381)
@@ -942,6 +965,16 @@ def _reviewed_tom_worker(calls, *, damage=None):
                 all_branch_cell_coordinates_compared=True)
         raise AssertionError(operation)
     return worker
+
+
+def test_reviewed_tom_legacy_situation_is_read_as_one_replacement_cover_memory():
+    from gateway.native_memory import RgmDocumentService
+    legacy = dict(source_id="source", text="Orchid Rowan", failure_party="Orchid",
+        cover_payer="Rowan", address_index=0, previous_write_keys=[["bank", 1]])
+    result = RgmDocumentService._worker_memories(dict(encoded=dict(worker_situation=legacy)))
+    assert result == [dict(memory_id="source", source_id="source", text="Orchid Rowan",
+        relation_kind="replacement_cover", source_party="Orchid", target_party="Rowan",
+        address_index=0, previous_write_keys=[["bank", 1]])]
 
 
 def test_reviewed_rgm_situation_is_persisted_taught_and_used_during_answer(tmp_path):
@@ -959,7 +992,7 @@ def test_reviewed_rgm_situation_is_persisted_taught_and_used_during_answer(tmp_p
             service.learn_situation("project", library, dict(payload, explicit_user_action=False))
         learned = service.learn_situation("project", library, payload)
         assert learned["status"] == "learned" and not learned["duplicate"]
-        assert learned["write_count"] == 1
+        assert learned["write_count"] == 2
         rows = library.records_with_prefix(RGM_TOM_SITUATION_PREFIX)
         assert len(rows) == 1 and rows[0]["content_hash"] == hashlib.sha256(rows[0]["content"].encode()).hexdigest()
         assert service.learn_situation("project", library, payload)["duplicate"]
@@ -971,12 +1004,16 @@ def test_reviewed_rgm_situation_is_persisted_taught_and_used_during_answer(tmp_p
         assert trace["status"] == "recalled" and trace["whole_tree_score"] is False
         assert trace["all_branch_cell_coordinates_compared"] is True
         assert trace["evidence_scope"]["mode"] == "reviewed_tom_sources"
+        repayment = service.answer("project", library, "Does Orchid reimburse Rowan?")
+        repayment_trace = repayment["trace"]["retrieval"]["reviewed_tom_memory"]
+        assert repayment_trace["status"] == "recalled"
+        assert repayment["purity"]["tree_calls"] == 1
         generic = service.answer("project", library, "Who reports leaks to Rowan?")
         assert generic["status"] == "supported" and generic["engine"] == "rgm"
         generic_trace = generic["trace"]["retrieval"]["reviewed_tom_memory"]
         assert generic_trace["status"] == "no_query_structure"
         assert generic["purity"]["tree_calls"] == 0
-        assert [call[0] for call in calls] == ["rgm_tom_learn", "rgm_tom_recall"]
+        assert [call[0] for call in calls] == ["rgm_tom_learn", "rgm_tom_recall", "rgm_tom_recall"]
     finally:
         library.db.close()
 

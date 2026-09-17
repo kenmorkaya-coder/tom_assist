@@ -724,7 +724,7 @@ def native_question_parts(question, generate):
     return parts, trace
 
 
-def reviewed_query_situation(question, situations):
+def reviewed_query_situation(question, memories):
     """Resolve one explicit question relationship to reviewed RGM party labels.
 
     This is intentionally narrow.  It reads only the relationship stated in
@@ -732,23 +732,61 @@ def reviewed_query_situation(question, situations):
     It does not inspect source passages or use a known answer.
     """
     import re
-    if not isinstance(question, str) or not isinstance(situations, list):
+    if not isinstance(question, str) or not isinstance(memories, list):
         raise ValueError("reviewed query input is invalid")
     labels = []
-    for item in situations:
+    for item in memories:
         if not isinstance(item, dict):
-            raise ValueError("reviewed situation is invalid")
-        for key in ("failure_party", "cover_payer"):
+            raise ValueError("reviewed memory is invalid")
+        keys = (("source_party", "target_party") if "source_party" in item
+            else ("failure_party", "cover_payer"))
+        for key in keys:
             value = item.get(key)
             if not isinstance(value, str) or not value.strip():
-                raise ValueError("reviewed situation party is invalid")
+                raise ValueError("reviewed memory party is invalid")
             if value not in labels:
                 labels.append(value)
 
     name = (r"(?!(?:If|When|After|Before|Under|Which|Who|What|Does|Do|Is|Are|Must|Can|Should|The|Any)\b)"
             r"[A-Z][\w'-]*(?:\s+(?:for|of|the|[A-Z][\w'-]*)){0,5}")
+    def forms(value):
+        words = re.findall(r"[A-Za-z0-9]+", value)
+        direct = "".join(words).casefold()
+        acronym = "".join(word if len(word) > 1 and word.isupper() else word[0]
+            for word in words).casefold() if words else ""
+        return {direct, acronym} - {""}
+
+    def resolve(values):
+        matches = {label for value in values for label in labels if forms(value) & forms(label)}
+        return next(iter(matches)) if len(matches) == 1 else None
+
+    repayment = {"source_party": [], "target_party": []}
+    spans = []
+    if re.search(r"\b(?:not|never)\s+(?:reimburse|repay)\b|\bnot\s+(?:reimbursed|repaid)\b", question, re.I):
+        return dict(status="incomplete", reason="negated_repayment_relationship",
+            fields={}, spans=[])
+    repay_rules = [
+        rf"(?P<source_party>{name})\s+(?:(?:to|must|shall|will|has to)\s+)?"
+        rf"(?:reimburse(?:s)?|repay(?:s)?)\s+(?P<target_party>{name})",
+        rf"(?P<target_party>{name})\s+(?:is|was|must be|shall be|will be)\s+"
+        rf"(?:reimbursed|repaid)\s+by\s+(?P<source_party>{name})",
+    ]
+    for rule in repay_rules:
+        for match in re.finditer(rule, question):
+            for key, value in match.groupdict().items():
+                if value not in repayment[key]:
+                    repayment[key].append(value)
+                    spans.append(dict(field=key, start=match.start(key),
+                        end=match.end(key), text=value))
+    repay_source, repay_target = (resolve(repayment[key])
+        for key in ("source_party", "target_party"))
+    if repay_source is not None and repay_target is not None and repay_source != repay_target:
+        return dict(status="complete", fields=dict(relation_kind="reimbursement",
+            source_party=repay_source, target_party=repay_target), spans=spans,
+            method="explicit repayment relationship resolved to reviewed RGM identities")
+
     patterns = {
-        "failure_party": [
+        "source_party": [
             rf"(?P<party>{name})\s+(?:has\s+)?failed to demonstrate compliance",
             rf"(?P<party>{name})[’']s failure to demonstrate compliance",
             rf"(?P<party>{name})\s+(?:does|did)\s+not\s+"
@@ -756,7 +794,7 @@ def reviewed_query_situation(question, situations):
             rf"(?P<party>{name})\s+fails?\s+to\s+"
             rf"(?:prove|provide|show|demonstrate)\s+(?:its\s+)?(?:insurance\s+)?compliance",
         ],
-        "cover_payer": [
+        "target_party": [
             rf"(?P<party>{name})\s+(?:has\s+)?(?:paid for|bought|purchased)\s+"
             rf"(?:replacement|substitute)\s+(?:insurance|cover)",
             rf"(?:can|may|could)\s+(?P<party>{name})\s+"
@@ -766,8 +804,7 @@ def reviewed_query_situation(question, situations):
             rf"(?:(?:the|that|replacement|substitute)\s+)*(?:insurance|cover)",
         ],
     }
-    raw = {"failure_party": [], "cover_payer": []}
-    spans = []
+    raw = {"source_party": [], "target_party": []}
     for key, rules in patterns.items():
         for rule in rules:
             for match in re.finditer(rule, question):
@@ -777,25 +814,17 @@ def reviewed_query_situation(question, situations):
                     spans.append(dict(field=key, start=match.start("party"),
                         end=match.end("party"), text=value))
 
-    def forms(value):
-        words = re.findall(r"[A-Za-z0-9]+", value)
-        direct = "".join(words).casefold()
-        acronym = "".join(word if len(word) > 1 and word.isupper() else word[0]
-            for word in words).casefold() if words else ""
-        return {direct, acronym} - {""}
-
     resolved = {}
     for key, values in raw.items():
-        matches = {label for value in values for label in labels if forms(value) & forms(label)}
-        if len(matches) != 1:
+        resolved[key] = resolve(values)
+        if resolved[key] is None:
             return dict(status="incomplete", reason=f"question_{key}_not_unique",
-                fields={name: None for name in raw}, spans=spans)
-        resolved[key] = next(iter(matches))
-    if resolved["failure_party"] == resolved["cover_payer"]:
+                fields=dict(relation_kind=None, source_party=None, target_party=None), spans=spans)
+    if resolved["source_party"] == resolved["target_party"]:
         return dict(status="incomplete", reason="question_relationship_has_one_party",
             fields=resolved, spans=spans)
-    return dict(status="complete", fields=resolved, spans=spans,
-        method="explicit question relationship resolved to reviewed RGM identities")
+    return dict(status="complete", fields=dict(relation_kind="replacement_cover", **resolved),
+        spans=spans, method="explicit replacement-cover relationship resolved to reviewed RGM identities")
 
 
 def check_rgm_replacement_chain(question, sources):
@@ -1282,9 +1311,10 @@ RGM_DOCUMENT_VERSION = "tom-assist-rgm-document-answers/1"
 RGM_DOCUMENT_SCOPE = "Experimental document answers: RGM retrieval and local evidence reading. ToM tree recall is not used."
 RGM_TOM_DOCUMENT_SCOPE = ("Project document answers: RGM finds exact evidence; reviewed relationships may also "
     "reactivate their persistent distributed ToM memory before evidence is checked.")
-RGM_TOM_BRIDGE_VERSION = "tom-assist-rgm-tom-reviewed-situations/1"
+RGM_TOM_BRIDGE_VERSION_V1 = "tom-assist-rgm-tom-reviewed-situations/1"
+RGM_TOM_BRIDGE_VERSION = "tom-assist-rgm-tom-reviewed-situations/2"
 RGM_TOM_SITUATION_PREFIX = "rgm-tom-situation-"
-RGM_TOM_MAX_SITUATIONS = 6
+RGM_TOM_MAX_MEMORIES = 6
 RGM_TOM_BASE_CHECKPOINT_SHA256 = "39377bce42eea2e3c75474c3f61013fbc49cbf23e5ebcea28676071ee7a164d1"
 
 
@@ -1467,7 +1497,7 @@ class RgmDocumentService:
         rows = []
         for stored in library.records_with_prefix(RGM_TOM_SITUATION_PREFIX):
             encoded = stored["record"]
-            if encoded.get("version") != RGM_TOM_BRIDGE_VERSION:
+            if encoded.get("version") not in (RGM_TOM_BRIDGE_VERSION_V1, RGM_TOM_BRIDGE_VERSION):
                 raise ValueError("stored reviewed situation has an unsupported version")
             rgm = ReflectionGatedMemory()
             rgm.restore(encoded["rgm_serialized"])
@@ -1478,6 +1508,24 @@ class RgmDocumentService:
                 raise ValueError("stored reviewed situation changed after persistence")
             rows.append(dict(stored, encoded=encoded, situation=situation))
         return rows
+
+    @staticmethod
+    def _worker_memories(row):
+        encoded = row["encoded"]
+        memories = encoded.get("worker_memories")
+        if memories is None:
+            legacy = encoded.get("worker_situation")
+            if not isinstance(legacy, dict):
+                raise ValueError("stored reviewed situation has no ToM memory record")
+            memories = [dict(memory_id=legacy["source_id"], source_id=legacy["source_id"],
+                text=legacy["text"], relation_kind="replacement_cover",
+                source_party=legacy["failure_party"], target_party=legacy["cover_payer"],
+                address_index=legacy["address_index"],
+                previous_write_keys=legacy.get("previous_write_keys", []))]
+        if (not isinstance(memories, list) or not memories
+            or len({memory.get("memory_id") for memory in memories}) != len(memories)):
+            raise ValueError("stored reviewed ToM memories are invalid")
+        return copy.deepcopy(memories)
 
     @staticmethod
     def _chunk_source(project_id, library, document_id, chunk_index):
@@ -1514,8 +1562,10 @@ class RgmDocumentService:
     def structural_status(self, project_id, library):
         profile = self._tom_runtime_profile(project_id, required=False)
         rows = self._situation_rows(library)
+        memories = [memory for row in rows for memory in self._worker_memories(row)]
         return dict(configured=profile is not None, learned_situations=len(rows),
-            capacity=RGM_TOM_MAX_SITUATIONS, version=RGM_TOM_BRIDGE_VERSION,
+            learned_relationship_memories=len(memories), capacity=RGM_TOM_MAX_MEMORIES,
+            version=RGM_TOM_BRIDGE_VERSION,
             automatic_extraction=False, whole_tree_score=False,
             state=(rows[-1]["encoded"]["tree"] if rows else None))
 
@@ -1562,26 +1612,41 @@ class RgmDocumentService:
             return dict(status="learned", duplicate=True, source_id=source["source_id"],
                 relationship=situation["relations"],
                 tree=rows[-1]["encoded"]["tree"] if rows else existing["record"]["tree"])
-        if len(rows) >= RGM_TOM_MAX_SITUATIONS:
-            raise ValueError("the reviewed small-tree memory is at its six-situation test limit")
         profile = self._tom_runtime_profile(project_id)
         current = rows[-1]["encoded"]["tree"] if rows else None
-        all_situations = [row["encoded"]["worker_situation"] for row in rows]
-        relation = next(item for item in situation["relations"] if item["kind"] == "triggers_replacement_cover")
-        worker_situation = dict(source_id=source["source_id"], text=source["text"],
-            failure_party=relation["source_label"], cover_payer=relation["target_label"],
-            address_index=len(rows), previous_write_keys=[])
+        all_memories = [memory for row in rows for memory in self._worker_memories(row)]
+        relation_specs = {
+            "triggers_replacement_cover": "replacement_cover",
+            "reimburses": "reimbursement",
+        }
+        new_memories = []
+        for relation in situation["relations"]:
+            kind = relation_specs.get(relation["kind"])
+            if kind is None:
+                continue
+            new_memories.append(dict(
+                memory_id=source["source_id"] + ":" + kind, source_id=source["source_id"],
+                text=source["text"], relation_kind=kind,
+                source_party=relation["source_label"], target_party=relation["target_label"],
+                address_index=len(all_memories) + len(new_memories), previous_write_keys=[]))
+        if not new_memories:
+            raise ValueError("reviewed RGM situation contains no supported ToM relationship")
+        if len(all_memories) + len(new_memories) > RGM_TOM_MAX_MEMORIES:
+            raise ValueError("the reviewed small-tree memory is at its six-relationship test limit")
         result = self.tom_worker("rgm_tom_learn", dict(_tom_profile=profile,
-            situations=all_situations + [worker_situation], new_source_id=source["source_id"],
+            memories=all_memories + new_memories,
+            new_memory_ids=[memory["memory_id"] for memory in new_memories],
             current=current))
-        if (result.get("source_id") != source["source_id"] or not result.get("tree_saved")
+        returned = {memory["memory_id"]: memory for memory in result.get("new_memories", [])}
+        if (set(returned) != {memory["memory_id"] for memory in new_memories}
+            or not result.get("tree_saved")
             or result.get("whole_tree_score") is not False
             or result.get("all_branch_cell_coordinates_preserved") is not True):
             raise ValueError("ToM did not confirm the complete distributed memory write")
-        worker_situation["previous_write_keys"] = result["write_keys"]
+        for memory in new_memories:
+            memory["previous_write_keys"] = returned[memory["memory_id"]]["write_keys"]
         encoded = dict(version=RGM_TOM_BRIDGE_VERSION, rgm_serialized=serialized,
-            situation=situation, roles=roles, address_index=len(rows),
-            worker_situation=worker_situation, tree=result["tree"])
+            situation=situation, roles=roles, worker_memories=new_memories, tree=result["tree"])
         library.retain(SimpleNamespace(id=record_id, content=source["text"], content_summary="",
             content_hash=situation["source_text_sha256"]), encoded)
         retired = []
@@ -1600,7 +1665,8 @@ class RgmDocumentService:
                     old.unlink(); retired.append(str(old))
         return dict(status="learned", duplicate=False, source_id=source["source_id"],
             relationship=situation["relations"], tree=result["tree"],
-            write_count=len(result["write_keys"]), full_field_reference=result["reference"],
+            write_count=sum(len(memory["write_keys"]) for memory in result["new_memories"]),
+            full_field_references=[memory["reference"] for memory in result["new_memories"]],
             retired_previous_artifacts=retired)
 
     def recall_situations(self, project_id, library, packet, question):
@@ -1619,14 +1685,14 @@ class RgmDocumentService:
         if not selected:
             return dict(status="no_candidate_situation", recalled_source_ids=[],
                 whole_tree_score=False, all_branch_cell_coordinates_compared=False)
-        query = reviewed_query_situation(question,
-            [row["encoded"]["worker_situation"] for row in rows])
+        memories = [memory for row in rows for memory in self._worker_memories(row)]
+        query = reviewed_query_situation(question, memories)
         if query["status"] != "complete":
             return dict(status="no_query_structure", recalled_source_ids=[], query_structure=query,
                 whole_tree_score=False, all_branch_cell_coordinates_compared=False)
         profile = self._tom_runtime_profile(project_id)
         result = self.tom_worker("rgm_tom_recall", dict(_tom_profile=profile,
-            situations=[row["encoded"]["worker_situation"] for row in rows],
+            memories=memories,
             candidate_source_ids=[row["situation"]["source_id"] for row in selected],
             query_situation=query["fields"],
             current=rows[-1]["encoded"]["tree"]))

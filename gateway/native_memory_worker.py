@@ -70,19 +70,31 @@ def native_memory_worker():
                     raise ValueError("reviewed ToM address fields are not orthogonal")
                 return values
 
-            def relationship_matrix(failure, cover, text):
+            def relationship_matrix(item, *, query=False):
+                kind = item["relation_kind"]
+                source, target = item["source_party"], item["target_party"]
+                text = source + " " + target if query else item["text"]
                 entities = []
-                for identifier, party in (("failure_party", failure), ("cover_payer", cover)):
+                for identifier, party in (("source_party", source), ("target_party", target)):
                     start = text.find(party)
                     if not isinstance(party, str) or start < 0:
                         raise ValueError("reviewed relationship party is absent from its exact source")
                     identity = "party:" + hashlib.sha256(" ".join(party.split()).casefold().encode()).hexdigest()[:16]
                     entities.append(dict(id=identifier, name=identity,
                         mentions=[dict(start=start, end=start + len(party), quote=party)]))
+                if kind == "replacement_cover":
+                    action, modality = "cause", "assertion"
+                    roles = dict(actor=None, object=None, source="source_party", target="target_party",
+                        recipient=None, authority=None)
+                elif kind == "reimbursement":
+                    action, modality = "discharge", "obligation"
+                    roles = dict(actor="source_party", object=None, source=None, target=None,
+                        recipient="target_party", authority=None)
+                else:
+                    raise ValueError("unsupported reviewed relationship kind")
                 graph = dict(version=graph_version, entities=entities, predicates=[], conditions=[],
-                    events=[dict(id="reviewed_failure_to_cover", action="cause",
-                        roles=dict(actor=None, object=None, source="failure_party", target="cover_payer",
-                            recipient=None, authority=None), modality="assertion", negated=False,
+                    events=[dict(id="reviewed_relationship", action=action,
+                        roles=roles, modality=modality, negated=False,
                         condition=None, exception=None, complement=None, revision=None, time=None,
                         evidence=[dict(start=0, end=len(text), quote=text)])], links=[], unresolved=[])
                 compiled = compile_graph(graph, text)
@@ -93,15 +105,14 @@ def native_memory_worker():
                     raise ValueError("reviewed relationship produced an invalid 32 by 32 field")
                 return value
 
-            def situation_matrix(item):
-                return relationship_matrix(item["failure_party"], item["cover_payer"], item["text"])
-
-            situations = payload["situations"]
-            if (not isinstance(situations, list) or not 1 <= len(situations) <= 6
-                or len({item.get("source_id") for item in situations}) != len(situations)
-                or sorted(item.get("address_index") for item in situations) != list(range(len(situations)))):
-                raise ValueError("reviewed ToM situations are invalid")
-            matrices = {item["source_id"]: situation_matrix(item) for item in situations}
+            memories = payload["memories"]
+            if (not isinstance(memories, list) or not 1 <= len(memories) <= 6
+                or len({item.get("memory_id") for item in memories}) != len(memories)
+                or sorted(item.get("address_index") for item in memories) != list(range(len(memories)))
+                or any(not isinstance(item.get("source_id"), str) or not item["source_id"]
+                    for item in memories)):
+                raise ValueError("reviewed ToM memories are invalid")
+            matrices = {item["memory_id"]: relationship_matrix(item) for item in memories}
             addresses = address_fields()
             state_dir = (Path(p["state_root"]) / p["project_id"]).resolve()
             if not state_dir.is_relative_to(Path(p["state_root"]).resolve()):
@@ -124,7 +135,7 @@ def native_memory_worker():
                 before = tree.state_hash()
                 order = list(readings["order"])
                 tips = [branch for branch in order if not readings["children"][branch]]
-                value = matrices[item["source_id"]] if matrix_value is None else matrix_value
+                value = matrices[item["memory_id"]] if matrix_value is None else matrix_value
                 path = precision_route_from_readings(value, readings)
                 _, returned, selected = tree._terminal_returns(path)
                 field = np.stack([returned[branch] for branch in tips])
@@ -140,37 +151,43 @@ def native_memory_worker():
                 return order, tips, field, active, keys
 
             if operation == "rgm_tom_learn":
-                new_source = payload["new_source_id"]
-                item = next((row for row in situations if row["source_id"] == new_source), None)
-                if item is None or item["address_index"] != len(situations) - 1:
-                    raise ValueError("new reviewed situation is not the next bounded address")
-                before_updates = {bank: unit.updates.copy() for bank, unit in tree.paired_units.items()}
+                new_ids = payload.get("new_memory_ids")
+                if (not isinstance(new_ids, list) or not new_ids
+                    or new_ids != [item["memory_id"] for item in memories[-len(new_ids):]]):
+                    raise ValueError("new reviewed memories are not the next bounded addresses")
+                new_items = memories[-len(new_ids):]
                 before_state = tree.state_hash()
+                prior = {(bank, int(slot)) for item in memories[:-len(new_ids)]
+                    for bank, slot in item.get("previous_write_keys", [])}
+                learned = {}
                 tree.teaching_enabled = True
                 try:
-                    tree.observe(matrices[new_source], addresses[item["address_index"]],
-                        event_id="rgm-reviewed-" + hashlib.sha256(new_source.encode()).hexdigest()[:20])
+                    for item in new_items:
+                        before_updates = {bank: unit.updates.copy() for bank, unit in tree.paired_units.items()}
+                        tree.observe(matrices[item["memory_id"]], addresses[item["address_index"]],
+                            event_id="rgm-reviewed-" + hashlib.sha256(item["memory_id"].encode()).hexdigest()[:20])
+                        keys = {(bank, int(slot)) for bank, unit in tree.paired_units.items()
+                            for slot in np.flatnonzero(unit.updates != before_updates.get(
+                                bank, np.zeros_like(unit.updates)))}
+                        if not keys or keys & prior:
+                            raise ValueError("reviewed ToM write is empty or overlaps another relationship")
+                        learned[item["memory_id"]] = keys
+                        prior.update(keys)
                 finally:
                     tree.teaching_enabled = False
-                write_keys = set()
-                for bank, unit in tree.paired_units.items():
-                    old = before_updates.get(bank, np.zeros_like(unit.updates))
-                    write_keys.update((bank, int(slot)) for slot in np.flatnonzero(unit.updates != old))
-                prior = {(bank, int(slot)) for row in situations[:-1]
-                    for bank, slot in row.get("previous_write_keys", [])}
-                if not write_keys or write_keys & prior or tree.state_hash() == before_state:
-                    raise ValueError("reviewed ToM write is empty, overlapping, or unchanged")
+                if tree.state_hash() == before_state:
+                    raise ValueError("reviewed ToM learning did not change the tree")
                 readings = capture_precision_readings(tree)
                 captures = []
-                for row in situations:
-                    order, tips, field, active, keys = capture(row, readings)
-                    expected = write_keys if row["source_id"] == new_source else {
-                        (bank, int(slot)) for bank, slot in row.get("previous_write_keys", [])}
+                for item in memories:
+                    order, tips, field, active, keys = capture(item, readings)
+                    expected = learned.get(item["memory_id"], {
+                        (bank, int(slot)) for bank, slot in item.get("previous_write_keys", [])})
                     if keys != expected:
                         raise ValueError("reviewed ToM memory no longer opens its exact owned slots")
                     captures.append((field, active))
                 state_dir.mkdir(parents=True, exist_ok=True)
-                sequence = len(situations)
+                sequence = len(memories)
                 saved_checkpoint = state_dir / f"tree-{sequence}.pkl"
                 reference_path = state_dir / f"references-{sequence}.npz"
                 tree.save(saved_checkpoint)
@@ -178,7 +195,9 @@ def native_memory_worker():
                 try:
                     with temporary.open("wb") as handle:
                         np.savez_compressed(handle,
-                            source_ids=np.asarray([row["source_id"] for row in situations]),
+                            memory_ids=np.asarray([item["memory_id"] for item in memories]),
+                            source_ids=np.asarray([item["source_id"] for item in memories]),
+                            relation_kinds=np.asarray([item["relation_kind"] for item in memories]),
                             branch_ids=np.asarray(order), terminal_branch_ids=np.asarray(tips),
                             fields=np.stack([row[0] for row in captures]),
                             active_slots=np.stack([row[1] for row in captures]))
@@ -189,26 +208,33 @@ def native_memory_worker():
                     checkpoint_path=str(saved_checkpoint), checkpoint_sha256=checksum(saved_checkpoint),
                     reference_path=str(reference_path), reference_sha256=checksum(reference_path),
                     branch_count=len(order), terminal_branch_count=len(tips))
-                result = dict(source_id=new_source, tree_saved=True, tree=tree_record,
-                    write_keys=sorted([list(key) for key in write_keys]),
-                    reference=dict(field_shape=list(captures[-1][0].shape),
-                        field_sha256=hashlib.sha256(captures[-1][0].tobytes()).hexdigest()),
+                capture_by_id = {item["memory_id"]: captures[index][0]
+                    for index, item in enumerate(memories)}
+                result = dict(tree_saved=True, tree=tree_record,
+                    new_memories=[dict(memory_id=item["memory_id"], source_id=item["source_id"],
+                        relation_kind=item["relation_kind"],
+                        write_keys=sorted([list(key) for key in learned[item["memory_id"]]]),
+                        reference=dict(field_shape=list(capture_by_id[item["memory_id"]].shape),
+                            field_sha256=hashlib.sha256(
+                                capture_by_id[item["memory_id"]].tobytes()).hexdigest()))
+                        for item in new_items],
                     whole_tree_score=False, all_branch_cell_coordinates_preserved=True,
                     starting_state_hash=before_state, learned_state_hash=tree.state_hash())
             else:
                 if current is None:
                     raise ValueError("reviewed ToM recall requires a learned project state")
                 query = payload.get("query_situation")
-                if (not isinstance(query, dict) or set(query) != {"failure_party", "cover_payer"}
+                if (not isinstance(query, dict)
+                    or set(query) != {"relation_kind", "source_party", "target_party"}
                     or not all(isinstance(query[key], str) and query[key].strip() for key in query)
-                    or query["failure_party"] == query["cover_payer"]):
+                    or query["relation_kind"] not in {"replacement_cover", "reimbursement"}
+                    or query["source_party"] == query["target_party"]):
                     raise ValueError("one complete reviewed query relationship is required")
-                known_parties = {item[key] for item in situations
-                    for key in ("failure_party", "cover_payer")}
-                if not set(query.values()) <= known_parties:
+                known_parties = {item[key] for item in memories
+                    for key in ("source_party", "target_party")}
+                if not {query["source_party"], query["target_party"]} <= known_parties:
                     raise ValueError("query relationship contains an unknown reviewed party")
-                query_text = query["failure_party"] + " " + query["cover_payer"]
-                query_matrix = relationship_matrix(query["failure_party"], query["cover_payer"], query_text)
+                query_matrix = relationship_matrix(query, query=True)
                 reference_path = Path(current["reference_path"])
                 if (not reference_path.resolve().is_relative_to(state_dir)
                     or checksum(reference_path) != current["reference_sha256"]):
@@ -217,29 +243,37 @@ def native_memory_worker():
                 before_state = tree.state_hash()
                 readings = capture_precision_readings(tree)
                 with np.load(reference_path, allow_pickle=False) as archive:
+                    memory_ids = archive["memory_ids"].tolist() if "memory_ids" in archive else archive["source_ids"].tolist()
                     source_ids = archive["source_ids"].tolist()
-                    if source_ids != [row["source_id"] for row in situations]:
-                        raise ValueError("project ToM source order changed")
+                    if (memory_ids != [item["memory_id"] for item in memories]
+                        or source_ids != [item["source_id"] for item in memories]):
+                        raise ValueError("project ToM memory order changed")
                     if (archive["branch_ids"].tolist() != list(readings["order"])
                         or archive["terminal_branch_ids"].tolist() != [branch for branch in readings["order"]
                             if not readings["children"][branch]]):
                         raise ValueError("project ToM branch positions changed")
                     _, _, query_field, query_active, query_keys = capture(
-                        {"source_id": "__query__"}, readings, matrix_value=query_matrix)
+                        {"memory_id": "__query__"}, readings, matrix_value=query_matrix)
                     recalled = []; returns = []; checks = []
-                    for source_id in payload["candidate_source_ids"]:
-                        index = source_ids.index(source_id)
-                        item = situations[index]
+                    candidates = payload["candidate_source_ids"]
+                    if not isinstance(candidates, list) or len(candidates) != len(set(candidates)):
+                        raise ValueError("candidate source identities are invalid")
+                    for index, item in enumerate(memories):
+                        if item["source_id"] not in candidates:
+                            continue
                         expected_keys = {(bank, int(slot)) for bank, slot in item["previous_write_keys"]}
                         exact_field = np.array_equal(query_field, archive["fields"][index])
                         exact_slots = (np.array_equal(query_active, archive["active_slots"][index])
                             and query_keys == expected_keys)
-                        checks.append(dict(source_id=source_id,
+                        checks.append(dict(memory_id=item["memory_id"], source_id=item["source_id"],
+                            relation_kind=item["relation_kind"],
                             same_complete_branch_cell_field=bool(exact_field),
                             same_complete_native_slot_map=bool(exact_slots)))
                         if exact_field and exact_slots:
-                            recalled.append(source_id)
-                            returns.append(dict(source_id=source_id, status="exact_native_return",
+                            if item["source_id"] not in recalled:
+                                recalled.append(item["source_id"])
+                            returns.append(dict(memory_id=item["memory_id"], source_id=item["source_id"],
+                                relation_kind=item["relation_kind"], status="exact_native_return",
                                 field_shape=list(query_field.shape),
                                 field_sha256=hashlib.sha256(query_field.tobytes()).hexdigest(),
                                 active_slot_count=len(query_keys)))

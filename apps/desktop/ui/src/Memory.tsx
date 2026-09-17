@@ -33,7 +33,7 @@ export function Memory({
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [error, setError] = useState("");
   const [canImport, setCanImport] = useState(false);
-  const [structural, setStructural] = useState<{ configured: boolean; learned_situations: number; capacity: number }>();
+  const [structural, setStructural] = useState<{ configured: boolean; learned_situations: number; learned_relationship_memories?: number; capacity: number }>();
   const [sourcePath, setSourcePath] = useState("");
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState("");
@@ -43,7 +43,7 @@ export function Memory({
     setCanImport(false);
     void backend.chat(projectId, "conversation.native_answer", { action: "status" })
       .then((state) => { if (current) {
-        const status = state as { engine?: string; structural_memory?: { configured: boolean; learned_situations: number; capacity: number } };
+        const status = state as { engine?: string; structural_memory?: { configured: boolean; learned_situations: number; learned_relationship_memories?: number; capacity: number } };
         setCanImport(Boolean(status.engine?.startsWith("rgm")));
         setStructural(status.structural_memory);
       } })
@@ -116,7 +116,7 @@ export function Memory({
         </article>
         {structural?.configured && <article>
           <span>Reviewed relationships</span>
-          <strong>{count(structural.learned_situations)} / {count(structural.capacity)}</strong>
+          <strong>{count(structural.learned_relationship_memories ?? structural.learned_situations)} / {count(structural.capacity)}</strong>
           <p>Saved in the small ToM tree only after an explicit source review.</p>
         </article>}
       </div>
