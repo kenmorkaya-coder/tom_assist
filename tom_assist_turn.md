@@ -2162,3 +2162,194 @@ the complete clause 23.5, and chunk_78; opening the citation showed TfNSW must
 reimburse SM. This repairs the known fourth desktop outcome without changing
 RGM retrieval, MiniLM, Gemma, the ToM tree, thresholds, or source-direction
 verification. A new sealed report section preserves the original failure.
+
+### 2026-09-17 — verified ToM capability beside RGM
+
+The owner redirected the architecture away from making ToM reproduce every
+document detail. The tested division of labour is now:
+
+```text
+question
+   ↓
+RGM: retain and retrieve exact chunks, text and provenance
+   ↓
+ToM: recognise a learned relationship, direction or event-order pattern
+   ↓
+RGM: resolve every exact source linked to that learned structure
+   ↓
+evidence checking and answer wording
+```
+
+RGM is not classified as a simple vector store. The broader audit of
+`tom_master17D` verified governed persistent memory, exact source provenance,
+contextual retrieval, commitment/identity/causal indexes, structured snapshots,
+branch-event components and document ingestion. The selected circa-500-branch
+Stream 1 tree is being tested only for a narrower addition: persistent,
+position-sensitive structural memory that can connect and distinguish exact RGM
+sources when their wording is similar or when the common structure is spread
+across different topics.
+
+#### Native learned structural memory
+
+The real-clause structural bridge used mirrored insurance clauses 23.5 and 24.5
+from the executed M12 Interface Agreement. Reviewed failure-party and
+replacement-cover roles were compiled into signed 32×32 matrices and taught to
+fresh copies of the hash-verified small tree. The two relationships wrote 381
+and 387 different native branch/slot locations with zero overlap. Four held-out
+questions, repeated under both teaching orders, opened only the correct
+relationship: 8/8 correct-only activations and zero reversed-source activations.
+The corresponding frozen RGM baseline put the correct chunk first for 3/4
+questions.
+
+The reviewed relationship was then stored as an RGM-native structural snapshot,
+serialized, reloaded and used as the only source-side structure supplied to the
+tree. Two unseen questions reopened all 381 learned locations; the untrained
+tree opened none. Teaching-input and returned-answer fields were deliberately
+kept as different native object types. A coexistence control loaded both
+mirrored RGM structural records together: all four questions opened only their
+own relationship's locations and no unowned location.
+
+This establishes persistent reviewed RGM structure → ToM learned state → unseen
+query reactivation. It does not establish automatic extraction. The retained
+V14 full-graph parser produced directionally plausible proposals on manual
+review but 0/2 were valid under its frozen schema and their graph shapes were
+inconsistent. Automatic full-graph teaching therefore remains blocked.
+
+#### What ToM added over the full RGM retrieval path
+
+Three bounded comparisons now identify two capabilities RGM did not supply in
+these cases.
+
+| Capability | RGM result | RGM plus ToM result | Claim boundary |
+| --- | ---: | ---: | --- |
+| Relationship direction over two near-identical real clauses | Correct source remained in all 8 candidate sets; correct first in 6/8 | Correct relationship selected in 8/8; both reversed-direction misses repaired | Two reviewed mirrored clauses and four questions over two order controls |
+| Event order with equal entities, actions and native RGM word vector | Native vectors tied in 8/8; rank fusion followed insertion order; correct first in 4/8 | Correct learned sequence selected in 8/8; untrained tree selected nothing | Controlled synthetic order isolation; supplied temporal links |
+| One structural motif across two real contracts | Across three structure-only questions, only 1/6 expected source occurrences appeared in the twenty returned candidates; both sources together in 0/3 | Both source pointers returned in 3/3; 6/6 expected occurrences; untrained tree selected nothing | One reviewed two-event motif, two native RGM chunks, three questions |
+
+The relationship comparison used the unchanged full contextual entry point
+`interface.stm_ltm_retrieval.retrieve_ltm_with_stm_triggers`. ToM received the
+same candidate set and selected by exact equality of the complete native memory
+slot map. There was no new training run, model call, branch averaging or
+whole-tree score in that comparison. RGM continued to own the exact text and
+provenance.
+
+The sequence comparison changed only event order. Two records contained the
+same entities, actions and word bag. RGM's underlying vectors were exactly equal;
+reversing insertion order changed its first result for all four questions. The
+two ToM temporal-link memories occupied non-overlapping locations and resolved
+all eight trials. Only the explicit temporal-link matrix was taught; equal event
+loads were excluded.
+
+The real cross-source comparison used the unmodified RGM parser on two executed
+project documents:
+
+- `SMWSA M12 Interface Agreement - Fully Executed 2 February 2022.pdf`, SHA-256
+  `29383bf63b32d42edebbfafd85adca9e2ce7be9a1b38ad49a0d28f4d859077ba`;
+- `SCAW D_C Deed - Executed 1 March 2022.pdf`, SHA-256
+  `a9dda3b6376d27bd76a01adc4a7692838b4271a9967c53f69fa6883dafc14f99`.
+
+It produced 315 native chunks; RGM admitted 312 and correctly rejected three
+exact duplicates. Interface clause 11 and D&C clause 31 each contain the
+reviewed sequence written notice → required meeting, despite describing
+different project situations. Their native vector ranks for the three
+structure-only questions were 47/22, 30/33 and 13/32. One ToM memory learned the
+shared notice-before-meeting structure once and retained both chunk IDs. Every
+question reopened its complete 381-location slot map and therefore released
+both exact RGM source pointers. This is the tested form of “one learned structure,
+evidence from multiple locations.”
+
+The cross-source test intentionally used the upstream native heading chunks,
+including their 4,003-character truncation. Tom Assist's separate lossless RGM
+corpus adapter remains responsible for complete production evidence. The result
+proves that the shared structural source index works on two real chunks; it is
+not yet wired as a general live-app temporal-motif type.
+
+#### Multiple sources, conflicts and authority
+
+The live reviewed-relationship bridge stores each unique relationship once in
+ToM. Further reviewed RGM sources describing the same relationship attach their
+exact text and provenance to that existing memory without teaching the matrix
+again. One exact distributed return can therefore release several source
+locations.
+
+Conflicting sources are not hidden and do not stop the user from seeing an
+answer. A source that explicitly negates a relationship or claims to supersede
+it cannot be silently attached as confirming evidence. When authority is
+unresolved, the app returns an ambiguous result and presents every exact
+conflicting and currently bound source with provenance. Neither ToM nor the
+language model chooses a winner. An optional explicit user decision can record
+that one exact source supersedes specified older sources for one relationship,
+with an effective timestamp and reason. This authority record does not change
+the tree and keeps the superseded text for audit.
+
+The current production bridge remains bounded to the reviewed insurance
+relationship schema and six orthogonal learned addresses. General temporal
+motifs, automatic pattern discovery and arbitrary event graphs are not product
+capabilities yet.
+
+#### Distributed-field rule and retained evidence
+
+None of these results collapses the tree response. Native branch identity,
+branch order, signed 32×32 matrices, selector scores and slot activations remain
+preserved. Selection uses the complete native slot constellation or exact full
+field identity, depending on the frozen experiment. Display counts are
+telemetry only.
+
+Complete evidence remains outside Git on Passport:
+
+- relationship structural-bridge fields: two approximately 42.7 MB archives in
+  `native_learned_recall/rgm500_structural_bridge_v1/`;
+- event-order fields: two approximately 58.4 MB archives in
+  `native_learned_recall/rgm500_sequence_discrimination_v1/`;
+- real cross-source fields: 39,976,817-byte
+  `native_learned_recall/rgm500_cross_source_motif_v1/native_fields.npz`,
+  SHA-256 `6564acbc4085e3a48acba09ef8ca4d388c4efe0c03946d58b5d3f8fff6f19d8c`.
+
+The compact, reproducible records are separate immutable sections of
+`validation/runs/stream1-native-learned-recall.json`:
+
+- `native_rgm500_structural_bridge`;
+- `native_rgm500_structure_parser_diagnosis`;
+- `native_rgm500_persisted_situation_bridge`;
+- `native_rgm500_persisted_situation_coexistence`;
+- `native_rgm500_relational_discrimination_invalid_attempt1`;
+- `native_rgm500_relational_discrimination_comparison`;
+- `native_rgm500_sequence_discrimination_initial_acceptance`;
+- `native_rgm500_sequence_discrimination_comparison`;
+- `native_rgm500_cross_source_motif_comparison`.
+
+#### Failures and corrections retained
+
+No failed step is counted as a ToM or RGM result:
+
+1. The first relationship harness compared a raw terminal return with a teaching
+   input. Those are different native object types. It produced zero valid matches
+   and is retained as `INVALID_OBJECT_COMPARISON`. The valid comparison uses
+   like-for-like complete slot maps.
+2. The first completed sequence report labelled the result as no gain because
+   its acceptance rule expected the final rank-fusion scores to tie. The actual
+   native RGM vectors did tie; rank fusion then assigned insertion-order ranks.
+   The bad label is retained as `MISCLASSIFIED_BY_ACCEPTANCE_RULE`; the corrected
+   run changed only the acceptance logic.
+3. The first real cross-source run stopped before the tree because its source
+   guard required literal spaces where the native PDF chunk contained a line
+   break. Only the guard changed to whitespace-normalized matching; source text,
+   chunks, questions and evidence remained unchanged.
+4. The first post-run test invocation omitted the repository from Python's
+   import path and failed during collection before running a test. The same
+   tests were rerun with the correct repository path: 192 passed.
+5. Native determinant warnings were observable during tree construction. All
+   archived fields were finite, saved-tree restore passed and reads left tree
+   state unchanged. The warnings are not described as resolved.
+
+The RGM source repository remained byte- and status-unchanged. The small-tree
+checkpoint remained hash-verified and unchanged. The latest bounded result and
+runner were committed as `8bf5b4a` on
+`codex/rgm-tom-structural-bridge`; pull request 5 contains the complete branch.
+
+The next product step is to generalise the existing reviewed relationship bridge
+into one reviewed temporal-motif memory type: save the motif once, bind several
+RGM chunk IDs, let a query open the motif through the unchanged distributed
+tree, resolve every linked exact RGM passage, and present all supporting or
+conflicting sources. Automatic motif extraction remains a separate validation
+gate.
