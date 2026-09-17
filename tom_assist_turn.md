@@ -2556,3 +2556,13 @@ the two expected passages. Both were correctly marked as already reviewed. It
 reported zero tree calls and no automatic learning. The full relevant gateway
 suite passes 252 tests; the desktop suite passes 19 tests, TypeScript checking
 passes, and the production interface build passes.
+
+A final live Save check imported the exact D&C clause 16.7 chunk that had been
+inspected during the diagnostic. The queue first marked it unreviewed and showed
+the three matched phrases: `but does not take`, `take any action necessary` and
+`debt due`. The explicit Save action created zero tree writes and bound the new
+source to the two existing ordered ToM memories. The learned relationship count
+remained 3, the reviewed source count increased from 4 to 5, and both the tree
+state hash and checkpoint hash remained exactly unchanged. A second scan marked
+the passage reviewed and again reported zero tree calls and no automatic
+learning.
