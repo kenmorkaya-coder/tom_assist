@@ -33,6 +33,7 @@ export function Memory({
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [error, setError] = useState("");
   const [canImport, setCanImport] = useState(false);
+  const [structural, setStructural] = useState<{ configured: boolean; learned_situations: number; capacity: number }>();
   const [sourcePath, setSourcePath] = useState("");
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState("");
@@ -41,7 +42,11 @@ export function Memory({
     let current = true;
     setCanImport(false);
     void backend.chat(projectId, "conversation.native_answer", { action: "status" })
-      .then((state) => { if (current) setCanImport((state as { engine?: string }).engine === "rgm"); })
+      .then((state) => { if (current) {
+        const status = state as { engine?: string; structural_memory?: { configured: boolean; learned_situations: number; capacity: number } };
+        setCanImport(Boolean(status.engine?.startsWith("rgm")));
+        setStructural(status.structural_memory);
+      } })
       .catch(() => {});
     void Promise.all([backend.diagnostics(projectId), backend.documents(projectId)])
       .then(([diagnostics, rows]) => {
@@ -106,9 +111,14 @@ export function Memory({
           <strong>{count(report?.document_count)} active documents</strong>
           <p>
             {count(report?.document_chunk_count)} finding chunks · {bytes(report?.document_bytes ?? 0)}
-            stored whole. Documents never push the tree.
+            stored whole. Import alone never changes the tree.
           </p>
         </article>
+        {structural?.configured && <article>
+          <span>Reviewed relationships</span>
+          <strong>{count(structural.learned_situations)} / {count(structural.capacity)}</strong>
+          <p>Saved in the small ToM tree only after an explicit source review.</p>
+        </article>}
       </div>
       <h3>Permanent project documents</h3>
       {documents.length ? (

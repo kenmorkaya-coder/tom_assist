@@ -82,6 +82,62 @@ def _native_answer_profile(count=3):
         question_instruction_sha256=hashlib.sha256(QUESTION_PRECISION_INSTRUCTION.encode()).hexdigest())
 
 
+def _reviewed_rgm_situation():
+    from gateway.native_memory import EVIDENCE_ROLE_FIELDS, rgm_role_record_receipt
+    text = ("If TfNSW fails to demonstrate insurance compliance, SM may obtain replacement cover. "
+            "TfNSW must reimburse SM on demand.")
+    digest = hashlib.sha256(text.encode()).hexdigest()
+    source = dict(source_id="SRC-reviewed", text=text, provenance=dict(
+        document_id="document-contract", chunk_id="chunk-23-5", clause="23.5",
+        start=100, end=100 + len(text), source_text=text,
+        extracted_text_sha256=digest))
+    roles = {key: None for key in EVIDENCE_ROLE_FIELDS}
+    roles.update(request=None, failure_party="TfNSW", cover_payer="SM",
+        repayment_from="TfNSW", repayment_to="SM", repayment_when="on demand")
+    verification = dict(status="frozen_verified", method="reviewed role-bound source record",
+        role_record_sha256=rgm_role_record_receipt(source, roles))
+    return source, roles, verification
+
+
+def test_reviewed_rgm_situation_survives_native_write_and_reload():
+    from gateway.native_memory import build_rgm_situation_memory, read_rgm_situation_memory
+    from gateway.vendor.rgm17d.memory.rgm import ReflectionGatedMemory
+    source, roles, verification = _reviewed_rgm_situation()
+    record = build_rgm_situation_memory(source, roles, verification)
+    rgm = ReflectionGatedMemory()
+    assert rgm.write_memory(record)
+    restored = ReflectionGatedMemory()
+    restored.restore(rgm.serialize())
+    result = read_rgm_situation_memory(next(iter(restored.state.anchors.values())))
+    assert result["source_id"] == source["source_id"]
+    assert result["provenance"] == source["provenance"]
+    assert [(row["kind"], row["source_label"], row["target_label"])
+            for row in result["relations"]] == [
+        ("triggers_replacement_cover", "TfNSW", "SM"),
+        ("reimburses", "TfNSW", "SM"),
+    ]
+
+
+@pytest.mark.parametrize("damage", ["roles", "source_text", "stored_relation"])
+def test_reviewed_rgm_situation_rejects_changed_roles_source_or_record(damage):
+    from gateway.native_memory import build_rgm_situation_memory, read_rgm_situation_memory
+    source, roles, verification = _reviewed_rgm_situation()
+    if damage == "roles":
+        roles = dict(roles, failure_party="SM", cover_payer="TfNSW")
+        with pytest.raises(ValueError, match="reviewed-role receipt"):
+            build_rgm_situation_memory(source, roles, verification)
+        return
+    if damage == "source_text":
+        source = dict(source, text=source["text"].replace("must reimburse", "must not reimburse"))
+        with pytest.raises(ValueError, match="text and provenance disagree"):
+            build_rgm_situation_memory(source, roles, verification)
+        return
+    record = build_rgm_situation_memory(source, roles, verification)
+    record.source_refs[0]["relations"][0]["target"] = record.source_refs[0]["relations"][0]["source"]
+    with pytest.raises(ValueError, match="checksum changed"):
+        read_rgm_situation_memory(record)
+
+
 def _rgm_reader_packet():
     text = "23.2 Premiums\nAuthority must pay the premiums, unless the exception applies."
     ref = dict(corpus_id="corpus", chunk_id="chunk_1", doc_id="document", start=100,
@@ -310,6 +366,47 @@ def test_rgm_replacement_chain_ambiguous_sources_and_unknown_question_are_not_fo
     assert check_rgm_replacement_chain("Who reimburses whom for replacement cover?",[source])["status"] == "needs_evidence_reading"
     assert check_rgm_replacement_chain("Who pays premiums?",[source])["status"] == "not_applicable"
     assert check_rgm_replacement_chain(CHAIN_QUESTION.replace("when","only when"),[source])["status"] == "needs_evidence_reading"
+
+
+@pytest.mark.parametrize("question,expected", [
+    ("If Transport for NSW does not prove its insurance compliance after a written request, can Sydney Metro arrange the insurance itself, and who has to repay the cost?", "tfnsw"),
+    ("If Sydney Metro does not prove its insurance compliance after a written request, can Transport for NSW arrange the insurance itself, and who has to repay the cost?", "sm"),
+])
+def test_rgm_replacement_chain_distinguishes_mirrored_abbreviated_parties(question, expected):
+    from gateway.native_memory import check_rgm_replacement_chain
+    tfnsw = _replacement_chain_source(failure_party="TfNSW", cover_payer="SM",
+        repayment_from="TfNSW", repayment_to="SM")
+    tfnsw["source_id"] = "tfnsw"
+    sm = _replacement_chain_source(failure_party="SM", cover_payer="TfNSW",
+        repayment_from="SM", repayment_to="TfNSW")
+    sm["source_id"] = "sm"
+    result = check_rgm_replacement_chain(question, [tfnsw, sm])
+    assert result["status"] == "supported"
+    assert result["matches"][0]["source_id"] == expected
+    assert result["matches"][0]["mismatches"] == []
+
+
+@pytest.mark.parametrize("question,expected", [
+    ("If Transport for NSW does not prove its insurance compliance, can Sydney Metro arrange the insurance, and who repays the cost?",
+        dict(failure_party="TfNSW", cover_payer="SM")),
+    ("If Sydney Metro does not prove its insurance compliance, can Transport for NSW arrange the insurance, and who repays the cost?",
+        dict(failure_party="SM", cover_payer="TfNSW")),
+])
+def test_reviewed_query_situation_resolves_mirrored_aliases_without_source_evidence(question, expected):
+    from gateway.native_memory import reviewed_query_situation
+    situations = [dict(failure_party="TfNSW", cover_payer="SM"),
+        dict(failure_party="SM", cover_payer="TfNSW")]
+    result = reviewed_query_situation(question, situations)
+    assert result["status"] == "complete"
+    assert result["fields"] == expected
+
+
+def test_reviewed_query_situation_refuses_incomplete_or_unrelated_wording():
+    from gateway.native_memory import reviewed_query_situation
+    situations = [dict(failure_party="TfNSW", cover_payer="SM"),
+        dict(failure_party="SM", cover_payer="TfNSW")]
+    for question in ("Who reimburses whom?", "If Alpha fails, can Beta arrange cover?"):
+        assert reviewed_query_situation(question, situations)["status"] == "incomplete"
 
 
 def test_rgm_reader_chain_proof_selects_whole_condition_and_repayment_from_bound_source():
@@ -797,3 +894,132 @@ def test_rgm_desktop_import_uses_local_chunker_and_never_initializes_tree(tmp_pa
     status, _ = call("/document/withdraw", document_id=doc_id, explicit_user_action=True, tombstoned_at="2026-09-17T00:00:00Z")
     assert status == 200 and call("/document/list")[1]["documents"] == []
     assert call("/document/get", document_id=doc_id)[0] == 400
+
+
+def _reviewed_tom_profile():
+    return dict(python="/fixture/python", native_root="/fixture/native",
+        base_checkpoint="/fixture/base.pkl", state_root="/Volumes/Fixture/tom-assist",
+        base_checkpoint_sha256="fixture", address_seed=20260916)
+
+
+def _reviewable_rgm_library(tmp_path):
+    from gateway.native_memory import RgmDocumentService
+    from gateway.permanent_library import PermanentLibrary
+    library = PermanentLibrary(tmp_path / "reviewable.sqlite3")
+    text = ("1.1 Replacement cover\nIf Orchid fails to demonstrate compliance, Rowan may obtain "
+        "replacement cover. Orchid must reimburse Rowan on demand.\n"
+        "1.2 Notice\nOrchid must notify Rowan of a leak within two days.")
+    service = RgmDocumentService(worker=_rgm_app_worker([]), model_identity="fixture-model")
+    result = service.ingest("project", library, dict(explicit_user_action=True,
+        display_name="Reviewed agreement", content=text, media_type="text/plain"))
+    return library, result
+
+
+def _reviewed_tom_worker(calls, *, damage=None):
+    def worker(operation, payload):
+        calls.append((operation, payload))
+        if operation == "rgm_tom_learn":
+            source_id = payload["new_source_id"]
+            sequence = len(payload["situations"])
+            return dict(source_id=source_id, tree_saved=True,
+                tree=dict(sequence=sequence, state_hash=f"state-{sequence}",
+                    checkpoint_path=f"/Volumes/Fixture/tom-assist/project/tree-{sequence}.pkl",
+                    checkpoint_sha256=f"checkpoint-{sequence}",
+                    reference_path=f"/Volumes/Fixture/tom-assist/project/references-{sequence}.npz",
+                    reference_sha256=f"references-{sequence}", branch_count=507,
+                    terminal_branch_count=254),
+                write_keys=[[f"bank-{sequence}", 0]],
+                reference=dict(field_shape=[254, 32, 32], field_sha256=f"field-{sequence}"),
+                whole_tree_score=False, all_branch_cell_coordinates_preserved=True)
+        if operation == "rgm_tom_recall":
+            assert payload["query_situation"] == dict(failure_party="Orchid", cover_payer="Rowan")
+            return dict(status="recalled", recalled_source_ids=payload["candidate_source_ids"],
+                returns=[dict(source_id=source_id, status="exact_native_return",
+                    field_shape=[254, 32, 32], field_sha256="field", active_slot_count=381)
+                    for source_id in payload["candidate_source_ids"]],
+                tree_state_hash="state-1", tree_unchanged=True, root_assembly_calls=0,
+                whole_tree_score=(damage == "collapsed"),
+                all_branch_cell_coordinates_compared=True)
+        raise AssertionError(operation)
+    return worker
+
+
+def test_reviewed_rgm_situation_is_persisted_taught_and_used_during_answer(tmp_path):
+    from gateway.native_memory import RgmDocumentService, RGM_TOM_SITUATION_PREFIX
+    library, ingested = _reviewable_rgm_library(tmp_path)
+    calls = []
+    service = RgmDocumentService(worker=_rgm_app_worker([]), model_identity="fixture-model",
+        tom_worker=_reviewed_tom_worker(calls), tom_profile=_reviewed_tom_profile())
+    roles = dict(failure_party="Orchid", cover_payer="Rowan",
+        repayment_from="Orchid", repayment_to="Rowan", repayment_when="on demand")
+    payload = dict(explicit_user_action=True, document_id=ingested["document_id"],
+        chunk_index=0, roles=roles)
+    try:
+        with pytest.raises(ValueError, match="explicit reviewed"):
+            service.learn_situation("project", library, dict(payload, explicit_user_action=False))
+        learned = service.learn_situation("project", library, payload)
+        assert learned["status"] == "learned" and not learned["duplicate"]
+        assert learned["write_count"] == 1
+        rows = library.records_with_prefix(RGM_TOM_SITUATION_PREFIX)
+        assert len(rows) == 1 and rows[0]["content_hash"] == hashlib.sha256(rows[0]["content"].encode()).hexdigest()
+        assert service.learn_situation("project", library, payload)["duplicate"]
+        question = "If Orchid fails to demonstrate compliance, can Rowan obtain replacement cover?"
+        result = service.answer("project", library, question)
+        assert result["status"] == "supported" and result["engine"] == "rgm+tom"
+        assert result["purity"]["tree_calls"] == 1
+        trace = result["trace"]["retrieval"]["reviewed_tom_memory"]
+        assert trace["status"] == "recalled" and trace["whole_tree_score"] is False
+        assert trace["all_branch_cell_coordinates_compared"] is True
+        assert trace["evidence_scope"]["mode"] == "reviewed_tom_sources"
+        generic = service.answer("project", library, "Who reports leaks to Rowan?")
+        assert generic["status"] == "supported" and generic["engine"] == "rgm"
+        generic_trace = generic["trace"]["retrieval"]["reviewed_tom_memory"]
+        assert generic_trace["status"] == "no_query_structure"
+        assert generic["purity"]["tree_calls"] == 0
+        assert [call[0] for call in calls] == ["rgm_tom_learn", "rgm_tom_recall"]
+    finally:
+        library.db.close()
+
+
+def test_reviewed_tom_return_binds_reader_to_its_exact_rgm_source():
+    from gateway.native_memory import bind_recalled_rgm_evidence, rgm_candidate_source_id
+    def memory(doc_id, start, end):
+        return dict(id=f"chunk-{start}", content="source", evidence_reference=dict(
+            doc_id=doc_id, start=start, end=end))
+    wrong = memory("document", 0, 10)
+    correct = memory("document", 10, 20)
+    correct_id = rgm_candidate_source_id(correct)
+    selected, scope = bind_recalled_rgm_evidence(dict(memories=[wrong, correct]),
+        dict(status="recalled", recalled_source_ids=[correct_id]))
+    assert selected == [correct]
+    assert scope == dict(mode="reviewed_tom_sources", source_ids=[correct_id],
+        candidate_count=2, selected_count=1)
+
+
+def test_rgm_reader_keeps_all_candidates_when_tom_returns_no_memory():
+    from gateway.native_memory import bind_recalled_rgm_evidence
+    memories = [dict(id="one"), dict(id="two")]
+    selected, scope = bind_recalled_rgm_evidence(dict(memories=memories),
+        dict(status="no_candidate_situation", recalled_source_ids=[]))
+    assert selected == memories
+    assert scope == dict(mode="all_rgm_candidates", source_ids=[], candidate_count=2)
+
+
+def test_reviewed_rgm_situation_refuses_changed_roles_or_collapsed_recall(tmp_path):
+    from gateway.native_memory import RgmDocumentService
+    library, ingested = _reviewable_rgm_library(tmp_path)
+    calls = []
+    service = RgmDocumentService(worker=_rgm_app_worker([]), model_identity="fixture-model",
+        tom_worker=_reviewed_tom_worker(calls, damage="collapsed"), tom_profile=_reviewed_tom_profile())
+    payload = dict(explicit_user_action=True, document_id=ingested["document_id"], chunk_index=0,
+        roles=dict(failure_party="Orchid", cover_payer="Rowan"))
+    try:
+        service.learn_situation("project", library, payload)
+        with pytest.raises(ValueError, match="different reviewed relationship"):
+            service.learn_situation("project", library, dict(payload,
+                roles=dict(failure_party="Rowan", cover_payer="Orchid")))
+        with pytest.raises(ValueError, match="preserve the distributed response"):
+            service.answer("project", library,
+                "If Orchid fails to demonstrate compliance, can Rowan obtain replacement cover?")
+    finally:
+        library.db.close()

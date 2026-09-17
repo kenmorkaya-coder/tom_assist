@@ -459,14 +459,15 @@ describe("desktop project → capture → supersede → audit smoke", () => {
   });
 });
 
-it("opens RGM project citations with the exact Unicode source range highlighted", async () => {
+it("opens exact RGM citations and explicitly saves a reviewed ToM relationship", async () => {
   const backend = new FakeDesktopBackend();
   const project = await backend.seedDemo();
   const chat = vi.spyOn(backend, "chat").mockImplementation(async (_project, _method, payload) =>
-    payload.action === "status" ? { ready: true, engine: "rgm", scope: "Experimental document answers." } : {
+    payload.action === "status" ? { ready: true, engine: "rgm", scope: "Experimental document answers." }
+      : payload.action === "learn_situation" ? { duplicate: false, write_count: 381 } : {
       status: "supported", answer: "Orchid must notify Rowan.",
       sources: [{ source_id: "corpus/chunk_1", text: "🌳 Orchid must notify Rowan. Next clause.",
-        provenance: { display_name: "Maintenance agreement", chunk_id: "chunk_1", start: 100, end: 138,
+        provenance: { display_name: "Maintenance agreement", doc_id: "document-a", chunk_id: "chunk_1", start: 100, end: 138,
           answer_start: 102, answer_end: 127 } }],
     });
   const view = render(<NativeMemoryAnswer project={project} draft="Who must notify Rowan?" backend={backend} />);
@@ -478,6 +479,14 @@ it("opens RGM project citations with the exact Unicode source range highlighted"
   expect(view.container.querySelector("mark")?.textContent).toBe("Orchid must notify Rowan.");
   expect(chat.mock.calls[1]![2]).toMatchObject({ explicit_answer: true, question: "Who must notify Rowan?" });
   expect(view.container.textContent).not.toContain("page undefined");
+  fireEvent.click(screen.getByText("Save a reviewed relationship in ToM"));
+  fireEvent.input(screen.getByLabelText("Party that failed to show compliance"), { target: { value: "Orchid" } });
+  fireEvent.input(screen.getByLabelText("Party that may buy replacement cover"), { target: { value: "Rowan" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save reviewed relationship" }));
+  await screen.findByText("Saved in ToM across 381 memory locations.");
+  expect(chat.mock.calls[2]![2]).toMatchObject({ action: "learn_situation", explicit_user_action: true,
+    project_state_version: project.state_version, document_id: "document-a", chunk_index: 1,
+    roles: { failure_party: "Orchid", cover_payer: "Rowan" } });
 });
 
 it("imports a local document only after an explicit action", async () => {

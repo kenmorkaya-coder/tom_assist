@@ -54,6 +54,86 @@ older system's complete contextual chat/branch-event pipeline. Results are kept
 separately as `native_rgm500_access_comparison` and
 `native_rgm500_access_punctuation_control` in the same compact master report.
 
+The follow-up `--rgm500-structural-bridge forward|reverse` test passes the
+question itself to the approved circa-500 native tree as a position-sensitive
+event matrix. It uses the real RGM chunks for clauses 23.5 and 24.5 and their
+retained source provenance. Their verified failure-party and cover-payer roles
+are reversed, so this checks direction rather than punctuation or general topic.
+The clauses write to 381 and 387 distinct native branch/slot locations with zero
+overlap. All four held-out questions activate every location belonging to the
+correct clause and zero locations belonging to the reversed clause. Reversing
+the teaching order repeats the result: eight correct-only activations across the
+two orders and no reversed activation. The same frozen RGM baseline ranks the
+correct chunk first for three of the four questions.
+
+This result preserves native branch order, every routed signed 32×32 input,
+every terminal signed 32×32 return, and the uncollapsed per-slot selector fields.
+No whole-tree score is calculated. The two complete archives are about 42.7 MB
+each and remain under
+`/Volumes/My Passport for Mac/tom_assist_test_results/native_learned_recall/rgm500_structural_bridge_v1/`.
+Peak process memory was 1.22 GiB. The compact result is
+`native_rgm500_structural_bridge` in the existing master report. Native
+determinant warnings remain observable; all retained fields were finite and the
+tree state was unchanged by reads.
+
+The result establishes a useful integration boundary: RGM retains exact text
+and provenance, while a verified directed situation can address a distinct
+distributed ToM memory. It does not validate automatic relationship extraction.
+The event roles in this bounded test were already frozen and verified. The live
+document path must not teach the tree from an unreviewed parser proposal.
+
+The immediate trained-parser check confirms that boundary. The retained V14
+event-graph adapter was run once on each mirrored real clause. Both proposals
+identify the reimbursement direction correctly on manual review, but neither is
+valid under its frozen graph schema. Clause 23.5 emits an unsupported
+`Business Days` quantity unit and incorrectly represents SM as both actor and
+recipient of its premium payment. Clause 24.5 emits unsupported contract-action
+labels and produces four events where the mirrored clause produced two. Changing
+the compiler to accept these outputs was rejected because it breaks the frozen
+adapter contract; that attempted change was reverted.
+
+The earlier narrow relationship extractor remains a useful control: for both
+clauses it captured the failure party, substitute-cover payer, repayment
+direction, 30-Business-Day period and on-demand timing with exact source spans.
+That extractor is explicitly insurance-specific and does not justify general
+automatic document learning. The safe integration remains reviewed or otherwise
+verified relationship records → structured matrix → ToM memory, with RGM keeping
+the exact source. Automatic full-graph ingestion is blocked. Raw proposals,
+model identity, validation errors and the control are retained under
+`native_rgm500_structure_parser_diagnosis` in the compact master report.
+
+The bounded `--rgm500-persisted-situation-bridge` follow-up wires the safe
+boundary directly. It stores the reviewed clause-23.5 situation as an RGM
+snapshot containing directed relations plus the exact chunk provenance, then
+serializes and reloads RGM before ToM sees it. The restored relation is the only
+source-side structure used to teach a fresh copy of the approved 500-branch
+tree. Both held-out questions open all 381 learned branch/slot locations and no
+other locations; the untrained-tree control opens none. The questions produce
+the same complete signed return as each other. That return differs from the
+teaching load, as expected for a new question entering the learned structure.
+
+No branch or 32×32 field is collapsed. The complete trained and untrained
+fields are retained in the 29 MB Passport archive
+`rgm500_structural_bridge_v1/rgm_persisted_n05_native_fields.npz`; the compact
+record is `native_rgm500_persisted_situation_bridge` in the master report. Peak
+process memory was 1.17 GiB. This proves the reviewed RGM-record → persistent
+ToM-memory boundary for one real relationship. It does not prove automatic
+relationship extraction. Tom 17D's current evidence validator cannot supply
+that authority because it accepts both the correct and reversed direction when
+both party names and the relation word occur in the source.
+
+The next `--rgm500-persisted-situation-coexistence` control reloads both
+mirrored RGM records together before teaching one fresh ToM copy. Clause 23.5
+writes 381 locations and clause 24.5 writes 387 different locations, with zero
+overlap. Each of the four held-out questions opens every location belonging to
+its correct relationship, none belonging to the reversed relationship, and no
+unowned location. The untrained tree again opens none. Thus multiple
+source-bound structural memories can coexist without the two directions being
+blended. Complete trained and untrained fields are retained in the 58.5 MB
+Passport archive `rgm500_structural_bridge_v1/rgm_persisted_coexistence_native_fields.npz`.
+The compact result is `native_rgm500_persisted_situation_coexistence`; peak
+process memory was 1.31 GiB.
+
 The subsequent `--rgm-document-ingestion` audit uses the actual unmodified
 `tom_master17D/interface/doc_ingest.py:ingest_any_document` on the complete
 executed M12 agreement, with native `auto` mode and default `zero_copy_strict`
@@ -773,6 +853,18 @@ export TOM_ASSIST_MINILM_MODEL=/absolute/path/to/local/all-MiniLM-L6-v2/snapshot
 export TOM_ASSIST_RGM_READER_PYTHON=/absolute/path/to/python-with-mlx-lm
 ```
 
+Reviewed structural memory uses the approved 500-branch Stream 1 fixture and
+must be configured separately. The base fixture remains read-only in its owner
+repository. Every learned project checkpoint is larger than 100 MB, so the
+state root must be on a mounted external volume:
+
+```sh
+export TOM_ASSIST_RGM_TOM_PYTHON=/absolute/path/to/python-with-numpy
+export TOM_ASSIST_RGM_TOM_NATIVE_ROOT=/Users/you/PycharmProjects/tom_matrix_native_stream1
+export TOM_ASSIST_RGM_TOM_BASE_CHECKPOINT=/Users/you/PycharmProjects/tom_matrix_native_stream1/artifacts/runs/native_500_branch_fixture_v1/native_500_branch_fixture.pkl
+export TOM_ASSIST_RGM_TOM_STATE_ROOT="/Volumes/Your Passport/tom_assist_data/rgm_tom_states"
+```
+
 In Memory, enter a local PDF, TXT or Markdown path and explicitly choose
 **Import document**. With this option enabled, extraction uses the copied RGM
 reader, and ingestion stores its lossless chunks and MiniLM vectors directly in
@@ -792,6 +884,40 @@ version and local MiniLM file hashes. RGM read reinforcement occurs in an
 isolated request-local instance. This path does not claim persistent ToM learned
 recall and does not use the app's live tree. Source text and range references
 remain in the permanent project library.
+
+An expanded source below a document answer now offers **Save a reviewed
+relationship in ToM**. The owner must copy the failing party and the party that
+may obtain replacement cover from that exact source. Optional repayment roles
+are retained in RGM. The gateway rejects values absent from the source, changed
+source ranges, stale project state and unreviewed calls. Automatic relationship
+extraction remains disabled because the current parser did not preserve party
+direction reliably.
+
+The reviewed source relation is first persisted as a native RGM snapshot with
+its exact document/chunk provenance. An isolated worker then teaches the same
+structured 32×32 field used by the validated calibration into a project copy of
+the approved 500-branch tree. The current integration is deliberately bounded
+to six reviewed situations, matching the six orthogonal addresses already
+tested. A new save must write non-overlapping tree locations; otherwise it is
+rejected. Only the newest large checkpoint and reference archive are retained.
+
+During an answer, MiniLM/RGM still locates candidate source passages. When the
+question explicitly states the failing party and the party obtaining replacement
+cover, those names are resolved to identities already retained in the reviewed
+RGM memories. The relationship is compiled into one 32×32 field and routed
+through the saved tree once. The worker compares the complete returned
+branch-position-preserving signed field and exact native slot map with the
+candidate memories. It does not replay every candidate's teaching input, average
+branches or compute a whole-tree score.
+
+Only exact native returns bind the evidence reader to reviewed RGM passages.
+Document-style party names such as `Transport for NSW` / `TfNSW` and
+`Sydney Metro` / `SM` are matched mechanically. If the question does not state
+one complete relationship, ToM makes no selection claim and the existing RGM
+candidate path remains available. The bounded insurance evidence check then
+verifies the complete linked reimbursement clause; an ambiguous, qualified or
+unparsed chain fails closed. ToM supplies persistent structural memory; RGM
+supplies exact text and provenance.
 
 MiniLM exits before the fixed local Gemma reader loads. Gemma uses the same
 8,192-token prompt bound. The reader now caps allocation at 17 GiB, following

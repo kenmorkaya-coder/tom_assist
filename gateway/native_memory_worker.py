@@ -24,6 +24,12 @@ def native_memory_worker():
     sys.dont_write_bytecode = True
     request = json.load(sys.stdin); p = request["profile"]; payload = request["payload"]
     operation = request["operation"]; started = time.monotonic()
+    write_roots = [Path("/private/tmp").resolve(), Path("/private/var/folders").resolve()]
+    if operation == "rgm_tom_learn":
+        state_root = Path(p.get("state_root", "")).resolve()
+        if not state_root.is_relative_to(Path("/Volumes").resolve()):
+            raise ValueError("large reviewed ToM tree states require an external-volume root")
+        write_roots.append(state_root)
     def readonly(event, args):
         if event == "socket.connect":
             raise PermissionError("native answer workers are offline")
@@ -32,11 +38,221 @@ def native_memory_worker():
             writes = isinstance(mode, str) and any(c in mode for c in "wax+") or isinstance(flags, int) and flags & (os.O_WRONLY | os.O_RDWR | os.O_CREAT | os.O_TRUNC | os.O_APPEND)
             if writes and isinstance(name, (str, bytes, os.PathLike)):
                 path = Path(os.fsdecode(name)).resolve()
-                if str(path) != "/dev/null" and not any(path.is_relative_to(root) for root in (Path("/private/tmp"), Path("/private/var/folders"))):
+                if str(path) != "/dev/null" and not any(path.is_relative_to(root) for root in write_roots):
                     raise PermissionError("native worker cannot write to projects or owner repositories")
     sys.addaudithook(readonly)
     with contextlib.redirect_stdout(sys.stderr):
-        if operation == "rgm_extract":
+        if operation in {"rgm_tom_learn", "rgm_tom_recall"}:
+            import re
+            import tempfile
+            root = Path(p["native_root"]).resolve()
+            if Path.cwd().resolve() != root or not re.fullmatch(r"[A-Za-z0-9._-]+", p["project_id"]):
+                raise ValueError("reviewed ToM worker origin or project identity is invalid")
+            sys.path.insert(0, str(root / "src"))
+            from tom_matrix import Stream1Tree
+            from tom_matrix.relations.precision_routing import capture_precision_readings, precision_route_from_readings
+            from gateway.event_graph_compiler import compile_graph
+            from gateway.typed_event_graph import VERSION as graph_version
+
+            def checksum(path):
+                with Path(path).open("rb") as handle:
+                    return hashlib.file_digest(handle, "sha256").hexdigest()
+
+            def address_fields():
+                rng = np.random.default_rng(int(p["address_seed"]))
+                def basis():
+                    q, r = np.linalg.qr(rng.standard_normal((32, 6)))
+                    return q * np.sign(np.diag(r))[None, :]
+                left, right = basis(), basis()
+                values = np.stack([np.outer(left[:, index], right[:, index]) for index in range(6)])
+                if not np.allclose(values.reshape(6, -1) @ values.reshape(6, -1).T,
+                                   np.eye(6), atol=1e-14):
+                    raise ValueError("reviewed ToM address fields are not orthogonal")
+                return values
+
+            def relationship_matrix(failure, cover, text):
+                entities = []
+                for identifier, party in (("failure_party", failure), ("cover_payer", cover)):
+                    start = text.find(party)
+                    if not isinstance(party, str) or start < 0:
+                        raise ValueError("reviewed relationship party is absent from its exact source")
+                    identity = "party:" + hashlib.sha256(" ".join(party.split()).casefold().encode()).hexdigest()[:16]
+                    entities.append(dict(id=identifier, name=identity,
+                        mentions=[dict(start=start, end=start + len(party), quote=party)]))
+                graph = dict(version=graph_version, entities=entities, predicates=[], conditions=[],
+                    events=[dict(id="reviewed_failure_to_cover", action="cause",
+                        roles=dict(actor=None, object=None, source="failure_party", target="cover_payer",
+                            recipient=None, authority=None), modality="assertion", negated=False,
+                        condition=None, exception=None, complement=None, revision=None, time=None,
+                        evidence=[dict(start=0, end=len(text), quote=text)])], links=[], unresolved=[])
+                compiled = compile_graph(graph, text)
+                if len(compiled.get("loads", [])) != 1:
+                    raise ValueError("reviewed relationship did not compile to one structural field")
+                value = np.asarray(compiled["loads"][0]["matrix"])
+                if value.shape != (32, 32) or not np.isfinite(value).all():
+                    raise ValueError("reviewed relationship produced an invalid 32 by 32 field")
+                return value
+
+            def situation_matrix(item):
+                return relationship_matrix(item["failure_party"], item["cover_payer"], item["text"])
+
+            situations = payload["situations"]
+            if (not isinstance(situations, list) or not 1 <= len(situations) <= 6
+                or len({item.get("source_id") for item in situations}) != len(situations)
+                or sorted(item.get("address_index") for item in situations) != list(range(len(situations)))):
+                raise ValueError("reviewed ToM situations are invalid")
+            matrices = {item["source_id"]: situation_matrix(item) for item in situations}
+            addresses = address_fields()
+            state_dir = (Path(p["state_root"]) / p["project_id"]).resolve()
+            if not state_dir.is_relative_to(Path(p["state_root"]).resolve()):
+                raise ValueError("reviewed ToM project state escaped its root")
+            current = payload.get("current")
+            if current is None:
+                checkpoint = Path(p["base_checkpoint"])
+                if checksum(checkpoint) != p["base_checkpoint_sha256"]:
+                    raise ValueError("approved 500-branch ToM fixture changed")
+            else:
+                checkpoint = Path(current["checkpoint_path"])
+                if (not checkpoint.resolve().is_relative_to(state_dir)
+                    or checksum(checkpoint) != current["checkpoint_sha256"]):
+                    raise ValueError("project ToM checkpoint identity changed")
+            tree = Stream1Tree.restore(checkpoint)
+            if current is not None and tree.state_hash() != current["state_hash"]:
+                raise ValueError("project ToM state changed")
+
+            def capture(item, readings, *, matrix_value=None):
+                before = tree.state_hash()
+                order = list(readings["order"])
+                tips = [branch for branch in order if not readings["children"][branch]]
+                value = matrices[item["source_id"]] if matrix_value is None else matrix_value
+                path = precision_route_from_readings(value, readings)
+                _, returned, selected = tree._terminal_returns(path)
+                field = np.stack([returned[branch] for branch in tips])
+                capacity = len(next(iter(tree.paired_units.values())).occupied)
+                active = np.zeros((len(tips), capacity), dtype=bool)
+                keys = set()
+                for row, branch in enumerate(tips):
+                    active[row, selected[branch]["active"]] = True
+                    keys.update((tree.paired_placement[branch], int(slot))
+                                for slot in selected[branch]["active"])
+                if tree.state_hash() != before or not np.isfinite(field).all():
+                    raise ValueError("reviewed ToM read changed state or returned invalid cells")
+                return order, tips, field, active, keys
+
+            if operation == "rgm_tom_learn":
+                new_source = payload["new_source_id"]
+                item = next((row for row in situations if row["source_id"] == new_source), None)
+                if item is None or item["address_index"] != len(situations) - 1:
+                    raise ValueError("new reviewed situation is not the next bounded address")
+                before_updates = {bank: unit.updates.copy() for bank, unit in tree.paired_units.items()}
+                before_state = tree.state_hash()
+                tree.teaching_enabled = True
+                try:
+                    tree.observe(matrices[new_source], addresses[item["address_index"]],
+                        event_id="rgm-reviewed-" + hashlib.sha256(new_source.encode()).hexdigest()[:20])
+                finally:
+                    tree.teaching_enabled = False
+                write_keys = set()
+                for bank, unit in tree.paired_units.items():
+                    old = before_updates.get(bank, np.zeros_like(unit.updates))
+                    write_keys.update((bank, int(slot)) for slot in np.flatnonzero(unit.updates != old))
+                prior = {(bank, int(slot)) for row in situations[:-1]
+                    for bank, slot in row.get("previous_write_keys", [])}
+                if not write_keys or write_keys & prior or tree.state_hash() == before_state:
+                    raise ValueError("reviewed ToM write is empty, overlapping, or unchanged")
+                readings = capture_precision_readings(tree)
+                captures = []
+                for row in situations:
+                    order, tips, field, active, keys = capture(row, readings)
+                    expected = write_keys if row["source_id"] == new_source else {
+                        (bank, int(slot)) for bank, slot in row.get("previous_write_keys", [])}
+                    if keys != expected:
+                        raise ValueError("reviewed ToM memory no longer opens its exact owned slots")
+                    captures.append((field, active))
+                state_dir.mkdir(parents=True, exist_ok=True)
+                sequence = len(situations)
+                saved_checkpoint = state_dir / f"tree-{sequence}.pkl"
+                reference_path = state_dir / f"references-{sequence}.npz"
+                tree.save(saved_checkpoint)
+                temporary = reference_path.with_suffix(".npz.tmp")
+                try:
+                    with temporary.open("wb") as handle:
+                        np.savez_compressed(handle,
+                            source_ids=np.asarray([row["source_id"] for row in situations]),
+                            branch_ids=np.asarray(order), terminal_branch_ids=np.asarray(tips),
+                            fields=np.stack([row[0] for row in captures]),
+                            active_slots=np.stack([row[1] for row in captures]))
+                    temporary.replace(reference_path)
+                finally:
+                    temporary.unlink(missing_ok=True)
+                tree_record = dict(sequence=sequence, state_hash=tree.state_hash(),
+                    checkpoint_path=str(saved_checkpoint), checkpoint_sha256=checksum(saved_checkpoint),
+                    reference_path=str(reference_path), reference_sha256=checksum(reference_path),
+                    branch_count=len(order), terminal_branch_count=len(tips))
+                result = dict(source_id=new_source, tree_saved=True, tree=tree_record,
+                    write_keys=sorted([list(key) for key in write_keys]),
+                    reference=dict(field_shape=list(captures[-1][0].shape),
+                        field_sha256=hashlib.sha256(captures[-1][0].tobytes()).hexdigest()),
+                    whole_tree_score=False, all_branch_cell_coordinates_preserved=True,
+                    starting_state_hash=before_state, learned_state_hash=tree.state_hash())
+            else:
+                if current is None:
+                    raise ValueError("reviewed ToM recall requires a learned project state")
+                query = payload.get("query_situation")
+                if (not isinstance(query, dict) or set(query) != {"failure_party", "cover_payer"}
+                    or not all(isinstance(query[key], str) and query[key].strip() for key in query)
+                    or query["failure_party"] == query["cover_payer"]):
+                    raise ValueError("one complete reviewed query relationship is required")
+                known_parties = {item[key] for item in situations
+                    for key in ("failure_party", "cover_payer")}
+                if not set(query.values()) <= known_parties:
+                    raise ValueError("query relationship contains an unknown reviewed party")
+                query_text = query["failure_party"] + " " + query["cover_payer"]
+                query_matrix = relationship_matrix(query["failure_party"], query["cover_payer"], query_text)
+                reference_path = Path(current["reference_path"])
+                if (not reference_path.resolve().is_relative_to(state_dir)
+                    or checksum(reference_path) != current["reference_sha256"]):
+                    raise ValueError("project ToM distributed references changed")
+                stat = checkpoint.stat()
+                before_state = tree.state_hash()
+                readings = capture_precision_readings(tree)
+                with np.load(reference_path, allow_pickle=False) as archive:
+                    source_ids = archive["source_ids"].tolist()
+                    if source_ids != [row["source_id"] for row in situations]:
+                        raise ValueError("project ToM source order changed")
+                    if (archive["branch_ids"].tolist() != list(readings["order"])
+                        or archive["terminal_branch_ids"].tolist() != [branch for branch in readings["order"]
+                            if not readings["children"][branch]]):
+                        raise ValueError("project ToM branch positions changed")
+                    _, _, query_field, query_active, query_keys = capture(
+                        {"source_id": "__query__"}, readings, matrix_value=query_matrix)
+                    recalled = []; returns = []; checks = []
+                    for source_id in payload["candidate_source_ids"]:
+                        index = source_ids.index(source_id)
+                        item = situations[index]
+                        expected_keys = {(bank, int(slot)) for bank, slot in item["previous_write_keys"]}
+                        exact_field = np.array_equal(query_field, archive["fields"][index])
+                        exact_slots = (np.array_equal(query_active, archive["active_slots"][index])
+                            and query_keys == expected_keys)
+                        checks.append(dict(source_id=source_id,
+                            same_complete_branch_cell_field=bool(exact_field),
+                            same_complete_native_slot_map=bool(exact_slots)))
+                        if exact_field and exact_slots:
+                            recalled.append(source_id)
+                            returns.append(dict(source_id=source_id, status="exact_native_return",
+                                field_shape=list(query_field.shape),
+                                field_sha256=hashlib.sha256(query_field.tobytes()).hexdigest(),
+                                active_slot_count=len(query_keys)))
+                now = checkpoint.stat()
+                if tree.state_hash() != before_state or (stat.st_size, stat.st_mtime_ns) != (now.st_size, now.st_mtime_ns):
+                    raise ValueError("reviewed ToM recall changed the saved tree")
+                result = dict(status="recalled" if recalled else "no_matching_memory",
+                    recalled_source_ids=recalled, returns=returns, candidate_checks=checks,
+                    tree_state_hash=before_state, tree_unchanged=True, root_assembly_calls=0,
+                    whole_tree_score=False, all_branch_cell_coordinates_compared=True,
+                    query_routes=1,
+                    access_mode="one query-derived reviewed structural field routes once through ToM")
+        elif operation == "rgm_extract":
             from gateway.vendor.rgm17d.interface.doc_ingest import read_pdf_file, read_txt_file
             source = Path(payload["source_path"])
             if not source.is_absolute() or not source.is_file() or source.suffix.lower() not in {".pdf", ".txt", ".md"}:

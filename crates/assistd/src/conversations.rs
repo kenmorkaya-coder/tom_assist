@@ -71,7 +71,7 @@ impl AssistService {
     /// Local source-grounded answers never send to a provider or commit experience.
     pub fn native_memory_answer(&self, project: &str, payload: &Value) -> Result<Value> {
         let action = payload["action"].as_str().unwrap_or("answer");
-        if action != "status" && action != "answer" {
+        if action != "status" && action != "answer" && action != "learn_situation" {
             return Err(ServiceError::Invalid(
                 "unsupported native answer action".into(),
             ));
@@ -92,6 +92,18 @@ impl AssistService {
             if question.trim().is_empty() || question.chars().count() > 4000 {
                 return Err(ServiceError::Invalid(
                     "question must contain 1–4000 characters".into(),
+                ));
+            }
+        }
+        if action == "learn_situation" {
+            if payload["explicit_user_action"] != true {
+                return Err(ServiceError::Invalid(
+                    "explicit reviewed-relationship action required".into(),
+                ));
+            }
+            if payload["project_state_version"].as_u64() != Some(before.state_version) {
+                return Err(ServiceError::Invalid(
+                    "project changed; review the source relationship again".into(),
                 ));
             }
         }

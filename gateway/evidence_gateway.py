@@ -656,26 +656,37 @@ class EvidenceTomGateway(base.TomGateway):
                 if library is not None: library.db.close()
         if (method == "POST" and path == "/document/native-memory/answer"
             and os.environ.get("TOM_ASSIST_RGM_DOCUMENT_ANSWERS") == "1"):
-            from gateway.native_memory import RgmDocumentService, RGM_DOCUMENT_SCOPE
+            from gateway.native_memory import RgmDocumentService, RGM_DOCUMENT_SCOPE, RGM_TOM_DOCUMENT_SCOPE
             from gateway.permanent_library import PermanentLibrary
             library = None
             try:
                 project_id = base._safe_project_id(payload.get("project_id"))
                 action = payload.get("action", "answer")
-                if action not in {"status", "answer"}:
+                if action not in {"status", "answer", "learn_situation"}:
                     raise ValueError("unsupported document answer action")
                 if action == "answer" and payload.get("explicit_answer") is not True:
                     raise ValueError("explicit local answer action required")
+                if action == "learn_situation" and payload.get("explicit_user_action") is not True:
+                    raise ValueError("explicit reviewed-relationship action required")
                 path = self.data_dir / "projects" / project_id / "tom" / "library.sqlite3"
                 # Do not initialize any tree or empty project just to check availability.
                 if not path.is_file():
-                    return 200, dict(ready=False, engine="rgm", scope="Import a document into this project first.") if action == "status" else dict(
-                        status="blocked", answer="Import a document into this project first.", sources=[])
+                    if action == "status":
+                        return 200, dict(ready=False, engine="rgm", scope="Import a document into this project first.")
+                    if action == "answer":
+                        return 200, dict(status="blocked", answer="Import a document into this project first.", sources=[])
+                    raise ValueError("import a document before reviewing a relationship")
                 library = PermanentLibrary(path)
+                service = getattr(self, "rgm_document_service", None) or RgmDocumentService()
                 if action == "status":
                     configured = all(os.environ.get(k) for k in ("TOM_ASSIST_STRUCTURE_PYTHON", "TOM_ASSIST_MINILM_MODEL", "TOM_ASSIST_RGM_READER_PYTHON"))
-                    return 200, dict(ready=bool(library.documents()) and configured, engine="rgm", scope=RGM_DOCUMENT_SCOPE)
-                service = getattr(self, "rgm_document_service", None) or RgmDocumentService()
+                    structural = service.structural_status(project_id, library)
+                    return 200, dict(ready=bool(library.documents()) and configured,
+                        engine="rgm+tom" if structural["learned_situations"] else "rgm",
+                        scope=RGM_TOM_DOCUMENT_SCOPE if structural["learned_situations"] else RGM_DOCUMENT_SCOPE,
+                        structural_memory=structural)
+                if action == "learn_situation":
+                    return 200, service.learn_situation(project_id, library, payload)
                 return 200, service.answer(project_id, library, payload.get("question"))
             except (ValueError, KeyError, OSError) as error:
                 return 400, {"error": error.__class__.__name__, "message": str(error)}
