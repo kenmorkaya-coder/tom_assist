@@ -768,10 +768,65 @@ type NativeAnswer = {
   answer: string;
   scope?: string;
   sources: { source_id: string; text: string; provenance: {
-    clause?: string; pdf_page?: number; display_name?: string; chunk_id?: string;
+    clause?: string; pdf_page?: number; display_name?: string; doc_id?: string; chunk_id?: string;
     start?: number; end?: number; answer_start?: number; answer_end?: number;
   } }[];
 };
+
+function ReviewedSituation({ project, backend, source }: {
+  project: Project; backend: DesktopBackend; source: NativeAnswer["sources"][number];
+}) {
+  const proof = source.provenance;
+  const chunk = proof.chunk_id?.match(/^chunk_(\d+)$/);
+  const chunkIndex = chunk ? Number(chunk[1]) : -1;
+  const [failureParty, setFailureParty] = useState("");
+  const [coverPayer, setCoverPayer] = useState("");
+  const [repaymentFrom, setRepaymentFrom] = useState("");
+  const [repaymentTo, setRepaymentTo] = useState("");
+  const [repaymentWhen, setRepaymentWhen] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  if (!proof.doc_id || chunkIndex < 0) return null;
+  async function remember() {
+    setBusy(true); setMessage(""); setError("");
+    const roles = Object.fromEntries(Object.entries({
+      failure_party: failureParty.trim(), cover_payer: coverPayer.trim(),
+      repayment_from: repaymentFrom.trim(), repayment_to: repaymentTo.trim(),
+      repayment_when: repaymentWhen.trim(),
+    }).filter(([, value]) => value));
+    try {
+      const result = await backend.chat(project.id, "conversation.native_answer", {
+        action: "learn_situation", explicit_user_action: true,
+        project_state_version: project.state_version, document_id: proof.doc_id,
+        chunk_index: chunkIndex, roles,
+      }) as { duplicate?: boolean; write_count?: number };
+      setMessage(result.duplicate
+        ? "This reviewed relationship is already in ToM."
+        : `Saved in ToM across ${Number(result.write_count ?? 0).toLocaleString()} memory locations.`);
+    } catch (reason) { setError(String(reason)); }
+    finally { setBusy(false); }
+  }
+  return <details class="reviewed-situation">
+    <summary>Save a reviewed relationship in ToM</summary>
+    <p>Use this only when the quoted passage says one party failed to show insurance compliance and another may buy replacement cover. Copy the party names exactly from the source.</p>
+    <label>Party that failed to show compliance<input value={failureParty}
+      onInput={(event) => setFailureParty(event.currentTarget.value)} disabled={busy} /></label>
+    <label>Party that may buy replacement cover<input value={coverPayer}
+      onInput={(event) => setCoverPayer(event.currentTarget.value)} disabled={busy} /></label>
+    <label>Party that must repay, if stated<input value={repaymentFrom}
+      onInput={(event) => setRepaymentFrom(event.currentTarget.value)} disabled={busy} /></label>
+    <label>Party receiving repayment, if stated<input value={repaymentTo}
+      onInput={(event) => setRepaymentTo(event.currentTarget.value)} disabled={busy} /></label>
+    <label>When repayment is due, if stated<input value={repaymentWhen}
+      onInput={(event) => setRepaymentWhen(event.currentTarget.value)} disabled={busy} /></label>
+    <button disabled={busy || !failureParty.trim() || !coverPayer.trim()} onClick={() => void remember()}>
+      {busy ? "Saving reviewed relationship…" : "Save reviewed relationship"}
+    </button>
+    {message && <p role="status">{message}</p>}
+    {error && <p role="alert">{error}</p>}
+  </details>;
+}
 
 export function NativeMemoryAnswer({ project, draft, backend, disabled = false }: {
   project: Project; draft: string; backend: DesktopBackend; disabled?: boolean;
@@ -810,10 +865,11 @@ export function NativeMemoryAnswer({ project, draft, backend, disabled = false }
     } finally { if (revision.current === ticket) setBusy(false); }
   }
   if (!ready) return null;
-  return <section class="chat-preview" aria-label={engine === "rgm" ? "Experimental document answers" : "Learned document answers"}>
+  const rgmEngine = engine.startsWith("rgm");
+  return <section class="chat-preview" aria-label={rgmEngine ? "Experimental document answers" : "Learned document answers"}>
     {scope && <p>{scope}</p>}
     <button disabled={disabled || busy || !draft.trim() || draft.length > 4000} onClick={() => void ask()}>
-      {busy ? "Reading documents…" : engine === "rgm" ? "Answer from project documents" : "Answer from learned documents"}
+      {busy ? "Reading documents…" : rgmEngine ? "Answer from project documents" : "Answer from learned documents"}
     </button>
     {busy && <p role="status">Finding relevant passages and checking the evidence locally.</p>}
     {error && <p role="alert">{error}</p>}
@@ -831,6 +887,7 @@ export function NativeMemoryAnswer({ project, draft, backend, disabled = false }
           <summary>{proof.display_name ? `Source: ${proof.display_name} · ${proof.chunk_id}`
             : `Source: clause ${proof.clause}, page ${proof.pdf_page}`}</summary>
           <p style={{ whiteSpace: "pre-wrap" }}>{highlight ? <>{points.slice(0, from).join("")}<mark>{points.slice(from, to).join("")}</mark>{points.slice(to).join("")}</> : source.text}</p>
+          <ReviewedSituation project={project} backend={backend} source={source} />
         </details>;
       })}
     </article>}

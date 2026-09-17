@@ -117,9 +117,14 @@ and prepares local MiniLM vectors. Chat's **Answer from project documents**
 then runs local RGM retrieval and Gemma evidence reading. Expand a source below
 the answer to inspect its original passage and highlighted quotation.
 
-This mode does not initialize or use a ToM tree, send to the connected cloud
-provider, or save these experimental answers in conversation history. Other
-Chat actions retain their existing behavior. Keep it opt-in. The earlier
+This mode does not send to the connected cloud provider or save these
+experimental answers in conversation history. By default it remains the RGM
+document path. When the separately configured reviewed ToM bridge has memories,
+an expanded source lets the owner copy and save its directional relationship.
+Automatic extraction is disabled. Later answers use RGM/MiniLM to find likely
+source memories, require any reviewed candidate to reproduce its complete
+branch-by-32×32 ToM return, and then verify the exact RGM evidence. Other Chat
+actions retain their existing behavior. Keep it opt-in. The earlier
 reversed-party block remains recorded as a failure; its bounded repair now says
 **No** and displays the complete cited clause only when that one clause proves
 the exact opposite party direction. See the gateway README for the guard's

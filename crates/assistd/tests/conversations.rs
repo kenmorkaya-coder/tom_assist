@@ -248,6 +248,29 @@ fn native_document_answers_require_explicit_action_and_registered_project_memory
     assert!(service.native_memory_answer("chat-project", &json!({
         "question":"Who pays?", "explicit_answer":true, "project_state_version":before.state_version
     })).is_err());
+    assert!(
+        service
+            .native_memory_answer(
+                "chat-project",
+                &json!({
+                    "action":"learn_situation", "project_state_version":before.state_version,
+                    "document_id":"document-a", "chunk_index":0, "roles":{}
+                })
+            )
+            .is_err()
+    );
+    assert!(
+        service
+            .native_memory_answer(
+                "chat-project",
+                &json!({
+                    "action":"learn_situation", "explicit_user_action":true,
+                    "project_state_version":before.state_version + 1,
+                    "document_id":"document-a", "chunk_index":0, "roles":{}
+                })
+            )
+            .is_err()
+    );
     assert_eq!(
         harness.observer().current_state("chat-project").unwrap(),
         before

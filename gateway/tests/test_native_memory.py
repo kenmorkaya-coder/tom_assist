@@ -853,3 +853,99 @@ def test_rgm_desktop_import_uses_local_chunker_and_never_initializes_tree(tmp_pa
     status, _ = call("/document/withdraw", document_id=doc_id, explicit_user_action=True, tombstoned_at="2026-09-17T00:00:00Z")
     assert status == 200 and call("/document/list")[1]["documents"] == []
     assert call("/document/get", document_id=doc_id)[0] == 400
+
+
+def _reviewed_tom_profile():
+    return dict(python="/fixture/python", native_root="/fixture/native",
+        base_checkpoint="/fixture/base.pkl", state_root="/Volumes/Fixture/tom-assist",
+        base_checkpoint_sha256="fixture", address_seed=20260916)
+
+
+def _reviewable_rgm_library(tmp_path):
+    from gateway.native_memory import RgmDocumentService
+    from gateway.permanent_library import PermanentLibrary
+    library = PermanentLibrary(tmp_path / "reviewable.sqlite3")
+    text = ("1.1 Replacement cover\nIf Orchid fails to demonstrate compliance, Rowan may obtain "
+        "replacement cover. Orchid must reimburse Rowan on demand.\n"
+        "1.2 Notice\nOrchid must notify Rowan of a leak within two days.")
+    service = RgmDocumentService(worker=_rgm_app_worker([]), model_identity="fixture-model")
+    result = service.ingest("project", library, dict(explicit_user_action=True,
+        display_name="Reviewed agreement", content=text, media_type="text/plain"))
+    return library, result
+
+
+def _reviewed_tom_worker(calls, *, damage=None):
+    def worker(operation, payload):
+        calls.append((operation, payload))
+        if operation == "rgm_tom_learn":
+            source_id = payload["new_source_id"]
+            sequence = len(payload["situations"])
+            return dict(source_id=source_id, tree_saved=True,
+                tree=dict(sequence=sequence, state_hash=f"state-{sequence}",
+                    checkpoint_path=f"/Volumes/Fixture/tom-assist/project/tree-{sequence}.pkl",
+                    checkpoint_sha256=f"checkpoint-{sequence}",
+                    reference_path=f"/Volumes/Fixture/tom-assist/project/references-{sequence}.npz",
+                    reference_sha256=f"references-{sequence}", branch_count=507,
+                    terminal_branch_count=254),
+                write_keys=[[f"bank-{sequence}", 0]],
+                reference=dict(field_shape=[254, 32, 32], field_sha256=f"field-{sequence}"),
+                whole_tree_score=False, all_branch_cell_coordinates_preserved=True)
+        if operation == "rgm_tom_recall":
+            return dict(status="recalled", recalled_source_ids=payload["candidate_source_ids"],
+                returns=[dict(source_id=source_id, status="exact_native_return",
+                    field_shape=[254, 32, 32], field_sha256="field", active_slot_count=381)
+                    for source_id in payload["candidate_source_ids"]],
+                tree_state_hash="state-1", tree_unchanged=True, root_assembly_calls=0,
+                whole_tree_score=(damage == "collapsed"),
+                all_branch_cell_coordinates_compared=True)
+        raise AssertionError(operation)
+    return worker
+
+
+def test_reviewed_rgm_situation_is_persisted_taught_and_used_during_answer(tmp_path):
+    from gateway.native_memory import RgmDocumentService, RGM_TOM_SITUATION_PREFIX
+    library, ingested = _reviewable_rgm_library(tmp_path)
+    calls = []
+    service = RgmDocumentService(worker=_rgm_app_worker([]), model_identity="fixture-model",
+        tom_worker=_reviewed_tom_worker(calls), tom_profile=_reviewed_tom_profile())
+    roles = dict(failure_party="Orchid", cover_payer="Rowan",
+        repayment_from="Orchid", repayment_to="Rowan", repayment_when="on demand")
+    payload = dict(explicit_user_action=True, document_id=ingested["document_id"],
+        chunk_index=0, roles=roles)
+    try:
+        with pytest.raises(ValueError, match="explicit reviewed"):
+            service.learn_situation("project", library, dict(payload, explicit_user_action=False))
+        learned = service.learn_situation("project", library, payload)
+        assert learned["status"] == "learned" and not learned["duplicate"]
+        assert learned["write_count"] == 1
+        rows = library.records_with_prefix(RGM_TOM_SITUATION_PREFIX)
+        assert len(rows) == 1 and rows[0]["content_hash"] == hashlib.sha256(rows[0]["content"].encode()).hexdigest()
+        assert service.learn_situation("project", library, payload)["duplicate"]
+        result = service.answer("project", library, "Who reports leaks to Rowan?")
+        assert result["status"] == "supported" and result["engine"] == "rgm+tom"
+        assert result["purity"]["tree_calls"] == 1
+        trace = result["trace"]["retrieval"]["reviewed_tom_memory"]
+        assert trace["status"] == "recalled" and trace["whole_tree_score"] is False
+        assert trace["all_branch_cell_coordinates_compared"] is True
+        assert [call[0] for call in calls] == ["rgm_tom_learn", "rgm_tom_recall"]
+    finally:
+        library.db.close()
+
+
+def test_reviewed_rgm_situation_refuses_changed_roles_or_collapsed_recall(tmp_path):
+    from gateway.native_memory import RgmDocumentService
+    library, ingested = _reviewable_rgm_library(tmp_path)
+    calls = []
+    service = RgmDocumentService(worker=_rgm_app_worker([]), model_identity="fixture-model",
+        tom_worker=_reviewed_tom_worker(calls, damage="collapsed"), tom_profile=_reviewed_tom_profile())
+    payload = dict(explicit_user_action=True, document_id=ingested["document_id"], chunk_index=0,
+        roles=dict(failure_party="Orchid", cover_payer="Rowan"))
+    try:
+        service.learn_situation("project", library, payload)
+        with pytest.raises(ValueError, match="different reviewed relationship"):
+            service.learn_situation("project", library, dict(payload,
+                roles=dict(failure_party="Rowan", cover_payer="Orchid")))
+        with pytest.raises(ValueError, match="preserve the distributed response"):
+            service.answer("project", library, "Who reports leaks to Rowan?")
+    finally:
+        library.db.close()

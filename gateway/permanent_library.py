@@ -95,6 +95,18 @@ class PermanentLibrary:
                               (record_id,)).fetchone()
         return None if row is None else {"content_hash": row[0], "content": row[1], "record": json.loads(row[2])}
 
+    def records_with_prefix(self, prefix):
+        """Return immutable shelf records in insertion order for one owned namespace."""
+        if not isinstance(prefix, str) or not prefix:
+            raise ValueError("record prefix is required")
+        rows = self.db.execute(
+            "SELECT record_id,content_hash,content,record_json FROM library_records "
+            "WHERE record_id LIKE ? ESCAPE '\\' ORDER BY rowid",
+            (prefix.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%",),
+        ).fetchall()
+        return [dict(record_id=row[0], content_hash=row[1], content=row[2],
+                     record=json.loads(row[3])) for row in rows]
+
     def first_id_for_hash(self, digest):
         row = self.db.execute("SELECT record_id FROM library_records WHERE content_hash=? ORDER BY rowid LIMIT 1", (digest,)).fetchone()
         return row[0] if row else None

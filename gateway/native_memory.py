@@ -1152,6 +1152,12 @@ class NativeMemoryService:
 
 RGM_DOCUMENT_VERSION = "tom-assist-rgm-document-answers/1"
 RGM_DOCUMENT_SCOPE = "Experimental document answers: RGM retrieval and local evidence reading. ToM tree recall is not used."
+RGM_TOM_DOCUMENT_SCOPE = ("Project document answers: RGM finds exact evidence; reviewed relationships may also "
+    "reactivate their persistent distributed ToM memory before evidence is checked.")
+RGM_TOM_BRIDGE_VERSION = "tom-assist-rgm-tom-reviewed-situations/1"
+RGM_TOM_SITUATION_PREFIX = "rgm-tom-situation-"
+RGM_TOM_MAX_SITUATIONS = 6
+RGM_TOM_BASE_CHECKPOINT_SHA256 = "39377bce42eea2e3c75474c3f61013fbc49cbf23e5ebcea28676071ee7a164d1"
 
 
 def verify_vendored_rgm():
@@ -1257,9 +1263,34 @@ def retrieve_rgm_project_documents(library, prepared, question, vectors):
 
 class RgmDocumentService:
     """Project document adapter; local worker exits before the next model loads."""
-    def __init__(self, *, worker=None, model_identity=None):
+    def __init__(self, *, worker=None, model_identity=None, tom_worker=None, tom_profile=None):
         self.worker = worker or self._launch
         self.model_identity = model_identity
+        self.tom_worker = tom_worker or self._launch
+        self.tom_profile = copy.deepcopy(tom_profile)
+
+    def _tom_runtime_profile(self, project_id, *, required=True):
+        profile = copy.deepcopy(self.tom_profile) if self.tom_profile is not None else dict(
+            python=os.environ.get("TOM_ASSIST_RGM_TOM_PYTHON", ""),
+            native_root=os.environ.get("TOM_ASSIST_RGM_TOM_NATIVE_ROOT", ""),
+            base_checkpoint=os.environ.get("TOM_ASSIST_RGM_TOM_BASE_CHECKPOINT", ""),
+            state_root=os.environ.get("TOM_ASSIST_RGM_TOM_STATE_ROOT", ""),
+            base_checkpoint_sha256=RGM_TOM_BASE_CHECKPOINT_SHA256,
+            address_seed=20260916,
+        )
+        profile["project_id"] = project_id
+        needed = ("python", "native_root", "base_checkpoint", "state_root")
+        if not all(profile.get(key) for key in needed):
+            if required:
+                raise ValueError("reviewed ToM structural memory is not configured")
+            return None
+        for key in needed:
+            if not Path(profile[key]).is_absolute():
+                raise ValueError(f"{key} must be an absolute path")
+        state_root = Path(profile["state_root"]).resolve()
+        if not state_root.is_relative_to(Path("/Volumes").resolve()):
+            raise ValueError("large reviewed ToM tree states must be stored on a mounted external volume")
+        return profile
 
     def _model_identity(self):
         if self.model_identity is not None:
@@ -1275,18 +1306,25 @@ class RgmDocumentService:
 
     def _launch(self, operation, payload):
         import subprocess
+        payload = copy.deepcopy(payload)
         root = Path(__file__).resolve().parents[1]
-        python = os.environ.get("TOM_ASSIST_STRUCTURE_PYTHON" if operation in {"rgm_embed", "rgm_extract"} else "TOM_ASSIST_RGM_READER_PYTHON", "")
+        if operation.startswith("rgm_tom_"):
+            profile = payload.pop("_tom_profile")
+            python = profile["python"]
+            cwd = Path(profile["native_root"])
+        else:
+            profile = dict(minilm_model=os.environ.get("TOM_ASSIST_MINILM_MODEL", ""))
+            python = os.environ.get("TOM_ASSIST_STRUCTURE_PYTHON" if operation in {"rgm_embed", "rgm_extract"} else "TOM_ASSIST_RGM_READER_PYTHON", "")
+            cwd = root
         if not python or not Path(python).is_absolute() or not Path(python).is_file():
             raise ValueError("local document model Python is not configured")
         env = {k: v for k, v in os.environ.items() if k in ("HOME", "PATH", "TMPDIR", "LANG")}
         env.update(HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1", TOKENIZERS_PARALLELISM="false",
             PYTHONDONTWRITEBYTECODE="1", OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", VECLIB_MAXIMUM_THREADS="1")
         code = f"import sys;sys.path.insert(0,{str(root)!r});from gateway.native_memory_worker import native_memory_worker;native_memory_worker()"
-        profile = dict(minilm_model=os.environ.get("TOM_ASSIST_MINILM_MODEL", ""))
         if operation == "rgm_read" and os.environ.get("TOM_ASSIST_RGM_CPU_JOB_PID"):
             profile["concurrent_cpu_pid"] = int(os.environ["TOM_ASSIST_RGM_CPU_JOB_PID"])
-        child = subprocess.run([python, "-I", "-B", "-c", code], cwd=root, env=env,
+        child = subprocess.run([python, "-I", "-B", "-c", code], cwd=cwd, env=env,
             input=json.dumps(dict(operation=operation, profile=profile, payload=payload)),
             text=True, capture_output=True, timeout=600)
         if child.returncode:
@@ -1294,6 +1332,175 @@ class RgmDocumentService:
         if len(child.stdout) > 40_000_000:
             raise ValueError("local document output exceeded bound")
         return json.loads(child.stdout)
+
+    @staticmethod
+    def _situation_rows(library):
+        from gateway.vendor.rgm17d.memory.rgm import ReflectionGatedMemory
+        rows = []
+        for stored in library.records_with_prefix(RGM_TOM_SITUATION_PREFIX):
+            encoded = stored["record"]
+            if encoded.get("version") != RGM_TOM_BRIDGE_VERSION:
+                raise ValueError("stored reviewed situation has an unsupported version")
+            rgm = ReflectionGatedMemory()
+            rgm.restore(encoded["rgm_serialized"])
+            if len(rgm.state.anchors) != 1:
+                raise ValueError("stored reviewed situation does not contain exactly one RGM memory")
+            situation = read_rgm_situation_memory(next(iter(rgm.state.anchors.values())))
+            if situation != encoded["situation"] or stored["content_hash"] != situation["source_text_sha256"]:
+                raise ValueError("stored reviewed situation changed after persistence")
+            rows.append(dict(stored, encoded=encoded, situation=situation))
+        return rows
+
+    @staticmethod
+    def _chunk_source(project_id, library, document_id, chunk_index):
+        from gateway.document_ingestion import retain_rgm_document_corpus
+        if type(chunk_index) is not int or chunk_index < 0:
+            raise ValueError("a non-negative document chunk index is required")
+        document = library.document(document_id, include_chunks=False)
+        if document is None or document["tombstoned_at"] is not None:
+            raise ValueError("an active project document is required")
+        prepared = prepare_rgm_project_documents(project_id, [document])[0]
+        corpus = prepared["corpus"]
+        if chunk_index >= len(corpus["chunks"]):
+            raise ValueError("document chunk does not exist")
+        chunk = corpus["chunks"][chunk_index]
+        reference = retain_rgm_document_corpus(library, document["content"], corpus)[chunk_index]
+        retained = library.document_chunks(document_id=document_id)
+        if chunk_index >= len(retained):
+            raise ValueError("retained document chunk is missing")
+        row = retained[chunk_index]
+        if any(row[key] != chunk[key] for key in ("start", "end", "text_sha256")):
+            raise ValueError("retained document chunk differs from the RGM corpus")
+        text = document["content"][chunk["start"]:chunk["end"]]
+        section = next(item for item in corpus["sections"] if item["section_id"] == chunk["section_id"])
+        source_id = "SRC-" + hashlib.sha256(
+            (document_id + f":{chunk['start']}:{chunk['end']}").encode()).hexdigest()[:16]
+        return dict(source_id=source_id, text=text, provenance=dict(
+            document_id=document_id, display_name=document["display_name"],
+            corpus_id=reference["corpus_id"], corpus_sha256=reference["corpus_sha256"],
+            chunk_id=chunk["chunk_id"], chunk_index=chunk_index,
+            section_id=chunk["section_id"], clause=section["title"],
+            start=chunk["start"], end=chunk["end"], source_text=text,
+            extracted_text_sha256=document["content_sha256"]))
+
+    def structural_status(self, project_id, library):
+        profile = self._tom_runtime_profile(project_id, required=False)
+        rows = self._situation_rows(library)
+        return dict(configured=profile is not None, learned_situations=len(rows),
+            capacity=RGM_TOM_MAX_SITUATIONS, version=RGM_TOM_BRIDGE_VERSION,
+            automatic_extraction=False, whole_tree_score=False,
+            state=(rows[-1]["encoded"]["tree"] if rows else None))
+
+    def learn_situation(self, project_id, library, payload):
+        if not NativeMemoryService._inference_lock.acquire(blocking=False):
+            raise ValueError("another local document operation is running")
+        try:
+            return self._learn_situation(project_id, library, payload)
+        finally:
+            NativeMemoryService._inference_lock.release()
+
+    def _learn_situation(self, project_id, library, payload):
+        """Persist one explicit reviewed source relation and teach the small ToM copy."""
+        from types import SimpleNamespace
+        from gateway.vendor.rgm17d.memory.rgm import ReflectionGatedMemory
+        if payload.get("explicit_user_action") is not True:
+            raise ValueError("explicit reviewed-relationship action required")
+        source = self._chunk_source(project_id, library, payload.get("document_id"), payload.get("chunk_index"))
+        supplied = payload.get("roles")
+        if not isinstance(supplied, dict) or any(key not in EVIDENCE_ROLE_FIELDS for key in supplied):
+            raise ValueError("reviewed relationship roles are invalid")
+        roles = dict(request=None, **{key: supplied.get(key) for key in EVIDENCE_ROLE_FIELDS})
+        if not roles["failure_party"] or not roles["cover_payer"]:
+            raise ValueError("the failing party and replacement-cover party are required")
+        if " ".join(roles["failure_party"].split()).casefold() == " ".join(roles["cover_payer"].split()).casefold():
+            raise ValueError("the failing party and replacement-cover party must be different")
+        verification = dict(status="frozen_verified", method="explicit user-reviewed source relationship",
+            role_record_sha256=rgm_role_record_receipt(source, roles))
+        record = build_rgm_situation_memory(source, roles, verification)
+        rgm = ReflectionGatedMemory()
+        if not rgm.write_memory(record):
+            raise ValueError("RGM rejected the reviewed relationship")
+        serialized = rgm.serialize()
+        restored = ReflectionGatedMemory(); restored.restore(serialized)
+        situation = read_rgm_situation_memory(next(iter(restored.state.anchors.values())))
+        record_id = RGM_TOM_SITUATION_PREFIX + source["source_id"]
+        existing = library.get(record_id)
+        rows = self._situation_rows(library)
+        if existing is not None:
+            if (existing["content"] != source["text"]
+                or existing["record"].get("situation") != situation
+                or existing["record"].get("roles") != roles):
+                raise ValueError("this source chunk already has a different reviewed relationship")
+            return dict(status="learned", duplicate=True, source_id=source["source_id"],
+                relationship=situation["relations"],
+                tree=rows[-1]["encoded"]["tree"] if rows else existing["record"]["tree"])
+        if len(rows) >= RGM_TOM_MAX_SITUATIONS:
+            raise ValueError("the reviewed small-tree memory is at its six-situation test limit")
+        profile = self._tom_runtime_profile(project_id)
+        current = rows[-1]["encoded"]["tree"] if rows else None
+        all_situations = [row["encoded"]["worker_situation"] for row in rows]
+        relation = next(item for item in situation["relations"] if item["kind"] == "triggers_replacement_cover")
+        worker_situation = dict(source_id=source["source_id"], text=source["text"],
+            failure_party=relation["source_label"], cover_payer=relation["target_label"],
+            address_index=len(rows), previous_write_keys=[])
+        result = self.tom_worker("rgm_tom_learn", dict(_tom_profile=profile,
+            situations=all_situations + [worker_situation], new_source_id=source["source_id"],
+            current=current))
+        if (result.get("source_id") != source["source_id"] or not result.get("tree_saved")
+            or result.get("whole_tree_score") is not False
+            or result.get("all_branch_cell_coordinates_preserved") is not True):
+            raise ValueError("ToM did not confirm the complete distributed memory write")
+        worker_situation["previous_write_keys"] = result["write_keys"]
+        encoded = dict(version=RGM_TOM_BRIDGE_VERSION, rgm_serialized=serialized,
+            situation=situation, roles=roles, address_index=len(rows),
+            worker_situation=worker_situation, tree=result["tree"])
+        library.retain(SimpleNamespace(id=record_id, content=source["text"], content_summary="",
+            content_hash=situation["source_text_sha256"]), encoded)
+        retired = []
+        if current is not None:
+            project_state = (Path(profile["state_root"]) / project_id).resolve()
+            replacements = {Path(result["tree"]["checkpoint_path"]).resolve(),
+                Path(result["tree"]["reference_path"]).resolve()}
+            old_paths = [Path(current["checkpoint_path"]),
+                Path(current["checkpoint_path"]).with_suffix(Path(current["checkpoint_path"]).suffix + ".json"),
+                Path(current["reference_path"])]
+            for old in old_paths:
+                resolved = old.resolve()
+                if not resolved.is_relative_to(project_state):
+                    raise ValueError("previous reviewed ToM artifact escaped its project directory")
+                if resolved not in replacements and old.exists():
+                    old.unlink(); retired.append(str(old))
+        return dict(status="learned", duplicate=False, source_id=source["source_id"],
+            relationship=situation["relations"], tree=result["tree"],
+            write_count=len(result["write_keys"]), full_field_reference=result["reference"],
+            retired_previous_artifacts=retired)
+
+    def recall_situations(self, project_id, library, packet):
+        rows = self._situation_rows(library)
+        if not rows:
+            return dict(status="no_learned_situations", recalled_source_ids=[],
+                whole_tree_score=False, all_branch_cell_coordinates_compared=False)
+        active_documents = {item["document_id"] for item in library.documents()}
+        candidates = []
+        for memory in packet["memories"]:
+            proof = memory["evidence_reference"]
+            source_id = "SRC-" + hashlib.sha256(
+                (proof["doc_id"] + f":{proof['start']}:{proof['end']}").encode()).hexdigest()[:16]
+            if proof["doc_id"] in active_documents and source_id not in candidates:
+                candidates.append(source_id)
+        selected = [row for row in rows if row["situation"]["source_id"] in candidates]
+        if not selected:
+            return dict(status="no_candidate_situation", recalled_source_ids=[],
+                whole_tree_score=False, all_branch_cell_coordinates_compared=False)
+        profile = self._tom_runtime_profile(project_id)
+        result = self.tom_worker("rgm_tom_recall", dict(_tom_profile=profile,
+            situations=[row["encoded"]["worker_situation"] for row in rows],
+            candidate_source_ids=[row["situation"]["source_id"] for row in selected],
+            current=rows[-1]["encoded"]["tree"]))
+        if (result.get("whole_tree_score") is not False
+            or result.get("all_branch_cell_coordinates_compared") is not True):
+            raise ValueError("ToM recall did not preserve the distributed response")
+        return result
 
     def ingest(self, project_id, library, payload):
         if not NativeMemoryService._inference_lock.acquire(blocking=False):
@@ -1397,6 +1604,8 @@ class RgmDocumentService:
                         library.retain(SimpleNamespace(id="rgm-vector-" + cache_identity + "-" + digest,
                             content=missing[digest], content_summary="", content_hash=digest), dict(vector=vector))
             packet, retrieval = retrieve_rgm_project_documents(library, prepared, question, vectors)
+            structural = self.recall_situations(project_id, library, packet)
+            retrieval["reviewed_tom_memory"] = structural
             if packet["memories"]:
                 reader_packet = dict(memories=[{k: m[k] for k in ("id", "content", "evidence_reference")}
                     for m in packet["memories"]])
@@ -1427,11 +1636,19 @@ class RgmDocumentService:
             if library.documents() != inventory or self._model_identity() != model_identity:
                 raise ValueError("document collection changed while answering; answer discarded")
             status = reading["status"]
+            tree_calls = 1 if structural.get("status") == "recalled" else 0
             if status not in {"supported", "partial", "not_supported", "ambiguous"}:
-                return dict(status="blocked", answer="The answer could not be verified against the source evidence.", sources=[], scope=RGM_DOCUMENT_SCOPE,
-                    engine="rgm", trace=dict(version=RGM_DOCUMENT_VERSION, vendor_sha256=vendor, retrieval=retrieval, reading=reading))
-            return dict(status=status, answer="\n\n".join(lines), sources=list(approved.values()), scope=RGM_DOCUMENT_SCOPE,
-                engine="rgm", trace=dict(version=RGM_DOCUMENT_VERSION, vendor_sha256=vendor, retrieval=retrieval, reading=reading),
-                purity=dict(tree_calls=0, training_calls=0, provider_sends=0))
+                return dict(status="blocked", answer="The answer could not be verified against the source evidence.", sources=[],
+                    scope=RGM_TOM_DOCUMENT_SCOPE if tree_calls else RGM_DOCUMENT_SCOPE,
+                    engine="rgm+tom" if tree_calls else "rgm",
+                    trace=dict(version=RGM_DOCUMENT_VERSION, vendor_sha256=vendor, retrieval=retrieval, reading=reading),
+                    purity=dict(tree_calls=tree_calls, training_calls=0, provider_sends=0,
+                        whole_tree_score=False, complete_distributed_return_compared=bool(tree_calls)))
+            return dict(status=status, answer="\n\n".join(lines), sources=list(approved.values()),
+                scope=RGM_TOM_DOCUMENT_SCOPE if tree_calls else RGM_DOCUMENT_SCOPE,
+                engine="rgm+tom" if tree_calls else "rgm",
+                trace=dict(version=RGM_DOCUMENT_VERSION, vendor_sha256=vendor, retrieval=retrieval, reading=reading),
+                purity=dict(tree_calls=tree_calls, training_calls=0, provider_sends=0,
+                    whole_tree_score=False, complete_distributed_return_compared=bool(tree_calls)))
         finally:
             NativeMemoryService._inference_lock.release()

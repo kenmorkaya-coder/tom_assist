@@ -853,6 +853,18 @@ export TOM_ASSIST_MINILM_MODEL=/absolute/path/to/local/all-MiniLM-L6-v2/snapshot
 export TOM_ASSIST_RGM_READER_PYTHON=/absolute/path/to/python-with-mlx-lm
 ```
 
+Reviewed structural memory uses the approved 500-branch Stream 1 fixture and
+must be configured separately. The base fixture remains read-only in its owner
+repository. Every learned project checkpoint is larger than 100 MB, so the
+state root must be on a mounted external volume:
+
+```sh
+export TOM_ASSIST_RGM_TOM_PYTHON=/absolute/path/to/python-with-numpy
+export TOM_ASSIST_RGM_TOM_NATIVE_ROOT=/Users/you/PycharmProjects/tom_matrix_native_stream1
+export TOM_ASSIST_RGM_TOM_BASE_CHECKPOINT=/Users/you/PycharmProjects/tom_matrix_native_stream1/artifacts/runs/native_500_branch_fixture_v1/native_500_branch_fixture.pkl
+export TOM_ASSIST_RGM_TOM_STATE_ROOT="/Volumes/Your Passport/tom_assist_data/rgm_tom_states"
+```
+
 In Memory, enter a local PDF, TXT or Markdown path and explicitly choose
 **Import document**. With this option enabled, extraction uses the copied RGM
 reader, and ingestion stores its lossless chunks and MiniLM vectors directly in
@@ -872,6 +884,31 @@ version and local MiniLM file hashes. RGM read reinforcement occurs in an
 isolated request-local instance. This path does not claim persistent ToM learned
 recall and does not use the app's live tree. Source text and range references
 remain in the permanent project library.
+
+An expanded source below a document answer now offers **Save a reviewed
+relationship in ToM**. The owner must copy the failing party and the party that
+may obtain replacement cover from that exact source. Optional repayment roles
+are retained in RGM. The gateway rejects values absent from the source, changed
+source ranges, stale project state and unreviewed calls. Automatic relationship
+extraction remains disabled because the current parser did not preserve party
+direction reliably.
+
+The reviewed source relation is first persisted as a native RGM snapshot with
+its exact document/chunk provenance. An isolated worker then teaches the same
+structured 32×32 field used by the validated calibration into a project copy of
+the approved 500-branch tree. The current integration is deliberately bounded
+to six reviewed situations, matching the six orthogonal addresses already
+tested. A new save must write non-overlapping tree locations; otherwise it is
+rejected. Only the newest large checkpoint and reference archive are retained.
+
+During an answer, MiniLM/RGM still locates candidate source passages. If a
+candidate has reviewed ToM memory, the worker reloads the saved tree, replays
+that candidate's canonical reviewed structural input, and requires it to
+reproduce its complete branch-position-preserving signed return and exact owned
+slots. The question itself is not compiled into a ToM matrix in this bridge.
+No branch average or whole-tree score is computed.
+The original RGM passage then goes to the evidence reader. ToM supplies
+persistent structural memory; RGM supplies exact text and provenance.
 
 MiniLM exits before the fixed local Gemma reader loads. Gemma uses the same
 8,192-token prompt bound. The reader now caps allocation at 17 GiB, following
