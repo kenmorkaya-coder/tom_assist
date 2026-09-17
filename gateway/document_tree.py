@@ -1,4 +1,4 @@
-"""Shared Tom Assist document-index Tree with project-filtered evidence receipts."""
+"""Project-local Tom Assist document Trees with evidence-addressed receipts."""
 from __future__ import annotations
 
 import hashlib
@@ -18,9 +18,14 @@ from gateway.document_ingestion import DOCUMENT_EMBEDDING_VERSION, decode_vector
 from gateway.structural_analysis import CHANNELS
 
 
-DOCUMENT_TREE_VERSION = "tom-assist-shared-document-tree/1.1"
+DOCUMENT_TREE_VERSION = "tom-assist-project-document-tree/2.0"
+DOCUMENT_TREE_RETRIEVAL_VERSION = "tom-assist-document-tree-native-resonance/1.0"
 DOCUMENT_TREE_LOAD_BATCH_SIZE = 16
 DOCUMENT_TREE_ADDRESS_BRANCHES = 32
+DOCUMENT_ROUTING_BASIS_NAMES = (
+    "L_axis", "S_axis", "T_axis", "delta_x", "delta_F", "phi",
+    "intensity", "confidence",
+)
 
 
 def bytes_digest(value: bytes) -> str:
@@ -109,18 +114,174 @@ def clause_provenance_for_chunk(
     ))
 
 
-class SharedDocumentTreeIndex:
-    """One dedicated mutable document Tree shared by Tom Assist projects.
+class Stream1DocumentIndex:
+    """Source pointers ranked by native routing patterns on a prepared Stream 1 Tree.
 
-    Shared structural influence is intentional.  Receipts carry project IDs and
-    retrieval callers may pass only chunks from their active project, preventing
-    document text or candidate IDs from crossing the project boundary.
+    This is a ToM_assist retrieval policy, not a document-ranking API supplied by
+    Stream 1. The caller owns the Tree and MiniLM-to-matrix encoder. Construction
+    stores source records; every query routes every candidate through one fresh,
+    frozen set of native readings. No slot-to-document identity is assumed and
+    neither construction nor retrieval teaches or saves the Tree.
     """
 
-    def __init__(self, data_dir: Path, seed: Any, config: Any) -> None:
-        from agency.mechanics.sicd_engine import TreeGrowthEngine
+    VERSION = "tom-assist-stream1-strongest-branch/1.0"
 
-        self.state_dir = Path(data_dir).resolve() / "document-index"
+    def __init__(self, tree, sources, *, encode_text, encoder_id):
+        import numpy as np
+        from tom_matrix import Stream1Tree
+
+        if not isinstance(tree, Stream1Tree):
+            raise ValueError("the current native Stream1Tree is required")
+        if not callable(encode_text) or not isinstance(encoder_id, str) or not encoder_id:
+            raise ValueError("a named MiniLM-to-matrix encoder is required")
+        self.tree = tree
+        self.encode_text = encode_text
+        self.encoder_id = encoder_id
+        self.lock = threading.RLock()
+        self.sources = []
+        seen = set()
+        for source in sources:
+            row = {key: source[key] for key in (
+                "source_id", "document_id", "start", "end", "text", "text_sha256",
+            )}
+            if (not isinstance(row["source_id"], str) or not row["source_id"]
+                    or row["source_id"] in seen
+                    or not isinstance(row["document_id"], str) or not row["document_id"]):
+                raise ValueError("unique source IDs and document IDs are required")
+            if (type(row["start"]) is not int or type(row["end"]) is not int
+                    or not 0 <= row["start"] < row["end"]
+                    or not isinstance(row["text"], str)
+                    or len(row["text"]) != row["end"] - row["start"]
+                    or hashlib.sha256(row["text"].encode()).hexdigest() != row["text_sha256"]):
+                raise ValueError("source text, offsets and hash must agree")
+            matrix = self._matrix(source["matrix"])
+            matrix.setflags(write=False)
+            self.sources.append((row, matrix))
+            seen.add(row["source_id"])
+        if not self.sources:
+            raise ValueError("source passages are required")
+
+    @staticmethod
+    def _matrix(value):
+        import numpy as np
+        matrix = np.array(value, dtype=np.float64, copy=True)
+        if (matrix.shape != (32, 32) or not np.isfinite(matrix).all()
+                or not np.any(matrix)):
+            raise ValueError("a finite, nonzero signed 32 by 32 matrix is required")
+        return matrix
+
+    def retrieve(self, question):
+        """Return exact source passages with scores and Tree-processing evidence."""
+        import numpy as np
+        from tom_matrix.core.integrity import array_digest
+        from tom_matrix.input import matrix_address as address
+        from tom_matrix.relations.precision_routing import (
+            capture_precision_readings, precision_route_from_readings,
+        )
+        from tom_matrix.relations.spectrum import normalized
+
+        if not isinstance(question, str) or not question.strip():
+            raise ValueError("a retrieval question is required")
+        query_matrix = self._matrix(self.encode_text(question))
+        with self.lock:
+            state_before = self.tree.state_hash()
+            readings = capture_precision_readings(self.tree)
+            path = precision_route_from_readings(query_matrix, readings)
+            fork = next((b for b in path.order if len(path.children[b]) > 1), None)
+            if fork is None:
+                raise ValueError("the Tree has no main branching point")
+            limbs = path.children[fork]
+            public, _, _ = self.tree._terminal_returns(path)
+            returned = dict(public)
+            for branch in reversed(path.order):
+                if path.children[branch]:
+                    returned[branch] = sum((
+                        path.adjoint(child, returned[child])
+                        for child in path.children[branch]
+                    ), np.zeros((32, 32)))
+            strengths = {}
+            for limb in limbs:
+                value = path.adjoint(limb, returned[limb])
+                parent = fork
+                while parent != path.root:
+                    value = path.adjoint(parent, value)
+                    parent = path.parents[parent]
+                value = path.frames[path.root].to_global(value)
+                strengths[limb] = float(np.linalg.norm(value))
+            if not all(np.isfinite(v) for v in strengths.values()) or max(strengths.values()) <= 0:
+                raise ValueError("the Tree returned no finite main-branch strength")
+            strongest = max(limbs, key=lambda branch: strengths[branch])
+            width = address.linewidth("spectrum", True)
+            query_patterns = {
+                branch: address.encode(normalized(path.precision["response"][branch]), "spectrum")
+                for branch in limbs
+            }
+            rows = []
+            for source, matrix in self.sources:
+                candidate = precision_route_from_readings(matrix, readings)
+                scores = {
+                    branch: float(address.response(
+                        query_patterns[branch],
+                        address.encode(normalized(candidate.precision["response"][branch]), "spectrum"),
+                        width,
+                    )[0]) for branch in limbs
+                }
+                if not all(np.isfinite(v) for v in scores.values()):
+                    raise ValueError("the native matcher returned a nonfinite score")
+                rows.append(dict(source, score=scores[strongest], branch_scores=scores,
+                    input_matrix_sha256=array_digest(matrix),
+                    pattern_sha256={branch: array_digest(candidate.precision["response"][branch])
+                                    for branch in limbs}))
+                del candidate
+            rows.sort(key=lambda row: (-row["score"], row["source_id"]))
+            matches = [row for row in rows if row["score"] >= address.MATCH]
+            state_after = self.tree.state_hash()
+            if state_after != state_before:
+                raise ValueError("Tree changed during retrieval; results discarded")
+            tied = len(matches) > 1 and matches[0]["score"] == matches[1]["score"]
+            return {
+                "policy": self.VERSION,
+                "question": question,
+                "encoder_id": self.encoder_id,
+                "status": "ambiguous" if tied else "matched" if matches else "no_match",
+                "matches": matches,
+                "candidates": rows,
+                "telemetry": {
+                    "tree_class": type(self.tree).__module__ + "." + type(self.tree).__name__,
+                    "state_before": state_before, "state_after": state_after,
+                    "branch_count": len(readings["ids"]),
+                    "first_fork": fork, "main_branches": list(limbs),
+                    "branch_return_strengths": strengths, "strongest_branch": strongest,
+                    "strength_tied": sum(v == strengths[strongest] for v in strengths.values()) > 1,
+                    "threshold": address.MATCH,
+                    "pattern_stage": "native_precision_stiffness_response_before_memory_readout",
+                    "query_matrix_sha256": array_digest(query_matrix),
+                    "query_pattern_sha256": {branch: array_digest(path.precision["response"][branch])
+                                             for branch in limbs},
+                    "query_return_sha256": array_digest(path.frames[path.root].to_global(returned[path.root])),
+                    "sources_routed": len(rows), "query_routed": True,
+                    "tree_mutated": False, "fallback_used": False,
+                },
+            }
+
+
+class ProjectDocumentTreeIndex:
+    """One mutable 10K-derived document Tree owned by exactly one project.
+
+    Original document prose remains in the project's permanent library. This
+    directory contains only that project's evolving Tree and replayable
+    evidence receipts. A second project begins from a fresh byte copy of the
+    canonical seed, so structural influence cannot cross the project boundary.
+    """
+
+    def __init__(
+        self, state_dir: Path, project_id: str, seed: Any, config: Any,
+    ) -> None:
+        from agency.mechanics.sicd_engine import TreeGrowthEngine
+        from gateway.tom_gateway import _safe_project_id
+
+        self.project_id = _safe_project_id(project_id)
+        self.state_dir = Path(state_dir).resolve() / "document-index"
         self.state_dir.mkdir(parents=True, exist_ok=True)
         os.chmod(self.state_dir, 0o700)
         self.path = self.state_dir / "tree_state.json"
@@ -167,6 +328,13 @@ class SharedDocumentTreeIndex:
                 event_time TEXT NOT NULL,
                 tree_digest TEXT NOT NULL);
         """)
+        foreign_projects = {
+            str(row[0])
+            for table in ("chunk_commits", "activation_events")
+            for row in self.db.execute(f"SELECT DISTINCT project_id FROM {table}")
+        } - {self.project_id}
+        if foreign_projects:
+            raise ValueError("project document Tree contains foreign-project receipts")
         head = self.db.execute(
             "SELECT tree,tree_digest,seed_artifact_sha256,mechanism_version,tick,"
             "branch_count FROM tree_head WHERE singleton=1"
@@ -194,6 +362,10 @@ class SharedDocumentTreeIndex:
             self._restore_fields(tree)
             if int(self.engine.state.tick) != tick or len(self.engine.state.branches) != branches:
                 raise ValueError("document Tree head lineage mismatch")
+
+    def _require_project(self, project_id: str) -> None:
+        if str(project_id) != self.project_id:
+            raise ValueError("project document Tree refuses a foreign project")
 
     def _write(self, tree: bytes) -> None:
         from gateway.tom_gateway import _atomic_write
@@ -237,6 +409,7 @@ class SharedDocumentTreeIndex:
         self._restore_fields(tree)
 
     def indexed_chunk_keys(self, project_id: str) -> set[tuple[str, int]]:
+        self._require_project(project_id)
         return {
             (document_id, int(index))
             for document_id, index in self.db.execute(
@@ -246,6 +419,7 @@ class SharedDocumentTreeIndex:
         }
 
     def project_commits(self, project_id: str) -> list[dict[str, Any]]:
+        self._require_project(project_id)
         rows = self.db.execute(
             "SELECT document_id,chunk_index,analysis_json,address_branches_json,"
             "clause_provenance_json FROM chunk_commits "
@@ -264,11 +438,13 @@ class SharedDocumentTreeIndex:
         ]
 
     def project_commit_count(self, project_id: str) -> int:
+        self._require_project(project_id)
         return int(self.db.execute(
             "SELECT COUNT(*) FROM chunk_commits WHERE project_id=?", (project_id,),
         ).fetchone()[0])
 
     def project_chunk_metadata(self, project_id: str) -> dict[tuple[str, int], dict[str, Any]]:
+        self._require_project(project_id)
         rows = self.db.execute(
             "SELECT document_id,chunk_index,routing_basis_8d_json,"
             "address_branches_json,clause_provenance_json FROM chunk_commits "
@@ -301,6 +477,8 @@ class SharedDocumentTreeIndex:
                 "SELECT COUNT(*) FROM chunk_commits"
             ).fetchone()[0])
         return {
+            "project_id": self.project_id,
+            "isolation": "dedicated_project_tree",
             "tree_digest": str(row[0]),
             "seed_artifact_sha256": str(row[1]),
             "mechanism_version": str(row[2]),
@@ -330,6 +508,7 @@ class SharedDocumentTreeIndex:
         from agency.mechanics.sicd_msr_load import LoadSignature
         from agency.mechanics.sicd_msr_load_application import apply_msr_load_to_sicd_engine
 
+        self._require_project(project_id)
         with self.lock:
             prior = self.serialize()
             analyses, receipts = [], []
@@ -455,6 +634,7 @@ class SharedDocumentTreeIndex:
                 raise
 
     def record_withdrawal(self, project_id, document_id, event_time):
+        self._require_project(project_id)
         with self.lock:
             head = self.db.execute("SELECT tree_digest FROM tree_head").fetchone()
             self.db.execute(
@@ -523,29 +703,61 @@ class SharedDocumentTreeIndex:
         return analysis, cohort, trace
 
     def structural_scores(self, project_id, chunks, cohort):
-        """Score overlap between retained chunk addresses and the query region.
+        """Rank retained 8D document addresses through the pinned Tree reader.
 
-        This is a Tree lookup, not a second embedding cosine.  If the query and
-        every candidate have the same/no branch overlap, callers receive an
-        explicit non-informative channel and must not manufacture a ranking from
-        floating-point noise.
+        The historic branch-ID intersection is retained only as a diagnostic.
+        Branch IDs captured while the Tree was growing are not a valid admission
+        gate for a later Tree snapshot.  Source text is never part of this call.
         """
+        self._require_project(project_id)
+        import math
+        from agency.mechanics.preview_readout import rank_by_branch_resonance
+
         query_ranks = {
             str(branch_id): (rank, float(score))
             for rank, (branch_id, _, score) in enumerate(cohort, 1)
         }
-        result = {}
-        raw_scores = []
+        if not query_ranks:
+            raise ValueError("document Tree query produced no active region")
+        for branch_id, branch_vector, _ in cohort:
+            if (
+                not isinstance(branch_id, str)
+                or len(branch_vector) != 8
+                or not all(math.isfinite(float(value)) for value in branch_vector)
+                or math.sqrt(sum(float(value) ** 2 for value in branch_vector)) < 1e-12
+            ):
+                raise ValueError("document Tree query region has an invalid 8D branch vector")
+
+        records = {}
+        receipt_metadata = {}
         for row in chunks:
+            row_id = f"{row['document_id']}:chunk:{int(row['chunk_index'])}"
             address = self.db.execute(
-                "SELECT address_branches_json FROM chunk_commits WHERE "
+                "SELECT commit_id,analysis_digest,routing_basis_8d_json,"
+                "address_branches_json,tick_after,batch_tree_digest "
+                "FROM chunk_commits WHERE "
                 "project_id=? AND document_id=? AND chunk_index=?",
                 (project_id, row["document_id"], int(row["chunk_index"])),
             ).fetchone()
             if address is None:
                 raise ValueError("active project chunk is absent from the document Tree")
+            routing = json.loads(address[2])
+            vector = routing.get("vector_8d") if isinstance(routing, Mapping) else None
+            basis_names = routing.get("basis_names") if isinstance(routing, Mapping) else None
+            if (
+                list(basis_names or ()) != list(DOCUMENT_ROUTING_BASIS_NAMES)
+                or not isinstance(vector, list)
+                or len(vector) != 8
+                or not all(math.isfinite(float(value)) for value in vector)
+            ):
+                raise ValueError("document Tree receipt has an invalid or incompatible 8D address")
+            norm = math.sqrt(sum(float(value) ** 2 for value in vector))
+            if abs(norm - 1.0) > 1e-9:
+                raise ValueError("document Tree receipt 8D address is not normalized")
+            records[row_id] = {"leaf_vec": [float(value) for value in vector]}
+
             overlaps = []
-            for branch in json.loads(address[0]):
+            for branch in json.loads(address[3]):
                 branch_id = str(branch["branch_id"])
                 query = query_ranks.get(branch_id)
                 if query is None:
@@ -566,21 +778,75 @@ class SharedDocumentTreeIndex:
             overlaps.sort(key=lambda item: (
                 -item["overlap_score"], item["branch_id"],
             ))
-            score = sum(item["overlap_score"] for item in overlaps)
+            receipt_metadata[row_id] = {
+                "receipt_id": str(address[0]),
+                "receipt_analysis_digest": str(address[1]),
+                "routing_basis_names": list(basis_names),
+                "routing_vector_8d": [float(value) for value in vector],
+                "routing_vector_norm": norm,
+                "receipt_tick_after": int(address[4]),
+                "receipt_batch_tree_digest": str(address[5]),
+                "historical_branch_overlap_count": len(overlaps),
+                "historical_best_overlap_branch_id": (
+                    overlaps[0]["branch_id"] if overlaps else None
+                ),
+            }
+
+        ordered_records = {row_id: records[row_id] for row_id in sorted(records)}
+        native_ranks, native_details = rank_by_branch_resonance(
+            ordered_records, list(cohort),
+        )
+        if len(native_ranks) != len(ordered_records) or len(native_details) != len(ordered_records):
+            raise ValueError("pinned document Tree reader did not rank every valid receipt")
+        detail_by_id = {
+            str(row_id): (str(branch_id), float(score))
+            for row_id, branch_id, score in native_details
+        }
+        if set(detail_by_id) != set(ordered_records) or set(native_ranks) != set(ordered_records):
+            raise ValueError("pinned document Tree reader returned an incomplete identity set")
+
+        query_region_identity = bytes_digest(json.dumps(
+            [
+                [str(branch_id), [float(value) for value in branch_vector], float(score)]
+                for branch_id, branch_vector, score in cohort
+            ],
+            sort_keys=True, separators=(",", ":"),
+        ).encode("utf-8"))
+        head = self.head_metadata()
+        result = {}
+        raw_scores = []
+        for row_id in ordered_records:
+            matched_branch_id, score = detail_by_id[row_id]
             raw_scores.append(score)
-            row_id = f"{row['document_id']}:chunk:{int(row['chunk_index'])}"
             result[row_id] = {
                 "score": score,
-                "matched_branch_id": overlaps[0]["branch_id"] if overlaps else "",
-                "branch_overlap_count": len(overlaps),
+                "matched_branch_id": matched_branch_id,
+                "native_rank": int(native_ranks[row_id]),
+                "query_region_identity": query_region_identity,
+                "retrieval_version": DOCUMENT_TREE_RETRIEVAL_VERSION,
+                "current_tree_digest": head["tree_digest"],
+                **receipt_metadata[row_id],
             }
         minimum = min(raw_scores, default=0.0)
         maximum = max(raw_scores, default=0.0)
-        informative = maximum > 0.0 and maximum - minimum > 1e-12
+        spread = maximum - minimum
+        informative = maximum > 0.0 and spread > 1e-12
         return result, {
+            "retrieval_version": DOCUMENT_TREE_RETRIEVAL_VERSION,
+            "reader": "agency.mechanics.preview_readout.rank_by_branch_resonance",
+            "routing_basis_names": list(DOCUMENT_ROUTING_BASIS_NAMES),
+            "same_basis_validated": True,
             "informative": informative,
             "score_min": minimum,
             "score_max": maximum,
-            "score_spread": maximum - minimum,
+            "score_spread": spread,
+            "ranked_receipt_count": len(result),
             "query_branch_count": len(query_ranks),
+            "query_region_identity": query_region_identity,
+            "tree_digest": head["tree_digest"],
+            "historical_overlap_only_count": sum(
+                int(row["historical_branch_overlap_count"] > 0)
+                for row in receipt_metadata.values()
+            ),
+            "historical_overlap_is_diagnostic_only": True,
         }

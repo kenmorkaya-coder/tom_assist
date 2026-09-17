@@ -51,6 +51,8 @@ export type Method =
   | "project.import"
   | "diagnostics.run"
   | "provider.status"
+  | "inspection.gemma"
+  | "conversation.native_answer"
   | "conversation.list"
   | "conversation.create"
   | "conversation.get"
@@ -75,6 +77,62 @@ export type EvidenceFacts = {
   evidence: Span;
   confidence: number;
 }[];
+export type DeclaredDocumentStructure = {
+  [k: string]: unknown;
+} & {
+  schema_version: "tom-assist-declared-structure/1.0" | "tom-assist-declared-structure/1.1";
+  source_text_sha256: string;
+  clause_index: {
+    version: "tom-assist-clause-index/1.0";
+    /**
+     * @maxItems 50000
+     */
+    entries: Address[];
+    entry_count: number;
+    valid_count: number;
+    malformed_count: number;
+    index_digest: string;
+  };
+  references: {
+    version: "tom-assist-reference-resolution/1.0";
+    /**
+     * @maxItems 100000
+     */
+    references: Reference[];
+    reference_count: number;
+    resolved_count: number;
+    unresolved_absent_count: number;
+    unparsed_count: number;
+  };
+  defined_terms: {
+    version: "tom-assist-defined-term-binding/1.0" | "tom-assist-defined-term-binding/1.1";
+    case_rule: "exact-unicode-codepoints-case-sensitive-whole-surface/1.0";
+    surface_forms_only_for_prompt: true;
+    /**
+     * @maxItems 10000
+     */
+    terms: DefinedTerm[];
+    term_count: number;
+    /**
+     * @maxItems 100000
+     */
+    bindings: Binding[];
+    binding_count: number;
+  };
+  declared_precedence: {
+    version: "tom-assist-declared-precedence/1.0";
+    /**
+     * @maxItems 10000
+     */
+    relations: Precedence[];
+    relation_count: number;
+  };
+  causation: {
+    derived: false;
+    reason: "not_self_declared";
+  };
+  structure_digest: string;
+};
 
 export interface Envelope {
   protocol: "tom-assist/1.0";
@@ -126,7 +184,7 @@ export interface TomCapabilities {
   document_packet_admission: true;
   document_packet_admission_version: "minilm-document-hybrid-packet-admission/1.0";
   supports_document_declared_structure: true;
-  document_declared_structure_version: "tom-assist-declared-structure/1.0";
+  document_declared_structure_version: "tom-assist-declared-structure/1.0" | "tom-assist-declared-structure/1.1";
   parser_glossary_enabled: boolean;
   parser_glossary_version: "tom-assist-parser-glossary/1.0";
   parser_glossary_term_count: number;
@@ -226,7 +284,7 @@ export interface ContinuityPacket {
   tom_checkpoint_digest: string;
   draft_hash: string;
   policy_version: string;
-  renderer_version: "authoritative-state/1.3";
+  renderer_version: "authoritative-state/1.7";
   provider_capabilities: ProviderCapabilities;
   tom_activation_id: string;
   sections: {
@@ -349,60 +407,6 @@ export interface Span {
   end: number;
   quote: string;
 }
-export interface DeclaredDocumentStructure {
-  schema_version: "tom-assist-declared-structure/1.0";
-  source_text_sha256: string;
-  clause_index: {
-    version: "tom-assist-clause-index/1.0";
-    /**
-     * @maxItems 50000
-     */
-    entries: Address[];
-    entry_count: number;
-    valid_count: number;
-    malformed_count: number;
-    index_digest: string;
-  };
-  references: {
-    version: "tom-assist-reference-resolution/1.0";
-    /**
-     * @maxItems 100000
-     */
-    references: Reference[];
-    reference_count: number;
-    resolved_count: number;
-    unresolved_absent_count: number;
-    unparsed_count: number;
-  };
-  defined_terms: {
-    version: "tom-assist-defined-term-binding/1.0";
-    case_rule: "exact-unicode-codepoints-case-sensitive-whole-surface/1.0";
-    surface_forms_only_for_prompt: true;
-    /**
-     * @maxItems 10000
-     */
-    terms: DefinedTerm[];
-    term_count: number;
-    /**
-     * @maxItems 100000
-     */
-    bindings: Binding[];
-    binding_count: number;
-  };
-  declared_precedence: {
-    version: "tom-assist-declared-precedence/1.0";
-    /**
-     * @maxItems 10000
-     */
-    relations: Precedence[];
-    relation_count: number;
-  };
-  causation: {
-    derived: false;
-    reason: "not_self_declared";
-  };
-  structure_digest: string;
-}
 export interface Address {
   entry_id: string;
   kind: "clause" | "subclause" | "schedule" | "exhibit" | "appendix" | "attachment" | "named_section";
@@ -433,6 +437,8 @@ export interface DefinedTerm {
   surface_span: Span1;
   defining_clause_entry_id: string;
   defining_clause_identifier: string;
+  scope_id?: string;
+  scope_span?: Span1;
   definition_span: Span1;
   definition_body: string;
   entry_digest: string;

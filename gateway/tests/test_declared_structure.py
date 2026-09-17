@@ -170,6 +170,84 @@ def test_declared_precedence_reproduces_order_and_only_named_notwithstanding_tar
     assert structure["causation"] == {"derived": False, "reason": "not_self_declared"}
 
 
+@pytest.mark.parametrize("opening", [
+    "This deed poll is made by:",
+    "This deed poll (Deed Poll) made the first day of September",
+    "Schedule 1 — Attached deed",
+    "                    Schedule 1",
+])
+def test_repeated_definition_is_scoped_and_reference_body_is_preserved(opening):
+    main = "1. INTERPRETATION\n1.1 Definitions\n\nReview means an examination.\n\n2. DUTIES\nA Review is required.\n"
+    attached = opening + "\n\n1. INTERPRETATION\n1.1 Definitions\n\nReview has the meaning given in the main deed.\n\n2. DUTIES\nA Review is required.\n"
+    text = main + "\n" + attached
+    result = build_declared_structure(text)
+    terms = result["defined_terms"]["terms"]
+    assert len(terms) == 2
+    assert terms[0]["scope_id"] != terms[1]["scope_id"]
+    assert terms[0]["definition_body"].strip() == "means an examination."
+    assert terms[1]["definition_body"].strip() == "has the meaning given in the main deed."
+    for index, term in enumerate(terms):
+        bindings = [row for row in result["defined_terms"]["bindings"] if row["term_id"] == term["term_id"]]
+        assert len(bindings) == 2
+        assert all((row["span"]["start"] < len(main)) == (index == 0) for row in bindings)
+    _schema_validator().validate(result)
+
+
+def test_duplicate_definition_without_explicit_new_scope_still_fails():
+    text = "1. DEFINITIONS\n1.1 Definitions\n\nReview means an examination.\n\nReview means a different action.\n"
+    with pytest.raises(DeclaredStructureError, match="duplicate exact"):
+        build_declared_structure(text)
+
+
+def test_numbering_reset_does_not_invent_a_definition_scope():
+    part = "1. DEFINITIONS\n1.1 Definitions\n\nReview means an examination.\n\n2. DUTIES\nReview is required.\n"
+    with pytest.raises(DeclaredStructureError, match="duplicate exact"):
+        build_declared_structure(part + "\n" + part)
+
+
+def test_attachment_cannot_inherit_the_previous_definitions_heading():
+    text = (
+        "1. DEFINITIONS\n1.1 Definitions\n\nReview means an examination.\n\n"
+        "This deed poll is made by:\n\nReview means a different action.\n"
+    )
+    result = build_declared_structure(text)
+    terms = result["defined_terms"]["terms"]
+    assert len(terms) == 1
+    assert terms[0]["definition_body"].strip() == "means an examination."
+    assert len(result["defined_terms"]["bindings"]) == 1
+
+
+def test_scoped_bindings_cannot_be_redirected_to_the_other_instrument():
+    from gateway.declared_structure import digest
+    main = "1. DEFINITIONS\n1.1 Definitions\n\nReview means an examination.\n\n2. DUTIES\nReview is required.\n"
+    text = main + "\nThis deed poll is made by:\n\n" + main
+    result = build_declared_structure(text)
+    binding = result["defined_terms"]["bindings"][-1]
+    binding["term_id"] = result["defined_terms"]["terms"][0]["term_id"]
+    result["structure_digest"] = digest({k: v for k, v in result.items() if k != "structure_digest"})
+    with pytest.raises(DeclaredStructureError, match="source scopes"):
+        validate_declared_structure(result, text)
+
+
+def test_existing_unscoped_structure_remains_readable():
+    from gateway.declared_structure import bind_defined_terms, digest
+    example = json.loads((ROOT / "tests/fixtures/protocol/examples.json").read_text())["declared_structure"]
+    assert example["schema_version"] == "tom-assist-declared-structure/1.0"
+    _schema_validator().validate(example)
+    legacy = build_declared_structure(SYNTHETIC_INSTRUMENT)
+    legacy["schema_version"] = "tom-assist-declared-structure/1.0"
+    payload = legacy["defined_terms"]
+    payload["version"] = "tom-assist-defined-term-binding/1.0"
+    for term in payload["terms"]:
+        del term["scope_id"], term["scope_span"]
+        term["entry_digest"] = digest({k: v for k, v in term.items() if k != "entry_digest"})
+    payload["bindings"] = bind_defined_terms(SYNTHETIC_INSTRUMENT, payload["terms"])
+    payload["binding_count"] = len(payload["bindings"])
+    legacy["structure_digest"] = digest({k: v for k, v in legacy.items() if k != "structure_digest"})
+    assert validate_declared_structure(legacy, SYNTHETIC_INSTRUMENT) == legacy
+    _schema_validator().validate(legacy)
+
+
 def test_ingestion_builds_and_persists_structure_without_touching_runtime_state(tmp_path):
     provider = FixtureEmbeddingProvider()
     gateway = EvidenceTomGateway(tmp_path, document_embedding_provider=provider)

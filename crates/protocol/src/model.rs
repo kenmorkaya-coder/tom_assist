@@ -104,6 +104,10 @@ pub enum Method {
     DiagnosticsRun,
     #[serde(rename = "provider.status")]
     ProviderStatus,
+    #[serde(rename = "inspection.gemma")]
+    GemmaInspect,
+    #[serde(rename = "conversation.native_answer")]
+    NativeMemoryAnswer,
     #[serde(rename = "conversation.list")]
     ConversationList,
     #[serde(rename = "conversation.create")]

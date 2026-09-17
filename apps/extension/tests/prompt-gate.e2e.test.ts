@@ -7,10 +7,11 @@ import { ChatGptAdapter, type ProviderTurn } from "@tom-assist/provider-adapters
 import { PromptGateController, type ExtensionService, type PacketPreview } from "../src/gate";
 
 class FixtureService implements ExtensionService {
-  prepared = 0; sent = 0; evaluated = 0; captured = 0; unavailable = false;
+  prepared = 0; sent = 0; evaluated = 0; accepted = 0; captured = 0; unavailable = false;
   async prepare(): Promise<PacketPreview> { this.prepared += 1; if (this.unavailable) throw new Error("offline"); return { packetText: "[TOM_ASSIST_STATE v1]\nHELD_DECISIONS\n- Ship fixture flow\n[/TOM_ASSIST_STATE]", packetDigest: "sha256:packet", includedCategories: ["HELD_DECISIONS"], warnings: ["fixture warning"], excludedItems: ["superseded-path"] }; }
   async markSent(): Promise<void> { this.sent += 1; }
   async evaluate(): Promise<any> { this.evaluated += 1; return { result: "REVIEW", count: 1, severity: "warning" }; }
+  async accept(): Promise<any> { this.accepted += 1; return { result: "REVIEW", count: 1, severity: "warning" }; }
   async capture(): Promise<void> { this.captured += 1; }
 }
 
@@ -35,7 +36,12 @@ describe("fixture prompt-gate e2e", () => {
     expect((dom.window.document.querySelector('[data-testid="prompt-textarea"]') as HTMLTextAreaElement).value).toContain("[TOM_ASSIST_STATE v1]");
     const response: ProviderTurn = { provider: "chatgpt", conversationKey: "/c/fixture", role: "assistant", ordinal: 3, normalizedText: "Fixture response", contentHash: "sha256:response", complete: true };
     await gate.captureResponse(response);
-    expect({ prepared: service.prepared, sent: service.sent, evaluated: service.evaluated, badge: gate.snapshot().badge }).toEqual({ prepared: 1, sent: 1, evaluated: 1, badge: { result: "REVIEW", count: 1, severity: "warning" } });
+    expect({ prepared: service.prepared, sent: service.sent, evaluated: service.evaluated, accepted: service.accepted, badge: gate.snapshot().badge }).toEqual({ prepared: 1, sent: 1, evaluated: 1, accepted: 0, badge: { result: "REVIEW", count: 1, severity: "warning" } });
+    await gate.acceptResponse();
+    expect(service.accepted).toBe(1);
+    expect(gate.snapshot().experienceAccepted).toBe(true);
+    await gate.acceptResponse();
+    expect(service.accepted).toBe(1);
   });
 
   it("requires an explicit user action before fail-open", async () => {

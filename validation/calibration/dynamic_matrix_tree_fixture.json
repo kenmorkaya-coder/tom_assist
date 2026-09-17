@@ -1,0 +1,194 @@
+{
+  "version": "tom-assist-actual-matrix-native-tree-retrieval-fixture/1.0",
+  "purpose": "Frozen contrastive test of actual matrix-native Tree load application, receipt retrieval, read-only querying, MiniLM retrieval and fixed hybrid scoring.",
+  "matrix_native": {
+    "source_repository": "/Users/kenmorkaya/PycharmProjects/tom_matrix_native",
+    "git_head_at_freeze": "dca1ab31733bb2bbefaec1e679f9643d2077c771",
+    "checkpoint": "/Users/kenmorkaya/PycharmProjects/tom_matrix_native/experiments/balanced_matrix_preparation_v2/evidence/growth_001/grown_4k.pkl",
+    "checkpoint_sha256": "5acdecaaad226ff69c7e4ebb0246ec7f83ef40c45f03fe9dc4ecbf1b70f919b0",
+    "checkpoint_state_hash": "d56b14546143db9bb01c3fbca3e11d88bacf41dae01fee6d771fefe1110708c5",
+    "checkpoint_source_manifest_sha256": "5ea22fcbd0bc5bf000ee9b2657a74659f4b29801d290c2f0e6b68a8907a9087d",
+    "checkpoint_sidecar_sha256": "39cf56002e46593a8667ae5c0c8ddd31ebf84b3609057044e5e31f51d4e96a23",
+    "apparatus_sources": {
+      "CODEX_TEST_FILES/real_tree_capability_recovery/common.py": "54874831b6ee43bf959178ec9a530602c59b082046e34d166a1161f641bcedb2",
+      "experiments/distributed_readout_repair_v1/readout.py": "3ef68f1068d6346d60680e261eae511b475e684545128905bd0629a718beeea0",
+      "experiments/integrated_matrix_sicd_v1/data/large_tree_profile.json": "34ec467e6671f43d44e57e442034af79c705cc2d4ce11c2cc1e8ff35d7acc13a"
+    },
+    "starting_branches": 4000,
+    "prior_matrix_growth_events": 505,
+    "preparation_scheduler_must_be_disabled": true,
+    "dimension": 32,
+    "sibling_leak": 0.05,
+    "memory_half_life": 32.0
+  },
+  "minilm": {
+    "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "dimension": 384
+  },
+  "matrix": {
+    "size": 32,
+    "source_target_weight": 1.0,
+    "relation_weight": 0.5,
+    "context_weight": 0.25,
+    "projection": "splitmix64-rademacher-jl-384-to-32/1.0",
+    "projection_seed": 539362568
+  },
+  "load": {
+    "version": "tom-assist-actual-matrix-tree-passage-load/1.0-diagnostic",
+    "order": "fixture_order_once",
+    "wind_schedule_degrees": [0, 180, 120, 300, 240, 60],
+    "nourishment": 1.1,
+    "dt": 1.0,
+    "outcomes_supplied": false,
+    "receipt": "actual_pre_event_terminal_branch_local_matrices"
+  },
+  "readout": {
+    "tree_score": "cosine_over_actual_load_terminal_receipt_and_current_native_query_route/1.0",
+    "hybrid": "equal_mean_of_unit_interval_minilm_cosine_and_tree_cosine/1.0",
+    "hybrid_minilm_weight": 0.5,
+    "hybrid_tree_weight": 0.5,
+    "fixed_k": [1, 3, 5]
+  },
+  "passages": [
+    {
+      "id": "CAUSE_FORWARD",
+      "text": "Heavy rain caused the road to flood.",
+      "event": {"source": "heavy rain", "target": "road flooding", "relation": "causes", "context": "weather impact"}
+    },
+    {
+      "id": "CAUSE_REVERSE",
+      "text": "The flooded road caused the heavy rain.",
+      "event": {"source": "road flooding", "target": "heavy rain", "relation": "causes", "context": "weather impact"}
+    },
+    {
+      "id": "OBLIGATION_FORWARD",
+      "text": "The Contractor must give the design report to the Principal.",
+      "event": {"source": "Contractor", "target": "give the design report to the Principal", "relation": "obligation", "context": "design report delivery"}
+    },
+    {
+      "id": "OBLIGATION_REVERSE",
+      "text": "The Principal must give the design report to the Contractor.",
+      "event": {"source": "Principal", "target": "give the design report to the Contractor", "relation": "obligation", "context": "design report delivery"}
+    },
+    {
+      "id": "CONDITION_FORWARD",
+      "text": "Written approval is required before excavation can begin.",
+      "event": {"source": "written approval", "target": "excavation begins", "relation": "condition precedent", "context": "before excavation"}
+    },
+    {
+      "id": "CONDITION_REVERSE",
+      "text": "Excavation must begin before written approval can be issued.",
+      "event": {"source": "excavation begins", "target": "written approval", "relation": "condition precedent", "context": "before approval"}
+    },
+    {
+      "id": "PRECEDENCE_FORWARD",
+      "text": "Technical Specification A takes precedence over Technical Specification B.",
+      "event": {"source": "Technical Specification A", "target": "Technical Specification B", "relation": "takes precedence over", "context": "document hierarchy"}
+    },
+    {
+      "id": "PRECEDENCE_REVERSE",
+      "text": "Technical Specification B takes precedence over Technical Specification A.",
+      "event": {"source": "Technical Specification B", "target": "Technical Specification A", "relation": "takes precedence over", "context": "document hierarchy"}
+    },
+    {
+      "id": "SUPERSESSION_FORWARD",
+      "text": "Revision 2 supersedes Revision 1.",
+      "event": {"source": "Revision 2", "target": "Revision 1", "relation": "supersedes", "context": "revision control"}
+    },
+    {
+      "id": "SUPERSESSION_REVERSE",
+      "text": "Revision 1 supersedes Revision 2.",
+      "event": {"source": "Revision 1", "target": "Revision 2", "relation": "supersedes", "context": "revision control"}
+    },
+    {
+      "id": "PREVENTION_FORWARD",
+      "text": "The waterproof barrier prevents groundwater from entering the tunnel.",
+      "event": {"source": "waterproof barrier", "target": "groundwater entering the tunnel", "relation": "prevents", "context": "tunnel water protection"}
+    },
+    {
+      "id": "PREVENTION_REVERSE",
+      "text": "Groundwater entering the tunnel prevents installation of the waterproof barrier.",
+      "event": {"source": "groundwater entering the tunnel", "target": "installation of the waterproof barrier", "relation": "prevents", "context": "tunnel water protection"}
+    },
+    {
+      "id": "DEPENDENCY_FORWARD",
+      "text": "System energisation depends on successful insulation testing.",
+      "event": {"source": "successful insulation testing", "target": "system energisation", "relation": "required for", "context": "electrical commissioning"}
+    },
+    {
+      "id": "DEPENDENCY_REVERSE",
+      "text": "Insulation testing depends on successful system energisation.",
+      "event": {"source": "successful system energisation", "target": "insulation testing", "relation": "required for", "context": "electrical commissioning"}
+    },
+    {
+      "id": "SEQUENCE_FORWARD",
+      "text": "Reinforcement inspection precedes the concrete pour.",
+      "event": {"source": "reinforcement inspection", "target": "concrete pour", "relation": "precedes", "context": "concrete construction sequence"}
+    },
+    {
+      "id": "SEQUENCE_REVERSE",
+      "text": "The concrete pour precedes reinforcement inspection.",
+      "event": {"source": "concrete pour", "target": "reinforcement inspection", "relation": "precedes", "context": "concrete construction sequence"}
+    }
+  ],
+  "queries": [
+    {
+      "id": "Q_CAUSE", "family": "causal_direction",
+      "text": "Did heavy rain cause the road to flood?",
+      "event": {"source": "heavy rain", "target": "road flooding", "relation": "causes", "context": "weather impact"},
+      "relevant_passage_ids": ["CAUSE_FORWARD"]
+    },
+    {
+      "id": "Q_OBLIGATION", "family": "obligation_direction",
+      "text": "Must the Contractor give the design report to the Principal?",
+      "event": {"source": "Contractor", "target": "give the design report to the Principal", "relation": "obligation", "context": "design report delivery"},
+      "relevant_passage_ids": ["OBLIGATION_FORWARD"]
+    },
+    {
+      "id": "Q_CONDITION", "family": "condition_direction",
+      "text": "Is written approval required before excavation begins?",
+      "event": {"source": "written approval", "target": "excavation begins", "relation": "condition precedent", "context": "before excavation"},
+      "relevant_passage_ids": ["CONDITION_FORWARD"]
+    },
+    {
+      "id": "Q_PRECEDENCE", "family": "precedence_direction",
+      "text": "Does Technical Specification A take precedence over Technical Specification B?",
+      "event": {"source": "Technical Specification A", "target": "Technical Specification B", "relation": "takes precedence over", "context": "document hierarchy"},
+      "relevant_passage_ids": ["PRECEDENCE_FORWARD"]
+    },
+    {
+      "id": "Q_SUPERSESSION", "family": "supersession_direction",
+      "text": "Does Revision 2 supersede Revision 1?",
+      "event": {"source": "Revision 2", "target": "Revision 1", "relation": "supersedes", "context": "revision control"},
+      "relevant_passage_ids": ["SUPERSESSION_FORWARD"]
+    },
+    {
+      "id": "Q_PREVENTION", "family": "prevention_direction",
+      "text": "Does the waterproof barrier prevent groundwater from entering the tunnel?",
+      "event": {"source": "waterproof barrier", "target": "groundwater entering the tunnel", "relation": "prevents", "context": "tunnel water protection"},
+      "relevant_passage_ids": ["PREVENTION_FORWARD"]
+    },
+    {
+      "id": "Q_DEPENDENCY", "family": "dependency_direction",
+      "text": "Is successful insulation testing required for system energisation?",
+      "event": {"source": "successful insulation testing", "target": "system energisation", "relation": "required for", "context": "electrical commissioning"},
+      "relevant_passage_ids": ["DEPENDENCY_FORWARD"]
+    },
+    {
+      "id": "Q_SEQUENCE", "family": "sequence_direction",
+      "text": "Does reinforcement inspection precede the concrete pour?",
+      "event": {"source": "reinforcement inspection", "target": "concrete pour", "relation": "precedes", "context": "concrete construction sequence"},
+      "relevant_passage_ids": ["SEQUENCE_FORWARD"]
+    }
+  ],
+  "diagnostic_expectations": {
+    "starting_tree_was_grown_from_six_branches_under_matrix_loads": true,
+    "all_passage_matrices_reach_actual_tree_advance_once": true,
+    "every_pre_event_live_branch_receives_nonzero_matrix": true,
+    "native_conservation_checks_hold": true,
+    "tree_state_changes_on_every_passage_load": true,
+    "query_probes_are_state_hash_pure": true,
+    "source_checkout_is_untouched": true,
+    "report_every_ranking_without_pass_threshold": true
+  }
+}

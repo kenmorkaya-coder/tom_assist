@@ -65,10 +65,14 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
         document_embedding_provider=None,
         parser_glossary_enabled: bool = False,
         document_index=None,
+        allow_document_index_migration: bool = False,
+        document_research_cursor_key: bytes | None = None,
     ) -> None:
         super().__init__(
             project_id, state_dir, runtime_sha, seed, document_embedding_provider,
             document_index,
+            allow_document_index_migration=allow_document_index_migration,
+            document_research_cursor_key=document_research_cursor_key,
         )
         self.structure_mode = structure_mode
         self.structure_provider = structure_provider
@@ -126,11 +130,12 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
 
     def preview_rank(
         self, user_text: str, k: int, max_chars: int,
-        declared_glossary_titles=(),
+        declared_glossary_titles=(), processing_cursor=None,
     ) -> dict[str, Any]:
         if self.structure_mode == "legacy":
             return super().preview_rank(
                 user_text, k, max_chars, declared_glossary_titles,
+                processing_cursor,
             )
         with self.lock:
             triggers = base._compute_preview_triggers(len(self._idempotency))
@@ -212,6 +217,7 @@ class EvidenceProjectRuntime(base.ProjectRuntime):
             ranked_documents, document_research_trace = self._rank_document_packet(
                 user_text, k, max_chars,
                 query_profile=analysis["semantic_profile"],
+                processing_cursor=processing_cursor,
             )
             activation_id = base.canonical_digest({
                 "project_id": self.project_id,
@@ -556,13 +562,17 @@ class EvidenceTomGateway(base.TomGateway):
             raise ValueError("parser_glossary_enabled must be boolean")
         self.parser_glossary_enabled = parser_glossary_enabled
 
-    def create_project_runtime(self, project_id: str, state_dir: Path):
+    def create_project_runtime(
+        self, project_id: str, state_dir: Path, *,
+        allow_document_index_migration: bool = False,
+    ):
         return EvidenceProjectRuntime(
             project_id, state_dir, self.runtime_sha, self.seed,
             self.structure_mode, self.structure_provider,
             self.document_embedding_provider,
             self.parser_glossary_enabled,
-            self.document_index,
+            allow_document_index_migration=allow_document_index_migration,
+            document_research_cursor_key=self.document_research_cursor_key(project_id),
         )
 
     def project(self, project_id: Any) -> EvidenceProjectRuntime:
@@ -605,6 +615,73 @@ class EvidenceTomGateway(base.TomGateway):
         self, method: str, path: str, payload: dict[str, Any] | None = None
     ) -> tuple[int, dict[str, Any]]:
         payload = payload or {}
+        if (method == "POST" and path in {"/document/ingest", "/document/list", "/document/get", "/document/withdraw", "/memory/diagnostics"}
+            and os.environ.get("TOM_ASSIST_RGM_DOCUMENT_ANSWERS") == "1"):
+            from gateway.native_memory import RgmDocumentService
+            from gateway.permanent_library import PermanentLibrary
+            library = None
+            try:
+                project_id = base._safe_project_id(payload.get("project_id"))
+                if path in {"/document/ingest", "/document/withdraw"} and payload.get("explicit_user_action") is not True:
+                    raise ValueError("explicit document action required")
+                directory = self.data_dir / "projects" / project_id / "tom"
+                database = directory / "library.sqlite3"
+                if not database.is_file() and path != "/document/ingest":
+                    if path == "/document/list": return 200, dict(documents=[])
+                    if path == "/memory/diagnostics": return 200, dict(document_count=0, document_chunk_count=0, tree_loaded=False)
+                    raise ValueError("document library does not exist")
+                directory.mkdir(parents=True, exist_ok=True)
+                library = PermanentLibrary(database)
+                if path == "/document/ingest":
+                    service = getattr(self, "rgm_document_service", None) or RgmDocumentService()
+                    return 200, service.ingest(project_id, library, payload)
+                if path == "/document/get":
+                    doc = library.document(payload.get("document_id"))
+                    if doc is None or doc["tombstoned_at"] is not None: raise ValueError("active document does not exist")
+                    return 200, base.ProjectRuntime._public_document(doc)
+                if path == "/document/withdraw":
+                    stamp = payload.get("tombstoned_at")
+                    if not isinstance(stamp, str) or not stamp.strip(): raise ValueError("withdrawal timestamp required")
+                    library.withdraw_document(payload.get("document_id"), stamp)
+                    return 200, dict(document_id=payload.get("document_id"), tombstoned_at=stamp)
+                documents = library.documents(include_withdrawn=bool(payload.get("include_withdrawn", False)))
+                for doc in documents:
+                    doc["chunk_count"] = len(library.document_chunks(document_id=doc["document_id"]))
+                if path == "/document/list": return 200, dict(documents=documents)
+                return 200, dict(document_count=len(documents), document_chunk_count=sum(d["chunk_count"] for d in documents),
+                    document_bytes=sum(d["byte_length"] for d in documents), tree_loaded=False)
+            except (ValueError, KeyError, OSError) as error:
+                return 400, {"error": error.__class__.__name__, "message": str(error)}
+            finally:
+                if library is not None: library.db.close()
+        if (method == "POST" and path == "/document/native-memory/answer"
+            and os.environ.get("TOM_ASSIST_RGM_DOCUMENT_ANSWERS") == "1"):
+            from gateway.native_memory import RgmDocumentService, RGM_DOCUMENT_SCOPE
+            from gateway.permanent_library import PermanentLibrary
+            library = None
+            try:
+                project_id = base._safe_project_id(payload.get("project_id"))
+                action = payload.get("action", "answer")
+                if action not in {"status", "answer"}:
+                    raise ValueError("unsupported document answer action")
+                if action == "answer" and payload.get("explicit_answer") is not True:
+                    raise ValueError("explicit local answer action required")
+                path = self.data_dir / "projects" / project_id / "tom" / "library.sqlite3"
+                # Do not initialize any tree or empty project just to check availability.
+                if not path.is_file():
+                    return 200, dict(ready=False, engine="rgm", scope="Import a document into this project first.") if action == "status" else dict(
+                        status="blocked", answer="Import a document into this project first.", sources=[])
+                library = PermanentLibrary(path)
+                if action == "status":
+                    configured = all(os.environ.get(k) for k in ("TOM_ASSIST_STRUCTURE_PYTHON", "TOM_ASSIST_MINILM_MODEL", "TOM_ASSIST_RGM_READER_PYTHON"))
+                    return 200, dict(ready=bool(library.documents()) and configured, engine="rgm", scope=RGM_DOCUMENT_SCOPE)
+                service = getattr(self, "rgm_document_service", None) or RgmDocumentService()
+                return 200, service.answer(project_id, library, payload.get("question"))
+            except (ValueError, KeyError, OSError) as error:
+                return 400, {"error": error.__class__.__name__, "message": str(error)}
+            finally:
+                if library is not None:
+                    library.db.close()
         if method == "GET" and path == "/health":
             status, response = super().handle(method, path, payload)
             return status, {**response, "gateway_version": EVIDENCE_GATEWAY_VERSION}

@@ -1,0 +1,101 @@
+{
+  "version": "tom-assist-vendored-rgm/1",
+  "upstream_repository": "/Users/kenmorkaya/PycharmProjects/tom_master17D",
+  "upstream_commit": "cb0d90c1450182a1828e3aed1617a466bbae7688",
+  "upstream_status_sha256": "12d68424d5e6524097be13af38c07fe14d43578e79dc47724e52eddc2edfdd5c",
+  "scope": "Document ingestion and native contextual retrieval. No chat orchestration, tree runtime, models, data or validation fixtures. Internal imports are namespaced; chat_adapter retains only the unchanged _retrieve_relevant_memories function.",
+  "files": {
+    "agency/mechanics/leaf_vectors.py": {
+      "upstream_sha256": "c3f2e73693ec858a5418bebd0788b0e84bfd08c7946f77114ccf084d2b8259ba",
+      "vendored_sha256": "f78f0b30dc0f99540b32a75b21c4f1cd507d87f7e0a1401132e447a62a49fd1b",
+      "selected_symbols": null
+    },
+    "agency/mechanics/semantic_metrics.py": {
+      "upstream_sha256": "7727b111edee5155ed0662d80abc1bd7a7fb59ca0754eec38378560fa8b7228b",
+      "vendored_sha256": "ec0f81e548e3aaba10c0001ec0ead646d69e9a56ebed7229fc946694a986a6c4",
+      "selected_symbols": null
+    },
+    "config/compat.py": {
+      "upstream_sha256": "0842bbebe11adc31a9da471f9281e498fac158e386856599edf64d840023a3cb",
+      "vendored_sha256": "228091ed0cc3132e0ee40a74ad0bc40769e0eca586339d30411d9c42b57915ba",
+      "selected_symbols": null
+    },
+    "config/env_mapping.py": {
+      "upstream_sha256": "778f4264da8bf52074aa41a4e2343bf8ccfd4284e330821171cb3c88df60496e",
+      "vendored_sha256": "778f4264da8bf52074aa41a4e2343bf8ccfd4284e330821171cb3c88df60496e",
+      "selected_symbols": null
+    },
+    "config/loader.py": {
+      "upstream_sha256": "17ebb29898a8ef8284ba0c7bdf730f2bae425729c5f4e2626b51d08fc4d8918a",
+      "vendored_sha256": "770195b7cdc537300b6eaa6be4da22bc316a939237dbdd887bceccb60646113e",
+      "selected_symbols": null
+    },
+    "config/tunable_params.py": {
+      "upstream_sha256": "3cb637e659956fad07cdb3dc286a2707a2d998bc2192bb6706443c8730b8840a",
+      "vendored_sha256": "13cfeaf682d8f1f37ba76c50669a9c373ecd548321e4c4f0419747b89fa83a2e",
+      "selected_symbols": null
+    },
+    "interface/chat_adapter.py": {
+      "upstream_sha256": "b052885133f302cc939e6545d55cd7870e4bba8d16480ee3b56924271fd61393",
+      "vendored_sha256": "8bc9918bf83e635cca3f97393606348e8b37f54305acf69d82d412b317362f40",
+      "selected_symbols": [
+        "_retrieve_relevant_memories"
+      ]
+    },
+    "interface/doc_ingest.py": {
+      "upstream_sha256": "7d4b592adc20187410b515423d556b13fe63ec71b6081747fb5f8ccfac5f59e8",
+      "vendored_sha256": "d3084c802c822fd97eb97891e1ae40a2f715722219c72a5b3d6e95497c0515c1",
+      "selected_symbols": null
+    },
+    "interface/stm_ltm_retrieval.py": {
+      "upstream_sha256": "cb3b985adde33becafc8ab998f118996c457b180f475237ba39961b60008d76d",
+      "vendored_sha256": "a3faeabc98d026e61020cfeafcddc91f1192e6deaa65b1680876fa2d265d1d02",
+      "selected_symbols": null
+    },
+    "memory/content_resolver.py": {
+      "upstream_sha256": "0526a8bf57ff4646f73179f742d92085ac3c091e3532a90a9cedab60cf3a80e5",
+      "vendored_sha256": "0526a8bf57ff4646f73179f742d92085ac3c091e3532a90a9cedab60cf3a80e5",
+      "selected_symbols": null
+    },
+    "memory/finite_geometry_retrieval.py": {
+      "upstream_sha256": "cc29af841090f72712f1e96b82f24fc577a0475756ef81a87d657463f19bf5b6",
+      "vendored_sha256": "cc29af841090f72712f1e96b82f24fc577a0475756ef81a87d657463f19bf5b6",
+      "selected_symbols": null
+    },
+    "memory/persistent_store.py": {
+      "upstream_sha256": "bb1431102c0890f200496e50b8de2323f20593433238b92dc6e9587aeaab71bf",
+      "vendored_sha256": "bb1431102c0890f200496e50b8de2323f20593433238b92dc6e9587aeaab71bf",
+      "selected_symbols": null
+    },
+    "memory/recall_filters.py": {
+      "upstream_sha256": "8841a51682eb0126e2549fc0293aea2c7f5e9c6f1fb2d04ce7c1d3ff12fca298",
+      "vendored_sha256": "8841a51682eb0126e2549fc0293aea2c7f5e9c6f1fb2d04ce7c1d3ff12fca298",
+      "selected_symbols": null
+    },
+    "memory/rgm.py": {
+      "upstream_sha256": "da36b2a91fb8ba893bfbbcdf8cc8f5221a2243a48057aea4c828b2e376f62636",
+      "vendored_sha256": "56e7fcc4d4a721eee6e1b93ed4da4003c2d4fe55e74122764eb30fc40aad55fe",
+      "selected_symbols": null
+    },
+    "registry/config_registry.py": {
+      "upstream_sha256": "48df451d010124f0ce039bd60e4381b959382968c4de985d2b1b42d92212631c",
+      "vendored_sha256": "7892d94c16fb5ace15e7e1a1c2d1305ae7fe01068fa79d1ff1b70b84ade65262",
+      "selected_symbols": null
+    },
+    "router/providers/config.py": {
+      "upstream_sha256": "35b4a4bc3a1d195e8b3db9c706a7f9cc182f8e482e4da51acb8314dcaf48c3cd",
+      "vendored_sha256": "35b4a4bc3a1d195e8b3db9c706a7f9cc182f8e482e4da51acb8314dcaf48c3cd",
+      "selected_symbols": null
+    },
+    "state/branch_residue_types.py": {
+      "upstream_sha256": "a0ad90a8715cd39c54b0f512144cecd9aaec2621fcd6fccee33429d8f2df8df8",
+      "vendored_sha256": "a0ad90a8715cd39c54b0f512144cecd9aaec2621fcd6fccee33429d8f2df8df8",
+      "selected_symbols": null
+    },
+    "state/state_types.py": {
+      "upstream_sha256": "b05677cceb550ef794426a7db1c6bd24c98337659109931da40c57d03ad4cfd8",
+      "vendored_sha256": "06149ed2fb8c6a33ba656226deb07438cdce57e0f8cd57875c73732be55dfa4e",
+      "selected_symbols": null
+    }
+  }
+}

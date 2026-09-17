@@ -18,7 +18,8 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 use tom_assist_context_admission::{
     AdmissionRequest, BudgetProfile, Candidate, CandidatePool, ContextAdmissionEngine,
-    IntegrityStatus, ScoreComponents,
+    DEFAULT_BUDGET_TOKENS, IntegrityStatus, MAX_BUDGET_TOKENS, MAX_DOCUMENT_RESEARCH_BUDGET_TOKENS,
+    ScoreComponents,
 };
 use tom_assist_governance::{
     CandidateChannel, EvaluationRequest, EvaluationState as GovernanceEvaluationState,
@@ -28,15 +29,15 @@ use tom_assist_persistence::{
     ContextRunRecord, ResponseEvaluationRecord, Store, StoreError, TurnRecord,
 };
 use tom_assist_protocol::{
-    ActorType, ContinuityPacket, Envelope, ExcludedItem, InterventionCode, Method,
-    PacketDigestInput, PacketSection, ProviderCapabilities, StateMutationCandidate, StateObject,
-    StateStatus, canonical_sha256, packet_digest,
+    ActorType, ContinuityPacket, Envelope, ExcludedItem, InterventionCode, InterventionStatus,
+    Method, PacketDigestInput, PacketSection, ProviderCapabilities, StateMutationCandidate,
+    StateObject, StateStatus, canonical_sha256, packet_digest,
 };
 use tom_assist_tom_adapter::GatewayClient;
 
 pub const SERVICE_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const SERVICE_PROTOCOL_VERSION: &str = tom_assist_protocol::PROTOCOL_VERSION;
-pub const POLICY_VERSION: &str = "context-policy/1.4";
+pub const POLICY_VERSION: &str = "context-policy/1.5";
 pub const RENDERER_VERSION: &str = tom_assist_context_admission::RENDERER_VERSION;
 
 #[derive(Debug)]
@@ -159,6 +160,8 @@ pub struct EvaluateTurnRequest {
     pub created_at: String,
     #[serde(default)]
     pub latency_ms: u64,
+    #[serde(default)]
+    pub accept_for_experience: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -270,7 +273,19 @@ impl AssistService {
             .ok_or_else(|| StoreError::ProjectNotFound(request.project_id.clone()))?;
         let state = store.current_state(&request.project_id)?;
         if let Some(gateway) = &self.gateway {
-            let broad_document_question = broad_prestart_document_question(&request.user_draft);
+            let research_intent = gateway
+                .document_research_intent(&request.user_draft)
+                .map_err(|error| {
+                    ServiceError::Invalid(format!("TOM_RUNTIME_UNAVAILABLE: {error}"))
+                })?;
+            let broad_document_question = research_intent
+                .get("broad_document_research")
+                .and_then(Value::as_bool)
+                .ok_or_else(|| {
+                    ServiceError::Invalid(
+                        "DOCUMENT_RESEARCH_INTENT_INVALID: gateway omitted scope".into(),
+                    )
+                })?;
             let preview_chars = if broad_document_question {
                 32_000
             } else {
@@ -289,6 +304,17 @@ impl AssistService {
                 .map_err(|error| {
                     ServiceError::Invalid(format!("TOM_RUNTIME_UNAVAILABLE: {error}"))
                 })?;
+            let gateway_broad = preview
+                .document_research_trace
+                .as_ref()
+                .and_then(|trace| trace.pointer("/intent/broad_document_research"))
+                .and_then(Value::as_bool)
+                .unwrap_or(false);
+            if gateway_broad != broad_document_question {
+                return Err(ServiceError::Invalid(
+                    "DOCUMENT_RESEARCH_SCOPE_MISMATCH: daemon and gateway disagree".into(),
+                ));
+            }
             let mut candidates: Vec<Candidate> = state
                 .objects
                 .iter()
@@ -352,49 +378,110 @@ impl AssistService {
                     redundancy_penalty: 0.0,
                 },
             }));
+            if broad_document_question {
+                if let Some(missing_sources) = preview
+                    .document_research_trace
+                    .as_ref()
+                    .and_then(|trace| trace.pointer("/final_evidence_coverage/missing_sources"))
+                    .and_then(Value::as_array)
+                {
+                    candidates.extend(missing_sources.iter().filter_map(|row| {
+                        let reference_id = row.get("reference_id")?.as_str()?;
+                        let named = row.get("named_identifier")?.as_str()?;
+                        let source_clause = row
+                            .get("source_clause_identifier")
+                            .and_then(Value::as_str)
+                            .unwrap_or("unresolved clause");
+                        let outcome = row
+                            .get("outcome")
+                            .and_then(Value::as_str)
+                            .unwrap_or("unclassified");
+                        Some(Candidate {
+                            id: format!("coverage:{reference_id}"),
+                            project_id: request.project_id.clone(),
+                            workstream_id: Some(request.workstream_id.clone()),
+                            pool: CandidatePool::CoverageLimit,
+                            state_type: None,
+                            status: None,
+                            text: format!(
+                                "{named:?} cited from clause {source_clause:?}: {outcome}"
+                            ),
+                            authority: "deterministic_coverage_observation".into(),
+                            binding_hard: true,
+                            integrity: IntegrityStatus::Verified,
+                            privacy_allowed: true,
+                            dependencies: vec![],
+                            provenance: Some(reference_id.to_owned()),
+                            reconsideration_condition: None,
+                            scores: ScoreComponents {
+                                retrieval_rrf: None,
+                                semantic_relevance: 0.0,
+                                structural_resonance: 0.0,
+                                dependency_sequence_relevance: 0.0,
+                                authority_strength: 0.0,
+                                bounded_recency: 0.0,
+                                stale_probability: 0.0,
+                                conflict_penalty: 0.0,
+                                redundancy_penalty: 0.0,
+                            },
+                        })
+                    }));
+                }
+            }
             candidates.extend(
                 preview
                     .ranked_document_chunks
                     .iter()
                     .filter(|chunk| chunk.packet_eligible)
-                    .map(|chunk| Candidate {
-                        id: chunk.id.clone(),
-                        project_id: request.project_id.clone(),
-                        workstream_id: Some(request.workstream_id.clone()),
-                        pool: CandidatePool::Evidence,
-                        state_type: Some(tom_assist_protocol::StateType::Evidence),
-                        status: Some(StateStatus::Active),
-                        text: chunk.text.clone(),
-                        authority: "user_supplied_document".into(),
-                        binding_hard: false,
-                        integrity: IntegrityStatus::Verified,
-                        privacy_allowed: true,
-                        dependencies: vec![],
-                        provenance: Some(format!(
-                            "{} | {} | clause {} | source chars {}-{} | excerpt chars {}-{}",
-                            chunk.display_name,
-                            chunk.id,
+                    .map(|chunk| {
+                        let source_ranges = if chunk.source_segments.is_empty() {
+                            format!("{}-{}", chunk.excerpt_start, chunk.excerpt_end)
+                        } else {
                             chunk
-                                .matched_clause_identifier
-                                .as_deref()
-                                .unwrap_or("unresolved"),
-                            chunk.start,
-                            chunk.end,
-                            chunk.excerpt_start,
-                            chunk.excerpt_end,
-                        )),
-                        reconsideration_condition: None,
-                        scores: ScoreComponents {
-                            retrieval_rrf: Some(chunk.rrf_score),
-                            semantic_relevance: chunk.semantic_score,
-                            structural_resonance: 0.0,
-                            dependency_sequence_relevance: 0.0,
-                            authority_strength: 0.0,
-                            bounded_recency: 0.0,
-                            stale_probability: 0.0,
-                            conflict_penalty: 0.0,
-                            redundancy_penalty: 0.0,
-                        },
+                                .source_segments
+                                .iter()
+                                .map(|segment| {
+                                    format!("{}:{}-{}", segment.role, segment.start, segment.end,)
+                                })
+                                .collect::<Vec<_>>()
+                                .join(",")
+                        };
+                        Candidate {
+                            id: chunk.id.clone(),
+                            project_id: request.project_id.clone(),
+                            workstream_id: Some(request.workstream_id.clone()),
+                            pool: CandidatePool::Evidence,
+                            state_type: Some(tom_assist_protocol::StateType::Evidence),
+                            status: Some(StateStatus::Active),
+                            text: chunk.text.clone(),
+                            authority: "user_supplied_document".into(),
+                            binding_hard: false,
+                            integrity: IntegrityStatus::Verified,
+                            privacy_allowed: true,
+                            dependencies: vec![],
+                            provenance: Some(format!(
+                                "{} | {} | clause {} | source segments {}",
+                                chunk.display_name,
+                                chunk.id,
+                                chunk
+                                    .matched_clause_identifier
+                                    .as_deref()
+                                    .unwrap_or("unresolved"),
+                                source_ranges,
+                            )),
+                            reconsideration_condition: None,
+                            scores: ScoreComponents {
+                                retrieval_rrf: Some(chunk.rrf_score),
+                                semantic_relevance: chunk.semantic_score,
+                                structural_resonance: 0.0,
+                                dependency_sequence_relevance: 0.0,
+                                authority_strength: 0.0,
+                                bounded_recency: 0.0,
+                                stale_probability: 0.0,
+                                conflict_penalty: 0.0,
+                                redundancy_penalty: 0.0,
+                            },
+                        }
                     }),
             );
             let admitted = ContextAdmissionEngine::default().build(AdmissionRequest {
@@ -411,7 +498,18 @@ impl AssistService {
                 user_draft: request.user_draft.clone(),
                 provider_capabilities: request.provider_capabilities.clone(),
                 candidates,
-                budget_tokens: if broad_document_question { 9_000 } else { 500 },
+                budget_tokens: if broad_document_question {
+                    MAX_DOCUMENT_RESEARCH_BUDGET_TOKENS
+                } else if preview
+                    .ranked_document_chunks
+                    .iter()
+                    .any(|chunk| chunk.packet_eligible)
+                {
+                    // Source passages and their provenance share the existing standard ceiling.
+                    MAX_BUDGET_TOKENS
+                } else {
+                    DEFAULT_BUDGET_TOKENS
+                },
                 budget_profile: if broad_document_question {
                     BudgetProfile::DocumentResearch
                 } else {
@@ -625,6 +723,7 @@ impl AssistService {
     }
 
     pub fn evaluate_turn(&self, request: EvaluateTurnRequest) -> Result<EvaluationResult> {
+        let acceptance_at = request.created_at.clone();
         let project_lock = self.project_lock(&request.project_id);
         let _writer = project_lock.lock().expect("project lock poisoned");
         let store = self.store.lock().expect("store poisoned");
@@ -816,15 +915,49 @@ impl AssistService {
             latency_ms: request.latency_ms,
             created_at: request.created_at,
         })?;
+        let evaluation = store
+            .response_evaluation(&response.evaluation_id)?
+            .expect("evaluation just stored");
+        if request.accept_for_experience {
+            for id in &evaluation.intervention_ids {
+                if matches!(
+                    store.intervention_status(id)?,
+                    None | Some(InterventionStatus::Open)
+                ) {
+                    return Err(ServiceError::Invalid(
+                        "resolve every open finding before accepting this response".into(),
+                    ));
+                }
+            }
+            let (accepted_now, exchange_id) =
+                store.accept_response_for_experience(&evaluation, &acceptance_at)?;
+            if accepted_now {
+                let sent_turn_id = store
+                    .sent_turn_for_packet(&evaluation.project_id, &evaluation.packet_digest)?
+                    .map(|turn| turn.id);
+                store.audit(
+                    &evaluation.project_id,
+                    if exchange_id.is_some() {
+                        "EXCHANGE_ACCEPTED_BY_USER"
+                    } else {
+                        "RESPONSE_ACCEPTED_BY_USER"
+                    },
+                    exchange_id.as_deref().unwrap_or(&evaluation.id),
+                    &json!({
+                        "evaluation_id": evaluation.id,
+                        "response_turn_id": evaluation.turn_id,
+                        "sent_turn_id": sent_turn_id,
+                    }),
+                    &acceptance_at,
+                )?;
+            }
+        }
         if let Some(gateway) = &self.gateway {
-            let evaluation = store
-                .response_evaluation(&response.evaluation_id)?
-                .expect("evaluation just stored");
             match experience::commit_captured_exchange(&store, gateway, &evaluation) {
                 Ok(Some(_)) => {}
                 Ok(None) if request.complete => response
                     .diagnostics
-                    .push("runtime_commit_awaiting_resolution".into()),
+                    .push("runtime_commit_awaiting_user_acceptance_or_resolution".into()),
                 Ok(None) => {}
                 Err(error) => {
                     response
@@ -945,6 +1078,8 @@ impl AssistService {
         }
         match envelope.method {
             Method::ProviderStatus
+            | Method::GemmaInspect
+            | Method::NativeMemoryAnswer
             | Method::ConversationList
             | Method::ConversationCreate
             | Method::ConversationGet
@@ -1082,46 +1217,6 @@ pub fn active_glossary_titles(objects: &[StateObject]) -> Vec<String> {
         })
         .map(|object| object.title.clone())
         .collect()
-}
-
-fn broad_prestart_document_question(text: &str) -> bool {
-    let folded = text.to_lowercase();
-    let oriented = [
-        "before",
-        "prior",
-        "pre-start",
-        "prestart",
-        "commenc",
-        "start",
-    ]
-    .iter()
-    .any(|term| folded.contains(term));
-    let asks_for_duties = [
-        "must",
-        "required",
-        "requirement",
-        "condition",
-        "prerequisite",
-        "what do",
-    ]
-    .iter()
-    .any(|term| folded.contains(term));
-    oriented && asks_for_duties
-}
-
-#[cfg(test)]
-mod document_question_tests {
-    use super::broad_prestart_document_question;
-
-    #[test]
-    fn recognises_broad_prestart_question_without_matching_completion() {
-        assert!(broad_prestart_document_question(
-            "What must the contractor do before it starts construction work under the deed?"
-        ));
-        assert!(!broad_prestart_document_question(
-            "What warranty applies after final completion?"
-        ));
-    }
 }
 
 #[derive(Debug, Clone, Copy)]

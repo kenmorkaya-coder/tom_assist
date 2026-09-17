@@ -74,6 +74,8 @@ pub struct RankedDocumentChunk {
     pub text: String,
     pub text_sha256: String,
     pub excerpt_sha256: String,
+    #[serde(default)]
+    pub source_segments: Vec<DocumentSourceSegment>,
     pub semantic_score: f64,
     pub best_chunk_score: f64,
     pub lexical_score: f64,
@@ -89,6 +91,17 @@ pub struct RankedDocumentChunk {
     pub clause_identifiers: Vec<String>,
     #[serde(default)]
     pub matched_clause_identifier: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DocumentSourceSegment {
+    pub start: u64,
+    pub end: u64,
+    pub role: String,
+    #[serde(default)]
+    pub entry_id: String,
+    #[serde(default)]
+    pub identifier: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -149,6 +162,12 @@ impl GatewayClient {
     pub fn provider_status(&self) -> Result<Value> {
         self.request("GET", "/provider/status", None)
     }
+    pub fn inspect_gemma(&self, payload: Value) -> Result<Value> {
+        self.request("POST", "/inspection/gemma", Some(payload))
+    }
+    pub fn native_memory_answer(&self, payload: Value) -> Result<Value> {
+        self.request("POST", "/document/native-memory/answer", Some(payload))
+    }
     pub fn provider_complete(&self, prompt: &str) -> Result<Value> {
         self.request(
             "POST",
@@ -180,6 +199,13 @@ impl GatewayClient {
     pub fn capabilities(&self) -> Result<TomCapabilities> {
         self.request("GET", "/capabilities", None)
     }
+    pub fn document_research_intent(&self, user_text: &str) -> Result<Value> {
+        self.request(
+            "POST",
+            "/document/research/intent",
+            Some(json!({"user_text": user_text})),
+        )
+    }
     pub fn preview_rank(
         &self,
         project_id: &str,
@@ -187,13 +213,7 @@ impl GatewayClient {
         k: u64,
         max_chars: u64,
     ) -> Result<RankPreview> {
-        self.request(
-            "POST",
-            "/preview/rank",
-            Some(
-                json!({"project_id":project_id,"user_text":user_text,"k":k,"max_chars":max_chars}),
-            ),
-        )
+        self.preview_rank_complete(project_id, user_text, k, max_chars, &[])
     }
     pub fn preview_rank_with_glossary_titles(
         &self,
@@ -203,17 +223,95 @@ impl GatewayClient {
         max_chars: u64,
         declared_glossary_titles: &[String],
     ) -> Result<RankPreview> {
-        self.request(
-            "POST",
-            "/preview/rank",
-            Some(json!({
-                "project_id": project_id,
-                "user_text": user_text,
-                "k": k,
-                "max_chars": max_chars,
-                "declared_glossary_titles": declared_glossary_titles,
-            })),
+        self.preview_rank_complete(
+            project_id,
+            user_text,
+            k,
+            max_chars,
+            declared_glossary_titles,
         )
+    }
+
+    /// Request one pure, read-only ranking page.  Callers that need explicit
+    /// recovery control can retain the opaque continuation returned in the
+    /// page trace and safely submit it again after a transport interruption.
+    pub fn preview_rank_page(
+        &self,
+        project_id: &str,
+        user_text: &str,
+        k: u64,
+        max_chars: u64,
+        declared_glossary_titles: &[String],
+        document_research_cursor: Option<&Value>,
+    ) -> Result<RankPreview> {
+        let mut payload = json!({
+            "project_id": project_id,
+            "user_text": user_text,
+            "k": k,
+            "max_chars": max_chars,
+            "declared_glossary_titles": declared_glossary_titles,
+        });
+        if let Some(value) = document_research_cursor {
+            payload["document_research_cursor"] = value.clone();
+        }
+        self.request("POST", "/preview/rank", Some(payload))
+    }
+
+    fn preview_rank_complete(
+        &self,
+        project_id: &str,
+        user_text: &str,
+        k: u64,
+        max_chars: u64,
+        declared_glossary_titles: &[String],
+    ) -> Result<RankPreview> {
+        let mut cursor: Option<Value> = None;
+        for _ in 0..64 {
+            let request_page = || {
+                self.preview_rank_page(
+                    project_id,
+                    user_text,
+                    k,
+                    max_chars,
+                    declared_glossary_titles,
+                    cursor.as_ref(),
+                )
+            };
+            let preview = match request_page() {
+                Ok(preview) => preview,
+                Err(error)
+                    if matches!(
+                        &error,
+                        GatewayError::Io(_) | GatewayError::Json(_) | GatewayError::Protocol(_)
+                    ) =>
+                {
+                    request_page()?
+                }
+                Err(error) => return Err(error),
+            };
+            let complete = preview
+                .document_research_trace
+                .as_ref()
+                .and_then(|trace| trace.pointer("/processing_coverage/cursor/complete"))
+                .and_then(Value::as_bool);
+            if complete != Some(false) {
+                return Ok(preview);
+            }
+            cursor = preview
+                .document_research_trace
+                .as_ref()
+                .and_then(|trace| trace.pointer("/processing_coverage/cursor/continuation"))
+                .filter(|value| !value.is_null())
+                .cloned();
+            if cursor.is_none() {
+                return Err(GatewayError::Protocol(
+                    "incomplete document research omitted its continuation cursor".into(),
+                ));
+            }
+        }
+        Err(GatewayError::Protocol(
+            "document research exceeded the bounded continuation limit".into(),
+        ))
     }
     pub fn commit_turn(
         &self,
@@ -306,7 +404,10 @@ impl GatewayClient {
             .unwrap_or_default();
         let mut stream = UnixStream::connect(&self.socket_path)?;
         stream.set_read_timeout(Some(std::time::Duration::from_secs(
-            if path == "/provider/complete" {
+            if path == "/provider/complete"
+                || path == "/inspection/gemma"
+                || path == "/document/native-memory/answer"
+            {
                 200
             } else {
                 60
@@ -342,5 +443,92 @@ impl GatewayClient {
             });
         }
         Ok(serde_json::from_slice(response_body)?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::os::unix::net::{UnixListener, UnixStream};
+    use std::thread;
+
+    fn request_body(mut stream: &UnixStream) -> Value {
+        let mut bytes = Vec::new();
+        stream.read_to_end(&mut bytes).unwrap();
+        let split = bytes
+            .windows(4)
+            .position(|window| window == b"\r\n\r\n")
+            .unwrap();
+        serde_json::from_slice(&bytes[split + 4..]).unwrap()
+    }
+
+    fn reply(mut stream: UnixStream, complete: bool, continuation: Option<&str>) {
+        let body = serde_json::to_vec(&json!({
+            "activated_branch_ids": [],
+            "candidate_trace": [],
+            "branch_trace": [],
+            "policy_version": "fixture",
+            "activation_id": "fixture",
+            "triggers": [],
+            "ranked_anchors": [],
+            "ranked_document_chunks": [],
+            "document_research_trace": {
+                "processing_coverage": {"cursor": {
+                    "complete": complete,
+                    "continuation": continuation,
+                }}
+            },
+            "checkpoint_digest": "sha256:fixture",
+        }))
+        .unwrap();
+        write!(
+            stream,
+            "HTTP/1.0 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n",
+            body.len()
+        )
+        .unwrap();
+        stream.write_all(&body).unwrap();
+    }
+
+    #[test]
+    fn complete_preview_retries_the_identical_pure_page_and_retains_cursor() {
+        let directory = tempfile::tempdir().unwrap();
+        let socket = directory.path().join("gateway.sock");
+        let listener = UnixListener::bind(&socket).unwrap();
+        let server = thread::spawn(move || {
+            let first = listener.accept().unwrap().0;
+            let first_body = request_body(&first);
+            drop(first); // Deliberate transport loss after receiving the request.
+
+            let second = listener.accept().unwrap().0;
+            let second_body = request_body(&second);
+            reply(second, false, Some("opaque.signed"));
+
+            let third = listener.accept().unwrap().0;
+            let third_body = request_body(&third);
+            reply(third, true, None);
+            (first_body, second_body, third_body)
+        });
+
+        let preview = GatewayClient::new(&socket)
+            .preview_rank("project", "question", 64, 32_000)
+            .unwrap();
+        assert_eq!(
+            preview
+                .document_research_trace
+                .as_ref()
+                .and_then(|trace| trace.pointer("/processing_coverage/cursor/complete"))
+                .and_then(Value::as_bool),
+            Some(true)
+        );
+        let (first, second, third) = server.join().unwrap();
+        assert_eq!(first, second);
+        assert!(first.get("document_research_cursor").is_none());
+        assert_eq!(
+            third
+                .get("document_research_cursor")
+                .and_then(Value::as_str),
+            Some("opaque.signed")
+        );
     }
 }

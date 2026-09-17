@@ -1,0 +1,220 @@
+{
+  "version": "tom-assist-native-memory-e2e/1",
+  "cases": [
+    {
+      "id": "H01",
+      "category": "paraphrase",
+      "question": "Who is on the hook for premiums and other charges on the policies mentioned in clause 23.1?",
+      "evaluation_only": {
+        "expected_facts": [
+          "N01"
+        ],
+        "expected_status": "supported"
+      }
+    },
+    {
+      "id": "H02",
+      "category": "paraphrase",
+      "question": "Which organisation has to keep the premiums paid for cover under clause 24.1?",
+      "evaluation_only": {
+        "expected_facts": [
+          "N02"
+        ],
+        "expected_status": "supported"
+      }
+    },
+    {
+      "id": "H03",
+      "category": "paraphrase",
+      "question": "If a policy covered by clause 23.1 carries an excess, which party must meet it?",
+      "evaluation_only": {
+        "expected_facts": [
+          "N03"
+        ],
+        "expected_status": "supported"
+      }
+    },
+    {
+      "id": "H04",
+      "category": "paraphrase",
+      "question": "For the clause 24.1 cover, does the deductible fall to SM or TfNSW?",
+      "evaluation_only": {
+        "expected_facts": [
+          "N04"
+        ],
+        "expected_status": "supported"
+      }
+    },
+    {
+      "id": "H05",
+      "category": "paraphrase",
+      "question": "SM has paid to maintain replacement cover following TfNSW\u2019s failure to show compliance. Who must refund SM, and what triggers payment?",
+      "evaluation_only": {
+        "expected_facts": [
+          "N05"
+        ],
+        "expected_status": "supported"
+      }
+    },
+    {
+      "id": "H06",
+      "category": "paraphrase",
+      "question": "After SM fails to provide satisfactory proof of insurance and TfNSW pays for the cover, who is TfNSW entitled to recover that spending from?",
+      "evaluation_only": {
+        "expected_facts": [
+          "N06"
+        ],
+        "expected_status": "supported"
+      }
+    },
+    {
+      "id": "H07",
+      "category": "reversed_actors",
+      "question": "Which clause says TfNSW reimburses SM when TfNSW has paid for replacement insurance after SM failed to demonstrate compliance?",
+      "evaluation_only": {
+        "expected_facts": [],
+        "expected_status": "not_supported"
+      }
+    },
+    {
+      "id": "H08",
+      "category": "reversed_actors",
+      "question": "Which clause says SM reimburses TfNSW when SM has paid for replacement insurance after TfNSW failed to demonstrate compliance?",
+      "evaluation_only": {
+        "expected_facts": [],
+        "expected_status": "not_supported"
+      }
+    },
+    {
+      "id": "H09",
+      "category": "related_wrong_party",
+      "question": "Under clause 23.1, is SM the party expressly identified as responsible for deductibles?",
+      "evaluation_only": {
+        "expected_facts": [
+          "N03"
+        ],
+        "expected_status": "supported"
+      }
+    },
+    {
+      "id": "H10",
+      "category": "absent_detail",
+      "question": "What specific premium amount in dollars is payable by SM?",
+      "evaluation_only": {
+        "expected_facts": [],
+        "expected_status": "not_supported"
+      }
+    },
+    {
+      "id": "H11",
+      "category": "absent_detail",
+      "question": "Which bank account should TfNSW send its premium payments to?",
+      "evaluation_only": {
+        "expected_facts": [],
+        "expected_status": "not_supported"
+      }
+    },
+    {
+      "id": "H12",
+      "category": "absent_detail",
+      "question": "Give the insurer\u2019s policy number for SM\u2019s insurance.",
+      "evaluation_only": {
+        "expected_facts": [],
+        "expected_status": "not_supported"
+      }
+    },
+    {
+      "id": "H13",
+      "category": "wrong_condition",
+      "question": "Which provision allows SM to arrange replacement insurance after only five Business Days from its written request for TfNSW to demonstrate compliance?",
+      "evaluation_only": {
+        "expected_facts": [],
+        "expected_status": "not_supported"
+      }
+    },
+    {
+      "id": "H14",
+      "category": "paraphrase",
+      "question": "How long after the written request must TfNSW have failed to provide satisfactory evidence before SM may obtain the insurance?",
+      "evaluation_only": {
+        "expected_facts": [
+          "N05"
+        ],
+        "expected_status": "supported"
+      }
+    },
+    {
+      "id": "H15",
+      "category": "paraphrase",
+      "question": "How long must SM have failed to supply satisfactory insurance evidence after the written request before TfNSW can buy the cover?",
+      "evaluation_only": {
+        "expected_facts": [
+          "N06"
+        ],
+        "expected_status": "supported"
+      }
+    },
+    {
+      "id": "H16",
+      "category": "multiple_sources",
+      "question": "Who pays premiums on the clause 23.1 policies? Who pays premiums on the clause 24.1 policies?",
+      "evaluation_only": {
+        "expected_facts": [
+          "N01",
+          "N02"
+        ],
+        "expected_status": "supported"
+      }
+    },
+    {
+      "id": "H17",
+      "category": "multiple_sources",
+      "question": "Compare who bears the deductibles for the clause 23.1 policies and the clause 24.1 policies.",
+      "evaluation_only": {
+        "expected_facts": [
+          "N03",
+          "N04"
+        ],
+        "expected_status": "supported"
+      }
+    },
+    {
+      "id": "H18",
+      "category": "multiple_sources",
+      "question": "If SM pays for substitute cover after TfNSW fails to show compliance, who reimburses SM? If TfNSW pays for substitute cover after SM fails to show compliance, who reimburses TfNSW?",
+      "evaluation_only": {
+        "expected_facts": [
+          "N05",
+          "N06"
+        ],
+        "expected_status": "supported"
+      }
+    },
+    {
+      "id": "H19",
+      "category": "partial_support",
+      "question": "Who pays the premiums under clause 24.1? What is the policy number for that cover?",
+      "evaluation_only": {
+        "expected_facts": [
+          "N02"
+        ],
+        "expected_status": "partial"
+      }
+    },
+    {
+      "id": "H20",
+      "category": "multiple_sources",
+      "question": "For the insurance required by clause 23.1, explain both who pays the premiums and who bears any deductible.",
+      "evaluation_only": {
+        "expected_facts": [
+          "N01",
+          "N03"
+        ],
+        "expected_status": "supported"
+      }
+    }
+  ],
+  "unscored_prior_case": "N02-Q2:missing remains unscored; it is not a held-out case.",
+  "policy": "Frozen components; first-pass held-out results retained. No label-conditioned selection, retries or tuning during the battery. No tree changes, collapsed responses or training. All evaluation labels remain outside application runtime.",
+  "frozen_sha256": "befa81d5ba05b59803c99b618ed638b22fad252c451920b2332e79b2d8b37108"
+}

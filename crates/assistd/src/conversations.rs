@@ -68,6 +68,126 @@ impl Drop for Inflight<'_> {
 }
 
 impl AssistService {
+    /// Local source-grounded answers never send to a provider or commit experience.
+    pub fn native_memory_answer(&self, project: &str, payload: &Value) -> Result<Value> {
+        let action = payload["action"].as_str().unwrap_or("answer");
+        if action != "status" && action != "answer" {
+            return Err(ServiceError::Invalid(
+                "unsupported native answer action".into(),
+            ));
+        }
+        let before = self.store.lock().unwrap().current_state(project)?;
+        if action == "answer" {
+            if payload["explicit_answer"] != true {
+                return Err(ServiceError::Invalid(
+                    "explicit local answer action required".into(),
+                ));
+            }
+            if payload["project_state_version"].as_u64() != Some(before.state_version) {
+                return Err(ServiceError::Invalid(
+                    "project changed; ask the question again".into(),
+                ));
+            }
+            let question = field(payload, "question")?;
+            if question.trim().is_empty() || question.chars().count() > 4000 {
+                return Err(ServiceError::Invalid(
+                    "question must contain 1–4000 characters".into(),
+                ));
+            }
+        }
+        let gateway = self
+            .gateway
+            .as_ref()
+            .ok_or_else(|| ServiceError::Invalid("local document gateway unavailable".into()))?;
+        let mut input = payload.clone();
+        input["project_id"] = json!(project);
+        let mut result = gateway
+            .native_memory_answer(input)
+            .map_err(|e| ServiceError::Invalid(e.to_string()))?;
+        let after = self.store.lock().unwrap().current_state(project)?;
+        if before != after {
+            return Err(ServiceError::Invalid(
+                "project changed while answering; answer discarded".into(),
+            ));
+        }
+        result["purity"]["project_state_unchanged"] = json!(true);
+        result["purity"]["provider_sends"] = json!(0);
+        result["purity"]["experience_commits"] = json!(0);
+        Ok(result)
+    }
+
+    /// Detached inspection: no preparation, provider, candidate or commit path.
+    pub fn inspect_gemma(&self, project: &str, payload: &Value) -> Result<Value> {
+        if payload["opt_in"] != true || payload["explicit_inspect"] != true {
+            return Err(ServiceError::Invalid(
+                "explicit experimental inspection required".into(),
+            ));
+        }
+        let mut input = payload.clone();
+        let (before, ledger_path) = {
+            let store = self.store.lock().unwrap();
+            let state = store.current_state(project)?;
+            if payload["project_state_version"].as_u64() != Some(state.state_version) {
+                return Err(ServiceError::Invalid(
+                    "project changed; select the passage again".into(),
+                ));
+            }
+            input["project_id"] = json!(project);
+            if input["source"]["kind"] == "state_object" {
+                let object_id = field(&input["source"], "id")?;
+                let object = store.state_object(project, &object_id)?.ok_or_else(|| {
+                    ServiceError::Invalid("source does not belong to active project".into())
+                })?;
+                if object.status != tom_assist_protocol::StateStatus::Active
+                    || input["source"]["version"] != object.content_hash
+                {
+                    return Err(ServiceError::Invalid(
+                        "source is inactive or has changed".into(),
+                    ));
+                }
+                input["source"]["text"] = json!(object.canonical_text);
+            } else if input["source"]["kind"] != "draft"
+                && input["source"]["kind"] != "saved_example"
+            {
+                return Err(ServiceError::Invalid(
+                    "unsupported inspection source".into(),
+                ));
+            }
+            (canonical_sha256(&state)?, store.path().to_path_buf())
+        };
+        let ledger_files = |path: &std::path::Path| -> Result<Value> {
+            let mut hashes = serde_json::Map::new();
+            for name in [
+                path.to_path_buf(),
+                std::path::PathBuf::from(format!("{}-wal", path.display())),
+            ] {
+                if name.is_file() {
+                    let bytes =
+                        std::fs::read(&name).map_err(|e| ServiceError::Invalid(e.to_string()))?;
+                    hashes.insert(name.display().to_string(), json!(canonical_sha256(&bytes)?));
+                }
+            }
+            Ok(Value::Object(hashes))
+        };
+        let files_before = ledger_files(&ledger_path)?;
+        let gateway = self
+            .gateway
+            .as_ref()
+            .ok_or_else(|| ServiceError::Invalid("local inspection gateway unavailable".into()))?;
+        let mut result = gateway
+            .inspect_gemma(input)
+            .map_err(|e| ServiceError::Invalid(e.to_string()))?;
+        let after = canonical_sha256(&self.store.lock().unwrap().current_state(project)?)?;
+        let files_after = ledger_files(&ledger_path)?;
+        result["purity"]["ledger"] = json!({
+            "state_before":before,"state_after":after,
+            "files_before":files_before,"files_after":files_after,
+            "unchanged":before == after && files_before == files_after,
+            "scope":"active-project canonical state and ledger/main WAL bytes; shared concurrent writes can invalidate this observation"
+        });
+        Ok(result)
+    }
+
     pub fn with_provider_adapter(
         mut self,
         provider: impl provider::ProviderAdapter + 'static,
@@ -266,14 +386,6 @@ impl AssistService {
                     "resolve every open finding before accepting this exchange".into(),
                 ));
             }
-            store.accept_reviewed_exchange(project, &record.id)?;
-            store.audit(
-                project,
-                "EXCHANGE_ACCEPTED_BY_USER",
-                &record.id,
-                &json!({"response_turn_id":record.response_id()}),
-                at,
-            )?;
         }
         let evaluation = self.evaluate_turn(EvaluateTurnRequest {
             project_id: project.into(),
@@ -284,6 +396,7 @@ impl AssistService {
             complete: true,
             created_at: at.into(),
             latency_ms: 0,
+            accept_for_experience: payload["accept_reviewed"] == true,
         });
         match evaluation {
             Ok(_) => self.store.lock().unwrap().update_provider_exchange(
@@ -323,6 +436,8 @@ impl AssistService {
         let payload = envelope.payload;
         let at = envelope.sent_at;
         match envelope.method {
+            Method::GemmaInspect => self.inspect_gemma(&project, &payload),
+            Method::NativeMemoryAnswer => self.native_memory_answer(&project, &payload),
             Method::ConversationList => {
                 Ok(json!(self.store.lock().unwrap().conversations(&project)?))
             }
