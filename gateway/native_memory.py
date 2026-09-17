@@ -2475,6 +2475,20 @@ class RgmDocumentService:
             if library.documents() != inventory or self._model_identity() != model_identity:
                 raise ValueError("document collection changed while answering; answer discarded")
             status = reading["status"]
+            if (status == "not_supported" and structural.get("status") == "recalled"
+                and structural_sources):
+                # A reviewed ToM structure can identify exact relevant evidence
+                # even when the language reader cannot verify a complete direct
+                # answer to broad wording. Do not tell the user that the
+                # information is absent; expose the bounded result as partial
+                # and keep every exact linked passage visible below it.
+                status = "partial"
+                lines = [
+                    "Tom Assist found reviewed passages with the learned structure. "
+                    "The evidence reader did not verify a direct answer to the full wording."
+                ]
+                reading["structural_evidence_presentation"] = (
+                    "reviewed_sources_found_direct_answer_unverified")
             tree_calls = 1 if structural.get("status") == "recalled" else 0
             if status not in {"supported", "partial", "not_supported", "ambiguous"}:
                 return dict(status="blocked", answer="The answer could not be verified against the source evidence.", sources=[],

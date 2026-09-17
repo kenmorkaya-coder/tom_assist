@@ -1340,6 +1340,26 @@ def test_live_answer_exposes_every_exact_source_linked_by_temporal_memory(tmp_pa
         assert trace["evidence_scope"]["selected_count"] == 2
         assert result["purity"]["whole_tree_score"] is False
         assert result["purity"]["complete_distributed_return_compared"] is True
+
+        def refusing_document_worker(operation, payload):
+            if operation == "rgm_embed":
+                return dict(vectors={hashlib.sha256(text.encode()).hexdigest():
+                    [1.0] + [0.0] * 383 for text in payload["texts"]})
+            assert operation == "rgm_read"
+            return dict(status="not_supported", answers=[dict(
+                question=payload["question"], text=None, status="not_supported")], parts=[])
+        refusing_service = RgmDocumentService(worker=refusing_document_worker,
+            model_identity="fixture-model", tom_worker=_reviewed_tom_worker([]),
+            tom_profile=_reviewed_tom_profile())
+        refused = refusing_service.answer("project", library,
+            "Where does notification happen, then people meet?")
+        assert refused["status"] == "partial"
+        assert refused["sources"] == []
+        assert len(refused["structural_sources"]) == 2
+        assert "learned structure" in refused["answer"]
+        assert "not present" not in refused["answer"]
+        assert refused["trace"]["reading"]["structural_evidence_presentation"] == (
+            "reviewed_sources_found_direct_answer_unverified")
     finally:
         library.db.close()
 

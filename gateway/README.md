@@ -1021,6 +1021,11 @@ server-owned source ID before exact-span validation; an unknown alias or altered
 source still fails closed. This prevents a correct quotation from being lost
 because a language model copied a long hash incorrectly without weakening the
 source binding.
+If the complete language reader declines a broad structural request after an
+exact reviewed ToM return, the response is labelled partly supported. It states
+only that reviewed structural passages were found and displays all of them; it
+does not say the information is absent or convert the structural match into an
+unverified direct answer.
 Document-style party names such as `Transport for NSW` / `TfNSW` and
 `Sydney Metro` / `SM` are matched mechanically. If the question does not state
 one complete relationship, ToM makes no selection claim and the existing RGM

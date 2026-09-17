@@ -2396,8 +2396,8 @@ contract passages under “Evidence linked by the learned structure”:
 | Question | Evidence reader | ToM-linked exact sources |
 | --- | --- | --- |
 | Which procedures require a written notice, followed by a meeting? | Supported; quoted D&C clause 31 | M12 clause 11 and D&C clause 31 |
-| Where does notification happen, then people meet? | Declined the broad wording | M12 clause 11 and D&C clause 31 |
-| Find the sequence notice, meeting, response. | Declined the broad wording | M12 clause 11 and D&C clause 31 |
+| Where does notification happen, then people meet? | Reader declined the broad wording; app reports partial structural evidence | M12 clause 11 and D&C clause 31 |
+| Find the sequence notice, meeting, response. | Reader declined the broad wording; app reports partial structural evidence | M12 clause 11 and D&C clause 31 |
 
 A separate live telemetry replay deliberately supplied only one initial RGM
 source. For every question, one ToM query route reopened both bound source IDs,
@@ -2418,9 +2418,18 @@ aliases; the server binds an accepted alias back to the complete authenticated
 ID before any answer leaves the gateway. Exact-span and source-integrity checks
 remain unchanged. Focused reader tests pass 23/23.
 
-The remaining limitation is now narrow and visible: ToM successfully finds the
-two cross-contract structural sources for all three questions, while the
-evidence reader approves only the first wording. The next diagnostic should
-inspect why the reader interprets the other two structure-search requests as
-unsupported even after ToM supplies both exact reviewed passages. Automatic
-motif extraction remains a separate validation gate.
+The two broad-wording traces were then inspected directly. In both cases ToM
+returned both reviewed source IDs, but the reader itself emitted an explicit
+`not_supported` result. The earlier UI consequently made the false stronger
+statement that the information was absent. That presentation is repaired: when
+reviewed ToM structure exists but the reader cannot verify a complete direct
+answer, the app reports **Partly supported answer**, explains that the learned
+structure found reviewed passages, and displays every linked exact source. It
+does not promote those passages into a model-written answer or claim that every
+word in the request was proved. Both broad questions were rerun successfully in
+the real desktop with this result.
+
+The remaining limitation is the evidence reader's inability to quote a direct
+answer for those two broad structural requests. This no longer hides the ToM
+result or falsely says the evidence is absent. Automatic motif extraction and
+general structural-question wording remain separate validation gates.
