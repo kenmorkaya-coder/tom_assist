@@ -76,6 +76,27 @@ Peak process memory was 1.22 GiB. The compact result is
 determinant warnings remain observable; all retained fields were finite and the
 tree state was unchanged by reads.
 
+The bounded `--rgm500-relational-discrimination` comparison then exercised the
+full RGM contextual retrieval entry point over those same two real clauses and
+four questions. Both source records remained available in all eight trials
+(four questions across both source/teaching orders). RGM put the correct source
+first in 6/8 trials. Adding only the exact, branch-position-preserving ToM
+memory-slot activation map selected the correct relationship in 8/8 and repaired
+both reversed-direction misses. RGM candidates, source text and provenance did
+not change; there was no new tree run, training, model call, branch averaging or
+whole-tree score. Complete signed terminal fields remain retained as evidence,
+but are not compared with teaching-input fields because those are different
+native object types. The first harness attempt made that invalid comparison and
+is retained explicitly as `INVALID_OBJECT_COMPARISON`; it is not counted as a
+ToM failure.
+
+This is the first direct evidence of the intended division of labour: RGM finds
+and preserves the exact plausible records, while ToM can disambiguate a learned
+relationship direction that RGM's document/context ranking gets wrong. The test
+is still limited to two reviewed mirrored relationships. It does not establish
+automatic relationship extraction, a broad accuracy gain, or superiority over
+every historical RGM branch-event experiment.
+
 The result establishes a useful integration boundary: RGM retains exact text
 and provenance, while a verified directed situation can address a distinct
 distributed ToM memory. It does not validate automatic relationship extraction.

@@ -4889,6 +4889,156 @@ def rgm500_comparison(stage):
     persist(run)
 
 
+def rgm500_relational_discrimination_comparison():
+    """Full RGM document/context retrieval versus one ToM relationship filter.
+
+    Both arms receive the same two real source records.  The ToM arm reuses the
+    frozen, complete native fields from the earlier teaching-order control and
+    identifies a source only by exact equality of its full return and slot map.
+    """
+    import subprocess
+    from types import SimpleNamespace
+
+    sys.path.insert(0, str(ASSIST))
+    from gateway.native_memory import NativeEvidenceLibrary
+    seal = NativeEvidenceLibrary._seal
+    key = "native_rgm500_relational_discrimination_comparison"
+    saved = json.loads(RESULT.read_text())
+    if key in saved:
+        raise FileExistsError("Preserve the frozen relational comparison")
+    structural = saved["native_rgm500_structural_bridge"]
+    if structural.get("status") != "COMPLETE_PASS":
+        raise RuntimeError("Verified structural bridge is required")
+    historical = {name: seal(value) for name, value in saved.items()}
+    root = Path("/Users/kenmorkaya/PycharmProjects/tom_master17D")
+    source_files = [root / "memory/rgm.py", root / "interface/stm_ltm_retrieval.py",
+        root / "interface/chat_adapter.py", root / "state/state_types.py"]
+    source_hashes = {str(path.relative_to(root)): sha(path) for path in source_files}
+    source_status = subprocess.run(["git", "status", "--porcelain"], cwd=root,
+        check=True, capture_output=True, text=True).stdout
+
+    forward = structural["runs"]["forward"]
+    sources = copy.deepcopy(forward["source_records"])
+    questions = [{key: row[key] for key in ("id", "text", "expected_source")}
+        for row in forward["questions"]]
+    run = dict(status="RUNNING", historical_sections=historical,
+        scope=("Four held-out questions over two mirrored real contract clauses. "
+            "The full RGM contextual retrieval entry point runs first. The second arm "
+            "adds only exact native ToM relationship-return identity over those same candidates."),
+        one_changed_variable=("Allow the frozen ToM relationship return to select one of the "
+            "unchanged RGM candidates. Source text, questions, RGM configuration and candidate "
+            "set remain fixed."),
+        questions=questions, sources=sources, trials=[],
+        rgm=dict(entrypoint="interface.stm_ltm_retrieval.retrieve_ltm_with_stm_triggers",
+            max_items=2, max_chars=10000, native_configuration=True,
+            branch_state="No legacy branch state was fabricated for the document retrieval path.",
+            source_hashes=source_hashes),
+        tom=dict(source_result="native_rgm500_structural_bridge",
+            selection=("Exact equality of the complete branch-position-preserving native memory-slot "
+                "activation map. Complete signed terminal fields are retained but are not compared "
+                "with teaching-input fields because they are different object types."),
+            whole_tree_score=False, branches_averaged=False, new_tree_runs=0,
+            new_training_events=0, model_calls=0))
+
+    sys.addaudithook(audit)
+    sys.path.insert(0, str(root))
+    from memory.rgm import ReflectionGatedMemory, MemoryRecord, PolicyOutcome
+    from state.state_types import MetricsSnapshot
+    from interface import stm_ltm_retrieval
+
+    for order_name, order in (("forward", [0, 1]), ("reverse", [1, 0])):
+        native = structural["runs"][order_name]
+        archive = Path(native["archive"]["path"])
+        if sha(archive) != native["archive"]["sha256"]:
+            raise RuntimeError("Frozen ToM field archive changed")
+        with np.load(archive, allow_pickle=False) as arrays:
+            source_slots = [arrays[f"source_{index}_active_slots"] for index in range(2)]
+            query_fields = {question["id"]:(
+                arrays[f"query_{question['id']}_terminal_return"],
+                arrays[f"query_{question['id']}_active_slots"])
+                for question in questions}
+        for question in questions:
+            memory = ReflectionGatedMemory()
+            anchors = {}
+            document_id = sources[0]["provenance"]["document_id"]
+            for index in order:
+                source = sources[index]
+                source_id = source["source_id"]
+                text = source["provenance"]["source_text"]
+                record = MemoryRecord(id=source_id, content=text, content_summary=text,
+                    source_refs=[copy.deepcopy(source["provenance"])], S=.9, C=.9, H=.1,
+                    novelty_score=.5, anchor_strength=.5, policy_outcome=PolicyOutcome.PERMIT)
+                if not memory.write_memory(record):
+                    raise RuntimeError("RGM refused a frozen real source")
+                anchors[source_id] = dict(id=source_id, content=text, content_summary=text,
+                    source_refs=[copy.deepcopy(source["provenance"])], anchor_type="reference_doc",
+                    semantic_tags=[f"DOC:{document_id}", "insurance"], anchor_strength=.5)
+            state = SimpleNamespace(memory=SimpleNamespace(anchors=anchors,
+                active_doc_ids=[document_id]), metrics=MetricsSnapshot(S=.9, C=.9, H=.1),
+                branches={}, tick=0, conversation_history=[], pending_interaction=None)
+            controller = SimpleNamespace(state=state, rgm=memory, continuity_id=None)
+            triggers = stm_ltm_retrieval.compute_retrieval_triggers([], None, None)
+            recalled, telemetry = stm_ltm_retrieval.retrieve_ltm_with_stm_triggers(
+                controller, triggers, max_items=2, max_chars=10000, user_text=question["text"])
+            candidate_ids = [row["id"] for row in recalled]
+
+            query_return, query_slots = query_fields[question["id"]]
+            native_matches = [sources[index]["source_id"] for index, slots
+                in enumerate(source_slots)
+                if np.array_equal(query_slots, slots)]
+            selected = [source_id for source_id in native_matches if source_id in candidate_ids]
+            run["trials"].append(dict(order=order_name, question_id=question["id"],
+                expected_source=question["expected_source"], rgm_candidate_ids=candidate_ids,
+                rgm_first_source=candidate_ids[0] if candidate_ids else None,
+                rgm_scores=dict(zip(telemetry.get("rrf_topk_ids", []),
+                    telemetry.get("rrf_topk_scores", []))),
+                tom_complete_slot_map_matches=native_matches,
+                tom_signed_terminal_field_sha256=hashlib.sha256(query_return.tobytes()).hexdigest(),
+                rgm_plus_tom_source_ids=selected,
+                candidate_set_unchanged=True,
+                correct_in_rgm_candidates=question["expected_source"] in candidate_ids,
+                rgm_top1_correct=bool(candidate_ids and candidate_ids[0] == question["expected_source"]),
+                rgm_plus_tom_correct=selected == [question["expected_source"]]))
+
+    trials = run["trials"]
+    run["findings"] = dict(trials=len(trials), unique_questions=len(questions),
+        rgm_correct_source_in_candidates=sum(row["correct_in_rgm_candidates"] for row in trials),
+        rgm_top1_correct=sum(row["rgm_top1_correct"] for row in trials),
+        rgm_plus_tom_top1_correct=sum(row["rgm_plus_tom_correct"] for row in trials),
+        wrong_rgm_first_repaired=sum(not row["rgm_top1_correct"] and row["rgm_plus_tom_correct"]
+            for row in trials),
+        exact_single_tom_matches=sum(len(row["tom_complete_slot_map_matches"]) == 1 for row in trials),
+        all_candidate_sets_preserved=all(row["candidate_set_unchanged"] for row in trials),
+        result=("ToM adds direction-sensitive relationship selection where the full RGM "
+            "document/context retrieval path retains both near-identical clauses and ranks one "
+            "reversed-direction question incorrectly."))
+    passed = (run["findings"]["rgm_correct_source_in_candidates"] == len(trials)
+        and run["findings"]["rgm_plus_tom_top1_correct"] == len(trials)
+        and run["findings"]["rgm_top1_correct"] < len(trials)
+        and run["findings"]["exact_single_tom_matches"] == len(trials)
+        and run["findings"]["all_candidate_sets_preserved"])
+    run["status"] = "COMPLETE_TOM_DISCRIMINATION_GAIN" if passed else "COMPLETE_NO_PROVEN_GAIN"
+    run["limitations"] = [
+        "This is two mirrored clauses and four questions across two order controls, not a broad benchmark.",
+        "The relationship roles were previously reviewed; automatic relationship extraction is not tested.",
+        "No legacy RGM branch state was fabricated. The comparison targets the product document/context path, not every historical RGM branch-event experiment.",
+        "ToM selects the relationship identity; RGM still owns exact text and provenance.",
+    ]
+    run["source_repository_unchanged"] = (
+        source_status == subprocess.run(["git", "status", "--porcelain"], cwd=root,
+            check=True, capture_output=True, text=True).stdout
+        and source_hashes == {str(path.relative_to(root)): sha(path) for path in source_files})
+    run["runner_sha256"] = sha(Path(__file__))
+    if not run["source_repository_unchanged"]:
+        raise RuntimeError("RGM source repository changed during comparison")
+    latest = json.loads(RESULT.read_text())
+    if {name: seal(value) for name, value in latest.items()} != historical:
+        raise RuntimeError("Historical result changed before comparison commit")
+    latest[key] = run
+    RESULT.write_text(json.dumps(latest, indent=2, ensure_ascii=False) + "\n")
+    print(json.dumps(dict(status=run["status"], findings=run["findings"]), indent=2), flush=True)
+
+
 def rgm500_structural_bridge(order):
     """Real RGM chunks -> verified situation graph -> native distributed memory."""
     sys.path.insert(0, str(ASSIST))
@@ -7237,6 +7387,9 @@ if __name__ == "__main__":
         sys.exit(0)
     if len(sys.argv) == 3 and sys.argv[1] == "--rgm500-comparison":
         rgm500_comparison(sys.argv[2])
+        sys.exit(0)
+    if sys.argv[1:] == ["--rgm500-relational-discrimination"]:
+        rgm500_relational_discrimination_comparison()
         sys.exit(0)
     if len(sys.argv) == 3 and sys.argv[1] == "--rgm500-bridge":
         rgm500_bridge(sys.argv[2])
