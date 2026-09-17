@@ -767,11 +767,92 @@ type NativeAnswer = {
   status: "supported" | "partial" | "not_supported" | "ambiguous" | "blocked";
   answer: string;
   scope?: string;
+  engine?: string;
   sources: { source_id: string; text: string; provenance: {
     clause?: string; pdf_page?: number; display_name?: string; doc_id?: string; chunk_id?: string;
     start?: number; end?: number; answer_start?: number; answer_end?: number;
   } }[];
+  structural_sources?: { source_id: string; text: string; provenance: {
+    display_name?: string; doc_id?: string; chunk_id?: string; start?: number; end?: number;
+  } }[];
+  authority_review?: {
+    status: "unresolved";
+    can_record: boolean;
+    relation_kind: "replacement_cover" | "reimbursement";
+    conflict_sources: AuthoritySource[];
+    current_sources: AuthoritySource[];
+  } | null;
 };
+
+type AuthoritySource = { source_id: string; text: string; reason?: string; active: boolean; provenance: {
+  display_name?: string; doc_id: string; chunk_index: number; start: number; end: number;
+} };
+
+function SourceAuthorityReview({ project, backend, review }: {
+  project: Project; backend: DesktopBackend; review: NonNullable<NativeAnswer["authority_review"]>;
+}) {
+  const [newer, setNewer] = useState(review.conflict_sources[0]?.source_id ?? "");
+  const [older, setOlder] = useState<string[]>([]);
+  const [effectiveAt, setEffectiveAt] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  function toggle(sourceId: string) {
+    setOlder((current) => current.includes(sourceId)
+      ? current.filter((value) => value !== sourceId) : [...current, sourceId]);
+  }
+  async function record() {
+    setBusy(true); setMessage(""); setError("");
+    try {
+      await backend.chat(project.id, "conversation.native_answer", {
+        action: "resolve_source_authority", explicit_user_action: true,
+        project_state_version: project.state_version, relation_kind: review.relation_kind,
+        superseding_source_id: newer, superseded_source_ids: older,
+        effective_at: effectiveAt.trim(), reason: reason.trim(),
+      });
+      setMessage("Source authority recorded. Ask the question again to apply it.");
+    } catch (value) { setError(String(value)); }
+    finally { setBusy(false); }
+  }
+  return <section class="source-authority-review" aria-label="Resolve conflicting source authority">
+    <h4>Conflicting source authority</h4>
+    <p>Choose the exact newer passage and every older passage it replaces for this relationship. This does not change the ToM tree.</p>
+    <label>New controlling passage<select aria-label="New controlling passage" value={newer}
+      onChange={(event) => setNewer(event.currentTarget.value)} disabled={busy}>
+      {review.conflict_sources.map((source) => <option value={source.source_id} key={source.source_id}>
+        {source.provenance.display_name ?? source.provenance.doc_id} · passage {source.provenance.chunk_index + 1}
+      </option>)}
+    </select></label>
+    {review.conflict_sources.map((source) => <details key={source.source_id}>
+      <summary>{source.provenance.display_name ?? source.provenance.doc_id}: {source.reason}</summary>
+      <p style={{ whiteSpace: "pre-wrap" }}>{source.text}</p>
+    </details>)}
+    {!review.can_record && <p>The recorded controlling passage was not among the retrieved evidence. No new authority decision can be made from this result.</p>}
+    {review.can_record && <>
+    <fieldset disabled={busy}><legend>Older passages replaced</legend>
+      {review.current_sources.map((source) => <div key={source.source_id}>
+        <label><input type="checkbox" aria-label={`Replace ${source.provenance.display_name ?? source.provenance.doc_id} passage ${source.provenance.chunk_index + 1}`}
+          checked={older.includes(source.source_id)} onChange={() => toggle(source.source_id)} />
+          {source.provenance.display_name ?? source.provenance.doc_id} · passage {source.provenance.chunk_index + 1}
+        </label>
+        <details><summary>View older passage</summary>
+          <p style={{ whiteSpace: "pre-wrap" }}>{source.text}</p>
+        </details>
+      </div>)}
+    </fieldset>
+    <label>Effective time, including timezone<input aria-label="Source authority effective time"
+      placeholder="2026-09-17T00:00:00+10:00" value={effectiveAt}
+      onInput={(event) => setEffectiveAt(event.currentTarget.value)} disabled={busy} /></label>
+    <label>Reason<input aria-label="Source authority reason" value={reason}
+      onInput={(event) => setReason(event.currentTarget.value)} disabled={busy} /></label>
+    <button disabled={busy || !newer || !older.length || !effectiveAt.trim() || !reason.trim()}
+      onClick={() => void record()}>{busy ? "Recording source authority…" : "Record source supersession"}</button>
+    </>}
+    {message && <p role="status">{message}</p>}
+    {error && <p role="alert">{error}</p>}
+  </section>;
+}
 
 function ReviewedSituation({ project, backend, source }: {
   project: Project; backend: DesktopBackend; source: NativeAnswer["sources"][number];
@@ -807,8 +888,26 @@ function ReviewedSituation({ project, backend, source }: {
     } catch (reason) { setError(String(reason)); }
     finally { setBusy(false); }
   }
+  async function rememberNoticeBeforeMeeting() {
+    setBusy(true); setMessage(""); setError("");
+    try {
+      const result = await backend.chat(project.id, "conversation.native_answer", {
+        action: "learn_situation", explicit_user_action: true,
+        project_state_version: project.state_version, document_id: proof.doc_id,
+        chunk_index: chunkIndex, temporal_motif: {
+          relation_kind: "before", source_event: "notify", target_event: "meeting",
+        },
+      }) as { duplicate?: boolean; write_count?: number; bound_existing_relationships?: number };
+      setMessage(result.duplicate
+        ? "This reviewed sequence is already in ToM."
+        : result.write_count === 0
+          ? "Linked this source to the existing ToM sequence memory."
+          : `Saved the sequence in ToM across ${Number(result.write_count ?? 0).toLocaleString()} memory locations.`);
+    } catch (reason) { setError(String(reason)); }
+    finally { setBusy(false); }
+  }
   return <details class="reviewed-situation">
-    <summary>Save a reviewed relationship in ToM</summary>
+    <summary>Save a reviewed structure in ToM</summary>
     <p>Use this only when the quoted passage says one party failed to show insurance compliance and another may buy replacement cover. Copy the party names exactly from the source.</p>
     <label>Party that failed to show compliance<input value={failureParty}
       onInput={(event) => setFailureParty(event.currentTarget.value)} disabled={busy} /></label>
@@ -822,6 +921,11 @@ function ReviewedSituation({ project, backend, source }: {
       onInput={(event) => setRepaymentWhen(event.currentTarget.value)} disabled={busy} /></label>
     <button disabled={busy || !failureParty.trim() || !coverPayer.trim()} onClick={() => void remember()}>
       {busy ? "Saving reviewed relationship…" : "Save reviewed relationship"}
+    </button>
+    <hr />
+    <p>If this passage explicitly requires written notice before a meeting, save that reviewed sequence once or link this source to it.</p>
+    <button disabled={busy} onClick={() => void rememberNoticeBeforeMeeting()}>
+      {busy ? "Saving reviewed structure…" : "Save notice-before-meeting structure"}
     </button>
     {message && <p role="status">{message}</p>}
     {error && <p role="alert">{error}</p>}
@@ -859,7 +963,11 @@ export function NativeMemoryAnswer({ project, draft, backend, disabled = false }
       const result = await backend.chat(project.id, "conversation.native_answer", {
         action: "answer", explicit_answer: true, project_state_version: project.state_version, question: draft,
       }) as NativeAnswer;
-      if (revision.current === ticket) setAnswer(result);
+      if (revision.current === ticket) {
+        setAnswer(result);
+        if (result.scope) setScope(result.scope);
+        if (result.engine) setEngine(result.engine);
+      }
     } catch (e) {
       if (revision.current === ticket) setError(String(e));
     } finally { if (revision.current === ticket) setBusy(false); }
@@ -877,6 +985,8 @@ export function NativeMemoryAnswer({ project, draft, backend, disabled = false }
       <h3>{({ supported: "Supported answer", partial: "Partly supported answer", not_supported: "Not supported",
         ambiguous: "Needs clarification", blocked: "Answer unavailable" })[answer.status]}</h3>
       <p style={{ whiteSpace: "pre-wrap" }}>{answer.answer}</p>
+      {answer.authority_review && <SourceAuthorityReview project={project} backend={backend}
+        review={answer.authority_review} />}
       {answer.sources.map((source) => {
         const proof = source.provenance;
         const points = Array.from(source.text);
@@ -890,6 +1000,16 @@ export function NativeMemoryAnswer({ project, draft, backend, disabled = false }
           <ReviewedSituation project={project} backend={backend} source={source} />
         </details>;
       })}
+      {!!answer.structural_sources?.length && <section aria-label="Evidence linked by learned structure">
+        <h4>Evidence linked by the learned structure</h4>
+        <p>ToM reopened this pattern. RGM supplied every exact passage linked to it.</p>
+        {answer.structural_sources.map((source) => <details key={`structural-${source.source_id}`}>
+          <summary>{source.provenance.display_name
+            ? `${source.provenance.display_name} · ${source.provenance.chunk_id}`
+            : source.source_id}</summary>
+          <p style={{ whiteSpace: "pre-wrap" }}>{source.text}</p>
+        </details>)}
+      </section>}
     </article>}
   </section>;
 }

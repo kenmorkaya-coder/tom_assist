@@ -465,21 +465,34 @@ it("opens exact RGM citations and explicitly saves a reviewed ToM relationship",
   const chat = vi.spyOn(backend, "chat").mockImplementation(async (_project, _method, payload) =>
     payload.action === "status" ? { ready: true, engine: "rgm", scope: "Experimental document answers." }
       : payload.action === "learn_situation" ? { duplicate: false, write_count: 381 } : {
-      status: "supported", answer: "Orchid must notify Rowan.",
+      status: "supported", answer: "Orchid must notify Rowan.", engine: "rgm+tom",
+      scope: "RGM exact evidence plus reviewed ToM structural recall.",
       sources: [{ source_id: "corpus/chunk_1", text: "🌳 Orchid must notify Rowan. Next clause.",
         provenance: { display_name: "Maintenance agreement", doc_id: "document-a", chunk_id: "chunk_1", start: 100, end: 138,
           answer_start: 102, answer_end: 127 } }],
+      structural_sources: [
+        { source_id: "SRC-a", text: "Written notice must occur before the meeting.",
+          provenance: { display_name: "Interface agreement", doc_id: "document-a", chunk_id: "chunk_1", start: 100, end: 145 } },
+        { source_id: "SRC-b", text: "The parties meet after the written notice.",
+          provenance: { display_name: "D&C deed", doc_id: "document-b", chunk_id: "chunk_4", start: 400, end: 443 } },
+      ],
     });
   const view = render(<NativeMemoryAnswer project={project} draft="Who must notify Rowan?" backend={backend} />);
   fireEvent.click(await screen.findByRole("button", { name: "Answer from project documents" }));
   await screen.findByRole("heading", { name: "Supported answer" });
+  expect(screen.getByText("RGM exact evidence plus reviewed ToM structural recall.")).toBeTruthy();
+  expect(screen.queryByText("Experimental document answers.")).toBeNull();
   const citation = screen.getByText("Source: Maintenance agreement · chunk_1");
   fireEvent.click(citation);
   expect(citation.closest("details")?.open).toBe(true);
   expect(view.container.querySelector("mark")?.textContent).toBe("Orchid must notify Rowan.");
+  expect(screen.getByRole("region", { name: "Evidence linked by learned structure" }).textContent)
+    .toContain("Interface agreement · chunk_1");
+  expect(screen.getByRole("region", { name: "Evidence linked by learned structure" }).textContent)
+    .toContain("D&C deed · chunk_4");
   expect(chat.mock.calls[1]![2]).toMatchObject({ explicit_answer: true, question: "Who must notify Rowan?" });
   expect(view.container.textContent).not.toContain("page undefined");
-  fireEvent.click(screen.getByText("Save a reviewed relationship in ToM"));
+  fireEvent.click(screen.getByText("Save a reviewed structure in ToM"));
   fireEvent.input(screen.getByLabelText("Party that failed to show compliance"), { target: { value: "Orchid" } });
   fireEvent.input(screen.getByLabelText("Party that may buy replacement cover"), { target: { value: "Rowan" } });
   fireEvent.click(screen.getByRole("button", { name: "Save reviewed relationship" }));
@@ -487,6 +500,54 @@ it("opens exact RGM citations and explicitly saves a reviewed ToM relationship",
   expect(chat.mock.calls[2]![2]).toMatchObject({ action: "learn_situation", explicit_user_action: true,
     project_state_version: project.state_version, document_id: "document-a", chunk_index: 1,
     roles: { failure_party: "Orchid", cover_payer: "Rowan" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save notice-before-meeting structure" }));
+  await screen.findByText("Saved the sequence in ToM across 381 memory locations.");
+  expect(chat.mock.calls[3]![2]).toMatchObject({ action: "learn_situation", explicit_user_action: true,
+    project_state_version: project.state_version, document_id: "document-a", chunk_index: 1,
+    temporal_motif: { relation_kind: "before", source_event: "notify", target_event: "meeting" } });
+});
+
+it("records explicit source authority when current evidence conflicts", async () => {
+  const backend = new FakeDesktopBackend();
+  const project = await backend.seedDemo();
+  const chat = vi.spyOn(backend, "chat").mockImplementation(async (_project, _method, payload) => {
+    if (payload.action === "status") return { ready: true, engine: "rgm+tom", scope: "Project documents." };
+    if (payload.action === "resolve_source_authority") return { status: "recorded", link_count: 1 };
+    return {
+      status: "ambiguous", answer: "The available sources disagree.\n\nOrchid must not reimburse Rowan.\n\nOrchid must reimburse Rowan.",
+      sources: [
+        { source_id: "SRC-new", text: "Orchid must not reimburse Rowan.",
+          provenance: { display_name: "Amendment", doc_id: "document-new", chunk_id: "chunk_0", chunk_index: 0, start: 0, end: 38 } },
+        { source_id: "SRC-old", text: "Orchid must reimburse Rowan.",
+          provenance: { display_name: "Original agreement", doc_id: "document-old", chunk_id: "chunk_2", chunk_index: 2, start: 50, end: 80 } },
+      ],
+      authority_review: { status: "unresolved", can_record: true, relation_kind: "reimbursement",
+        conflict_sources: [{ source_id: "SRC-new", text: "Orchid must not reimburse Rowan.",
+          reason: "source explicitly negates reimbursement", active: true,
+          provenance: { display_name: "Amendment", doc_id: "document-new", chunk_index: 0, start: 0, end: 38 } }],
+        current_sources: [{ source_id: "SRC-old", text: "Orchid must reimburse Rowan.", active: true,
+          provenance: { display_name: "Original agreement", doc_id: "document-old", chunk_index: 2, start: 50, end: 80 } }],
+      },
+    };
+  });
+  render(<NativeMemoryAnswer project={project} draft="Does Orchid reimburse Rowan?" backend={backend} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Answer from project documents" }));
+  await screen.findByRole("heading", { name: "Needs clarification" });
+  expect(screen.getByText("Source: Amendment · chunk_0")).toBeTruthy();
+  expect(screen.getByText("Source: Original agreement · chunk_2")).toBeTruthy();
+  fireEvent.click(screen.getByLabelText("Replace Original agreement passage 3"));
+  fireEvent.input(screen.getByLabelText("Source authority effective time"), {
+    target: { value: "2026-09-17T00:00:00+10:00" },
+  });
+  fireEvent.input(screen.getByLabelText("Source authority reason"), {
+    target: { value: "Executed amendment replaces the original clause" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Record source supersession" }));
+  await screen.findByText("Source authority recorded. Ask the question again to apply it.");
+  expect(chat.mock.calls[2]![2]).toMatchObject({ action: "resolve_source_authority",
+    explicit_user_action: true, relation_kind: "reimbursement", superseding_source_id: "SRC-new",
+    superseded_source_ids: ["SRC-old"], effective_at: "2026-09-17T00:00:00+10:00",
+    reason: "Executed amendment replaces the original clause" });
 });
 
 it("imports a local document only after an explicit action", async () => {
@@ -507,4 +568,48 @@ it("imports a local document only after an explicit action", async () => {
   expect(chat).toHaveBeenCalledWith(project.id, "document.ingest", {
     explicit_user_action: true, source_path: "/Volumes/Passport/Agreement.pdf",
   });
+});
+
+it("lists source-local structure candidates and teaches only after review", async () => {
+  const { Memory } = await import("../src/Memory");
+  const backend = new FakeDesktopBackend();
+  const project = await backend.seedDemo();
+  vi.spyOn(backend, "diagnostics").mockResolvedValue({ memory: {} });
+  vi.spyOn(backend, "documents").mockResolvedValue([{
+    document_id: "document-a", display_name: "Agreement.pdf", content_sha256: "a".repeat(64),
+    byte_length: 500, media_type: "application/pdf", chunking_version: "rgm",
+    embedding_version: "minilm", ingested_tick: 1, tombstoned_at: null, chunk_count: 1,
+  }]);
+  const motif = { relation_kind: "sequence", source_event: "failure",
+    intermediate_event: "substitute_action", target_event: "cost_recovery" } as const;
+  const chat = vi.spyOn(backend, "chat").mockImplementation(async (_id, _method, payload) => {
+    if (payload.action === "status") return { ready: true, engine: "rgm+tom",
+      structural_memory: { configured: true, learned_situations: 0, capacity: 6 } };
+    if (payload.action === "review_candidates") return { candidates: [{
+      candidate_id: "RGMCAND-a", source_id: "SRC-a", document_id: "document-a",
+      display_name: "Agreement.pdf", chunk_id: "chunk_0", chunk_index: 0,
+      text: "Orchid fails. Rowan acts. The cost is a debt due.", temporal_motif: motif,
+      events: [
+        { kind: "failure", start: 7, end: 12, text: "fails" },
+        { kind: "substitute_action", start: 20, end: 24, text: "acts" },
+        { kind: "cost_recovery", start: 40, end: 48, text: "debt due" },
+      ], reviewed: false, reviewed_structure_count: 1,
+    }] };
+    if (payload.action === "learn_situation") return { duplicate: false, write_count: 0 };
+    throw new Error("unexpected action");
+  });
+  render(<Memory projectId={project.id} backend={backend} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Find structures to review" }));
+  await screen.findByText(/Detected: failure/);
+  expect(chat.mock.calls.filter((call) => call[2].action === "learn_situation")).toHaveLength(0);
+  expect(screen.getByText(/already has 1 other reviewed structure/)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", {
+    name: "Save failure → substitute action → cost recovery",
+  }));
+  await screen.findByText("Linked this passage to the existing distributed ToM memories.");
+  expect(chat).toHaveBeenCalledWith(project.id, "conversation.native_answer", {
+    action: "learn_situation", explicit_user_action: true,
+    document_id: "document-a", chunk_index: 0, temporal_motif: motif,
+  });
+  expect(screen.getByRole("button", { name: "Already reviewed in ToM" })).toBeTruthy();
 });

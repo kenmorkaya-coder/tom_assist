@@ -662,12 +662,12 @@ class EvidenceTomGateway(base.TomGateway):
             try:
                 project_id = base._safe_project_id(payload.get("project_id"))
                 action = payload.get("action", "answer")
-                if action not in {"status", "answer", "learn_situation"}:
+                if action not in {"status", "answer", "review_candidates", "learn_situation", "resolve_source_authority"}:
                     raise ValueError("unsupported document answer action")
                 if action == "answer" and payload.get("explicit_answer") is not True:
                     raise ValueError("explicit local answer action required")
-                if action == "learn_situation" and payload.get("explicit_user_action") is not True:
-                    raise ValueError("explicit reviewed-relationship action required")
+                if action in {"learn_situation", "resolve_source_authority"} and payload.get("explicit_user_action") is not True:
+                    raise ValueError("explicit reviewed document-memory action required")
                 path = self.data_dir / "projects" / project_id / "tom" / "library.sqlite3"
                 # Do not initialize any tree or empty project just to check availability.
                 if not path.is_file():
@@ -675,7 +675,7 @@ class EvidenceTomGateway(base.TomGateway):
                         return 200, dict(ready=False, engine="rgm", scope="Import a document into this project first.")
                     if action == "answer":
                         return 200, dict(status="blocked", answer="Import a document into this project first.", sources=[])
-                    raise ValueError("import a document before reviewing a relationship")
+                    raise ValueError("import a document before reviewing a structure")
                 library = PermanentLibrary(path)
                 service = getattr(self, "rgm_document_service", None) or RgmDocumentService()
                 if action == "status":
@@ -685,8 +685,12 @@ class EvidenceTomGateway(base.TomGateway):
                         engine="rgm+tom" if structural["learned_situations"] else "rgm",
                         scope=RGM_TOM_DOCUMENT_SCOPE if structural["learned_situations"] else RGM_DOCUMENT_SCOPE,
                         structural_memory=structural)
+                if action == "review_candidates":
+                    return 200, service.review_candidates(library)
                 if action == "learn_situation":
                     return 200, service.learn_situation(project_id, library, payload)
+                if action == "resolve_source_authority":
+                    return 200, service.resolve_source_authority(project_id, library, payload)
                 return 200, service.answer(project_id, library, payload.get("question"))
             except (ValueError, KeyError, OSError) as error:
                 return 400, {"error": error.__class__.__name__, "message": str(error)}

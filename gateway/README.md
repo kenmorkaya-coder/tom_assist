@@ -76,6 +76,86 @@ Peak process memory was 1.22 GiB. The compact result is
 determinant warnings remain observable; all retained fields were finite and the
 tree state was unchanged by reads.
 
+The bounded `--rgm500-relational-discrimination` comparison then exercised the
+full RGM contextual retrieval entry point over those same two real clauses and
+four questions. Both source records remained available in all eight trials
+(four questions across both source/teaching orders). RGM put the correct source
+first in 6/8 trials. Adding only the exact, branch-position-preserving ToM
+memory-slot activation map selected the correct relationship in 8/8 and repaired
+both reversed-direction misses. RGM candidates, source text and provenance did
+not change; there was no new tree run, training, model call, branch averaging or
+whole-tree score. Complete signed terminal fields remain retained as evidence,
+but are not compared with teaching-input fields because those are different
+native object types. The first harness attempt made that invalid comparison and
+is retained explicitly as `INVALID_OBJECT_COMPARISON`; it is not counted as a
+ToM failure.
+
+This is the first direct evidence of the intended division of labour: RGM finds
+and preserves the exact plausible records, while ToM can disambiguate a learned
+relationship direction that RGM's document/context ranking gets wrong. The test
+is still limited to two reviewed mirrored relationships. It does not establish
+automatic relationship extraction, a broad accuracy gain, or superiority over
+every historical RGM branch-event experiment.
+
+The next `--rgm500-sequence-discrimination` test isolates event order. Two
+controlled records contain exactly the same entities, actions and native-RGM
+word vector; only the event sequence changes. Across four unseen phrasings and
+both record/teaching orders, RGM retained both records in 8/8 trials. Its native
+vectors tied, so rank fusion followed insertion order in 8/8 and changed the
+first result for all four questions when insertion was reversed. RGM therefore
+put the correct sequence first in 4/8. The ToM temporal-link memories wrote to
+381 and 387 distinct branch/slot locations with zero overlap. Their complete
+native activation maps selected the correct sequence in 8/8, while the
+untrained tree opened no memory.
+
+Only the explicit temporal-link 32×32 matrix was taught; the two event loads
+were held equal and excluded. No branch was averaged and no whole-tree score was
+calculated. Complete routed inputs, signed terminal fields, slot scores and
+activation maps for both teaching orders remain in two roughly 58.4 MB archives
+under Passport `rgm500_sequence_discrimination_v1/`. The first completed report
+used an incorrect acceptance rule that confused the native-vector tie with the
+later rank-fusion scores; it is retained as
+`MISCLASSIFIED_BY_ACCEPTANCE_RULE`. The rerun changed only that diagnostic rule.
+This establishes a controlled sequence-memory gain, not automatic sequence
+extraction or performance on natural project event histories.
+
+The bounded `--rgm500-cross-source-motif` follow-up then uses real project
+material. The unmodified RGM parser produced 315 native chunks from the executed
+M12 Interface Agreement and SCAW D&C Deed; native admission retained 312 unique
+chunks and rejected three exact duplicates. Two chunks in different contracts
+state the same reviewed sequence motif: written notice before a required
+meeting. For three structure-only questions, full RGM contextual retrieval with
+a twenty-record allowance returned only one of the six expected source
+occurrences and never returned both sources together. The target vector ranks
+were 13–47.
+
+That one reviewed sequence motif was learned once by the approved circa-500
+tree and bound to both RGM chunk IDs. All three question forms reopened its
+complete 381-location native slot map and returned both exact source pointers;
+the untrained tree opened no memory. This is the intended shared-memory case:
+one structural memory can connect several evidence locations, while RGM retains
+their separate text and provenance. No branch was averaged and no whole-tree
+score was calculated. Complete routed inputs, signed terminal fields, slot
+scores and activation maps remain in the 38 MB Passport archive
+`rgm500_cross_source_motif_v1/native_fields.npz`; the compact result is
+`native_rgm500_cross_source_motif_comparison`.
+
+The claim remains narrow. The motif was reviewed and supplied, automatic motif
+extraction is not tested, and the two native RGM heading chunks are the parser's
+4,003-character truncated outputs. The live app now admits this one reviewed
+motif through the lossless RGM corpus path: the first source writes one ToM
+memory, later sources bind without another tree write, and one retrieved source
+can reopen every authenticated RGM passage linked to that structure.
+
+The bounded live-tree verification used the approved 507-branch fixture. The
+motif wrote to 381 native branch/slot locations. Three question forms reopened
+the same complete signed distributed field and returned both source pointers;
+every read left the saved tree unchanged. No branch response was averaged and
+no whole-tree score was calculated. The 217 MB checkpoint and 2.9 MB reference
+archive are on Passport under
+`native_learned_recall/live_temporal_motif_bridge_v1/`; the compact result is
+the adjacent `result.json`.
+
 The result establishes a useful integration boundary: RGM retains exact text
 and provenance, while a verified directed situation can address a distinct
 distributed ToM memory. It does not validate automatic relationship extraction.
@@ -886,31 +966,83 @@ recall and does not use the app's live tree. Source text and range references
 remain in the permanent project library.
 
 An expanded source below a document answer now offers **Save a reviewed
-relationship in ToM**. The owner must copy the failing party and the party that
+structure in ToM**. The owner must copy the failing party and the party that
 may obtain replacement cover from that exact source. Optional repayment roles
 are retained in RGM. The gateway rejects values absent from the source, changed
 source ranges, stale project state and unreviewed calls. Automatic relationship
 extraction remains disabled because the current parser did not preserve party
 direction reliably.
 
-The reviewed source relation is first persisted as a native RGM snapshot with
-its exact document/chunk provenance. An isolated worker then teaches the same
-structured 32×32 field used by the validated calibration into a project copy of
-the approved 500-branch tree. The current integration is deliberately bounded
-to six reviewed situations, matching the six orthogonal addresses already
-tested. A new save must write non-overlapping tree locations; otherwise it is
+The reviewed source relations are first persisted as native RGM snapshots with
+their exact document/chunk provenance. An isolated worker teaches one structured
+32×32 ToM memory for each unique relationship. Replacement cover uses
+source→target roles; reimbursement uses actor→recipient roles. Further reviewed
+RGM sources describing the same relationship bind to that existing ToM memory;
+they do not teach the same matrix at another address. This lets one distributed
+return release several exact evidence locations without duplicating the learned
+relationship. A source that explicitly negates a relationship or declares
+supersession cannot be attached to the positive memory. If such evidence is in
+the current RGM candidates, ToM does not narrow the evidence set. The answer
+reports that the sources disagree and presents every exact conflicting and
+currently bound passage with its provenance. No model or ToM process chooses a
+winner. An optional explicit user action can record that one exact RGM passage
+supersedes one or more older passages for one relationship, with an effective
+timestamp and reason. The app never infers this authority from filenames, dates
+or amendment wording. Once effective, and only
+when every competing reviewed source has been covered, the newer passage goes
+to evidence checking without a tree call. Older text and the ToM memory remain
+unchanged for audit. The current integration is deliberately bounded to six
+unique structural memories, matching the six orthogonal addresses already
+tested. A
+new structure must write non-overlapping tree locations; otherwise it is
 rejected. Only the newest large checkpoint and reference archive are retained.
 
+The same review panel supports two admitted event structures: written notice
+before a required meeting, and failure followed by substitute action followed
+by cost recovery. The latter is retained as two separate ordered relationships;
+both complete distributed returns and native slot maps must match before their
+shared source locations reopen. Reviewing another passage with the same
+structure binds its immutable RGM source pointer without another ToM write. The
+failure/substitute/cost structure can reopen its reviewed sources even when RGM
+supplies no correct initial candidate. This does not perform automatic motif
+extraction or accept arbitrary event graphs.
+
+The failure/substitute/cost source guard checks one local procedure rather than
+combining keywords from anywhere in a long RGM chunk. On the two frozen contract
+corpora it recognized 12 reviewed procedures across 563 native chunks, including
+insurance substitution, corrective work, emergency action and general step-in
+wording. Nearby failure/debt clauses without substitute performance were
+rejected. This remains a bounded admission check for an explicitly reviewed
+motif; it does not automatically teach every detected passage.
+
+Memory now exposes a read-only **Structures to review** scan for that bounded
+motif. It lists the exact RGM passage and the three matched event phrases. The
+scan makes no tree call. Each candidate requires a separate explicit Save
+action, and the server repeats the source-local validation before teaching or
+binding it. One source passage may retain different reviewed structure types;
+it may not retain two conflicting versions of the same party relationship.
+
 During an answer, MiniLM/RGM still locates candidate source passages. When the
-question explicitly states the failing party and the party obtaining replacement
-cover, those names are resolved to identities already retained in the reviewed
-RGM memories. The relationship is compiled into one 32×32 field and routed
-through the saved tree once. The worker compares the complete returned
+question explicitly states a supported insurance relationship or an admitted
+event sequence, its reviewed structure is resolved from the query alone. Each
+relationship is compiled into one 32×32 field and routed independently through
+the saved tree. The worker compares each complete returned
 branch-position-preserving signed field and exact native slot map with the
 candidate memories. It does not replay every candidate's teaching input, average
 branches or compute a whole-tree score.
 
 Only exact native returns bind the evidence reader to reviewed RGM passages.
+The language reader sees short request-local source aliases rather than the
+long authenticated corpus hashes. A supported alias is rebound to the complete
+server-owned source ID before exact-span validation; an unknown alias or altered
+source still fails closed. This prevents a correct quotation from being lost
+because a language model copied a long hash incorrectly without weakening the
+source binding.
+If the complete language reader declines a broad structural request after an
+exact reviewed ToM return, the response is labelled partly supported. It states
+only that reviewed structural passages were found and displays all of them; it
+does not say the information is absent or convert the structural match into an
+unverified direct answer.
 Document-style party names such as `Transport for NSW` / `TfNSW` and
 `Sydney Metro` / `SM` are matched mechanically. If the question does not state
 one complete relationship, ToM makes no selection claim and the existing RGM
@@ -936,9 +1068,11 @@ extraction rather than repair it speculatively.
 
 The option is off by default. It takes precedence over the earlier frozen
 native-memory profile on this explicit answer endpoint when enabled; other
-chat/preview/commit paths remain independent. A separate isolated real desktop
-run now exercises import, local answering and opening source citations. This
-does not establish ToM-versus-RGM benefit or general document-answer accuracy.
+chat/preview/commit paths remain independent. The isolated desktop run now
+exercises import, reviewed teaching, shared-source binding and three live recall
+questions. It establishes the bounded cross-contract source-linking behavior;
+it does not establish general document-answer accuracy or automatic motif
+extraction.
 
 Initial app-path check: three of four new questions produced correct outcomes.
 The fourth, a reversed repayment question, elicited a wrong supported proposal
