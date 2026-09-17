@@ -73,21 +73,28 @@ def native_memory_worker():
             def relationship_matrix(item, *, query=False):
                 kind = item["relation_kind"]
                 if kind == "before":
-                    if (item.get("source_event"), item.get("target_event")) != ("notify", "meeting"):
+                    pair = (item.get("source_event"), item.get("target_event"))
+                    actions = dict(notify="notify", meeting="approve", failure="stop",
+                        substitute_action="replace", cost_recovery="discharge")
+                    if pair not in {
+                        ("notify", "meeting"),
+                        ("failure", "substitute_action"),
+                        ("substitute_action", "cost_recovery"),
+                    }:
                         raise ValueError("unsupported reviewed temporal motif")
-                    text = "notice meeting" if query else item["text"]
+                    text = " ".join(pair) if query else item["text"]
                     evidence = [dict(start=0, end=len(text), quote=text)]
                     roles = dict(actor=None, object=None, source=None, target=None,
                         recipient=None, authority=None)
                     graph = dict(version=graph_version, entities=[], predicates=[], conditions=[], events=[
-                        dict(id="notice", action="notify", roles=roles, modality="obligation",
+                        dict(id=pair[0], action=actions[pair[0]], roles=roles, modality="obligation",
                             negated=False, condition=None, exception=None, complement=None,
                             revision=None, time=None, evidence=evidence),
-                        dict(id="meeting", action="approve", roles=roles, modality="obligation",
+                        dict(id=pair[1], action=actions[pair[1]], roles=roles, modality="obligation",
                             negated=False, condition=None, exception=None, complement=None,
                             revision=None, time=None, evidence=evidence),
-                    ], links=[dict(id="notice_before_meeting", kind="before", source="notice",
-                        target="meeting", evidence=evidence)], unresolved=[])
+                    ], links=[dict(id=pair[0] + "_before_" + pair[1], kind="before",
+                        source=pair[0], target=pair[1], evidence=evidence)], unresolved=[])
                     compiled = compile_graph(graph, text)
                     if [load["kind"] for load in compiled.get("loads", [])] != ["event", "event", "link"]:
                         raise ValueError("reviewed temporal motif did not compile to its explicit link")

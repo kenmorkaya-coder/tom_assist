@@ -2310,9 +2310,10 @@ that one exact source supersedes specified older sources for one relationship,
 with an effective timestamp and reason. This authority record does not change
 the tree and keeps the superseded text for audit.
 
-The current production bridge remains bounded to the reviewed insurance
-relationships plus the single notice-before-meeting motif and six orthogonal
-learned addresses. General temporal motifs, automatic pattern discovery and
+At that stage the bridge was bounded to the reviewed insurance relationships
+plus the notice-before-meeting motif and six orthogonal learned addresses. The
+later failure/substitute-action/cost-recovery result below adds one further
+reviewed structure. General temporal motifs, automatic pattern discovery and
 arbitrary event graphs are not product capabilities yet.
 
 #### Distributed-field rule and retained evidence
@@ -2441,3 +2442,61 @@ The remaining limitation is the evidence reader's inability to quote a direct
 answer for those two broad structural requests. This no longer hides the ToM
 result or falsely says the evidence is absent. Automatic motif extraction and
 general structural-question wording remain separate validation gates.
+
+### 2026-09-18 — ToM recovers a structural situation that RGM misses
+
+The next diagnostic tested a different relationship rather than extending the
+notice-before-meeting result. The reviewed structure was:
+
+```text
+required action fails → another party performs it → cost is recovered
+```
+
+The exact sources were M12 clause 14.4, where SM's failure allows TfNSW to take
+the emergency action at SM's cost, and D&C clause 13.6, where the contractor's
+failure allows the Principal to employ others and makes the resulting loss a
+debt. An earlier proposed contamination/change-order pairing was rejected before
+learning because the clauses did not express the same relationship.
+
+RGM was tested first over a capacity-valid 512-chunk corpus made from all 248
+native M12 chunks and the first 264 native D&C chunks. The target passages were
+present as M12 chunks 62/64 and D&C chunk 171. Three structure-only questions
+returned neither correct passage. The result therefore identified a real RGM
+gap rather than assuming that ToM would help.
+
+The reviewed bridge now admits this one additional event chain. It stores the
+chain as two distinct ordered memories—failure before substitute action, then
+substitute action before cost recovery. Each relationship routes independently
+through ToM. Their complete native branch-position-preserving signed 32×32
+fields and exact slot maps must both match. They are never averaged or combined
+into a whole-tree score. The final source set is the intersection of the exact
+sources bound to both returned relationships.
+
+On the real approved small tree, the first source created both distributed
+memories with 780 total native writes. The resulting saved tree had 520 branches
+and 399 terminal branches. The second contract source bound to the same two
+memories with zero new tree writes. The two learned return fields were:
+
+- `de26a5ce700c23b12e8adc3a88476c5ef769c120edd5ebd20a45f75cf6a0afc8`;
+- `abea835beb76600be379c270ad9284dad07af6b18ff65a9c56575cb24028b5f1`.
+
+All three frozen wording variants produced exact matches to both fields and both
+native slot maps. In the live answer path, both reviewed source locations were
+reopened and the evidence reader selected and quoted the D&C clause 13.6 passage
+that directly states failure, substitute performance and debt. The answer kept
+both M12 and D&C passages visible as structural sources.
+
+The decisive control then supplied **zero RGM candidates** to the real recall
+path. For every wording, ToM still returned both reviewed source IDs, reopened
+both exact RGM passages, preserved every branch/cell coordinate, used two query
+routes and no root assembly or whole-tree score, and left state
+`bc634d0071db4b296c58b50d6bc2b6da0979ef46bdc327b9f5e3fcb0d2740386`
+unchanged. This demonstrates the complementary role directly: RGM retains exact
+text and provenance; ToM can recognize a learned cross-document situation and
+recover the RGM source locations when ordinary RGM retrieval supplies none.
+
+This remains a reviewed, bounded capability. The app does not yet discover the
+motif automatically or accept arbitrary event chains. The large tree and field
+archive remain on Passport under
+`native_learned_recall/live_desktop_temporal_motif_v1/`; no large artifact was
+added to Git.

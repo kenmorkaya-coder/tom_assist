@@ -996,6 +996,8 @@ def _reviewed_tom_worker(calls, *, damage=None):
                 dict(relation_kind="replacement_cover", source_party="Orchid", target_party="Rowan"),
                 dict(relation_kind="reimbursement", source_party="Orchid", target_party="Rowan"),
                 dict(relation_kind="before", source_event="notify", target_event="meeting"),
+                dict(relation_kind="before", source_event="failure", target_event="substitute_action"),
+                dict(relation_kind="before", source_event="substitute_action", target_event="cost_recovery"),
             )
             def key(item):
                 endpoints = (("source_event", "target_event") if item["relation_kind"] == "before"
@@ -1280,6 +1282,57 @@ def test_reviewed_notice_before_meeting_memory_reopens_every_bound_rgm_source(tm
         assert reversed_result["status"] == "no_matching_structure"
         assert reversed_result["recalled_source_ids"] == []
         assert len(calls) == calls_before
+    finally:
+        library.db.close()
+
+
+def test_reviewed_failure_step_in_cost_chain_recalls_sources_without_rgm_candidate(tmp_path):
+    from gateway.native_memory import (FAILURE_STEP_IN_COST_MOTIF, RgmDocumentService,
+        bind_recalled_rgm_evidence, rgm_candidate_source_id)
+    from gateway.permanent_library import PermanentLibrary
+    library = PermanentLibrary(tmp_path / "step-in-chain.sqlite3")
+    calls = []
+    service = RgmDocumentService(worker=_rgm_app_worker([]), model_identity="fixture-model",
+        tom_worker=_reviewed_tom_worker(calls), tom_profile=_reviewed_tom_profile())
+    documents = [
+        ("M12 emergency work", "14.4 Emergency Work\nIf SM fails to promptly comply, TfNSW may, "
+            "at the cost of SM, undertake all actions necessary to manage the emergency."),
+        ("D&C quality direction", "13.6 Quality direction\nIf the SCAW Contractor does not comply, "
+            "the Principal may employ others to carry out the direction. The resulting Loss is a debt due "
+            "from the SCAW Contractor to the Principal."),
+    ]
+    try:
+        learned = []
+        for name, text in documents:
+            document = service.ingest("project", library, dict(explicit_user_action=True,
+                display_name=name, content=text, media_type="text/plain"))
+            learned.append(service.learn_situation("project", library, dict(
+                explicit_user_action=True, document_id=document["document_id"], chunk_index=0,
+                temporal_motif=FAILURE_STEP_IN_COST_MOTIF)))
+        assert learned[0]["write_count"] == 2
+        assert learned[1]["write_count"] == 0
+        assert learned[1]["bound_existing_relationships"] == 2
+
+        packet = dict(memories=[])
+        returned = service.recall_situations("project", library, packet,
+            "Find procedures where a failure is followed by substitute performance and then a debt.",
+            "2026-09-17T00:00:00Z")
+        expected_ids = {row["situation"]["source_id"] for row in service._situation_rows(library)}
+        assert returned["status"] == "recalled"
+        assert set(returned["recalled_source_ids"]) == expected_ids
+        assert returned["query_routes"] == 2
+        assert returned["whole_tree_score"] is False
+        assert returned["all_branch_cell_coordinates_compared"] is True
+
+        expanded = service._restore_recalled_sources(library, packet, returned)
+        selected, scope = bind_recalled_rgm_evidence(expanded, returned)
+        assert {rgm_candidate_source_id(memory) for memory in selected} == expected_ids
+        assert {memory["content"] for memory in selected} == {text for _, text in documents}
+        assert scope["selected_count"] == 2
+        assert returned["rgm_access_candidate_count"] == 0
+        assert returned["linked_source_count"] == 2
+        assert [call[0] for call in calls] == [
+            "rgm_tom_learn", "rgm_tom_recall", "rgm_tom_recall"]
     finally:
         library.db.close()
 

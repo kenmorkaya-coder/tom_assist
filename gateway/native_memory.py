@@ -429,6 +429,12 @@ def validate_native_roles(raw, text):
 
 RGM_SITUATION_VERSION = "tom-assist-rgm-situation/1"
 
+NOTICE_MEETING_MOTIF = dict(
+    relation_kind="before", source_event="notify", target_event="meeting")
+FAILURE_STEP_IN_COST_MOTIF = dict(
+    relation_kind="sequence", source_event="failure",
+    intermediate_event="substitute_action", target_event="cost_recovery")
+
 
 def _validate_rgm_source_roles(roles, text):
     """Validate the frozen source-role shape without applying question intent rules."""
@@ -501,24 +507,41 @@ def rgm_role_record_receipt(source, roles):
 
 
 def rgm_temporal_motif_receipt(source, motif):
-    """Seal the one reviewed temporal motif currently admitted by the live bridge."""
+    """Seal one explicitly reviewed event motif against its exact source."""
     import re
     if not isinstance(source, dict) or not isinstance(source.get("text"), str):
         raise ValueError("exact source identity and text are required")
     text, source_id = source["text"], source.get("source_id")
-    expected = {"relation_kind": "before", "source_event": "notify", "target_event": "meeting"}
-    if motif != expected:
-        raise ValueError("only the reviewed notice-before-meeting motif is supported")
     if not isinstance(source_id, str) or not source_id or not text.strip():
         raise ValueError("exact source identity and text are required")
-    notice = re.search(r"\b(?:notice|notification|notify|notifies|notified)\b", text, re.I)
-    meeting = re.search(r"\b(?:meet|meets|meeting)\b", text, re.I)
-    if notice is None or meeting is None:
-        raise ValueError("the exact source must contain both the reviewed notice and meeting events")
+    if motif == NOTICE_MEETING_MOTIF:
+        matches = {
+            "notice": re.search(r"\b(?:notice|notification|notify|notifies|notified)\b", text, re.I),
+            "meeting": re.search(r"\b(?:meet|meets|meeting)\b", text, re.I),
+        }
+        if any(match is None for match in matches.values()):
+            raise ValueError("the exact source must contain both the reviewed notice and meeting events")
+    elif motif == FAILURE_STEP_IN_COST_MOTIF:
+        matches = {
+            "failure": re.search(
+                r"\b(?:fails?\s+to|failure\s+to|does\s+not\s+comply|did\s+not\s+comply)\b",
+                text, re.I),
+            "substitute_action": re.search(
+                r"\b(?:undertake\s+all\s+actions|employ\s+others\s+to\s+carry\s+out|"
+                r"carry\s+out\s+such\s+work|engage\s+others\s+to\s+carry\s+out|step(?:s|ped)?\s+in)\b",
+                text, re.I),
+            "cost_recovery": re.search(
+                r"\b(?:at\s+the\s+cost\s+of|debt\s+due|recover(?:s|ed|ing)?\s+(?:the\s+)?cost|"
+                r"reasonable\s+costs?)\b", text, re.I),
+        }
+        if any(match is None for match in matches.values()):
+            raise ValueError(
+                "the exact source must contain failure, substitute action, and cost recovery")
+    else:
+        raise ValueError("unsupported reviewed event motif")
     return native_digest(dict(schema=RGM_SITUATION_VERSION, source_id=source_id,
         source_text_sha256=hashlib.sha256(text.encode()).hexdigest(), temporal_motif=motif,
-        event_offsets=dict(notice=[notice.start(), notice.end()],
-            meeting=[meeting.start(), meeting.end()])))
+        event_offsets={name: [match.start(), match.end()] for name, match in matches.items()}))
 
 
 def rgm_candidate_source_id(memory):
@@ -630,10 +653,21 @@ def build_rgm_situation_memory(source, roles, verification, *, temporal_motif=No
         import re
         fields = None
         expected_receipt = rgm_temporal_motif_receipt(source, temporal_motif)
-        offsets = {name: [match.start(), match.end()] for name, match in (
-            ("notice", re.search(r"\b(?:notice|notification|notify|notifies|notified)\b", text, re.I)),
-            ("meeting", re.search(r"\b(?:meet|meets|meeting)\b", text, re.I)),
-        )}
+        if temporal_motif == NOTICE_MEETING_MOTIF:
+            patterns = dict(notice=r"\b(?:notice|notification|notify|notifies|notified)\b",
+                meeting=r"\b(?:meet|meets|meeting)\b")
+        elif temporal_motif == FAILURE_STEP_IN_COST_MOTIF:
+            patterns = dict(
+                failure=r"\b(?:fails?\s+to|failure\s+to|does\s+not\s+comply|did\s+not\s+comply)\b",
+                substitute_action=(r"\b(?:undertake\s+all\s+actions|"
+                    r"employ\s+others\s+to\s+carry\s+out|carry\s+out\s+such\s+work|"
+                    r"engage\s+others\s+to\s+carry\s+out|step(?:s|ped)?\s+in)\b"),
+                cost_recovery=(r"\b(?:at\s+the\s+cost\s+of|debt\s+due|"
+                    r"recover(?:s|ed|ing)?\s+(?:the\s+)?cost|reasonable\s+costs?)\b"))
+        else:
+            raise ValueError("unsupported reviewed event motif")
+        offsets = {name: [match.start(), match.end()] for name, pattern in patterns.items()
+            for match in [re.search(pattern, text, re.I)]}
     if (not isinstance(verification, dict)
         or verification.get("status") != "frozen_verified"
         or not isinstance(verification.get("method"), str)
@@ -642,14 +676,31 @@ def build_rgm_situation_memory(source, roles, verification, *, temporal_motif=No
         raise ValueError("a matching frozen reviewed-role receipt is required")
 
     if temporal_motif is not None:
-        labels = [temporal_motif["source_event"], temporal_motif["target_event"]]
+        labels = [temporal_motif["source_event"]]
+        if temporal_motif.get("intermediate_event"):
+            labels.append(temporal_motif["intermediate_event"])
+        labels.append(temporal_motif["target_event"])
         entity_ids = {label: "event:" + hashlib.sha256(label.encode()).hexdigest()[:16]
             for label in labels}
         entities = [dict(id=entity_ids[label], kind="event", label=label) for label in labels]
-        relations = [dict(id="notice_before_meeting", kind="before",
-            source=entity_ids[temporal_motif["source_event"]],
-            target=entity_ids[temporal_motif["target_event"]],
-            source_role="source_event", target_role="target_event")]
+        if temporal_motif == NOTICE_MEETING_MOTIF:
+            relations = [dict(id="notice_before_meeting", kind="before",
+                source=entity_ids[temporal_motif["source_event"]],
+                target=entity_ids[temporal_motif["target_event"]],
+                source_role="source_event", target_role="target_event")]
+        elif temporal_motif == FAILURE_STEP_IN_COST_MOTIF:
+            relations = [
+                dict(id="failure_before_substitute_action", kind="before",
+                    source=entity_ids[temporal_motif["source_event"]],
+                    target=entity_ids[temporal_motif["intermediate_event"]],
+                    source_role="source_event", target_role="target_event"),
+                dict(id="substitute_action_before_cost_recovery", kind="before",
+                    source=entity_ids[temporal_motif["intermediate_event"]],
+                    target=entity_ids[temporal_motif["target_event"]],
+                    source_role="source_event", target_role="target_event"),
+            ]
+        else:
+            raise ValueError("unsupported reviewed event motif")
     else:
         labels = []
         for role in ("failure_party", "cover_payer", "repayment_from", "repayment_to"):
@@ -846,6 +897,37 @@ def reviewed_query_situation(question, memories):
     if not isinstance(question, str) or not isinstance(memories, list):
         raise ValueError("reviewed query input is invalid")
     temporal = [item for item in memories if item.get("relation_kind") == "before"]
+    chain_relationships = [
+        dict(relation_kind="before", source_event="failure", target_event="substitute_action"),
+        dict(relation_kind="before", source_event="substitute_action", target_event="cost_recovery"),
+    ]
+    available_temporal = {
+        (item.get("source_event"), item.get("target_event")) for item in temporal}
+    failure = re.search(
+        r"\b(?:fail(?:s|ed|ure)?|not\s+done|does\s+not\s+comply|required\s+action\s+is\s+not\s+done)\b",
+        question, re.I)
+    substitute = re.search(
+        r"\b(?:substitute\s+(?:action|performance)|step(?:s|ped)?\s+in|"
+        r"someone\s+else\s+performs?|other\s+party\s+(?:acts?|performs?)|"
+        r"employs?\s+others|performs?\s+it)\b", question, re.I)
+    cost = re.search(
+        r"\b(?:cost(?:s)?(?:\s+is|\s+are)?\s+recover(?:ed|y)?|debt|"
+        r"responsible\s+party\s+pays?|cost\s+consequence|pays?\s+the\s+cost)\b",
+        question, re.I)
+    if (failure is not None and substitute is not None and cost is not None
+        and failure.start() < substitute.start() < cost.start()
+        and {(item["source_event"], item["target_event"])
+            for item in chain_relationships} <= available_temporal):
+        return dict(status="complete", fields=chain_relationships[0],
+            relationships=chain_relationships,
+            motif="failure_substitute_action_cost_recovery",
+            spans=[
+                dict(field="failure", start=failure.start(), end=failure.end(), text=failure.group()),
+                dict(field="substitute_action", start=substitute.start(), end=substitute.end(),
+                    text=substitute.group()),
+                dict(field="cost_recovery", start=cost.start(), end=cost.end(), text=cost.group()),
+            ],
+            method="explicit failure, substitute-action, cost-recovery sequence resolved from the question")
     if temporal:
         notice = re.search(r"\b(?:notice|notification|notify|notifies|notified)\b", question, re.I)
         meeting = re.search(r"\b(?:meet|meets|meeting)\b", question, re.I)
@@ -1500,7 +1582,8 @@ RGM_TOM_DOCUMENT_SCOPE = ("Project document answers: RGM finds exact evidence; r
 RGM_TOM_BRIDGE_VERSION_V1 = "tom-assist-rgm-tom-reviewed-situations/1"
 RGM_TOM_BRIDGE_VERSION_V2 = "tom-assist-rgm-tom-reviewed-situations/2"
 RGM_TOM_BRIDGE_VERSION_V3 = "tom-assist-rgm-tom-reviewed-situations/3"
-RGM_TOM_BRIDGE_VERSION = "tom-assist-rgm-tom-reviewed-situations/4"
+RGM_TOM_BRIDGE_VERSION_V4 = "tom-assist-rgm-tom-reviewed-situations/4"
+RGM_TOM_BRIDGE_VERSION = "tom-assist-rgm-tom-reviewed-situations/5"
 RGM_TOM_SITUATION_PREFIX = "rgm-tom-situation-"
 RGM_SOURCE_AUTHORITY_VERSION = "tom-assist-rgm-source-authority/1"
 RGM_SOURCE_AUTHORITY_PREFIX = "rgm-source-authority-"
@@ -1845,7 +1928,8 @@ class RgmDocumentService:
             encoded = stored["record"]
             if encoded.get("version") not in (
                 RGM_TOM_BRIDGE_VERSION_V1, RGM_TOM_BRIDGE_VERSION_V2,
-                RGM_TOM_BRIDGE_VERSION_V3, RGM_TOM_BRIDGE_VERSION,
+                RGM_TOM_BRIDGE_VERSION_V3, RGM_TOM_BRIDGE_VERSION_V4,
+                RGM_TOM_BRIDGE_VERSION,
             ):
                 raise ValueError("stored reviewed situation has an unsupported version")
             rgm = ReflectionGatedMemory()
@@ -1882,7 +1966,8 @@ class RgmDocumentService:
                 previous_write_keys=legacy.get("previous_write_keys", []))]
         if (not isinstance(memories, list)
             or (not memories and encoded.get("version") not in {
-                RGM_TOM_BRIDGE_VERSION_V3, RGM_TOM_BRIDGE_VERSION})
+                RGM_TOM_BRIDGE_VERSION_V3, RGM_TOM_BRIDGE_VERSION_V4,
+                RGM_TOM_BRIDGE_VERSION})
             or len({memory.get("memory_id") for memory in memories}) != len(memories)):
             raise ValueError("stored reviewed ToM memories are invalid")
         return copy.deepcopy(memories)
@@ -2160,16 +2245,25 @@ class RgmDocumentService:
         if query["status"] != "complete":
             return dict(status="no_query_structure", recalled_source_ids=[], query_structure=query,
                 whole_tree_score=False, all_branch_cell_coordinates_compared=False)
-        matched = [memory for memory in memories
-            if self._relationship_key(memory) == self._relationship_key(query["fields"])]
+        query_relationships = query.get("relationships", [query["fields"]])
+        matched = []
+        for relationship in query_relationships:
+            candidates_for_relationship = [memory for memory in memories
+                if self._relationship_key(memory) == self._relationship_key(relationship)]
+            if len(candidates_for_relationship) != 1:
+                matched = []
+                break
+            matched.append(candidates_for_relationship[0])
         if not matched:
             return dict(status="no_matching_structure", recalled_source_ids=[],
                 query_structure=query, whole_tree_score=False,
                 all_branch_cell_coordinates_compared=False)
         active_source_ids = {row["situation"]["source_id"] for row in rows
             if row["situation"]["provenance"]["document_id"] in active_documents}
-        query_sources = ([source_id for source_id in matched[0]["source_ids"]
-            if source_id in active_source_ids] if len(matched) == 1 else [])
+        bound_sets = [{source_id for source_id in memory["source_ids"]
+            if source_id in active_source_ids} for memory in matched]
+        query_sources = list(dict.fromkeys(source_id for source_id in matched[0]["source_ids"]
+            if all(source_id in bound for bound in bound_sets)))
         conflicts = []
         for memory in packet["memories"]:
             reason = reviewed_source_conflict(memory.get("content"), query["fields"]["relation_kind"])
@@ -2215,20 +2309,41 @@ class RgmDocumentService:
                 conflict_sources=authority_issues,
                 reviewed_source_ids=review_targets, query_structure=query,
                 whole_tree_score=False, all_branch_cell_coordinates_compared=False)
-        if not selected:
+        structural_chain = query.get("motif") == "failure_substitute_action_cost_recovery"
+        if not selected and not structural_chain:
             return dict(status="no_candidate_situation", recalled_source_ids=[],
                 query_structure=query, whole_tree_score=False,
                 all_branch_cell_coordinates_compared=False)
         profile = self._tom_runtime_profile(project_id)
-        result = self.tom_worker("rgm_tom_recall", dict(_tom_profile=profile,
-            memories=memories,
-            candidate_source_ids=[row["situation"]["source_id"] for row in selected],
-            query_situation=query["fields"],
-            current=rows[-1]["encoded"]["tree"]))
-        if (result.get("whole_tree_score") is not False
-            or result.get("all_branch_cell_coordinates_compared") is not True):
-            raise ValueError("ToM recall did not preserve the distributed response")
-        return result
+        access_source_ids = (query_sources if structural_chain else
+            [row["situation"]["source_id"] for row in selected])
+        results = []
+        for relationship in query_relationships:
+            result = self.tom_worker("rgm_tom_recall", dict(_tom_profile=profile,
+                memories=memories, candidate_source_ids=access_source_ids,
+                query_situation=relationship, current=rows[-1]["encoded"]["tree"]))
+            if (result.get("whole_tree_score") is not False
+                or result.get("all_branch_cell_coordinates_compared") is not True):
+                raise ValueError("ToM recall did not preserve the distributed response")
+            results.append(result)
+        if len(results) == 1:
+            return results[0]
+        recalled_sets = [set(result.get("recalled_source_ids", [])) for result in results]
+        recalled = [source_id for source_id in query_sources
+            if all(source_id in values for values in recalled_sets)]
+        state_hashes = {result.get("tree_state_hash") for result in results}
+        if len(state_hashes) != 1 or any(result.get("tree_unchanged") is not True for result in results):
+            raise ValueError("ToM chain recall changed or mixed saved tree states")
+        return dict(status="recalled" if recalled else "no_matching_memory",
+            recalled_source_ids=recalled,
+            returns=[item for result in results for item in result.get("returns", [])],
+            candidate_checks=[item for result in results
+                for item in result.get("candidate_checks", [])],
+            tree_state_hash=next(iter(state_hashes)), tree_unchanged=True,
+            root_assembly_calls=sum(result.get("root_assembly_calls", 0) for result in results),
+            whole_tree_score=False, all_branch_cell_coordinates_compared=True,
+            query_routes=len(results),
+            access_mode="reviewed multi-event structure routed independently through ToM")
 
     def _restore_recalled_sources(self, library, packet, structural):
         """Reopen exact RGM passages linked by a recalled ToM structure."""

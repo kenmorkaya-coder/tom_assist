@@ -997,19 +997,21 @@ tested. A
 new structure must write non-overlapping tree locations; otherwise it is
 rejected. Only the newest large checkpoint and reference archive are retained.
 
-The same review panel supports the one admitted temporal structure: written
-notice before a required meeting. The first exact passage teaches only its
-explicit temporal-link matrix. Reviewing another passage with the same
-structure binds its immutable RGM source pointer without another ToM write. One
-RGM access candidate may then open the learned memory; the bridge reopens and
-displays every active exact passage bound to it. This does not perform automatic
-motif extraction or accept arbitrary event graphs.
+The same review panel supports two admitted event structures: written notice
+before a required meeting, and failure followed by substitute action followed
+by cost recovery. The latter is retained as two separate ordered relationships;
+both complete distributed returns and native slot maps must match before their
+shared source locations reopen. Reviewing another passage with the same
+structure binds its immutable RGM source pointer without another ToM write. The
+failure/substitute/cost structure can reopen its reviewed sources even when RGM
+supplies no correct initial candidate. This does not perform automatic motif
+extraction or accept arbitrary event graphs.
 
 During an answer, MiniLM/RGM still locates candidate source passages. When the
-question explicitly states either a supported insurance relationship or the
-notice-before-meeting sequence, its reviewed structure is resolved from the
-query alone. The structure is compiled into one 32×32 field and routed through
-the saved tree once. The worker compares the complete returned
+question explicitly states a supported insurance relationship or an admitted
+event sequence, its reviewed structure is resolved from the query alone. Each
+relationship is compiled into one 32×32 field and routed independently through
+the saved tree. The worker compares each complete returned
 branch-position-preserving signed field and exact native slot map with the
 candidate memories. It does not replay every candidate's teaching input, average
 branches or compute a whole-tree score.
