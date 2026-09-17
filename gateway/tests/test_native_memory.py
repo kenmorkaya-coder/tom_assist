@@ -927,9 +927,34 @@ def test_reviewed_rgm_situation_is_persisted_taught_and_used_during_answer(tmp_p
         trace = result["trace"]["retrieval"]["reviewed_tom_memory"]
         assert trace["status"] == "recalled" and trace["whole_tree_score"] is False
         assert trace["all_branch_cell_coordinates_compared"] is True
+        assert trace["evidence_scope"]["mode"] == "reviewed_tom_sources"
         assert [call[0] for call in calls] == ["rgm_tom_learn", "rgm_tom_recall"]
     finally:
         library.db.close()
+
+
+def test_reviewed_tom_return_binds_reader_to_its_exact_rgm_source():
+    from gateway.native_memory import bind_recalled_rgm_evidence, rgm_candidate_source_id
+    def memory(doc_id, start, end):
+        return dict(id=f"chunk-{start}", content="source", evidence_reference=dict(
+            doc_id=doc_id, start=start, end=end))
+    wrong = memory("document", 0, 10)
+    correct = memory("document", 10, 20)
+    correct_id = rgm_candidate_source_id(correct)
+    selected, scope = bind_recalled_rgm_evidence(dict(memories=[wrong, correct]),
+        dict(status="recalled", recalled_source_ids=[correct_id]))
+    assert selected == [correct]
+    assert scope == dict(mode="reviewed_tom_sources", source_ids=[correct_id],
+        candidate_count=2, selected_count=1)
+
+
+def test_rgm_reader_keeps_all_candidates_when_tom_returns_no_memory():
+    from gateway.native_memory import bind_recalled_rgm_evidence
+    memories = [dict(id="one"), dict(id="two")]
+    selected, scope = bind_recalled_rgm_evidence(dict(memories=memories),
+        dict(status="no_candidate_situation", recalled_source_ids=[]))
+    assert selected == memories
+    assert scope == dict(mode="all_rgm_candidates", source_ids=[], candidate_count=2)
 
 
 def test_reviewed_rgm_situation_refuses_changed_roles_or_collapsed_recall(tmp_path):

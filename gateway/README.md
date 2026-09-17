@@ -906,9 +906,12 @@ candidate has reviewed ToM memory, the worker reloads the saved tree, replays
 that candidate's canonical reviewed structural input, and requires it to
 reproduce its complete branch-position-preserving signed return and exact owned
 slots. The question itself is not compiled into a ToM matrix in this bridge.
-No branch average or whole-tree score is computed.
-The original RGM passage then goes to the evidence reader. ToM supplies
-persistent structural memory; RGM supplies exact text and provenance.
+No branch average or whole-tree score is computed. When reviewed memory returns,
+the evidence reader receives the exact RGM passages bound to those returned
+memories instead of unrelated or mirror-image candidates from the wider semantic
+neighbourhood. With no reviewed return, the existing RGM candidate path is
+unchanged. ToM supplies persistent structural memory; RGM supplies exact text
+and provenance.
 
 MiniLM exits before the fixed local Gemma reader loads. Gemma uses the same
 8,192-token prompt bound. The reader now caps allocation at 17 GiB, following

@@ -465,6 +465,41 @@ def rgm_role_record_receipt(source, roles):
         source_text_sha256=hashlib.sha256(text.encode()).hexdigest(), roles=fields))
 
 
+def rgm_candidate_source_id(memory):
+    """Derive the reviewed-memory source identity from immutable RGM provenance."""
+    proof = memory.get("evidence_reference") if isinstance(memory, dict) else None
+    if (not isinstance(proof, dict) or not isinstance(proof.get("doc_id"), str)
+        or type(proof.get("start")) is not int or type(proof.get("end")) is not int
+        or proof["start"] < 0 or proof["end"] <= proof["start"]):
+        raise ValueError("RGM candidate lacks immutable source provenance")
+    return "SRC-" + hashlib.sha256(
+        (proof["doc_id"] + f":{proof['start']}:{proof['end']}").encode()).hexdigest()[:16]
+
+
+def bind_recalled_rgm_evidence(packet, structural):
+    """Use exact source passages returned by reviewed ToM memory.
+
+    This is an identity/provenance join. It does not score, average or inspect
+    the distributed field, which has already been checked by native recall.
+    """
+    memories = packet.get("memories") if isinstance(packet, dict) else None
+    if not isinstance(memories, list):
+        raise ValueError("RGM packet memories are invalid")
+    recalled = structural.get("recalled_source_ids", []) if isinstance(structural, dict) else []
+    if not recalled:
+        return memories, dict(mode="all_rgm_candidates", source_ids=[], candidate_count=len(memories))
+    if (not isinstance(recalled, list) or any(not isinstance(value, str) or not value for value in recalled)
+        or len(set(recalled)) != len(recalled)):
+        raise ValueError("reviewed ToM returned invalid source identities")
+    wanted = set(recalled)
+    selected = [memory for memory in memories if rgm_candidate_source_id(memory) in wanted]
+    found = {rgm_candidate_source_id(memory) for memory in selected}
+    if found != wanted:
+        raise ValueError("reviewed ToM source is absent from the authenticated RGM candidates")
+    return selected, dict(mode="reviewed_tom_sources", source_ids=recalled,
+        candidate_count=len(memories), selected_count=len(selected))
+
+
 def build_rgm_situation_memory(source, roles, verification):
     """Package reviewed directional roles as a native RGM snapshot.
 
@@ -1484,8 +1519,7 @@ class RgmDocumentService:
         candidates = []
         for memory in packet["memories"]:
             proof = memory["evidence_reference"]
-            source_id = "SRC-" + hashlib.sha256(
-                (proof["doc_id"] + f":{proof['start']}:{proof['end']}").encode()).hexdigest()[:16]
+            source_id = rgm_candidate_source_id(memory)
             if proof["doc_id"] in active_documents and source_id not in candidates:
                 candidates.append(source_id)
         selected = [row for row in rows if row["situation"]["source_id"] in candidates]
@@ -1605,15 +1639,17 @@ class RgmDocumentService:
                             content=missing[digest], content_summary="", content_hash=digest), dict(vector=vector))
             packet, retrieval = retrieve_rgm_project_documents(library, prepared, question, vectors)
             structural = self.recall_situations(project_id, library, packet)
+            reader_memories, evidence_scope = bind_recalled_rgm_evidence(packet, structural)
+            structural["evidence_scope"] = evidence_scope
             retrieval["reviewed_tom_memory"] = structural
-            if packet["memories"]:
+            if reader_memories:
                 reader_packet = dict(memories=[{k: m[k] for k in ("id", "content", "evidence_reference")}
-                    for m in packet["memories"]])
+                    for m in reader_memories])
                 reading = self.worker("rgm_read", dict(question=question, packet=reader_packet))
             else:
                 reading = dict(status="not_supported", answers=[dict(question=question, text=None, status="not_supported")], parts=[])
             # Rebind every outgoing citation to the current authenticated packet.
-            sources = {m["evidence_reference"]["corpus_id"] + "/" + m["id"]: m for m in packet["memories"]}
+            sources = {m["evidence_reference"]["corpus_id"] + "/" + m["id"]: m for m in reader_memories}
             approved, lines = {}, []
             for part in reading["answers"]:
                 if part.get("text") is None:
