@@ -901,24 +901,23 @@ to six reviewed situations, matching the six orthogonal addresses already
 tested. A new save must write non-overlapping tree locations; otherwise it is
 rejected. Only the newest large checkpoint and reference archive are retained.
 
-During an answer, MiniLM/RGM still locates candidate source passages. If a
-candidate has reviewed ToM memory, the worker reloads the saved tree, replays
-that candidate's canonical reviewed structural input, and requires it to
-reproduce its complete branch-position-preserving signed return and exact owned
-slots. The question itself is not compiled into a ToM matrix in this bridge.
-No branch average or whole-tree score is computed. When reviewed memory returns,
-the evidence reader receives the exact RGM passages bound to those returned
-memories instead of unrelated or mirror-image candidates from the wider semantic
-neighbourhood. With no reviewed return, the existing RGM candidate path is
-unchanged. ToM supplies persistent structural memory; RGM supplies exact text
-and provenance.
+During an answer, MiniLM/RGM still locates candidate source passages. When the
+question explicitly states the failing party and the party obtaining replacement
+cover, those names are resolved to identities already retained in the reviewed
+RGM memories. The relationship is compiled into one 32×32 field and routed
+through the saved tree once. The worker compares the complete returned
+branch-position-preserving signed field and exact native slot map with the
+candidate memories. It does not replay every candidate's teaching input, average
+branches or compute a whole-tree score.
 
-If several mirrored reviewed memories return, the bounded insurance evidence
-check compares the explicitly stated failure party and replacement-cover party
-against every complete linked reimbursement clause. Document-style party
-abbreviations such as `Transport for NSW` / `TfNSW` and `Sydney Metro` / `SM`
-are matched mechanically. A unique four-role chain returns its complete exact
-clause; an ambiguous, qualified or unparsed chain fails closed.
+Only exact native returns bind the evidence reader to reviewed RGM passages.
+Document-style party names such as `Transport for NSW` / `TfNSW` and
+`Sydney Metro` / `SM` are matched mechanically. If the question does not state
+one complete relationship, ToM makes no selection claim and the existing RGM
+candidate path remains available. The bounded insurance evidence check then
+verifies the complete linked reimbursement clause; an ambiguous, qualified or
+unparsed chain fails closed. ToM supplies persistent structural memory; RGM
+supplies exact text and provenance.
 
 MiniLM exits before the fixed local Gemma reader loads. Gemma uses the same
 8,192-token prompt bound. The reader now caps allocation at 17 GiB, following

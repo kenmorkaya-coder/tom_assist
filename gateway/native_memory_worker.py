@@ -70,9 +70,7 @@ def native_memory_worker():
                     raise ValueError("reviewed ToM address fields are not orthogonal")
                 return values
 
-            def situation_matrix(item):
-                text = item["text"]
-                failure, cover = item["failure_party"], item["cover_payer"]
+            def relationship_matrix(failure, cover, text):
                 entities = []
                 for identifier, party in (("failure_party", failure), ("cover_payer", cover)):
                     start = text.find(party)
@@ -94,6 +92,9 @@ def native_memory_worker():
                 if value.shape != (32, 32) or not np.isfinite(value).all():
                     raise ValueError("reviewed relationship produced an invalid 32 by 32 field")
                 return value
+
+            def situation_matrix(item):
+                return relationship_matrix(item["failure_party"], item["cover_payer"], item["text"])
 
             situations = payload["situations"]
             if (not isinstance(situations, list) or not 1 <= len(situations) <= 6
@@ -119,11 +120,12 @@ def native_memory_worker():
             if current is not None and tree.state_hash() != current["state_hash"]:
                 raise ValueError("project ToM state changed")
 
-            def capture(item, readings):
+            def capture(item, readings, *, matrix_value=None):
                 before = tree.state_hash()
                 order = list(readings["order"])
                 tips = [branch for branch in order if not readings["children"][branch]]
-                path = precision_route_from_readings(matrices[item["source_id"]], readings)
+                value = matrices[item["source_id"]] if matrix_value is None else matrix_value
+                path = precision_route_from_readings(value, readings)
                 _, returned, selected = tree._terminal_returns(path)
                 field = np.stack([returned[branch] for branch in tips])
                 capacity = len(next(iter(tree.paired_units.values())).occupied)
@@ -196,6 +198,17 @@ def native_memory_worker():
             else:
                 if current is None:
                     raise ValueError("reviewed ToM recall requires a learned project state")
+                query = payload.get("query_situation")
+                if (not isinstance(query, dict) or set(query) != {"failure_party", "cover_payer"}
+                    or not all(isinstance(query[key], str) and query[key].strip() for key in query)
+                    or query["failure_party"] == query["cover_payer"]):
+                    raise ValueError("one complete reviewed query relationship is required")
+                known_parties = {item[key] for item in situations
+                    for key in ("failure_party", "cover_payer")}
+                if not set(query.values()) <= known_parties:
+                    raise ValueError("query relationship contains an unknown reviewed party")
+                query_text = query["failure_party"] + " " + query["cover_payer"]
+                query_matrix = relationship_matrix(query["failure_party"], query["cover_payer"], query_text)
                 reference_path = Path(current["reference_path"])
                 if (not reference_path.resolve().is_relative_to(state_dir)
                     or checksum(reference_path) != current["reference_sha256"]):
@@ -211,29 +224,34 @@ def native_memory_worker():
                         or archive["terminal_branch_ids"].tolist() != [branch for branch in readings["order"]
                             if not readings["children"][branch]]):
                         raise ValueError("project ToM branch positions changed")
-                    recalled = []
-                    returns = []
+                    _, _, query_field, query_active, query_keys = capture(
+                        {"source_id": "__query__"}, readings, matrix_value=query_matrix)
+                    recalled = []; returns = []; checks = []
                     for source_id in payload["candidate_source_ids"]:
                         index = source_ids.index(source_id)
                         item = situations[index]
-                        _, _, field, active, keys = capture(item, readings)
                         expected_keys = {(bank, int(slot)) for bank, slot in item["previous_write_keys"]}
-                        exact = (np.array_equal(field, archive["fields"][index])
-                            and np.array_equal(active, archive["active_slots"][index])
-                            and keys == expected_keys)
-                        if not exact:
-                            raise ValueError("candidate did not reproduce its complete distributed ToM memory")
-                        recalled.append(source_id)
-                        returns.append(dict(source_id=source_id, status="exact_native_return",
-                            field_shape=list(field.shape), field_sha256=hashlib.sha256(field.tobytes()).hexdigest(),
-                            active_slot_count=len(keys)))
+                        exact_field = np.array_equal(query_field, archive["fields"][index])
+                        exact_slots = (np.array_equal(query_active, archive["active_slots"][index])
+                            and query_keys == expected_keys)
+                        checks.append(dict(source_id=source_id,
+                            same_complete_branch_cell_field=bool(exact_field),
+                            same_complete_native_slot_map=bool(exact_slots)))
+                        if exact_field and exact_slots:
+                            recalled.append(source_id)
+                            returns.append(dict(source_id=source_id, status="exact_native_return",
+                                field_shape=list(query_field.shape),
+                                field_sha256=hashlib.sha256(query_field.tobytes()).hexdigest(),
+                                active_slot_count=len(query_keys)))
                 now = checkpoint.stat()
                 if tree.state_hash() != before_state or (stat.st_size, stat.st_mtime_ns) != (now.st_size, now.st_mtime_ns):
                     raise ValueError("reviewed ToM recall changed the saved tree")
-                result = dict(status="recalled", recalled_source_ids=recalled, returns=returns,
+                result = dict(status="recalled" if recalled else "no_matching_memory",
+                    recalled_source_ids=recalled, returns=returns, candidate_checks=checks,
                     tree_state_hash=before_state, tree_unchanged=True, root_assembly_calls=0,
                     whole_tree_score=False, all_branch_cell_coordinates_compared=True,
-                    access_mode="RGM candidate address replays its canonical reviewed structural input")
+                    query_routes=1,
+                    access_mode="one query-derived reviewed structural field routes once through ToM")
         elif operation == "rgm_extract":
             from gateway.vendor.rgm17d.interface.doc_ingest import read_pdf_file, read_txt_file
             source = Path(payload["source_path"])

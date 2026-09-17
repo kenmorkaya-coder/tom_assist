@@ -724,6 +724,80 @@ def native_question_parts(question, generate):
     return parts, trace
 
 
+def reviewed_query_situation(question, situations):
+    """Resolve one explicit question relationship to reviewed RGM party labels.
+
+    This is intentionally narrow.  It reads only the relationship stated in
+    the question and the identities already retained in reviewed RGM memories.
+    It does not inspect source passages or use a known answer.
+    """
+    import re
+    if not isinstance(question, str) or not isinstance(situations, list):
+        raise ValueError("reviewed query input is invalid")
+    labels = []
+    for item in situations:
+        if not isinstance(item, dict):
+            raise ValueError("reviewed situation is invalid")
+        for key in ("failure_party", "cover_payer"):
+            value = item.get(key)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError("reviewed situation party is invalid")
+            if value not in labels:
+                labels.append(value)
+
+    name = (r"(?!(?:If|When|After|Before|Under|Which|Who|What|Does|Do|Is|Are|Must|Can|Should|The|Any)\b)"
+            r"[A-Z][\w'-]*(?:\s+(?:for|of|the|[A-Z][\w'-]*)){0,5}")
+    patterns = {
+        "failure_party": [
+            rf"(?P<party>{name})\s+(?:has\s+)?failed to demonstrate compliance",
+            rf"(?P<party>{name})[’']s failure to demonstrate compliance",
+            rf"(?P<party>{name})\s+(?:does|did)\s+not\s+"
+            rf"(?:prove|provide|show|demonstrate)\s+(?:its\s+)?(?:insurance\s+)?compliance",
+            rf"(?P<party>{name})\s+fails?\s+to\s+"
+            rf"(?:prove|provide|show|demonstrate)\s+(?:its\s+)?(?:insurance\s+)?compliance",
+        ],
+        "cover_payer": [
+            rf"(?P<party>{name})\s+(?:has\s+)?(?:paid for|bought|purchased)\s+"
+            rf"(?:replacement|substitute)\s+(?:insurance|cover)",
+            rf"(?:can|may|could)\s+(?P<party>{name})\s+"
+            rf"(?:arrange|effect|obtain|maintain|buy|purchase|pay for)\s+"
+            rf"(?:(?:the|that|replacement|substitute)\s+)*(?:insurance|cover)",
+            rf"(?P<party>{name})\s+(?:arranges?|effects?|obtains?|maintains?|buys?|purchases?|pays? for)\s+"
+            rf"(?:(?:the|that|replacement|substitute)\s+)*(?:insurance|cover)",
+        ],
+    }
+    raw = {"failure_party": [], "cover_payer": []}
+    spans = []
+    for key, rules in patterns.items():
+        for rule in rules:
+            for match in re.finditer(rule, question):
+                value = match["party"]
+                if value not in raw[key]:
+                    raw[key].append(value)
+                    spans.append(dict(field=key, start=match.start("party"),
+                        end=match.end("party"), text=value))
+
+    def forms(value):
+        words = re.findall(r"[A-Za-z0-9]+", value)
+        direct = "".join(words).casefold()
+        acronym = "".join(word if len(word) > 1 and word.isupper() else word[0]
+            for word in words).casefold() if words else ""
+        return {direct, acronym} - {""}
+
+    resolved = {}
+    for key, values in raw.items():
+        matches = {label for value in values for label in labels if forms(value) & forms(label)}
+        if len(matches) != 1:
+            return dict(status="incomplete", reason=f"question_{key}_not_unique",
+                fields={name: None for name in raw}, spans=spans)
+        resolved[key] = next(iter(matches))
+    if resolved["failure_party"] == resolved["cover_payer"]:
+        return dict(status="incomplete", reason="question_relationship_has_one_party",
+            fields=resolved, spans=spans)
+    return dict(status="complete", fields=resolved, spans=spans,
+        method="explicit question relationship resolved to reviewed RGM identities")
+
+
 def check_rgm_replacement_chain(question, sources):
     """Compare explicit replacement-insurance roles within a linked clause.
 
@@ -1529,7 +1603,7 @@ class RgmDocumentService:
             write_count=len(result["write_keys"]), full_field_reference=result["reference"],
             retired_previous_artifacts=retired)
 
-    def recall_situations(self, project_id, library, packet):
+    def recall_situations(self, project_id, library, packet, question):
         rows = self._situation_rows(library)
         if not rows:
             return dict(status="no_learned_situations", recalled_source_ids=[],
@@ -1545,10 +1619,16 @@ class RgmDocumentService:
         if not selected:
             return dict(status="no_candidate_situation", recalled_source_ids=[],
                 whole_tree_score=False, all_branch_cell_coordinates_compared=False)
+        query = reviewed_query_situation(question,
+            [row["encoded"]["worker_situation"] for row in rows])
+        if query["status"] != "complete":
+            return dict(status="no_query_structure", recalled_source_ids=[], query_structure=query,
+                whole_tree_score=False, all_branch_cell_coordinates_compared=False)
         profile = self._tom_runtime_profile(project_id)
         result = self.tom_worker("rgm_tom_recall", dict(_tom_profile=profile,
             situations=[row["encoded"]["worker_situation"] for row in rows],
             candidate_source_ids=[row["situation"]["source_id"] for row in selected],
+            query_situation=query["fields"],
             current=rows[-1]["encoded"]["tree"]))
         if (result.get("whole_tree_score") is not False
             or result.get("all_branch_cell_coordinates_compared") is not True):
@@ -1657,7 +1737,7 @@ class RgmDocumentService:
                         library.retain(SimpleNamespace(id="rgm-vector-" + cache_identity + "-" + digest,
                             content=missing[digest], content_summary="", content_hash=digest), dict(vector=vector))
             packet, retrieval = retrieve_rgm_project_documents(library, prepared, question, vectors)
-            structural = self.recall_situations(project_id, library, packet)
+            structural = self.recall_situations(project_id, library, packet, question)
             reader_memories, evidence_scope = bind_recalled_rgm_evidence(packet, structural)
             structural["evidence_scope"] = evidence_scope
             retrieval["reviewed_tom_memory"] = structural

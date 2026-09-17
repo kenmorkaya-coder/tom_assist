@@ -386,6 +386,29 @@ def test_rgm_replacement_chain_distinguishes_mirrored_abbreviated_parties(questi
     assert result["matches"][0]["mismatches"] == []
 
 
+@pytest.mark.parametrize("question,expected", [
+    ("If Transport for NSW does not prove its insurance compliance, can Sydney Metro arrange the insurance, and who repays the cost?",
+        dict(failure_party="TfNSW", cover_payer="SM")),
+    ("If Sydney Metro does not prove its insurance compliance, can Transport for NSW arrange the insurance, and who repays the cost?",
+        dict(failure_party="SM", cover_payer="TfNSW")),
+])
+def test_reviewed_query_situation_resolves_mirrored_aliases_without_source_evidence(question, expected):
+    from gateway.native_memory import reviewed_query_situation
+    situations = [dict(failure_party="TfNSW", cover_payer="SM"),
+        dict(failure_party="SM", cover_payer="TfNSW")]
+    result = reviewed_query_situation(question, situations)
+    assert result["status"] == "complete"
+    assert result["fields"] == expected
+
+
+def test_reviewed_query_situation_refuses_incomplete_or_unrelated_wording():
+    from gateway.native_memory import reviewed_query_situation
+    situations = [dict(failure_party="TfNSW", cover_payer="SM"),
+        dict(failure_party="SM", cover_payer="TfNSW")]
+    for question in ("Who reimburses whom?", "If Alpha fails, can Beta arrange cover?"):
+        assert reviewed_query_situation(question, situations)["status"] == "incomplete"
+
+
 def test_rgm_reader_chain_proof_selects_whole_condition_and_repayment_from_bound_source():
     from gateway.native_memory import read_rgm_source_evidence
     source=_replacement_chain_source();packet=_rgm_reader_packet();memory=packet["memories"][0]
@@ -909,6 +932,7 @@ def _reviewed_tom_worker(calls, *, damage=None):
                 reference=dict(field_shape=[254, 32, 32], field_sha256=f"field-{sequence}"),
                 whole_tree_score=False, all_branch_cell_coordinates_preserved=True)
         if operation == "rgm_tom_recall":
+            assert payload["query_situation"] == dict(failure_party="Orchid", cover_payer="Rowan")
             return dict(status="recalled", recalled_source_ids=payload["candidate_source_ids"],
                 returns=[dict(source_id=source_id, status="exact_native_return",
                     field_shape=[254, 32, 32], field_sha256="field", active_slot_count=381)
@@ -939,13 +963,19 @@ def test_reviewed_rgm_situation_is_persisted_taught_and_used_during_answer(tmp_p
         rows = library.records_with_prefix(RGM_TOM_SITUATION_PREFIX)
         assert len(rows) == 1 and rows[0]["content_hash"] == hashlib.sha256(rows[0]["content"].encode()).hexdigest()
         assert service.learn_situation("project", library, payload)["duplicate"]
-        result = service.answer("project", library, "Who reports leaks to Rowan?")
+        question = "If Orchid fails to demonstrate compliance, can Rowan obtain replacement cover?"
+        result = service.answer("project", library, question)
         assert result["status"] == "supported" and result["engine"] == "rgm+tom"
         assert result["purity"]["tree_calls"] == 1
         trace = result["trace"]["retrieval"]["reviewed_tom_memory"]
         assert trace["status"] == "recalled" and trace["whole_tree_score"] is False
         assert trace["all_branch_cell_coordinates_compared"] is True
         assert trace["evidence_scope"]["mode"] == "reviewed_tom_sources"
+        generic = service.answer("project", library, "Who reports leaks to Rowan?")
+        assert generic["status"] == "supported" and generic["engine"] == "rgm"
+        generic_trace = generic["trace"]["retrieval"]["reviewed_tom_memory"]
+        assert generic_trace["status"] == "no_query_structure"
+        assert generic["purity"]["tree_calls"] == 0
         assert [call[0] for call in calls] == ["rgm_tom_learn", "rgm_tom_recall"]
     finally:
         library.db.close()
@@ -989,6 +1019,7 @@ def test_reviewed_rgm_situation_refuses_changed_roles_or_collapsed_recall(tmp_pa
             service.learn_situation("project", library, dict(payload,
                 roles=dict(failure_party="Rowan", cover_payer="Orchid")))
         with pytest.raises(ValueError, match="preserve the distributed response"):
-            service.answer("project", library, "Who reports leaks to Rowan?")
+            service.answer("project", library,
+                "If Orchid fails to demonstrate compliance, can Rowan obtain replacement cover?")
     finally:
         library.db.close()
