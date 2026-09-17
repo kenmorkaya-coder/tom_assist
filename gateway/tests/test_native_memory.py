@@ -457,6 +457,25 @@ def test_rgm_reader_binds_complete_quote_and_keeps_missing_part_separate():
     assert all(c["sources"][0]["text"] == packet["memories"][0]["content"] for c in calls)
 
 
+def test_rgm_reader_uses_short_source_alias_and_rebinds_complete_server_id():
+    from gateway.native_memory import read_rgm_source_evidence
+    packet = _rgm_reader_packet()
+    canonical_id = "rgm-corpus-" + "7daab18e" * 8 + "/chunk_0"
+    packet["memories"][0]["id"] = "chunk_0"
+    packet["memories"][0]["evidence_reference"].update(
+        corpus_id=canonical_id.rsplit("/", 1)[0], chunk_id="chunk_0")
+
+    def generate(instruction, data, limit):
+        assert data["sources"][0]["source_id"] == "source_1"
+        return dict(raw=json.dumps(dict(status="supported", source_id="source_1",
+            answer_quote=packet["memories"][0]["content"])))
+
+    result = read_rgm_source_evidence("Who pays the premiums?", packet, generate)
+    assert result["status"] == "supported"
+    assert result["answers"][0]["source_id"] == canonical_id
+    assert result["parts"][0]["selection"]["reader_source_alias"] == "source_1"
+
+
 @pytest.mark.parametrize("damage", ["invented_quote", "wrong_source", "changed_source"])
 def test_rgm_reader_rejects_unbound_answer_or_changed_source(damage):
     from gateway.native_memory import read_rgm_source_evidence

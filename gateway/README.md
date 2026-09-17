@@ -1015,6 +1015,12 @@ candidate memories. It does not replay every candidate's teaching input, average
 branches or compute a whole-tree score.
 
 Only exact native returns bind the evidence reader to reviewed RGM passages.
+The language reader sees short request-local source aliases rather than the
+long authenticated corpus hashes. A supported alias is rebound to the complete
+server-owned source ID before exact-span validation; an unknown alias or altered
+source still fails closed. This prevents a correct quotation from being lost
+because a language model copied a long hash incorrectly without weakening the
+source binding.
 Document-style party names such as `Transport for NSW` / `TfNSW` and
 `Sydney Metro` / `SM` are matched mechanically. If the question does not state
 one complete relationship, ToM makes no selection claim and the existing RGM
@@ -1040,9 +1046,11 @@ extraction rather than repair it speculatively.
 
 The option is off by default. It takes precedence over the earlier frozen
 native-memory profile on this explicit answer endpoint when enabled; other
-chat/preview/commit paths remain independent. A separate isolated real desktop
-run now exercises import, local answering and opening source citations. This
-does not establish ToM-versus-RGM benefit or general document-answer accuracy.
+chat/preview/commit paths remain independent. The isolated desktop run now
+exercises import, reviewed teaching, shared-source binding and three live recall
+questions. It establishes the bounded cross-contract source-linking behavior;
+it does not establish general document-answer accuracy or automatic motif
+extraction.
 
 Initial app-path check: three of four new questions produced correct outcomes.
 The fourth, a reversed repayment question, elicited a wrong supported proposal

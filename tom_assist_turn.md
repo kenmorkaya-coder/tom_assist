@@ -2378,7 +2378,49 @@ checkpoint remained hash-verified and unchanged. The latest bounded result and
 runner were committed as `8bf5b4a` on
 `codex/rgm-tom-structural-bridge`; pull request 5 contains the complete branch.
 
-The next product check is one real end-to-end desktop run using the two imported
-contracts and the three frozen questions. It must show both exact passages in
-the user interface when only one is present in the initial RGM candidates.
-Automatic motif extraction remains a separate validation gate.
+### 2026-09-17 — live desktop cross-contract structural recall
+
+The next product check was completed in the real isolated desktop app. The full
+documents could not both be admitted to one unchanged RGM project: the lossless
+Tom Assist chunker produced 248 M12 chunks and 315 D&C deed chunks, for 563
+against the fixed 512-chunk capacity. The test therefore used exact text from
+M12 original PDF page 37 and D&C deed original PDF page 327. Each small input
+records the original contract path and page. This is a controlled two-passage
+product test, not a claim that both complete contracts were loaded together.
+
+The first reviewed passage taught the notice-before-meeting memory at 381 native
+locations. The second passage attached to that existing memory with zero new
+tree writes. In the actual UI, all three frozen questions showed both exact
+contract passages under “Evidence linked by the learned structure”:
+
+| Question | Evidence reader | ToM-linked exact sources |
+| --- | --- | --- |
+| Which procedures require a written notice, followed by a meeting? | Supported; quoted D&C clause 31 | M12 clause 11 and D&C clause 31 |
+| Where does notification happen, then people meet? | Declined the broad wording | M12 clause 11 and D&C clause 31 |
+| Find the sequence notice, meeting, response. | Declined the broad wording | M12 clause 11 and D&C clause 31 |
+
+A separate live telemetry replay deliberately supplied only one initial RGM
+source. For every question, one ToM query route reopened both bound source IDs,
+selected both exact passages, preserved every branch/cell coordinate, used no
+root assembly or whole-tree score, and left the saved tree unchanged. All three
+returns had the same saved-tree state hash
+`1df6cd1a2ad54a83cda0f3ad15a67acdab9f91ab434b6f6c4a3917c63c8f0a64`.
+The compact record is on Passport at
+`native_learned_recall/live_desktop_temporal_motif_v1/live_desktop_result.json`;
+the approximately 214 MB tree and 2.9 MB reference field remain beside it and
+outside Git.
+
+The run exposed and repaired one evidence-reader integration defect. The reader
+selected the correct passage and exact quotation, but copied an 83-character
+authenticated source ID as an incorrect 80-character ID. The verifier correctly
+rejected the unbound answer. The reader now sees short deterministic source
+aliases; the server binds an accepted alias back to the complete authenticated
+ID before any answer leaves the gateway. Exact-span and source-integrity checks
+remain unchanged. Focused reader tests pass 23/23.
+
+The remaining limitation is now narrow and visible: ToM successfully finds the
+two cross-contract structural sources for all three questions, while the
+evidence reader approves only the first wording. The next diagnostic should
+inspect why the reader interprets the other two structure-search requests as
+unsupported even after ToM supplies both exact reviewed passages. Automatic
+motif extraction remains a separate validation gate.

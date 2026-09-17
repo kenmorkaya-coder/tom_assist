@@ -1173,11 +1173,32 @@ def read_rgm_source_evidence(question, packet, generate, *, spacing_resolver=Non
             text=text, provenance=ref))
     if len({s["source_id"] for s in sources}) != len(sources):
         raise ValueError("duplicate selected source")
+    # The authenticated source IDs contain long hashes. Giving those hashes to
+    # the language reader made an otherwise correct quotation fail closed when
+    # the model copied one hash with a few characters missing. Present short,
+    # deterministic aliases to the reader, then bind an accepted alias back to
+    # the complete server-owned ID. Keep accepting the complete ID here for
+    # compatibility with older deterministic readers and recorded fixtures.
+    reader_sources = []
+    canonical_by_alias = {}
+    for index, source in enumerate(sources, 1):
+        alias = f"source_{index}"
+        canonical_by_alias[alias] = source["source_id"]
+        reader_sources.append({**source, "source_id": alias})
+    validation_sources = sources + reader_sources
+
+    def canonicalize_reader_source(selection):
+        alias = selection.get("source_id")
+        if selection.get("status") == "supported" and alias in canonical_by_alias:
+            selection["reader_source_alias"] = alias
+            selection["source_id"] = canonical_by_alias[alias]
+        return selection
+
     parts, planning = native_question_parts(question, generate)
     outcomes = []
     for part in parts:
         generation = generate(RGM_PASSAGE_READER_INSTRUCTION, dict(question=part,
-            sources=[dict(source_id=s["source_id"], text=s["text"]) for s in sources]), 1024)
+            sources=[dict(source_id=s["source_id"], text=s["text"]) for s in reader_sources]), 1024)
         chain_check = check_rgm_replacement_chain(part,sources)
         recheck = None
         try:
@@ -1187,17 +1208,21 @@ def read_rgm_source_evidence(question, packet, generate, *, spacing_resolver=Non
             elif chain_check["status"] in ("not_supported","ambiguous","needs_evidence_reading"):
                 selection=dict(status="not_supported" if chain_check["status"]=="not_supported" else "ambiguous",source_id=None,answer_quote=None)
             else:
-                selection = validate_evidence_reading(generation["raw"], sources,spacing_resolver=spacing_resolver)
+                selection = canonicalize_reader_source(validate_evidence_reading(
+                    generation["raw"], validation_sources, spacing_resolver=spacing_resolver))
                 if selection["status"] == "not_supported":
                     focus = find_rgm_cited_clause(part, sources)
                     if focus is not None:
                         # One targeted reading, same question/instruction. Keep
                         # the original refusal and both raw generations visible.
+                        focus_alias = next(s for s in reader_sources if
+                            canonical_by_alias[s["source_id"]] == focus["source_id"])
                         second = generate(RGM_PASSAGE_READER_INSTRUCTION, dict(question=part,
-                            sources=[dict(source_id=focus["source_id"], text=focus["text"])]), 1024)
+                            sources=[dict(source_id=focus_alias["source_id"], text=focus["text"])]), 1024)
                         recheck = dict(focus=focus, generation=second)
                         selected_source = next(s for s in sources if s["source_id"] == focus["source_id"])
-                        selection = validate_evidence_reading(second["raw"], [selected_source], spacing_resolver=spacing_resolver)
+                        selection = canonicalize_reader_source(validate_evidence_reading(
+                            second["raw"], [selected_source, focus_alias], spacing_resolver=spacing_resolver))
                         if selection["status"] == "supported" and not (
                             focus["start"] <= selection["local_start"] < selection["local_end"] <= focus["end"]):
                             raise ValueError("refusal recheck quote lies outside the cited clause")
