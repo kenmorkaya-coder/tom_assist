@@ -54,6 +54,34 @@ older system's complete contextual chat/branch-event pipeline. Results are kept
 separately as `native_rgm500_access_comparison` and
 `native_rgm500_access_punctuation_control` in the same compact master report.
 
+The follow-up `--rgm500-structural-bridge forward|reverse` test passes the
+question itself to the approved circa-500 native tree as a position-sensitive
+event matrix. It uses the real RGM chunks for clauses 23.5 and 24.5 and their
+retained source provenance. Their verified failure-party and cover-payer roles
+are reversed, so this checks direction rather than punctuation or general topic.
+The clauses write to 381 and 387 distinct native branch/slot locations with zero
+overlap. All four held-out questions activate every location belonging to the
+correct clause and zero locations belonging to the reversed clause. Reversing
+the teaching order repeats the result: eight correct-only activations across the
+two orders and no reversed activation. The same frozen RGM baseline ranks the
+correct chunk first for three of the four questions.
+
+This result preserves native branch order, every routed signed 32×32 input,
+every terminal signed 32×32 return, and the uncollapsed per-slot selector fields.
+No whole-tree score is calculated. The two complete archives are about 42.7 MB
+each and remain under
+`/Volumes/My Passport for Mac/tom_assist_test_results/native_learned_recall/rgm500_structural_bridge_v1/`.
+Peak process memory was 1.22 GiB. The compact result is
+`native_rgm500_structural_bridge` in the existing master report. Native
+determinant warnings remain observable; all retained fields were finite and the
+tree state was unchanged by reads.
+
+The result establishes a useful integration boundary: RGM retains exact text
+and provenance, while a verified directed situation can address a distinct
+distributed ToM memory. It does not validate automatic relationship extraction.
+The event roles in this bounded test were already frozen and verified. The live
+document path must not teach the tree from an unreviewed parser proposal.
+
 The subsequent `--rgm-document-ingestion` audit uses the actual unmodified
 `tom_master17D/interface/doc_ingest.py:ingest_any_document` on the complete
 executed M12 agreement, with native `auto` mode and default `zero_copy_strict`
