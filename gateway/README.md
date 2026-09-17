@@ -82,6 +82,26 @@ distributed ToM memory. It does not validate automatic relationship extraction.
 The event roles in this bounded test were already frozen and verified. The live
 document path must not teach the tree from an unreviewed parser proposal.
 
+The immediate trained-parser check confirms that boundary. The retained V14
+event-graph adapter was run once on each mirrored real clause. Both proposals
+identify the reimbursement direction correctly on manual review, but neither is
+valid under its frozen graph schema. Clause 23.5 emits an unsupported
+`Business Days` quantity unit and incorrectly represents SM as both actor and
+recipient of its premium payment. Clause 24.5 emits unsupported contract-action
+labels and produces four events where the mirrored clause produced two. Changing
+the compiler to accept these outputs was rejected because it breaks the frozen
+adapter contract; that attempted change was reverted.
+
+The earlier narrow relationship extractor remains a useful control: for both
+clauses it captured the failure party, substitute-cover payer, repayment
+direction, 30-Business-Day period and on-demand timing with exact source spans.
+That extractor is explicitly insurance-specific and does not justify general
+automatic document learning. The safe integration remains reviewed or otherwise
+verified relationship records → structured matrix → ToM memory, with RGM keeping
+the exact source. Automatic full-graph ingestion is blocked. Raw proposals,
+model identity, validation errors and the control are retained under
+`native_rgm500_structure_parser_diagnosis` in the compact master report.
+
 The subsequent `--rgm-document-ingestion` audit uses the actual unmodified
 `tom_master17D/interface/doc_ingest.py:ingest_any_document` on the complete
 executed M12 agreement, with native `auto` mode and default `zero_copy_strict`
