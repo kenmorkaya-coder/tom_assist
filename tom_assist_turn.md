@@ -2566,3 +2566,11 @@ remained 3, the reviewed source count increased from 4 to 5, and both the tree
 state hash and checkpoint hash remained exactly unchanged. A second scan marked
 the passage reviewed and again reported zero tree calls and no automatic
 learning.
+
+The new binding was then tested with an empty RGM candidate packet. The unchanged
+ToM tree returned all three reviewed source locations—M12 clause 14.4, D&C
+clause 13.6 and the newly linked D&C clause 16.7—through the two independent
+ordered query routes. All native branch/cell coordinates were compared, no
+whole-tree score was used, and the tree remained unchanged. This confirms that
+the review queue adds usable source provenance to the existing distributed
+structure rather than merely changing an interface label.
