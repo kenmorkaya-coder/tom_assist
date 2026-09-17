@@ -511,6 +511,19 @@ def rgm_candidate_source_id(memory):
         (proof["doc_id"] + f":{proof['start']}:{proof['end']}").encode()).hexdigest()[:16]
 
 
+def _canonical_utc_instant(value, name):
+    from datetime import datetime, timezone
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{name} is required")
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError(f"{name} must be an ISO 8601 timestamp") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError(f"{name} must include a timezone")
+    return parsed.astimezone(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+
 def bind_recalled_rgm_evidence(packet, structural):
     """Use exact source passages returned by reviewed ToM memory.
 
@@ -520,6 +533,18 @@ def bind_recalled_rgm_evidence(packet, structural):
     memories = packet.get("memories") if isinstance(packet, dict) else None
     if not isinstance(memories, list):
         raise ValueError("RGM packet memories are invalid")
+    if isinstance(structural, dict) and structural.get("status") == "source_authority_resolved":
+        authoritative = structural.get("authoritative_source_ids")
+        if (not isinstance(authoritative, list) or not authoritative
+            or any(not isinstance(value, str) or not value for value in authoritative)
+            or len(set(authoritative)) != len(authoritative)):
+            raise ValueError("resolved source authority is invalid")
+        wanted = set(authoritative)
+        selected = [memory for memory in memories if rgm_candidate_source_id(memory) in wanted]
+        if {rgm_candidate_source_id(memory) for memory in selected} != wanted:
+            raise ValueError("authoritative RGM source is absent from the retrieved candidates")
+        return selected, dict(mode="explicit_source_authority", source_ids=authoritative,
+            candidate_count=len(memories), selected_count=len(selected))
     if isinstance(structural, dict) and structural.get("status") == "source_authority_unresolved":
         conflicts = structural.get("conflict_sources")
         if (not isinstance(conflicts, list) or not conflicts
@@ -1009,6 +1034,32 @@ def find_rgm_cited_clause(question, sources):
     return matches[0] if len(matches) == 1 else None
 
 
+def check_rgm_explicit_negated_repayment_claim(question, quote):
+    """Verify an exact same-party repayment prohibition as a bounded No answer."""
+    import re
+    empty = dict(request="other", **{key: None for key in EVIDENCE_ROLE_FIELDS})
+    try:
+        requested = interpret_native_question(question, empty)["fields"]
+    except ValueError as exc:
+        return dict(status="unresolved", reason=str(exc))
+    source = requested.get("repayment_from")
+    target = requested.get("repayment_to")
+    if not source or not target or not isinstance(quote, str):
+        return dict(status="not_applicable")
+    literal = lambda value: r"\s+".join(re.escape(word) for word in value.split())
+    actor, recipient = literal(source), literal(target)
+    patterns = (
+        rf"\b{actor}\s+(?:must|shall|will|does|did|is|are|was|were|has|have)\s+"
+        rf"(?:not|never)\s+(?:reimburse|repay)s?\s+{recipient}\b",
+        rf"\b{recipient}\s+(?:is|was|must be|shall be|will be)\s+(?:not|never)\s+"
+        rf"(?:reimbursed|repaid)\s+by\s+{actor}\b",
+    )
+    if not any(re.search(pattern, quote, re.I) for pattern in patterns):
+        return dict(status="not_applicable")
+    return dict(status="verified", verdict="no", repayment_from=source,
+        repayment_to=target, scope="Exact quoted same-party repayment negation.")
+
+
 def check_rgm_cited_repayment_claim(question, sources):
     """Verify a yes/no repayment direction against one complete cited clause.
 
@@ -1103,11 +1154,16 @@ def read_rgm_source_evidence(question, packet, generate, *, spacing_resolver=Non
                 empty = dict(request="other", **{k: None for k in EVIDENCE_ROLE_FIELDS})
                 requested = interpret_native_question(part, empty)["fields"]
                 if any(requested[k] is not None for k in ("repayment_from", "repayment_to")):
-                    quoted = interpret_native_question(selection["answer_quote"], empty)["fields"]
-                    mismatch = any(requested[key] is not None and (quoted[key] is None or
-                        " ".join(requested[key].split()).casefold() != " ".join(quoted[key].split()).casefold())
-                        for key in ("repayment_from", "repayment_to"))
-                    if mismatch:
+                    negated = check_rgm_explicit_negated_repayment_claim(part, selection["answer_quote"])
+                    if negated["status"] == "verified":
+                        selection["claim_verdict"] = "no"
+                        selection["claim_check"] = negated
+                    else:
+                        quoted = interpret_native_question(selection["answer_quote"], empty)["fields"]
+                        mismatch = any(requested[key] is not None and (quoted[key] is None or
+                            " ".join(requested[key].split()).casefold() != " ".join(quoted[key].split()).casefold())
+                            for key in ("repayment_from", "repayment_to"))
+                    if negated["status"] != "verified" and mismatch:
                         repayment_claim = check_rgm_cited_repayment_claim(part, sources)
                         if repayment_claim["status"] != "verified" or repayment_claim["verdict"] != "no":
                             raise ValueError("quoted repayment direction does not match the explicit question")
@@ -1361,6 +1417,8 @@ RGM_TOM_BRIDGE_VERSION_V1 = "tom-assist-rgm-tom-reviewed-situations/1"
 RGM_TOM_BRIDGE_VERSION_V2 = "tom-assist-rgm-tom-reviewed-situations/2"
 RGM_TOM_BRIDGE_VERSION = "tom-assist-rgm-tom-reviewed-situations/3"
 RGM_TOM_SITUATION_PREFIX = "rgm-tom-situation-"
+RGM_SOURCE_AUTHORITY_VERSION = "tom-assist-rgm-source-authority/1"
+RGM_SOURCE_AUTHORITY_PREFIX = "rgm-source-authority-"
 RGM_TOM_MAX_MEMORIES = 6
 RGM_TOM_BASE_CHECKPOINT_SHA256 = "39377bce42eea2e3c75474c3f61013fbc49cbf23e5ebcea28676071ee7a164d1"
 
@@ -1539,6 +1597,161 @@ class RgmDocumentService:
         return json.loads(child.stdout)
 
     @staticmethod
+    def _source_index(library):
+        sources = {}
+        for chunk in library.document_chunks(active_only=False):
+            if hashlib.sha256(chunk["text"].encode()).hexdigest() != chunk["text_sha256"]:
+                raise ValueError("retained RGM source text changed")
+            source_id = rgm_candidate_source_id(dict(evidence_reference=dict(
+                doc_id=chunk["document_id"], start=chunk["start"], end=chunk["end"])))
+            if source_id in sources:
+                raise ValueError("RGM source identity is duplicated")
+            sources[source_id] = dict(source_id=source_id, text=chunk["text"],
+                text_sha256=chunk["text_sha256"], active=chunk["tombstoned_at"] is None,
+                provenance=dict(doc_id=chunk["document_id"], display_name=chunk["display_name"],
+                    chunk_index=chunk["chunk_index"], start=chunk["start"], end=chunk["end"]))
+        return sources
+
+    @classmethod
+    def _authority_rows(cls, library):
+        required = {"version", "relation_kind", "superseding_source_id",
+            "superseded_source_id", "superseding_source_text_sha256",
+            "superseded_source_text_sha256", "effective_at", "reason", "created_at"}
+        sources = cls._source_index(library)
+        rows = []
+        outgoing = {}
+        for stored in library.records_with_prefix(RGM_SOURCE_AUTHORITY_PREFIX):
+            record = stored["record"]
+            if not isinstance(record, dict) or set(record) != required:
+                raise ValueError("stored source-authority record has an invalid schema")
+            if (record["version"] != RGM_SOURCE_AUTHORITY_VERSION
+                or record["relation_kind"] not in {"replacement_cover", "reimbursement"}):
+                raise ValueError("stored source-authority record has an unsupported version or relationship")
+            if (any(not isinstance(record[key], str) or not record[key] for key in required - {"version"})
+                or record["superseding_source_id"] == record["superseded_source_id"]
+                or len(record["reason"]) > 1000):
+                raise ValueError("stored source-authority record contains invalid values")
+            encoded = json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+            if stored["content"] != encoded or stored["content_hash"] != hashlib.sha256(encoded.encode()).hexdigest():
+                raise ValueError("stored source-authority record changed after persistence")
+            _canonical_utc_instant(record["effective_at"], "effective_at")
+            _canonical_utc_instant(record["created_at"], "created_at")
+            newer = sources.get(record["superseding_source_id"])
+            older = sources.get(record["superseded_source_id"])
+            if (newer is None or older is None
+                or newer["text_sha256"] != record["superseding_source_text_sha256"]
+                or older["text_sha256"] != record["superseded_source_text_sha256"]):
+                raise ValueError("stored source-authority record lost its exact source binding")
+            key = (record["relation_kind"], record["superseded_source_id"])
+            if key in outgoing:
+                raise ValueError("one source has multiple authority successors")
+            outgoing[key] = record["superseding_source_id"]
+            rows.append(dict(stored, authority=copy.deepcopy(record)))
+        for relation_kind in {"replacement_cover", "reimbursement"}:
+            relation = {older: newer for (kind, older), newer in outgoing.items()
+                if kind == relation_kind}
+            for start in relation:
+                seen = {start}
+                cursor = relation[start]
+                while cursor in relation:
+                    if cursor in seen:
+                        raise ValueError("stored source-authority links form a cycle")
+                    seen.add(cursor)
+                    cursor = relation[cursor]
+        return rows
+
+    @classmethod
+    def _active_authority(cls, library, relation_kind, as_of):
+        instant = _canonical_utc_instant(as_of, "answer as_of")
+        active = {}
+        for row in cls._authority_rows(library):
+            record = row["authority"]
+            if record["relation_kind"] == relation_kind and record["effective_at"] <= instant:
+                active[record["superseded_source_id"]] = record["superseding_source_id"]
+        return active
+
+    def resolve_source_authority(self, project_id, library, payload):
+        if not NativeMemoryService._inference_lock.acquire(blocking=False):
+            raise ValueError("another local document operation is running")
+        try:
+            return self._resolve_source_authority(project_id, library, payload)
+        finally:
+            NativeMemoryService._inference_lock.release()
+
+    def _resolve_source_authority(self, project_id, library, payload):
+        from datetime import datetime, timezone
+        from types import SimpleNamespace
+        if payload.get("explicit_user_action") is not True:
+            raise ValueError("explicit source-authority review is required")
+        relation_kind = payload.get("relation_kind")
+        if relation_kind not in {"replacement_cover", "reimbursement"}:
+            raise ValueError("source authority requires one supported relationship")
+        newer_id = payload.get("superseding_source_id")
+        older_ids = payload.get("superseded_source_ids")
+        if (not isinstance(newer_id, str) or not newer_id
+            or not isinstance(older_ids, list) or not 1 <= len(older_ids) <= 20
+            or any(not isinstance(value, str) or not value for value in older_ids)
+            or len(set(older_ids)) != len(older_ids) or newer_id in older_ids):
+            raise ValueError("source-authority identities are invalid")
+        effective_at = _canonical_utc_instant(payload.get("effective_at"), "effective_at")
+        reason = payload.get("reason")
+        if not isinstance(reason, str) or not reason.strip() or len(reason.strip()) > 1000:
+            raise ValueError("source-authority reason must contain 1–1000 characters")
+        reason = reason.strip()
+        sources = self._source_index(library)
+        if newer_id not in sources or any(source_id not in sources for source_id in older_ids):
+            raise ValueError("source authority must use exact retained RGM source identities")
+        if not sources[newer_id]["active"]:
+            raise ValueError("the superseding source passage must be active")
+        existing = self._authority_rows(library)
+        outgoing = {(row["authority"]["relation_kind"], row["authority"]["superseded_source_id"]):
+            row["authority"]["superseding_source_id"] for row in existing}
+        pending = []
+        duplicates = 0
+        for older_id in older_ids:
+            key = (relation_kind, older_id)
+            current = outgoing.get(key)
+            if current is not None:
+                row = next(item["authority"] for item in existing
+                    if (item["authority"]["relation_kind"], item["authority"]["superseded_source_id"]) == key)
+                if (current != newer_id or row["effective_at"] != effective_at or row["reason"] != reason):
+                    raise ValueError("this source already has a different authority successor")
+                duplicates += 1
+                continue
+            outgoing[key] = newer_id
+            pending.append(older_id)
+        for older_id in pending:
+            seen = {older_id}
+            cursor = newer_id
+            while cursor in {old for kind, old in outgoing if kind == relation_kind}:
+                if cursor in seen:
+                    raise ValueError("source-authority links cannot form a cycle")
+                seen.add(cursor)
+                cursor = outgoing[(relation_kind, cursor)]
+        created_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        library.db.execute("BEGIN IMMEDIATE")
+        try:
+            for older_id in pending:
+                record = dict(version=RGM_SOURCE_AUTHORITY_VERSION, relation_kind=relation_kind,
+                    superseding_source_id=newer_id, superseded_source_id=older_id,
+                    superseding_source_text_sha256=sources[newer_id]["text_sha256"],
+                    superseded_source_text_sha256=sources[older_id]["text_sha256"],
+                    effective_at=effective_at, reason=reason, created_at=created_at)
+                content = json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+                record_id = RGM_SOURCE_AUTHORITY_PREFIX + native_digest(dict(
+                    relation_kind=relation_kind, superseded_source_id=older_id))[:24]
+                library.retain(SimpleNamespace(id=record_id, content=content,
+                    content_summary="", content_hash=hashlib.sha256(content.encode()).hexdigest()), record)
+            library.db.execute("COMMIT")
+        except BaseException:
+            library.db.execute("ROLLBACK")
+            raise
+        return dict(status="recorded", relation_kind=relation_kind,
+            superseding_source_id=newer_id, superseded_source_ids=copy.deepcopy(older_ids),
+            effective_at=effective_at, link_count=len(pending), duplicate_count=duplicates,
+            tree_calls=0)
+
+    @staticmethod
     def _situation_rows(library):
         from gateway.vendor.rgm17d.memory.rgm import ReflectionGatedMemory
         rows = []
@@ -1681,6 +1894,7 @@ class RgmDocumentService:
         memories = self._memory_catalog(rows)
         return dict(configured=profile is not None, learned_situations=len(rows),
             learned_relationship_memories=len(memories), capacity=RGM_TOM_MAX_MEMORIES,
+            source_authority_links=len(self._authority_rows(library)),
             version=RGM_TOM_BRIDGE_VERSION,
             automatic_extraction=False, whole_tree_score=False,
             state=(rows[-1]["encoded"]["tree"] if rows else None))
@@ -1810,7 +2024,7 @@ class RgmDocumentService:
             bound_existing_relationships=len(bindings) - len(new_memories),
             retired_previous_artifacts=retired)
 
-    def recall_situations(self, project_id, library, packet, question):
+    def recall_situations(self, project_id, library, packet, question, as_of):
         rows = self._situation_rows(library)
         if not rows:
             return dict(status="no_learned_situations", recalled_source_ids=[],
@@ -1823,23 +2037,66 @@ class RgmDocumentService:
             if proof["doc_id"] in active_documents and source_id not in candidates:
                 candidates.append(source_id)
         selected = [row for row in rows if row["situation"]["source_id"] in candidates]
-        if not selected:
-            return dict(status="no_candidate_situation", recalled_source_ids=[],
-                whole_tree_score=False, all_branch_cell_coordinates_compared=False)
         memories = self._memory_catalog(rows)
         query = reviewed_query_situation(question, memories)
         if query["status"] != "complete":
             return dict(status="no_query_structure", recalled_source_ids=[], query_structure=query,
                 whole_tree_score=False, all_branch_cell_coordinates_compared=False)
+        matched = [memory for memory in memories
+            if self._relationship_key(memory) == self._relationship_key(query["fields"])]
+        active_source_ids = {row["situation"]["source_id"] for row in rows
+            if row["situation"]["provenance"]["document_id"] in active_documents}
+        query_sources = ([source_id for source_id in matched[0]["source_ids"]
+            if source_id in active_source_ids] if len(matched) == 1 else [])
         conflicts = []
         for memory in packet["memories"]:
             reason = reviewed_source_conflict(memory.get("content"), query["fields"]["relation_kind"])
             if reason is not None:
                 conflicts.append(dict(source_id=rgm_candidate_source_id(memory), reason=reason))
-        if conflicts:
+        authority = self._active_authority(library, query["fields"]["relation_kind"], as_of)
+        resolved = {}
+        missing = []
+        endpoints = []
+        for source_id in query_sources:
+            seen = {source_id}
+            successor = authority.get(source_id, source_id)
+            while successor in authority:
+                if successor in seen:
+                    raise ValueError("stored source-authority links form a cycle")
+                seen.add(successor)
+                successor = authority[successor]
+            endpoints.append(successor)
+            if successor == source_id:
+                continue
+            if successor in candidates:
+                resolved[source_id] = successor
+            else:
+                missing.append(dict(source_id=successor,
+                    reason="the effective authoritative successor was not retrieved"))
+        remaining = [source_id for source_id in query_sources if source_id not in resolved]
+        successors = list(dict.fromkeys(resolved.values()))
+        unresolved_conflicts = [item for item in conflicts if item["source_id"] not in successors]
+        if resolved and not remaining and not missing and not unresolved_conflicts:
+            return dict(status="source_authority_resolved", recalled_source_ids=[],
+                authoritative_source_ids=successors, superseded_source_ids=list(resolved),
+                query_structure=query, whole_tree_score=False,
+                all_branch_cell_coordinates_compared=False)
+        authority_issues = unresolved_conflicts + missing
+        if resolved and remaining:
+            authority_issues = conflicts + missing if conflicts else [dict(source_id=successors[0],
+                reason="source authority does not cover every current reviewed source")]
+        if conflicts or authority_issues:
+            conflict_ids = {item["source_id"] for item in authority_issues}
+            review_targets = [source_id for source_id in dict.fromkeys(endpoints)
+                if source_id not in conflict_ids]
             return dict(status="source_authority_unresolved", recalled_source_ids=[],
-                conflict_sources=conflicts, query_structure=query,
+                conflict_sources=authority_issues,
+                reviewed_source_ids=review_targets, query_structure=query,
                 whole_tree_score=False, all_branch_cell_coordinates_compared=False)
+        if not selected:
+            return dict(status="no_candidate_situation", recalled_source_ids=[],
+                query_structure=query, whole_tree_score=False,
+                all_branch_cell_coordinates_compared=False)
         profile = self._tom_runtime_profile(project_id)
         result = self.tom_worker("rgm_tom_recall", dict(_tom_profile=profile,
             memories=memories,
@@ -1850,6 +2107,26 @@ class RgmDocumentService:
             or result.get("all_branch_cell_coordinates_compared") is not True):
             raise ValueError("ToM recall did not preserve the distributed response")
         return result
+
+    def _authority_review(self, library, structural):
+        if structural.get("status") != "source_authority_unresolved":
+            return None
+        sources = self._source_index(library)
+        def describe(source_id, reason=None):
+            source = sources.get(source_id)
+            if source is None:
+                raise ValueError("source-authority review lost a retained source")
+            result = dict(source_id=source_id, text=source["text"],
+                provenance=copy.deepcopy(source["provenance"]), active=source["active"])
+            if reason is not None:
+                result["reason"] = reason
+            return result
+        current = [describe(source_id) for source_id in structural.get("reviewed_source_ids", [])]
+        return dict(status="unresolved", relation_kind=structural["query_structure"]["fields"]["relation_kind"],
+            can_record=bool(current),
+            conflict_sources=[describe(item["source_id"], item["reason"])
+                for item in structural["conflict_sources"]],
+            current_sources=current)
 
     def ingest(self, project_id, library, payload):
         if not NativeMemoryService._inference_lock.acquire(blocking=False):
@@ -1918,8 +2195,9 @@ class RgmDocumentService:
             encoder=native_file_hash(Path(__file__).with_name("native_memory_worker.py")),
             pooling=native_file_hash(Path(__file__).with_name("semantic_chunks.py"))))
 
-    def answer(self, project_id, library, question):
+    def answer(self, project_id, library, question, *, as_of=None):
         from types import SimpleNamespace
+        from datetime import datetime, timezone
         if not isinstance(question, str) or not question.strip() or len(question) > 4000:
             raise ValueError("question must contain 1–4000 characters")
         if not NativeMemoryService._inference_lock.acquire(blocking=False):
@@ -1953,10 +2231,12 @@ class RgmDocumentService:
                         library.retain(SimpleNamespace(id="rgm-vector-" + cache_identity + "-" + digest,
                             content=missing[digest], content_summary="", content_hash=digest), dict(vector=vector))
             packet, retrieval = retrieve_rgm_project_documents(library, prepared, question, vectors)
-            structural = self.recall_situations(project_id, library, packet, question)
+            answer_as_of = _canonical_utc_instant(as_of or datetime.now(timezone.utc).isoformat(), "answer as_of")
+            structural = self.recall_situations(project_id, library, packet, question, answer_as_of)
             reader_memories, evidence_scope = bind_recalled_rgm_evidence(packet, structural)
             structural["evidence_scope"] = evidence_scope
             retrieval["reviewed_tom_memory"] = structural
+            authority_review = self._authority_review(library, structural)
             if reader_memories:
                 reader_packet = dict(memories=[{k: m[k] for k in ("id", "content", "evidence_reference")}
                     for m in reader_memories])
@@ -1990,12 +2270,16 @@ class RgmDocumentService:
             tree_calls = 1 if structural.get("status") == "recalled" else 0
             if status not in {"supported", "partial", "not_supported", "ambiguous"}:
                 return dict(status="blocked", answer="The answer could not be verified against the source evidence.", sources=[],
+                    authority_review=authority_review,
                     scope=RGM_TOM_DOCUMENT_SCOPE if tree_calls else RGM_DOCUMENT_SCOPE,
                     engine="rgm+tom" if tree_calls else "rgm",
                     trace=dict(version=RGM_DOCUMENT_VERSION, vendor_sha256=vendor, retrieval=retrieval, reading=reading),
                     purity=dict(tree_calls=tree_calls, training_calls=0, provider_sends=0,
                         whole_tree_score=False, complete_distributed_return_compared=bool(tree_calls)))
-            return dict(status=status, answer="\n\n".join(lines), sources=list(approved.values()),
+            answer_text = ("The available source passages conflict. Record which source controls before asking again."
+                if authority_review is not None else "\n\n".join(lines))
+            return dict(status=status, answer=answer_text, sources=list(approved.values()),
+                authority_review=authority_review,
                 scope=RGM_TOM_DOCUMENT_SCOPE if tree_calls else RGM_DOCUMENT_SCOPE,
                 engine="rgm+tom" if tree_calls else "rgm",
                 trace=dict(version=RGM_DOCUMENT_VERSION, vendor_sha256=vendor, retrieval=retrieval, reading=reading),

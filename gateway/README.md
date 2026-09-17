@@ -903,10 +903,16 @@ return release several exact evidence locations without duplicating the learned
 relationship. A source that explicitly negates a relationship or declares
 supersession cannot be attached to the positive memory. If such evidence is in
 the current RGM candidates, ToM does not narrow the evidence set and the answer
-fails closed until source authority is resolved. The current schema does not yet
-decide which conflicting source is legally effective. The current integration
-is deliberately bounded to six unique relationship memories, matching the six
-orthogonal addresses already tested. A
+fails closed until source authority is resolved. The desktop then shows the
+exact conflicting and currently bound passages. An explicit user action can
+record that one exact RGM passage supersedes one or more older passages for one
+relationship, with an effective timestamp and reason. The app never infers this
+authority from filenames, dates or amendment wording. Once effective, and only
+when every competing reviewed source has been covered, the newer passage goes
+to evidence checking without a tree call. Older text and the ToM memory remain
+unchanged for audit. The current integration is deliberately bounded to six
+unique relationship memories, matching the six orthogonal addresses already
+tested. A
 new relationship must write non-overlapping tree locations; otherwise it is
 rejected. Only the newest large checkpoint and reference archive are retained.
 

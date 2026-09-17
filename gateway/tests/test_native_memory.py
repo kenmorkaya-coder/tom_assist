@@ -773,6 +773,18 @@ def test_negated_failure_condition_is_not_confused_with_negated_repayment():
     assert result["fields"]["failure_party"] == "City Works"
 
 
+def test_exact_negated_repayment_supports_only_the_same_named_direction():
+    from gateway.native_memory import check_rgm_explicit_negated_repayment_claim
+    question = "Does Orchid reimburse Rowan?"
+    correct = check_rgm_explicit_negated_repayment_claim(question,
+        "Orchid must not reimburse Rowan on demand.")
+    assert correct["status"] == "verified" and correct["verdict"] == "no"
+    assert check_rgm_explicit_negated_repayment_claim(question,
+        "Rowan must not reimburse Orchid on demand.")["status"] == "not_applicable"
+    assert check_rgm_explicit_negated_repayment_claim(question,
+        "Orchid may reimburse Rowan on demand.")["status"] == "not_applicable"
+
+
 def _rgm_project_library(tmp_path, name="project"):
     from gateway.permanent_library import PermanentLibrary
     library = PermanentLibrary(tmp_path / (name + ".sqlite3"))
@@ -794,6 +806,9 @@ def _rgm_app_worker(calls, *, damage=None):
             source = data["sources"][0]
             if "policy number" in data["question"]:
                 value = dict(status="not_supported", source_id=None, answer_quote=None)
+            elif "reimburse" in data["question"] and "must not reimburse" in source["text"]:
+                value = dict(status="supported", source_id=source["source_id"],
+                    answer_quote="Orchid must not reimburse Rowan on demand.")
             else:
                 value = dict(status="supported", source_id=source["source_id"],
                     answer_quote="Orchid must notify Rowan of a leak within two days.")
@@ -880,6 +895,12 @@ def test_rgm_endpoint_uses_project_library_without_initializing_tree(tmp_path, m
     assert call(action="answer", question="Who reports leaks?")[0] == 400
     status, result = call(action="answer", explicit_answer=True, question="Who reports leaks?")
     assert status == 200 and result["status"] == "supported"
+    authority = dict(action="resolve_source_authority", relation_kind="reimbursement",
+        superseding_source_id="SRC-new", superseded_source_ids=["SRC-old"],
+        effective_at="2026-09-17T00:00:00Z", reason="Reviewed replacement")
+    assert call(**authority)[0] == 400
+    assert call(explicit_user_action=True, **authority)[1]["message"] == (
+        "source authority must use exact retained RGM source identities")
     status, other = gateway.handle("POST", "/document/native-memory/answer", dict(project_id="other", action="status"))
     assert status == 200 and not other["ready"]
     assert not (tmp_path / "projects" / "other").exists()
@@ -1083,6 +1104,58 @@ def test_multiple_rgm_sources_bind_to_one_tom_relationship_without_second_tree_w
         assert blocked_trace["evidence_scope"]["mode"] == "unresolved_source_authority"
         assert blocked_trace["evidence_scope"]["selected_count"] == 0
         assert blocked_trace["conflict_sources"] == blocked_trace["evidence_scope"]["conflict_sources"]
+        assert [call[0] for call in calls] == ["rgm_tom_learn", "rgm_tom_recall"]
+
+        review = blocked["authority_review"]
+        assert review["relation_kind"] == "reimbursement"
+        assert {row["source_id"] for row in review["current_sources"]} == {
+            initial["source_id"], bound["source_id"]}
+        conflict_source_id = review["conflict_sources"][0]["source_id"]
+        authority = service.resolve_source_authority("project", library, dict(
+            explicit_user_action=True, relation_kind="reimbursement",
+            superseding_source_id=conflict_source_id,
+            superseded_source_ids=[initial["source_id"]],
+            effective_at="2026-09-01T00:00:00Z", reason="Reviewed amendment replaces both prior sources"))
+        assert authority["link_count"] == 1 and authority["tree_calls"] == 0
+        partial = service.answer("project", library, "Does Orchid reimburse Rowan?",
+            as_of="2026-09-17T00:00:00Z")
+        assert partial["status"] == "not_supported"
+        assert partial["trace"]["retrieval"]["reviewed_tom_memory"]["status"] == "source_authority_unresolved"
+        completed = service.resolve_source_authority("project", library, dict(
+            explicit_user_action=True, relation_kind="reimbursement",
+            superseding_source_id=conflict_source_id,
+            superseded_source_ids=[bound["source_id"]],
+            effective_at="2026-09-01T00:00:00Z", reason="Reviewed amendment replaces both prior sources"))
+        assert completed["link_count"] == 1
+        duplicate = service.resolve_source_authority("project", library, dict(
+            explicit_user_action=True, relation_kind="reimbursement",
+            superseding_source_id=conflict_source_id,
+            superseded_source_ids=[initial["source_id"], bound["source_id"]],
+            effective_at="2026-09-01T00:00:00Z", reason="Reviewed amendment replaces both prior sources"))
+        assert duplicate["link_count"] == 0 and duplicate["duplicate_count"] == 2
+        with pytest.raises(ValueError, match="cannot form a cycle"):
+            service.resolve_source_authority("project", library, dict(
+                explicit_user_action=True, relation_kind="reimbursement",
+                superseding_source_id=initial["source_id"],
+                superseded_source_ids=[conflict_source_id],
+                effective_at="2026-09-01T00:00:00Z", reason="Invalid reverse link"))
+
+        not_yet_effective = service.answer("project", library, "Does Orchid reimburse Rowan?",
+            as_of="2026-08-31T23:59:59Z")
+        assert not_yet_effective["status"] == "not_supported"
+        assert not_yet_effective["trace"]["retrieval"]["reviewed_tom_memory"]["status"] == (
+            "source_authority_unresolved")
+
+        resolved = service.answer("project", library, "Does Orchid reimburse Rowan?",
+            as_of="2026-09-17T00:00:00Z")
+        resolved_trace = resolved["trace"]["retrieval"]["reviewed_tom_memory"]
+        assert resolved["status"] == "supported", resolved["trace"]["reading"]
+        assert resolved["purity"]["tree_calls"] == 0
+        assert resolved["authority_review"] is None
+        assert resolved_trace["status"] == "source_authority_resolved"
+        assert resolved_trace["evidence_scope"]["mode"] == "explicit_source_authority"
+        assert resolved_trace["authoritative_source_ids"] == [conflict_source_id]
+        assert len(resolved["sources"]) == 1
         assert [call[0] for call in calls] == ["rgm_tom_learn", "rgm_tom_recall"]
     finally:
         library.db.close()

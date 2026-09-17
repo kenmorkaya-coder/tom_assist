@@ -489,6 +489,41 @@ it("opens exact RGM citations and explicitly saves a reviewed ToM relationship",
     roles: { failure_party: "Orchid", cover_payer: "Rowan" } });
 });
 
+it("records explicit source authority when current evidence conflicts", async () => {
+  const backend = new FakeDesktopBackend();
+  const project = await backend.seedDemo();
+  const chat = vi.spyOn(backend, "chat").mockImplementation(async (_project, _method, payload) => {
+    if (payload.action === "status") return { ready: true, engine: "rgm+tom", scope: "Project documents." };
+    if (payload.action === "resolve_source_authority") return { status: "recorded", link_count: 1 };
+    return {
+      status: "not_supported", answer: "Conflicting evidence needs source-authority review.", sources: [],
+      authority_review: { status: "unresolved", can_record: true, relation_kind: "reimbursement",
+        conflict_sources: [{ source_id: "SRC-new", text: "Orchid must not reimburse Rowan.",
+          reason: "source explicitly negates reimbursement", active: true,
+          provenance: { display_name: "Amendment", doc_id: "document-new", chunk_index: 0, start: 0, end: 38 } }],
+        current_sources: [{ source_id: "SRC-old", text: "Orchid must reimburse Rowan.", active: true,
+          provenance: { display_name: "Original agreement", doc_id: "document-old", chunk_index: 2, start: 50, end: 80 } }],
+      },
+    };
+  });
+  render(<NativeMemoryAnswer project={project} draft="Does Orchid reimburse Rowan?" backend={backend} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Answer from project documents" }));
+  await screen.findByRole("heading", { name: "Not supported" });
+  fireEvent.click(screen.getByLabelText("Replace Original agreement passage 3"));
+  fireEvent.input(screen.getByLabelText("Source authority effective time"), {
+    target: { value: "2026-09-17T00:00:00+10:00" },
+  });
+  fireEvent.input(screen.getByLabelText("Source authority reason"), {
+    target: { value: "Executed amendment replaces the original clause" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Record source supersession" }));
+  await screen.findByText("Source authority recorded. Ask the question again to apply it.");
+  expect(chat.mock.calls[2]![2]).toMatchObject({ action: "resolve_source_authority",
+    explicit_user_action: true, relation_kind: "reimbursement", superseding_source_id: "SRC-new",
+    superseded_source_ids: ["SRC-old"], effective_at: "2026-09-17T00:00:00+10:00",
+    reason: "Executed amendment replaces the original clause" });
+});
+
 it("imports a local document only after an explicit action", async () => {
   const { Memory } = await import("../src/Memory");
   const backend = new FakeDesktopBackend();
