@@ -2261,8 +2261,36 @@ evidence from multiple locations.”
 The cross-source test intentionally used the upstream native heading chunks,
 including their 4,003-character truncation. Tom Assist's separate lossless RGM
 corpus adapter remains responsible for complete production evidence. The result
-proves that the shared structural source index works on two real chunks; it is
-not yet wired as a general live-app temporal-motif type.
+proves that the shared structural source index works on two real chunks.
+
+#### Live notice-before-meeting integration
+
+The existing reviewed RGM–ToM bridge now supports that one temporal motif in the
+live document path. A user can explicitly mark an exact RGM passage as stating
+written notice before a required meeting. The first passage teaches one
+temporal-link 32×32 matrix. Reviewing another passage with the same structure
+adds its exact source pointer to the existing memory and performs zero further
+tree writes. Automatic motif extraction remains disabled.
+
+Recall no longer limits a shared structural memory to sources already present
+in the initial RGM candidate packet. One authenticated candidate can open the
+ToM memory, after which the bridge reopens every active bound passage from the
+lossless RGM corpus and exposes them separately to the evidence reader and the
+desktop source display. Unknown or reversed event order does not call the tree
+and returns no structural source.
+
+The real approved fixture was exercised through the same isolated native worker:
+507 branches, 387 terminal branches and 381 learned locations. Each of three
+question forms reopened the exact 381-location map, returned both bound source
+IDs and left the saved tree unchanged. The complete branch-local signed fields
+were compared; there was no branch averaging or whole-tree score. The large
+217 MB checkpoint and 2.9 MB reference archive are stored only on Passport at
+`native_learned_recall/live_temporal_motif_bridge_v1/`. The 4 KB `result.json`
+in the same folder records the checkpoint and field hashes.
+
+The implementation check also exercised the actual answer boundary. With only
+one source in the initial RGM packet, the returned app response contained both
+exact linked passages under “Evidence linked by the learned structure.”
 
 #### Multiple sources, conflicts and authority
 
@@ -2283,9 +2311,9 @@ with an effective timestamp and reason. This authority record does not change
 the tree and keeps the superseded text for audit.
 
 The current production bridge remains bounded to the reviewed insurance
-relationship schema and six orthogonal learned addresses. General temporal
-motifs, automatic pattern discovery and arbitrary event graphs are not product
-capabilities yet.
+relationships plus the single notice-before-meeting motif and six orthogonal
+learned addresses. General temporal motifs, automatic pattern discovery and
+arbitrary event graphs are not product capabilities yet.
 
 #### Distributed-field rule and retained evidence
 
@@ -2304,6 +2332,9 @@ Complete evidence remains outside Git on Passport:
 - real cross-source fields: 39,976,817-byte
   `native_learned_recall/rgm500_cross_source_motif_v1/native_fields.npz`,
   SHA-256 `6564acbc4085e3a48acba09ef8ca4d388c4efe0c03946d58b5d3f8fff6f19d8c`.
+- live temporal-motif tree and reference: approximately 217 MB under
+  `native_learned_recall/live_temporal_motif_bridge_v1/`, with compact hashes in
+  the adjacent `result.json`.
 
 The compact, reproducible records are separate immutable sections of
 `validation/runs/stream1-native-learned-recall.json`:
@@ -2347,9 +2378,7 @@ checkpoint remained hash-verified and unchanged. The latest bounded result and
 runner were committed as `8bf5b4a` on
 `codex/rgm-tom-structural-bridge`; pull request 5 contains the complete branch.
 
-The next product step is to generalise the existing reviewed relationship bridge
-into one reviewed temporal-motif memory type: save the motif once, bind several
-RGM chunk IDs, let a query open the motif through the unchanged distributed
-tree, resolve every linked exact RGM passage, and present all supporting or
-conflicting sources. Automatic motif extraction remains a separate validation
-gate.
+The next product check is one real end-to-end desktop run using the two imported
+contracts and the three frozen questions. It must show both exact passages in
+the user interface when only one is present in the initial RGM candidates.
+Automatic motif extraction remains a separate validation gate.

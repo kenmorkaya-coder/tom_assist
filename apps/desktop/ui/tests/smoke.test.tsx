@@ -469,6 +469,12 @@ it("opens exact RGM citations and explicitly saves a reviewed ToM relationship",
       sources: [{ source_id: "corpus/chunk_1", text: "🌳 Orchid must notify Rowan. Next clause.",
         provenance: { display_name: "Maintenance agreement", doc_id: "document-a", chunk_id: "chunk_1", start: 100, end: 138,
           answer_start: 102, answer_end: 127 } }],
+      structural_sources: [
+        { source_id: "SRC-a", text: "Written notice must occur before the meeting.",
+          provenance: { display_name: "Interface agreement", doc_id: "document-a", chunk_id: "chunk_1", start: 100, end: 145 } },
+        { source_id: "SRC-b", text: "The parties meet after the written notice.",
+          provenance: { display_name: "D&C deed", doc_id: "document-b", chunk_id: "chunk_4", start: 400, end: 443 } },
+      ],
     });
   const view = render(<NativeMemoryAnswer project={project} draft="Who must notify Rowan?" backend={backend} />);
   fireEvent.click(await screen.findByRole("button", { name: "Answer from project documents" }));
@@ -477,9 +483,13 @@ it("opens exact RGM citations and explicitly saves a reviewed ToM relationship",
   fireEvent.click(citation);
   expect(citation.closest("details")?.open).toBe(true);
   expect(view.container.querySelector("mark")?.textContent).toBe("Orchid must notify Rowan.");
+  expect(screen.getByRole("region", { name: "Evidence linked by learned structure" }).textContent)
+    .toContain("Interface agreement · chunk_1");
+  expect(screen.getByRole("region", { name: "Evidence linked by learned structure" }).textContent)
+    .toContain("D&C deed · chunk_4");
   expect(chat.mock.calls[1]![2]).toMatchObject({ explicit_answer: true, question: "Who must notify Rowan?" });
   expect(view.container.textContent).not.toContain("page undefined");
-  fireEvent.click(screen.getByText("Save a reviewed relationship in ToM"));
+  fireEvent.click(screen.getByText("Save a reviewed structure in ToM"));
   fireEvent.input(screen.getByLabelText("Party that failed to show compliance"), { target: { value: "Orchid" } });
   fireEvent.input(screen.getByLabelText("Party that may buy replacement cover"), { target: { value: "Rowan" } });
   fireEvent.click(screen.getByRole("button", { name: "Save reviewed relationship" }));
@@ -487,6 +497,11 @@ it("opens exact RGM citations and explicitly saves a reviewed ToM relationship",
   expect(chat.mock.calls[2]![2]).toMatchObject({ action: "learn_situation", explicit_user_action: true,
     project_state_version: project.state_version, document_id: "document-a", chunk_index: 1,
     roles: { failure_party: "Orchid", cover_payer: "Rowan" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save notice-before-meeting structure" }));
+  await screen.findByText("Saved the sequence in ToM across 381 memory locations.");
+  expect(chat.mock.calls[3]![2]).toMatchObject({ action: "learn_situation", explicit_user_action: true,
+    project_state_version: project.state_version, document_id: "document-a", chunk_index: 1,
+    temporal_motif: { relation_kind: "before", source_event: "notify", target_event: "meeting" } });
 });
 
 it("records explicit source authority when current evidence conflicts", async () => {

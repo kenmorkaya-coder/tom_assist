@@ -142,8 +142,19 @@ scores and activation maps remain in the 38 MB Passport archive
 
 The claim remains narrow. The motif was reviewed and supplied, automatic motif
 extraction is not tested, and the two native RGM heading chunks are the parser's
-4,003-character truncated outputs. This proves the shared structural source
-index on two real chunks; it is not yet the live app integration.
+4,003-character truncated outputs. The live app now admits this one reviewed
+motif through the lossless RGM corpus path: the first source writes one ToM
+memory, later sources bind without another tree write, and one retrieved source
+can reopen every authenticated RGM passage linked to that structure.
+
+The bounded live-tree verification used the approved 507-branch fixture. The
+motif wrote to 381 native branch/slot locations. Three question forms reopened
+the same complete signed distributed field and returned both source pointers;
+every read left the saved tree unchanged. No branch response was averaged and
+no whole-tree score was calculated. The 217 MB checkpoint and 2.9 MB reference
+archive are on Passport under
+`native_learned_recall/live_temporal_motif_bridge_v1/`; the compact result is
+the adjacent `result.json`.
 
 The result establishes a useful integration boundary: RGM retains exact text
 and provenance, while a verified directed situation can address a distinct
@@ -955,7 +966,7 @@ recall and does not use the app's live tree. Source text and range references
 remain in the permanent project library.
 
 An expanded source below a document answer now offers **Save a reviewed
-relationship in ToM**. The owner must copy the failing party and the party that
+structure in ToM**. The owner must copy the failing party and the party that
 may obtain replacement cover from that exact source. Optional repayment roles
 are retained in RGM. The gateway rejects values absent from the source, changed
 source ranges, stale project state and unreviewed calls. Automatic relationship
@@ -981,17 +992,24 @@ or amendment wording. Once effective, and only
 when every competing reviewed source has been covered, the newer passage goes
 to evidence checking without a tree call. Older text and the ToM memory remain
 unchanged for audit. The current integration is deliberately bounded to six
-unique relationship memories, matching the six orthogonal addresses already
+unique structural memories, matching the six orthogonal addresses already
 tested. A
-new relationship must write non-overlapping tree locations; otherwise it is
+new structure must write non-overlapping tree locations; otherwise it is
 rejected. Only the newest large checkpoint and reference archive are retained.
 
+The same review panel supports the one admitted temporal structure: written
+notice before a required meeting. The first exact passage teaches only its
+explicit temporal-link matrix. Reviewing another passage with the same
+structure binds its immutable RGM source pointer without another ToM write. One
+RGM access candidate may then open the learned memory; the bridge reopens and
+displays every active exact passage bound to it. This does not perform automatic
+motif extraction or accept arbitrary event graphs.
+
 During an answer, MiniLM/RGM still locates candidate source passages. When the
-question explicitly states either the failure→replacement-cover relationship or
-the debtor→reimbursement-recipient relationship, those names are resolved to
-identities already retained in the reviewed RGM memories. The relationship type
-and direction are compiled into one 32×32 field and routed through the saved
-tree once. The worker compares the complete returned
+question explicitly states either a supported insurance relationship or the
+notice-before-meeting sequence, its reviewed structure is resolved from the
+query alone. The structure is compiled into one 32×32 field and routed through
+the saved tree once. The worker compares the complete returned
 branch-position-preserving signed field and exact native slot map with the
 candidate memories. It does not replay every candidate's teaching input, average
 branches or compute a whole-tree score.

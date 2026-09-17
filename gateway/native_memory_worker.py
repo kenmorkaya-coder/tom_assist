@@ -72,6 +72,29 @@ def native_memory_worker():
 
             def relationship_matrix(item, *, query=False):
                 kind = item["relation_kind"]
+                if kind == "before":
+                    if (item.get("source_event"), item.get("target_event")) != ("notify", "meeting"):
+                        raise ValueError("unsupported reviewed temporal motif")
+                    text = "notice meeting" if query else item["text"]
+                    evidence = [dict(start=0, end=len(text), quote=text)]
+                    roles = dict(actor=None, object=None, source=None, target=None,
+                        recipient=None, authority=None)
+                    graph = dict(version=graph_version, entities=[], predicates=[], conditions=[], events=[
+                        dict(id="notice", action="notify", roles=roles, modality="obligation",
+                            negated=False, condition=None, exception=None, complement=None,
+                            revision=None, time=None, evidence=evidence),
+                        dict(id="meeting", action="approve", roles=roles, modality="obligation",
+                            negated=False, condition=None, exception=None, complement=None,
+                            revision=None, time=None, evidence=evidence),
+                    ], links=[dict(id="notice_before_meeting", kind="before", source="notice",
+                        target="meeting", evidence=evidence)], unresolved=[])
+                    compiled = compile_graph(graph, text)
+                    if [load["kind"] for load in compiled.get("loads", [])] != ["event", "event", "link"]:
+                        raise ValueError("reviewed temporal motif did not compile to its explicit link")
+                    value = np.asarray(compiled["loads"][2]["matrix"])
+                    if value.shape != (32, 32) or not np.isfinite(value).all():
+                        raise ValueError("reviewed temporal motif produced an invalid 32 by 32 field")
+                    return value
                 source, target = item["source_party"], item["target_party"]
                 text = source + " " + target if query else item["text"]
                 entities = []
@@ -231,16 +254,20 @@ def native_memory_worker():
                 if current is None:
                     raise ValueError("reviewed ToM recall requires a learned project state")
                 query = payload.get("query_situation")
-                if (not isinstance(query, dict)
-                    or set(query) != {"relation_kind", "source_party", "target_party"}
-                    or not all(isinstance(query[key], str) and query[key].strip() for key in query)
-                    or query["relation_kind"] not in {"replacement_cover", "reimbursement"}
-                    or query["source_party"] == query["target_party"]):
+                if not isinstance(query, dict):
                     raise ValueError("one complete reviewed query relationship is required")
-                known_parties = {item[key] for item in memories
-                    for key in ("source_party", "target_party")}
-                if not {query["source_party"], query["target_party"]} <= known_parties:
-                    raise ValueError("query relationship contains an unknown reviewed party")
+                temporal = query.get("relation_kind") == "before"
+                endpoint_keys = (("source_event", "target_event") if temporal
+                    else ("source_party", "target_party"))
+                if (set(query) != {"relation_kind", *endpoint_keys}
+                    or not all(isinstance(query[key], str) and query[key].strip() for key in query)
+                    or query["relation_kind"] not in {"replacement_cover", "reimbursement", "before"}
+                    or query[endpoint_keys[0]] == query[endpoint_keys[1]]):
+                    raise ValueError("one complete reviewed query relationship is required")
+                known = {item[key] for item in memories
+                    if item["relation_kind"] == query["relation_kind"] for key in endpoint_keys}
+                if not {query[key] for key in endpoint_keys} <= known:
+                    raise ValueError("query relationship contains an unknown reviewed endpoint")
                 query_matrix = relationship_matrix(query, query=True)
                 reference_path = Path(current["reference_path"])
                 if (not reference_path.resolve().is_relative_to(state_dir)
@@ -267,16 +294,17 @@ def native_memory_worker():
                         raise ValueError("candidate source identities are invalid")
                     for index, item in enumerate(memories):
                         source_ids = item.get("source_ids", [item["source_id"]])
-                        matched_sources = [source_id for source_id in source_ids
+                        access_sources = [source_id for source_id in source_ids
                             if source_id in candidates]
-                        if not matched_sources:
+                        if not access_sources:
                             continue
+                        matched_sources = list(source_ids)
                         expected_keys = {(bank, int(slot)) for bank, slot in item["previous_write_keys"]}
                         exact_field = np.array_equal(query_field, archive["fields"][index])
                         exact_slots = (np.array_equal(query_active, archive["active_slots"][index])
                             and query_keys == expected_keys)
                         checks.append(dict(memory_id=item["memory_id"], source_id=item["source_id"],
-                            matched_source_ids=matched_sources,
+                            access_source_ids=access_sources, matched_source_ids=matched_sources,
                             relation_kind=item["relation_kind"],
                             same_complete_branch_cell_field=bool(exact_field),
                             same_complete_native_slot_map=bool(exact_slots)))

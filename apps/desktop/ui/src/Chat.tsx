@@ -771,6 +771,9 @@ type NativeAnswer = {
     clause?: string; pdf_page?: number; display_name?: string; doc_id?: string; chunk_id?: string;
     start?: number; end?: number; answer_start?: number; answer_end?: number;
   } }[];
+  structural_sources?: { source_id: string; text: string; provenance: {
+    display_name?: string; doc_id?: string; chunk_id?: string; start?: number; end?: number;
+  } }[];
   authority_review?: {
     status: "unresolved";
     can_record: boolean;
@@ -884,8 +887,26 @@ function ReviewedSituation({ project, backend, source }: {
     } catch (reason) { setError(String(reason)); }
     finally { setBusy(false); }
   }
+  async function rememberNoticeBeforeMeeting() {
+    setBusy(true); setMessage(""); setError("");
+    try {
+      const result = await backend.chat(project.id, "conversation.native_answer", {
+        action: "learn_situation", explicit_user_action: true,
+        project_state_version: project.state_version, document_id: proof.doc_id,
+        chunk_index: chunkIndex, temporal_motif: {
+          relation_kind: "before", source_event: "notify", target_event: "meeting",
+        },
+      }) as { duplicate?: boolean; write_count?: number; bound_existing_relationships?: number };
+      setMessage(result.duplicate
+        ? "This reviewed sequence is already in ToM."
+        : result.write_count === 0
+          ? "Linked this source to the existing ToM sequence memory."
+          : `Saved the sequence in ToM across ${Number(result.write_count ?? 0).toLocaleString()} memory locations.`);
+    } catch (reason) { setError(String(reason)); }
+    finally { setBusy(false); }
+  }
   return <details class="reviewed-situation">
-    <summary>Save a reviewed relationship in ToM</summary>
+    <summary>Save a reviewed structure in ToM</summary>
     <p>Use this only when the quoted passage says one party failed to show insurance compliance and another may buy replacement cover. Copy the party names exactly from the source.</p>
     <label>Party that failed to show compliance<input value={failureParty}
       onInput={(event) => setFailureParty(event.currentTarget.value)} disabled={busy} /></label>
@@ -899,6 +920,11 @@ function ReviewedSituation({ project, backend, source }: {
       onInput={(event) => setRepaymentWhen(event.currentTarget.value)} disabled={busy} /></label>
     <button disabled={busy || !failureParty.trim() || !coverPayer.trim()} onClick={() => void remember()}>
       {busy ? "Saving reviewed relationship…" : "Save reviewed relationship"}
+    </button>
+    <hr />
+    <p>If this passage explicitly requires written notice before a meeting, save that reviewed sequence once or link this source to it.</p>
+    <button disabled={busy} onClick={() => void rememberNoticeBeforeMeeting()}>
+      {busy ? "Saving reviewed structure…" : "Save notice-before-meeting structure"}
     </button>
     {message && <p role="status">{message}</p>}
     {error && <p role="alert">{error}</p>}
@@ -969,6 +995,16 @@ export function NativeMemoryAnswer({ project, draft, backend, disabled = false }
           <ReviewedSituation project={project} backend={backend} source={source} />
         </details>;
       })}
+      {!!answer.structural_sources?.length && <section aria-label="Evidence linked by learned structure">
+        <h4>Evidence linked by the learned structure</h4>
+        <p>ToM reopened this pattern. RGM supplied every exact passage linked to it.</p>
+        {answer.structural_sources.map((source) => <details key={`structural-${source.source_id}`}>
+          <summary>{source.provenance.display_name
+            ? `${source.provenance.display_name} · ${source.provenance.chunk_id}`
+            : source.source_id}</summary>
+          <p style={{ whiteSpace: "pre-wrap" }}>{source.text}</p>
+        </details>)}
+      </section>}
     </article>}
   </section>;
 }

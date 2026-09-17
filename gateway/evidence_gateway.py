@@ -675,7 +675,7 @@ class EvidenceTomGateway(base.TomGateway):
                         return 200, dict(ready=False, engine="rgm", scope="Import a document into this project first.")
                     if action == "answer":
                         return 200, dict(status="blocked", answer="Import a document into this project first.", sources=[])
-                    raise ValueError("import a document before reviewing a relationship")
+                    raise ValueError("import a document before reviewing a structure")
                 library = PermanentLibrary(path)
                 service = getattr(self, "rgm_document_service", None) or RgmDocumentService()
                 if action == "status":

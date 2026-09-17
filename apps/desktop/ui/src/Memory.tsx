@@ -33,7 +33,7 @@ export function Memory({
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [error, setError] = useState("");
   const [canImport, setCanImport] = useState(false);
-  const [structural, setStructural] = useState<{ configured: boolean; learned_situations: number; learned_relationship_memories?: number; capacity: number }>();
+  const [structural, setStructural] = useState<{ configured: boolean; learned_situations: number; learned_relationship_memories?: number; learned_structural_memories?: number; capacity: number }>();
   const [sourcePath, setSourcePath] = useState("");
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState("");
@@ -115,8 +115,8 @@ export function Memory({
           </p>
         </article>
         {structural?.configured && <article>
-          <span>Reviewed relationships</span>
-          <strong>{count(structural.learned_relationship_memories ?? structural.learned_situations)} / {count(structural.capacity)}</strong>
+          <span>Reviewed structural memories</span>
+          <strong>{count(structural.learned_structural_memories ?? structural.learned_relationship_memories ?? structural.learned_situations)} / {count(structural.capacity)}</strong>
           <p>Saved in the small ToM tree only after an explicit source review.</p>
         </article>}
       </div>

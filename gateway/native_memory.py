@@ -500,6 +500,27 @@ def rgm_role_record_receipt(source, roles):
         source_text_sha256=hashlib.sha256(text.encode()).hexdigest(), roles=fields))
 
 
+def rgm_temporal_motif_receipt(source, motif):
+    """Seal the one reviewed temporal motif currently admitted by the live bridge."""
+    import re
+    if not isinstance(source, dict) or not isinstance(source.get("text"), str):
+        raise ValueError("exact source identity and text are required")
+    text, source_id = source["text"], source.get("source_id")
+    expected = {"relation_kind": "before", "source_event": "notify", "target_event": "meeting"}
+    if motif != expected:
+        raise ValueError("only the reviewed notice-before-meeting motif is supported")
+    if not isinstance(source_id, str) or not source_id or not text.strip():
+        raise ValueError("exact source identity and text are required")
+    notice = re.search(r"\b(?:notice|notification|notify|notifies|notified)\b", text, re.I)
+    meeting = re.search(r"\b(?:meet|meets|meeting)\b", text, re.I)
+    if notice is None or meeting is None:
+        raise ValueError("the exact source must contain both the reviewed notice and meeting events")
+    return native_digest(dict(schema=RGM_SITUATION_VERSION, source_id=source_id,
+        source_text_sha256=hashlib.sha256(text.encode()).hexdigest(), temporal_motif=motif,
+        event_offsets=dict(notice=[notice.start(), notice.end()],
+            meeting=[meeting.start(), meeting.end()])))
+
+
 def rgm_candidate_source_id(memory):
     """Derive the reviewed-memory source identity from immutable RGM provenance."""
     proof = memory.get("evidence_reference") if isinstance(memory, dict) else None
@@ -571,8 +592,8 @@ def bind_recalled_rgm_evidence(packet, structural):
         candidate_count=len(memories), selected_count=len(selected))
 
 
-def build_rgm_situation_memory(source, roles, verification):
-    """Package reviewed directional roles as a native RGM snapshot.
+def build_rgm_situation_memory(source, roles, verification, *, temporal_motif=None):
+    """Package one reviewed relationship or temporal motif as a native RGM snapshot.
 
     The function preserves a prior review decision and exact source binding. It
     deliberately does not infer a relationship from text or treat an integrity
@@ -602,8 +623,17 @@ def build_rgm_situation_memory(source, roles, verification):
             (document_id + f":{proof['start']}:{proof['end']}").encode()).hexdigest()[:16]
         if source.get("source_id") != expected_source_id:
             raise ValueError("RGM source identity does not match its document range")
-    fields, offsets = _validate_rgm_source_roles(roles, text)
-    expected_receipt = rgm_role_record_receipt(source, fields)
+    if temporal_motif is None:
+        fields, offsets = _validate_rgm_source_roles(roles, text)
+        expected_receipt = rgm_role_record_receipt(source, fields)
+    else:
+        import re
+        fields = None
+        expected_receipt = rgm_temporal_motif_receipt(source, temporal_motif)
+        offsets = {name: [match.start(), match.end()] for name, match in (
+            ("notice", re.search(r"\b(?:notice|notification|notify|notifies|notified)\b", text, re.I)),
+            ("meeting", re.search(r"\b(?:meet|meets|meeting)\b", text, re.I)),
+        )}
     if (not isinstance(verification, dict)
         or verification.get("status") != "frozen_verified"
         or not isinstance(verification.get("method"), str)
@@ -611,24 +641,34 @@ def build_rgm_situation_memory(source, roles, verification):
         or verification.get("role_record_sha256") != expected_receipt):
         raise ValueError("a matching frozen reviewed-role receipt is required")
 
-    labels = []
-    for role in ("failure_party", "cover_payer", "repayment_from", "repayment_to"):
-        value = fields.get(role)
-        if value is not None and value not in labels:
-            labels.append(value)
-    if not labels:
-        raise ValueError("reviewed roles contain no structural parties")
-    entity_ids = {label: "party:" + hashlib.sha256(label.encode()).hexdigest()[:16] for label in labels}
-    entities = [dict(id=entity_ids[label], kind="party", label=label) for label in labels]
-    relations = []
-    if fields.get("failure_party") and fields.get("cover_payer"):
-        relations.append(dict(id="failure_to_replacement_cover", kind="triggers_replacement_cover",
-            source=entity_ids[fields["failure_party"]], target=entity_ids[fields["cover_payer"]],
-            source_role="failure_party", target_role="cover_payer"))
-    if fields.get("repayment_from") and fields.get("repayment_to"):
-        relations.append(dict(id="reimbursement_direction", kind="reimburses",
-            source=entity_ids[fields["repayment_from"]], target=entity_ids[fields["repayment_to"]],
-            source_role="repayment_from", target_role="repayment_to"))
+    if temporal_motif is not None:
+        labels = [temporal_motif["source_event"], temporal_motif["target_event"]]
+        entity_ids = {label: "event:" + hashlib.sha256(label.encode()).hexdigest()[:16]
+            for label in labels}
+        entities = [dict(id=entity_ids[label], kind="event", label=label) for label in labels]
+        relations = [dict(id="notice_before_meeting", kind="before",
+            source=entity_ids[temporal_motif["source_event"]],
+            target=entity_ids[temporal_motif["target_event"]],
+            source_role="source_event", target_role="target_event")]
+    else:
+        labels = []
+        for role in ("failure_party", "cover_payer", "repayment_from", "repayment_to"):
+            value = fields.get(role)
+            if value is not None and value not in labels:
+                labels.append(value)
+        if not labels:
+            raise ValueError("reviewed roles contain no structural parties")
+        entity_ids = {label: "party:" + hashlib.sha256(label.encode()).hexdigest()[:16] for label in labels}
+        entities = [dict(id=entity_ids[label], kind="party", label=label) for label in labels]
+        relations = []
+        if fields.get("failure_party") and fields.get("cover_payer"):
+            relations.append(dict(id="failure_to_replacement_cover", kind="triggers_replacement_cover",
+                source=entity_ids[fields["failure_party"]], target=entity_ids[fields["cover_payer"]],
+                source_role="failure_party", target_role="cover_payer"))
+        if fields.get("repayment_from") and fields.get("repayment_to"):
+            relations.append(dict(id="reimbursement_direction", kind="reimburses",
+                source=entity_ids[fields["repayment_from"]], target=entity_ids[fields["repayment_to"]],
+                source_role="repayment_from", target_role="repayment_to"))
     if not relations:
         raise ValueError("reviewed roles contain no complete directional relationship")
 
@@ -805,10 +845,29 @@ def reviewed_query_situation(question, memories):
     import re
     if not isinstance(question, str) or not isinstance(memories, list):
         raise ValueError("reviewed query input is invalid")
+    temporal = [item for item in memories if item.get("relation_kind") == "before"]
+    if temporal:
+        notice = re.search(r"\b(?:notice|notification|notify|notifies|notified)\b", question, re.I)
+        meeting = re.search(r"\b(?:meet|meets|meeting)\b", question, re.I)
+        ordered = re.search(r"\b(?:before|followed\s+by|then|sequence)\b", question, re.I)
+        if notice is not None and meeting is not None and ordered is not None:
+            reversed_order = bool(re.search(
+                r"\b(?:meet|meets|meeting)\b.{0,100}\bbefore\b.{0,100}"
+                r"\b(?:notice|notification|notify|notifies|notified)\b", question, re.I | re.S))
+            fields = (dict(relation_kind="before", source_event="meeting", target_event="notify")
+                if reversed_order else dict(relation_kind="before", source_event="notify",
+                    target_event="meeting"))
+            return dict(status="complete", fields=fields,
+                spans=[dict(field="source_event", start=notice.start(), end=notice.end(),
+                    text=notice.group()), dict(field="target_event", start=meeting.start(),
+                    end=meeting.end(), text=meeting.group())],
+                method="explicit notice-before-meeting motif resolved from the question")
     labels = []
     for item in memories:
         if not isinstance(item, dict):
             raise ValueError("reviewed memory is invalid")
+        if item.get("relation_kind") == "before":
+            continue
         keys = (("source_party", "target_party") if "source_party" in item
             else ("failure_party", "cover_payer"))
         for key in keys:
@@ -1411,11 +1470,12 @@ class NativeMemoryService:
 
 RGM_DOCUMENT_VERSION = "tom-assist-rgm-document-answers/1"
 RGM_DOCUMENT_SCOPE = "Experimental document answers: RGM retrieval and local evidence reading. ToM tree recall is not used."
-RGM_TOM_DOCUMENT_SCOPE = ("Project document answers: RGM finds exact evidence; reviewed relationships may also "
+RGM_TOM_DOCUMENT_SCOPE = ("Project document answers: RGM finds exact evidence; reviewed structures may also "
     "reactivate their persistent distributed ToM memory before evidence is checked.")
 RGM_TOM_BRIDGE_VERSION_V1 = "tom-assist-rgm-tom-reviewed-situations/1"
 RGM_TOM_BRIDGE_VERSION_V2 = "tom-assist-rgm-tom-reviewed-situations/2"
-RGM_TOM_BRIDGE_VERSION = "tom-assist-rgm-tom-reviewed-situations/3"
+RGM_TOM_BRIDGE_VERSION_V3 = "tom-assist-rgm-tom-reviewed-situations/3"
+RGM_TOM_BRIDGE_VERSION = "tom-assist-rgm-tom-reviewed-situations/4"
 RGM_TOM_SITUATION_PREFIX = "rgm-tom-situation-"
 RGM_SOURCE_AUTHORITY_VERSION = "tom-assist-rgm-source-authority/1"
 RGM_SOURCE_AUTHORITY_PREFIX = "rgm-source-authority-"
@@ -1760,7 +1820,7 @@ class RgmDocumentService:
             encoded = stored["record"]
             if encoded.get("version") not in (
                 RGM_TOM_BRIDGE_VERSION_V1, RGM_TOM_BRIDGE_VERSION_V2,
-                RGM_TOM_BRIDGE_VERSION,
+                RGM_TOM_BRIDGE_VERSION_V3, RGM_TOM_BRIDGE_VERSION,
             ):
                 raise ValueError("stored reviewed situation has an unsupported version")
             rgm = ReflectionGatedMemory()
@@ -1770,9 +1830,12 @@ class RgmDocumentService:
             situation = read_rgm_situation_memory(next(iter(rgm.state.anchors.values())))
             if situation != encoded["situation"] or stored["content_hash"] != situation["source_text_sha256"]:
                 raise ValueError("stored reviewed situation changed after persistence")
-            roles = encoded.get("roles")
             text = situation["provenance"]["source_text"]
-            _validate_rgm_source_roles(roles, text)
+            motif = encoded.get("temporal_motif")
+            if motif is None:
+                _validate_rgm_source_roles(encoded.get("roles"), text)
+            else:
+                rgm_temporal_motif_receipt(dict(source_id=situation["source_id"], text=text), motif)
             conflict = reviewed_source_conflict(text)
             if conflict is not None:
                 raise ValueError("stored reviewed relationship has unresolved source conflict: " + conflict)
@@ -1793,7 +1856,8 @@ class RgmDocumentService:
                 address_index=legacy["address_index"],
                 previous_write_keys=legacy.get("previous_write_keys", []))]
         if (not isinstance(memories, list)
-            or (not memories and encoded.get("version") != RGM_TOM_BRIDGE_VERSION)
+            or (not memories and encoded.get("version") not in {
+                RGM_TOM_BRIDGE_VERSION_V3, RGM_TOM_BRIDGE_VERSION})
             or len({memory.get("memory_id") for memory in memories}) != len(memories)):
             raise ValueError("stored reviewed ToM memories are invalid")
         return copy.deepcopy(memories)
@@ -1803,26 +1867,35 @@ class RgmDocumentService:
         encoded = row["encoded"]
         bindings = encoded.get("worker_bindings")
         if bindings is None:
-            bindings = [dict(memory_id=memory["memory_id"], source_id=memory["source_id"],
-                relation_kind=memory["relation_kind"], source_party=memory["source_party"],
-                target_party=memory["target_party"]) for memory in cls._worker_memories(row)]
+            bindings = []
+            for memory in cls._worker_memories(row):
+                source_key, target_key = cls._structure_endpoint_keys(memory)
+                bindings.append(dict(memory_id=memory["memory_id"], source_id=memory["source_id"],
+                    relation_kind=memory["relation_kind"],
+                    **{source_key: memory[source_key], target_key: memory[target_key]}))
         source_id = row["situation"]["source_id"]
-        required = {"memory_id", "source_id", "relation_kind", "source_party", "target_party"}
         if (not isinstance(bindings, list) or not bindings
-            or any(not isinstance(binding, dict) or set(binding) != required
-                or binding["source_id"] != source_id for binding in bindings)
+            or any(not isinstance(binding, dict) or binding.get("source_id") != source_id
+                or set(binding) != {"memory_id", "source_id", "relation_kind",
+                    *cls._structure_endpoint_keys(binding)} for binding in bindings)
             or len({binding["memory_id"] for binding in bindings}) != len(bindings)):
             raise ValueError("stored reviewed ToM source bindings are invalid")
         return copy.deepcopy(bindings)
 
     @staticmethod
-    def _relationship_key(item):
+    def _structure_endpoint_keys(item):
+        return (("source_event", "target_event") if item.get("relation_kind") == "before"
+            else ("source_party", "target_party"))
+
+    @classmethod
+    def _relationship_key(cls, item):
         def normalized(value):
             if not isinstance(value, str) or not value.strip():
                 raise ValueError("reviewed ToM relationship identity is invalid")
             return " ".join(value.split()).casefold()
-        return (normalized(item.get("relation_kind")), normalized(item.get("source_party")),
-            normalized(item.get("target_party")))
+        source_key, target_key = cls._structure_endpoint_keys(item)
+        return (normalized(item.get("relation_kind")), normalized(item.get(source_key)),
+            normalized(item.get(target_key)))
 
     @classmethod
     def _memory_catalog(cls, rows):
@@ -1894,7 +1967,8 @@ class RgmDocumentService:
         rows = self._situation_rows(library)
         memories = self._memory_catalog(rows)
         return dict(configured=profile is not None, learned_situations=len(rows),
-            learned_relationship_memories=len(memories), capacity=RGM_TOM_MAX_MEMORIES,
+            learned_relationship_memories=len(memories), learned_structural_memories=len(memories),
+            capacity=RGM_TOM_MAX_MEMORIES,
             source_authority_links=len(self._authority_rows(library)),
             version=RGM_TOM_BRIDGE_VERSION,
             automatic_extraction=False, whole_tree_score=False,
@@ -1909,23 +1983,35 @@ class RgmDocumentService:
             NativeMemoryService._inference_lock.release()
 
     def _learn_situation(self, project_id, library, payload):
-        """Persist one explicit reviewed source relation and teach the small ToM copy."""
+        """Persist one explicit reviewed source structure and teach the small ToM copy."""
         from types import SimpleNamespace
         from gateway.vendor.rgm17d.memory.rgm import ReflectionGatedMemory
         if payload.get("explicit_user_action") is not True:
             raise ValueError("explicit reviewed-relationship action required")
         source = self._chunk_source(project_id, library, payload.get("document_id"), payload.get("chunk_index"))
         supplied = payload.get("roles")
-        if not isinstance(supplied, dict) or any(key not in EVIDENCE_ROLE_FIELDS for key in supplied):
-            raise ValueError("reviewed relationship roles are invalid")
-        roles = dict(request=None, **{key: supplied.get(key) for key in EVIDENCE_ROLE_FIELDS})
-        if not roles["failure_party"] or not roles["cover_payer"]:
-            raise ValueError("the failing party and replacement-cover party are required")
-        if " ".join(roles["failure_party"].split()).casefold() == " ".join(roles["cover_payer"].split()).casefold():
-            raise ValueError("the failing party and replacement-cover party must be different")
-        verification = dict(status="frozen_verified", method="explicit user-reviewed source relationship",
-            role_record_sha256=rgm_role_record_receipt(source, roles))
-        record = build_rgm_situation_memory(source, roles, verification)
+        temporal_motif = payload.get("temporal_motif")
+        if temporal_motif is not None:
+            if supplied is not None:
+                raise ValueError("review one structural memory type at a time")
+            motif_receipt = rgm_temporal_motif_receipt(source, temporal_motif)
+            roles = None
+            verification = dict(status="frozen_verified",
+                method="explicit user-reviewed source temporal motif",
+                role_record_sha256=motif_receipt)
+            record = build_rgm_situation_memory(source, roles, verification,
+                temporal_motif=temporal_motif)
+        else:
+            if not isinstance(supplied, dict) or any(key not in EVIDENCE_ROLE_FIELDS for key in supplied):
+                raise ValueError("reviewed relationship roles are invalid")
+            roles = dict(request=None, **{key: supplied.get(key) for key in EVIDENCE_ROLE_FIELDS})
+            if not roles["failure_party"] or not roles["cover_payer"]:
+                raise ValueError("the failing party and replacement-cover party are required")
+            if " ".join(roles["failure_party"].split()).casefold() == " ".join(roles["cover_payer"].split()).casefold():
+                raise ValueError("the failing party and replacement-cover party must be different")
+            verification = dict(status="frozen_verified", method="explicit user-reviewed source relationship",
+                role_record_sha256=rgm_role_record_receipt(source, roles))
+            record = build_rgm_situation_memory(source, roles, verification)
         rgm = ReflectionGatedMemory()
         if not rgm.write_memory(record):
             raise ValueError("RGM rejected the reviewed relationship")
@@ -1938,7 +2024,8 @@ class RgmDocumentService:
         if existing is not None:
             if (existing["content"] != source["text"]
                 or existing["record"].get("situation") != situation
-                or existing["record"].get("roles") != roles):
+                or existing["record"].get("roles") != roles
+                or existing["record"].get("temporal_motif") != temporal_motif):
                 raise ValueError("this source chunk already has a different reviewed relationship")
             return dict(status="learned", duplicate=True, source_id=source["source_id"],
                 relationship=situation["relations"],
@@ -1950,6 +2037,7 @@ class RgmDocumentService:
         relation_specs = {
             "triggers_replacement_cover": "replacement_cover",
             "reimburses": "reimbursement",
+            "before": "before",
         }
         new_memories = []
         bindings = []
@@ -1957,8 +2045,11 @@ class RgmDocumentService:
             kind = relation_specs.get(relation["kind"])
             if kind is None:
                 continue
+            endpoints = (("source_event", "target_event") if kind == "before"
+                else ("source_party", "target_party"))
             relationship = dict(relation_kind=kind,
-                source_party=relation["source_label"], target_party=relation["target_label"])
+                **{endpoints[0]: relation["source_label"],
+                    endpoints[1]: relation["target_label"]})
             key = self._relationship_key(relationship)
             memory = existing_by_key.get(key)
             if memory is None:
@@ -1999,7 +2090,8 @@ class RgmDocumentService:
             tree_record = current
         encoded = dict(version=RGM_TOM_BRIDGE_VERSION, rgm_serialized=serialized,
             situation=situation, roles=roles, worker_memories=new_memories,
-            worker_bindings=bindings, tree=tree_record)
+            temporal_motif=copy.deepcopy(temporal_motif), worker_bindings=bindings,
+            tree=tree_record)
         library.retain(SimpleNamespace(id=record_id, content=source["text"], content_summary="",
             content_hash=situation["source_text_sha256"]), encoded)
         retired = []
@@ -2045,6 +2137,10 @@ class RgmDocumentService:
                 whole_tree_score=False, all_branch_cell_coordinates_compared=False)
         matched = [memory for memory in memories
             if self._relationship_key(memory) == self._relationship_key(query["fields"])]
+        if not matched:
+            return dict(status="no_matching_structure", recalled_source_ids=[],
+                query_structure=query, whole_tree_score=False,
+                all_branch_cell_coordinates_compared=False)
         active_source_ids = {row["situation"]["source_id"] for row in rows
             if row["situation"]["provenance"]["document_id"] in active_documents}
         query_sources = ([source_id for source_id in matched[0]["source_ids"]
@@ -2107,6 +2203,52 @@ class RgmDocumentService:
         if (result.get("whole_tree_score") is not False
             or result.get("all_branch_cell_coordinates_compared") is not True):
             raise ValueError("ToM recall did not preserve the distributed response")
+        return result
+
+    def _restore_recalled_sources(self, library, packet, structural):
+        """Reopen exact RGM passages linked by a recalled ToM structure."""
+        if not isinstance(structural, dict) or structural.get("status") != "recalled":
+            return packet
+        wanted = structural.get("recalled_source_ids")
+        if not isinstance(wanted, list) or not wanted or len(wanted) != len(set(wanted)):
+            raise ValueError("reviewed ToM returned invalid source identities")
+        memories = copy.deepcopy(packet.get("memories"))
+        if not isinstance(memories, list):
+            raise ValueError("RGM packet memories are invalid")
+        present = {rgm_candidate_source_id(memory) for memory in memories}
+        rows = {row["situation"]["source_id"]: row for row in self._situation_rows(library)}
+        sources = self._source_index(library)
+        for source_id in wanted:
+            if source_id in present:
+                continue
+            row, source = rows.get(source_id), sources.get(source_id)
+            if row is None or source is None or not source["active"]:
+                raise ValueError("reviewed ToM source is not an active retained RGM passage")
+            situation = row["situation"]
+            proof = situation["provenance"]
+            if (source["text_sha256"] != situation["source_text_sha256"]
+                or source["text"] != proof.get("source_text")):
+                raise ValueError("reviewed ToM source changed after its structural binding")
+            corpus = library.get(proof["corpus_id"])
+            if (corpus is None or corpus["record"].get("source_text_sha256")
+                != proof.get("extracted_text_sha256")):
+                raise ValueError("reviewed ToM source lost its authenticated RGM corpus")
+            reference = dict(doc_id=proof["document_id"], corpus_id=proof["corpus_id"],
+                corpus_sha256=proof["corpus_sha256"], chunk_id=proof["chunk_id"],
+                section_id=proof["section_id"], start=proof["start"], end=proof["end"],
+                text_sha256=situation["source_text_sha256"], provenance=corpus["record"]["provenance"])
+            memory = dict(id=proof["chunk_id"], content=source["text"],
+                evidence_reference=reference, source="tom_structural_pointer")
+            if rgm_candidate_source_id(memory) != source_id:
+                raise ValueError("reviewed ToM source pointer changed identity")
+            memories.append(memory)
+            present.add(source_id)
+        result = copy.deepcopy(packet)
+        result["memories"] = memories
+        result["source_count"] = len(memories)
+        result["source_chars"] = sum(len(memory["content"]) for memory in memories)
+        structural["rgm_access_candidate_count"] = len(packet["memories"])
+        structural["linked_source_count"] = len(wanted)
         return result
 
     def _authority_review(self, library, structural):
@@ -2267,9 +2409,17 @@ class RgmDocumentService:
                         retrieval=retrieval, reading=reading),
                     purity=dict(tree_calls=0, training_calls=0, provider_sends=0,
                         whole_tree_score=False, complete_distributed_return_compared=False))
+            packet = self._restore_recalled_sources(library, packet, structural)
             reader_memories, evidence_scope = bind_recalled_rgm_evidence(packet, structural)
             structural["evidence_scope"] = evidence_scope
             retrieval["reviewed_tom_memory"] = structural
+            structural_sources = []
+            if structural.get("status") == "recalled":
+                for memory in reader_memories:
+                    ref = memory["evidence_reference"]
+                    structural_sources.append(dict(source_id=rgm_candidate_source_id(memory),
+                        text=memory["content"], provenance={**ref,
+                            "display_name": retrieval["titles"][ref["corpus_id"]]}))
             if reader_memories:
                 reader_packet = dict(memories=[{k: m[k] for k in ("id", "content", "evidence_reference")}
                     for m in reader_memories])
@@ -2310,6 +2460,7 @@ class RgmDocumentService:
                     purity=dict(tree_calls=tree_calls, training_calls=0, provider_sends=0,
                         whole_tree_score=False, complete_distributed_return_compared=bool(tree_calls)))
             return dict(status=status, answer="\n\n".join(lines), sources=list(approved.values()),
+                structural_sources=structural_sources,
                 authority_review=authority_review,
                 scope=RGM_TOM_DOCUMENT_SCOPE if tree_calls else RGM_DOCUMENT_SCOPE,
                 engine="rgm+tom" if tree_calls else "rgm",

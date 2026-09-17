@@ -976,11 +976,22 @@ def _reviewed_tom_worker(calls, *, damage=None):
             assert payload["query_situation"] in (
                 dict(relation_kind="replacement_cover", source_party="Orchid", target_party="Rowan"),
                 dict(relation_kind="reimbursement", source_party="Orchid", target_party="Rowan"),
+                dict(relation_kind="before", source_event="notify", target_event="meeting"),
             )
-            return dict(status="recalled", recalled_source_ids=payload["candidate_source_ids"],
+            def key(item):
+                endpoints = (("source_event", "target_event") if item["relation_kind"] == "before"
+                    else ("source_party", "target_party"))
+                return (item["relation_kind"], *(item[name] for name in endpoints))
+            match = next(memory for memory in payload["memories"]
+                if key(memory) == key(payload["query_situation"]))
+            access = set(payload["candidate_source_ids"])
+            recalled = list(match.get("source_ids", [match["source_id"]])) if access.intersection(
+                match.get("source_ids", [match["source_id"]])) else []
+            return dict(status="recalled" if recalled else "no_matching_memory",
+                recalled_source_ids=recalled,
                 returns=[dict(source_id=source_id, status="exact_native_return",
                     field_shape=[254, 32, 32], field_sha256="field", active_slot_count=381)
-                    for source_id in payload["candidate_source_ids"]],
+                    for source_id in recalled],
                 tree_state_hash="state-1", tree_unchanged=True, root_assembly_calls=0,
                 whole_tree_score=(damage == "collapsed"),
                 all_branch_cell_coordinates_compared=True)
@@ -1007,6 +1018,24 @@ def test_reviewed_tom_v2_source_memory_is_catalogued_with_its_binding():
         worker_memories=[memory]), situation=dict(source_id="source"))]
     assert RgmDocumentService._memory_catalog(rows) == [dict(memory,
         source_ids=["source"])]
+
+
+def test_reviewed_tom_v3_multi_source_binding_remains_readable():
+    from gateway.native_memory import RgmDocumentService, RGM_TOM_BRIDGE_VERSION_V3
+    memory = dict(memory_id="memory", source_id="source-a", text="Orchid Rowan",
+        relation_kind="reimbursement", source_party="Orchid", target_party="Rowan",
+        address_index=0, previous_write_keys=[["bank", 1]])
+    def binding(source_id):
+        return dict(memory_id="memory", source_id=source_id, relation_kind="reimbursement",
+            source_party="Orchid", target_party="Rowan")
+    rows = [
+        dict(encoded=dict(version=RGM_TOM_BRIDGE_VERSION_V3, worker_memories=[memory],
+            worker_bindings=[binding("source-a")]), situation=dict(source_id="source-a")),
+        dict(encoded=dict(version=RGM_TOM_BRIDGE_VERSION_V3, worker_memories=[],
+            worker_bindings=[binding("source-b")]), situation=dict(source_id="source-b")),
+    ]
+    assert RgmDocumentService._memory_catalog(rows) == [dict(memory,
+        source_ids=["source-a", "source-b"])]
 
 
 def test_reviewed_rgm_situation_is_persisted_taught_and_used_during_answer(tmp_path):
@@ -1164,6 +1193,134 @@ def test_multiple_rgm_sources_bind_to_one_tom_relationship_without_second_tree_w
         assert resolved_trace["authoritative_source_ids"] == [conflict_source_id]
         assert len(resolved["sources"]) == 1
         assert [call[0] for call in calls] == ["rgm_tom_learn", "rgm_tom_recall"]
+    finally:
+        library.db.close()
+
+
+def test_reviewed_notice_before_meeting_memory_reopens_every_bound_rgm_source(tmp_path):
+    from gateway.native_memory import (RgmDocumentService, bind_recalled_rgm_evidence,
+        rgm_candidate_source_id)
+    from gateway.permanent_library import PermanentLibrary
+    library = PermanentLibrary(tmp_path / "temporal.sqlite3")
+    calls = []
+    service = RgmDocumentService(worker=_rgm_app_worker([]), model_identity="fixture-model",
+        tom_worker=_reviewed_tom_worker(calls), tom_profile=_reviewed_tom_profile())
+    documents = [
+        ("Interface agreement", "11 Dispute process\nFollowing the issue of a written notice, the Executive Group must meet to resolve the issue."),
+        ("D&C deed", "31 Claim process\nThe Contractor issues a notice and the parties must meet before the claim response is due."),
+    ]
+    motif = dict(relation_kind="before", source_event="notify", target_event="meeting")
+    try:
+        learned = []
+        for name, text in documents:
+            document = service.ingest("project", library, dict(explicit_user_action=True,
+                display_name=name, content=text, media_type="text/plain"))
+            learned.append(service.learn_situation("project", library, dict(
+                explicit_user_action=True, document_id=document["document_id"], chunk_index=0,
+                temporal_motif=motif)))
+        assert learned[0]["write_count"] == 1
+        assert learned[1]["write_count"] == 0
+        assert learned[1]["bound_existing_relationships"] == 1
+        assert [call[0] for call in calls] == ["rgm_tom_learn"]
+        status = service.structural_status("project", library)
+        assert status["learned_structural_memories"] == 1
+        assert status["learned_situations"] == 2
+
+        rows = service._situation_rows(library)
+        first = rows[0]["situation"]
+        proof = first["provenance"]
+        packet = dict(memories=[dict(id=proof["chunk_id"], content=proof["source_text"],
+            evidence_reference=dict(doc_id=proof["document_id"], chunk_id=proof["chunk_id"],
+                corpus_id=proof["corpus_id"], corpus_sha256=proof["corpus_sha256"],
+                section_id=proof["section_id"], start=proof["start"], end=proof["end"],
+                text_sha256=first["source_text_sha256"], provenance={}))])
+        questions = [
+            "Which procedures require a written notice, followed by a meeting?",
+            "Where does notification happen, then people meet?",
+            "Find the sequence notice, meeting, response.",
+        ]
+        expected_ids = {row["situation"]["source_id"] for row in rows}
+        for question in questions:
+            returned = service.recall_situations("project", library, packet, question,
+                "2026-09-17T00:00:00Z")
+            assert returned["status"] == "recalled"
+            assert set(returned["recalled_source_ids"]) == expected_ids
+            assert returned["whole_tree_score"] is False
+            assert returned["all_branch_cell_coordinates_compared"] is True
+            expanded = service._restore_recalled_sources(library, packet, returned)
+            selected, scope = bind_recalled_rgm_evidence(expanded, returned)
+            assert {rgm_candidate_source_id(memory) for memory in selected} == expected_ids
+            assert {memory["content"] for memory in selected} == {text for _, text in documents}
+            assert scope["selected_count"] == 2
+            assert returned["rgm_access_candidate_count"] == 1
+            assert returned["linked_source_count"] == 2
+
+        calls_before = len(calls)
+        reversed_result = service.recall_situations("project", library, packet,
+            "Does the meeting happen before the written notice?", "2026-09-17T00:00:00Z")
+        assert reversed_result["status"] == "no_matching_structure"
+        assert reversed_result["recalled_source_ids"] == []
+        assert len(calls) == calls_before
+    finally:
+        library.db.close()
+
+
+def test_live_answer_exposes_every_exact_source_linked_by_temporal_memory(tmp_path, monkeypatch):
+    import gateway.native_memory as native_memory
+    from gateway.native_memory import RgmDocumentService, read_rgm_source_evidence
+    from gateway.permanent_library import PermanentLibrary
+    library = PermanentLibrary(tmp_path / "temporal-answer.sqlite3")
+    calls = []
+    def document_worker(operation, payload):
+        if operation == "rgm_embed":
+            return dict(vectors={hashlib.sha256(text.encode()).hexdigest(): [1.0] + [0.0] * 383
+                for text in payload["texts"]})
+        assert operation == "rgm_read"
+        assert len(payload["packet"]["memories"]) == 2
+        def generate(_instruction, data, _limit):
+            source = data["sources"][0]
+            return dict(raw=json.dumps(dict(status="supported", source_id=source["source_id"],
+                answer_quote=source["text"])))
+        return read_rgm_source_evidence(payload["question"], payload["packet"], generate)
+    service = RgmDocumentService(worker=document_worker, model_identity="fixture-model",
+        tom_worker=_reviewed_tom_worker(calls), tom_profile=_reviewed_tom_profile())
+    documents = [
+        ("Interface agreement", "11 Dispute process\nFollowing the issue of a written notice, the Executive Group must meet to resolve the issue."),
+        ("D&C deed", "31 Claim process\nThe Contractor issues a notice and the parties must meet before the claim response is due."),
+    ]
+    motif = dict(relation_kind="before", source_event="notify", target_event="meeting")
+    try:
+        for name, text in documents:
+            document = service.ingest("project", library, dict(explicit_user_action=True,
+                display_name=name, content=text, media_type="text/plain"))
+            service.learn_situation("project", library, dict(explicit_user_action=True,
+                document_id=document["document_id"], chunk_index=0, temporal_motif=motif))
+        rows = service._situation_rows(library)
+        first = rows[0]["situation"]; proof = first["provenance"]
+        first_memory = dict(id=proof["chunk_id"], content=proof["source_text"],
+            evidence_reference=dict(doc_id=proof["document_id"], chunk_id=proof["chunk_id"],
+                corpus_id=proof["corpus_id"], corpus_sha256=proof["corpus_sha256"],
+                section_id=proof["section_id"], start=proof["start"], end=proof["end"],
+                text_sha256=first["source_text_sha256"], provenance={}))
+        titles = {row["situation"]["provenance"]["corpus_id"]:
+            row["situation"]["provenance"]["display_name"] for row in rows}
+        monkeypatch.setattr(native_memory, "retrieve_rgm_project_documents",
+            lambda *_args, **_kwargs: (dict(memories=[first_memory]),
+                dict(native={}, candidates=2, titles=titles, tree_calls=0)))
+        result = service.answer("project", library,
+            "Which procedures require a written notice, followed by a meeting?")
+        assert result["status"] == "supported"
+        assert len(result["sources"]) == 1
+        assert len(result["structural_sources"]) == 2
+        assert {source["text"] for source in result["structural_sources"]} == {
+            text for _, text in documents}
+        trace = result["trace"]["retrieval"]["reviewed_tom_memory"]
+        assert trace["status"] == "recalled"
+        assert trace["rgm_access_candidate_count"] == 1
+        assert trace["linked_source_count"] == 2
+        assert trace["evidence_scope"]["selected_count"] == 2
+        assert result["purity"]["whole_tree_score"] is False
+        assert result["purity"]["complete_distributed_return_compared"] is True
     finally:
         library.db.close()
 
