@@ -1007,6 +1007,14 @@ failure/substitute/cost structure can reopen its reviewed sources even when RGM
 supplies no correct initial candidate. This does not perform automatic motif
 extraction or accept arbitrary event graphs.
 
+The failure/substitute/cost source guard checks one local procedure rather than
+combining keywords from anywhere in a long RGM chunk. On the two frozen contract
+corpora it recognized 12 reviewed procedures across 563 native chunks, including
+insurance substitution, corrective work, emergency action and general step-in
+wording. Nearby failure/debt clauses without substitute performance were
+rejected. This remains a bounded admission check for an explicitly reviewed
+motif; it does not automatically teach every detected passage.
+
 During an answer, MiniLM/RGM still locates candidate source passages. When the
 question explicitly states a supported insurance relationship or an admitted
 event sequence, its reviewed structure is resolved from the query alone. Each

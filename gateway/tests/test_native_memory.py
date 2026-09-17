@@ -1286,6 +1286,76 @@ def test_reviewed_notice_before_meeting_memory_reopens_every_bound_rgm_source(tm
         library.db.close()
 
 
+@pytest.mark.parametrize("text", [
+    ("If SM fails to promptly comply, TfNSW may, at the cost of SM, undertake all actions "
+        "necessary to manage the emergency."),
+    ("If TfNSW fails to promptly comply, SM may, at the cost of TfNSW, undertake all actions "
+        "necessary to manage the emergency."),
+    ("TfNSW fails to provide evidence of insurance. SM may effect and maintain that insurance "
+        "and pay such premiums. Any amounts paid will be a debt due and TfNSW must reimburse SM."),
+    ("SM fails to provide evidence of insurance. TfNSW may effect and maintain that insurance "
+        "and pay such premiums. Any amounts paid will be a debt due and SM must reimburse TfNSW."),
+    ("The Contractor does not comply. The Principal may employ others to carry out the direction. "
+        "The resulting Loss is a debt due from the Contractor."),
+    ("The Principal may take any action necessary which the Contractor must take but does not take. "
+        "Loss from taking that action or the failure to take it will be a debt due from the Contractor."),
+    ("The Contractor is not taking adequate measures. The Principal may take such actions as it "
+        "deems necessary and recover its reasonable costs and expenses from the Contractor."),
+    ("If the Contractor does not comply, the Principal may have the correction work carried out at "
+        "the Contractor's expense, and the cost incurred will be a debt due from the Contractor."),
+    ("If the Contractor fails to maintain insurance, the Principal may effect and maintain the "
+        "relevant insurances and its costs and expenses will be a debt due from the Contractor."),
+    ("If the Contractor fails to pay premiums, the Principal may effect such insurance or pay such "
+        "premium and any costs incurred will be a debt due from the Contractor."),
+    ("If the Contractor fails to repair the work, the Principal may carry out such work or engage "
+        "others to carry out such work and its Loss will be a debt due from the Contractor."),
+    ("If the Contractor fails to perform an obligation, the Principal may take such action as may be "
+        "necessary to remedy the failure. Its Loss in doing so will be a debt due from the Contractor."),
+])
+def test_reviewed_failure_step_in_cost_source_forms_are_local(text):
+    from gateway.native_memory import FAILURE_STEP_IN_COST_MOTIF, rgm_temporal_motif_receipt
+    assert len(rgm_temporal_motif_receipt(
+        dict(source_id="SRC-local-chain", text=text), FAILURE_STEP_IN_COST_MOTIF)) == 64
+
+
+@pytest.mark.parametrize("text", [
+    "The Contractor fails to finish on time and liquidated damages become a debt due.",
+    "The certifier's cost is a debt due. The Proof Engineer later fails to submit a report.",
+    "The Contractor fails to pay an amount. The Principal may perfect a security interest at its expense.",
+    ("The Contractor fails to act and the Principal may carry out such work. "
+        + "Unrelated contract text. " * 100
+        + "A different overpayment is a debt due."),
+])
+def test_reviewed_failure_step_in_cost_rejects_incomplete_or_distant_phrases(text):
+    from gateway.native_memory import FAILURE_STEP_IN_COST_MOTIF, rgm_temporal_motif_receipt
+    with pytest.raises(ValueError, match="one local failure"):
+        rgm_temporal_motif_receipt(
+            dict(source_id="SRC-not-a-chain", text=text), FAILURE_STEP_IN_COST_MOTIF)
+
+
+def test_reviewed_failure_step_in_cost_preserves_legacy_receipt_offsets():
+    import re
+    from gateway.native_memory import (FAILURE_STEP_IN_COST_MOTIF, RGM_SITUATION_VERSION,
+        native_digest, rgm_temporal_motif_receipt)
+    text = ("The Principal may employ others to carry out the direction. The amount of Loss from "
+        "the Contractor's failure to comply will be a debt due from the Contractor.")
+    patterns = {
+        "failure": r"\b(?:fails?\s+to|failure\s+to|does\s+not\s+comply|did\s+not\s+comply)\b",
+        "substitute_action": (r"\b(?:undertake\s+all\s+actions|"
+            r"employ\s+others\s+to\s+carry\s+out|carry\s+out\s+such\s+work|"
+            r"engage\s+others\s+to\s+carry\s+out|step(?:s|ped)?\s+in)\b"),
+        "cost_recovery": (r"\b(?:at\s+the\s+cost\s+of|debt\s+due|"
+            r"recover(?:s|ed|ing)?\s+(?:the\s+)?cost|reasonable\s+costs?)\b"),
+    }
+    matches = {name: re.search(pattern, text, re.I) for name, pattern in patterns.items()}
+    expected = native_digest(dict(schema=RGM_SITUATION_VERSION, source_id="SRC-existing",
+        source_text_sha256=hashlib.sha256(text.encode()).hexdigest(),
+        temporal_motif=FAILURE_STEP_IN_COST_MOTIF,
+        event_offsets={name: [match.start(), match.end()] for name, match in matches.items()}))
+    assert rgm_temporal_motif_receipt(
+        dict(source_id="SRC-existing", text=text), FAILURE_STEP_IN_COST_MOTIF) == expected
+
+
 def test_reviewed_failure_step_in_cost_chain_recalls_sources_without_rgm_candidate(tmp_path):
     from gateway.native_memory import (FAILURE_STEP_IN_COST_MOTIF, RgmDocumentService,
         bind_recalled_rgm_evidence, rgm_candidate_source_id)

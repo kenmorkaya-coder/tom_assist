@@ -436,6 +436,79 @@ FAILURE_STEP_IN_COST_MOTIF = dict(
     intermediate_event="substitute_action", target_event="cost_recovery")
 
 
+def _failure_step_in_cost_matches(text):
+    """Locate one local failure -> substitute action -> cost-recovery procedure.
+
+    The source may state the cost allocation before the substitute action, or
+    describe the substitute action before the omitted duty. Those two legal
+    drafting forms are admitted explicitly. Unrelated phrases elsewhere in a
+    long RGM chunk are not combined.
+    """
+    import itertools
+    import re
+    legacy_patterns = {
+        "failure": (r"\b(?:fails?\s+to|failure\s+to|does\s+not\s+comply|"
+            r"did\s+not\s+comply)\b"),
+        "substitute_action": (r"\b(?:undertake\s+all\s+actions|"
+            r"employ\s+others\s+to\s+carry\s+out|carry\s+out\s+such\s+work|"
+            r"engage\s+others\s+to\s+carry\s+out|step(?:s|ped)?\s+in)\b"),
+        "cost_recovery": (r"\b(?:at\s+the\s+cost\s+of|debt\s+due|"
+            r"recover(?:s|ed|ing)?\s+(?:the\s+)?cost|reasonable\s+costs?)\b"),
+    }
+    extended_patterns = {
+        "failure": (r"\b(?:fails?\s+to|failure\s+to|does\s+not\s+comply|"
+            r"did\s+not\s+comply|but\s+does\s+not\s+take|"
+            r"not\s+taking\s+adequate\s+measures)\b"),
+        "substitute_action": (r"\b(?:undertake\s+all\s+actions|"
+            r"employ\s+others\s+to\s+carry\s+out|carry\s+out\s+such\s+work|"
+            r"engage\s+others\s+to\s+carry\s+out|step(?:s|ped)?\s+in|"
+            r"effect\s+and\s+maintain\s+(?:that|the\s+relevant)\s+insurances?|"
+            r"effect\s+such\s+insurance|pay\s+such\s+premium|"
+            r"take\s+any\s+action\s+necessary|"
+            r"take\s+such\s+actions?\s+(?:as\s+may\s+be\s+necessary|as)|"
+            r"have\s+(?:the\s+)?[^.;]{0,80}\s+carried\s+out)\b"),
+        "cost_recovery": (r"\b(?:at\s+the\s+cost\s+of|debt\s+due|"
+            r"recover(?:s|ed|ing)?\s+(?:its\s+)?(?:reasonable\s+)?costs?|"
+            r"reasonable\s+costs?|costs?\s+and\s+expenses?|"
+            r"reimburse(?:s|d|ment)?)\b"),
+    }
+
+    def valid(matches):
+        failure, action, cost = (matches[name]
+            for name in ("failure", "substitute_action", "cost_recovery"))
+        starts = failure.start(), action.start(), cost.start()
+        span = max(match.end() for match in matches.values()) - min(starts)
+        if span > 1200:
+            return False
+        if starts[0] < starts[1] < starts[2]:
+            return True
+        if (starts[0] < starts[2] < starts[1]
+            and cost.group().casefold().startswith("at")):
+            return True
+        failure_text = " ".join(failure.group().casefold().split())
+        return (starts[1] < starts[0] < starts[2]
+            and failure_text in {"failure to", "but does not take"})
+
+    # Preserve offsets used by already-stored reviewed memories when their
+    # original phrase set is locally coherent.
+    legacy = {name: re.search(pattern, text, re.I)
+        for name, pattern in legacy_patterns.items()}
+    if all(legacy.values()) and valid(legacy):
+        return legacy
+
+    found = {name: list(re.finditer(pattern, text, re.I))
+        for name, pattern in extended_patterns.items()}
+    candidates = []
+    for failure, action, cost in itertools.product(
+        found["failure"], found["substitute_action"], found["cost_recovery"]):
+        matches = dict(failure=failure, substitute_action=action, cost_recovery=cost)
+        if valid(matches):
+            span = max(match.end() for match in matches.values()) - min(
+                match.start() for match in matches.values())
+            candidates.append((span, matches))
+    return min(candidates, key=lambda item: item[0])[1] if candidates else None
+
+
 def _validate_rgm_source_roles(roles, text):
     """Validate the frozen source-role shape without applying question intent rules."""
     import re
@@ -522,21 +595,10 @@ def rgm_temporal_motif_receipt(source, motif):
         if any(match is None for match in matches.values()):
             raise ValueError("the exact source must contain both the reviewed notice and meeting events")
     elif motif == FAILURE_STEP_IN_COST_MOTIF:
-        matches = {
-            "failure": re.search(
-                r"\b(?:fails?\s+to|failure\s+to|does\s+not\s+comply|did\s+not\s+comply)\b",
-                text, re.I),
-            "substitute_action": re.search(
-                r"\b(?:undertake\s+all\s+actions|employ\s+others\s+to\s+carry\s+out|"
-                r"carry\s+out\s+such\s+work|engage\s+others\s+to\s+carry\s+out|step(?:s|ped)?\s+in)\b",
-                text, re.I),
-            "cost_recovery": re.search(
-                r"\b(?:at\s+the\s+cost\s+of|debt\s+due|recover(?:s|ed|ing)?\s+(?:the\s+)?cost|"
-                r"reasonable\s+costs?)\b", text, re.I),
-        }
-        if any(match is None for match in matches.values()):
+        matches = _failure_step_in_cost_matches(text)
+        if matches is None:
             raise ValueError(
-                "the exact source must contain failure, substitute action, and cost recovery")
+                "the exact source must contain one local failure, substitute action, and cost-recovery procedure")
     else:
         raise ValueError("unsupported reviewed event motif")
     return native_digest(dict(schema=RGM_SITUATION_VERSION, source_id=source_id,
@@ -656,18 +718,15 @@ def build_rgm_situation_memory(source, roles, verification, *, temporal_motif=No
         if temporal_motif == NOTICE_MEETING_MOTIF:
             patterns = dict(notice=r"\b(?:notice|notification|notify|notifies|notified)\b",
                 meeting=r"\b(?:meet|meets|meeting)\b")
+            offsets = {name: [match.start(), match.end()] for name, pattern in patterns.items()
+                for match in [re.search(pattern, text, re.I)]}
         elif temporal_motif == FAILURE_STEP_IN_COST_MOTIF:
-            patterns = dict(
-                failure=r"\b(?:fails?\s+to|failure\s+to|does\s+not\s+comply|did\s+not\s+comply)\b",
-                substitute_action=(r"\b(?:undertake\s+all\s+actions|"
-                    r"employ\s+others\s+to\s+carry\s+out|carry\s+out\s+such\s+work|"
-                    r"engage\s+others\s+to\s+carry\s+out|step(?:s|ped)?\s+in)\b"),
-                cost_recovery=(r"\b(?:at\s+the\s+cost\s+of|debt\s+due|"
-                    r"recover(?:s|ed|ing)?\s+(?:the\s+)?cost|reasonable\s+costs?)\b"))
+            matches = _failure_step_in_cost_matches(text)
+            if matches is None:
+                raise ValueError("reviewed event motif is absent from its exact source")
+            offsets = {name: [match.start(), match.end()] for name, match in matches.items()}
         else:
             raise ValueError("unsupported reviewed event motif")
-        offsets = {name: [match.start(), match.end()] for name, pattern in patterns.items()
-            for match in [re.search(pattern, text, re.I)]}
     if (not isinstance(verification, dict)
         or verification.get("status") != "frozen_verified"
         or not isinstance(verification.get("method"), str)

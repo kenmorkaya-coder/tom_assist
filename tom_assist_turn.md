@@ -2500,3 +2500,34 @@ motif automatically or accept arbitrary event chains. The large tree and field
 archive remain on Passport under
 `native_learned_recall/live_desktop_temporal_motif_v1/`; no large artifact was
 added to Git.
+
+#### Clause-local source recognition diagnostic
+
+The next diagnostic scanned every one of the 248 M12 and 315 D&C native RGM
+chunks before changing the learning path. The original narrow phrase guard
+admitted five passages. Manual inspection confirmed that all five expressed the
+reviewed failure → substitute action → cost-recovery structure, but the guard
+missed seven other clear instances. The missed drafting forms included one
+party effecting insurance for another, corrective work being carried out by
+others, direct protective action and incident response.
+
+A broad whole-chunk keyword rule was rejected. It combined a failure in one
+clause with an unrelated action or debt elsewhere in the same chunk. The source
+guard now requires the three events to form one local procedure. It explicitly
+handles three observed legal drafting layouts: ordinary failure/action/cost
+order; cost allocation immediately before the substitute action; and a clause
+that first grants the substitute action and then describes the omitted duty.
+It does not combine event phrases separated by more than 1,200 source
+characters.
+
+The revised guard found exactly 12 candidate passages in the unchanged
+563-chunk corpus: M12 chunks 62, 64, 78 and 80, plus D&C chunks 171, 194, 195,
+205, 261, 263, 265 and 303. Every match was inspected and contains the complete
+procedure. Nearby clauses containing failure and debt but no substitute
+performance were rejected, as was a deliberately separated three-phrase
+control. Existing learned-memory receipts retain their original event offsets,
+and the live project loaded all four older bridge records unchanged.
+
+This change improves the exact-source admission check only. It does not alter
+the tree, automatically teach detected passages or collapse a distributed ToM
+return. The relevant gateway suite passes 251 tests.
