@@ -102,6 +102,26 @@ the exact source. Automatic full-graph ingestion is blocked. Raw proposals,
 model identity, validation errors and the control are retained under
 `native_rgm500_structure_parser_diagnosis` in the compact master report.
 
+The bounded `--rgm500-persisted-situation-bridge` follow-up wires the safe
+boundary directly. It stores the reviewed clause-23.5 situation as an RGM
+snapshot containing directed relations plus the exact chunk provenance, then
+serializes and reloads RGM before ToM sees it. The restored relation is the only
+source-side structure used to teach a fresh copy of the approved 500-branch
+tree. Both held-out questions open all 381 learned branch/slot locations and no
+other locations; the untrained-tree control opens none. The questions produce
+the same complete signed return as each other. That return differs from the
+teaching load, as expected for a new question entering the learned structure.
+
+No branch or 32×32 field is collapsed. The complete trained and untrained
+fields are retained in the 29 MB Passport archive
+`rgm500_structural_bridge_v1/rgm_persisted_n05_native_fields.npz`; the compact
+record is `native_rgm500_persisted_situation_bridge` in the master report. Peak
+process memory was 1.17 GiB. This proves the reviewed RGM-record → persistent
+ToM-memory boundary for one real relationship. It does not prove automatic
+relationship extraction. Tom 17D's current evidence validator cannot supply
+that authority because it accepts both the correct and reversed direction when
+both party names and the relation word occur in the source.
+
 The subsequent `--rgm-document-ingestion` audit uses the actual unmodified
 `tom_master17D/interface/doc_ingest.py:ingest_any_document` on the complete
 executed M12 agreement, with native `auto` mode and default `zero_copy_strict`

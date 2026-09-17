@@ -427,6 +427,171 @@ def validate_native_roles(raw, text):
     return fields, offsets
 
 
+RGM_SITUATION_VERSION = "tom-assist-rgm-situation/1"
+
+
+def _validate_rgm_source_roles(roles, text):
+    """Validate the frozen source-role shape without applying question intent rules."""
+    import re
+    if not isinstance(roles, dict) or set(roles) != {"request", *EVIDENCE_ROLE_FIELDS}:
+        raise ValueError("invalid source role schema")
+    if roles["request"] is not None:
+        raise ValueError("a source role record cannot contain a question request")
+    fields = copy.deepcopy(roles)
+    offsets = {}
+    for key in EVIDENCE_ROLE_FIELDS:
+        value = fields[key]
+        if value is None:
+            continue
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError("invalid source role value")
+        match = re.search(r"\s+".join(re.escape(word) for word in value.split()), text)
+        if match is None:
+            raise ValueError("source role is not copied from the source")
+        offsets[key] = [match.start(), match.end()]
+    return fields, offsets
+
+
+def rgm_role_record_receipt(source, roles):
+    """Seal an already-reviewed role record; this does not prove its meaning."""
+    if not isinstance(source, dict) or not isinstance(roles, dict):
+        raise ValueError("source and reviewed roles are required")
+    text = source.get("text")
+    source_id = source.get("source_id")
+    if not isinstance(text, str) or not text.strip() or not isinstance(source_id, str) or not source_id:
+        raise ValueError("exact source identity and text are required")
+    fields, _ = _validate_rgm_source_roles(roles, text)
+    return native_digest(dict(schema=RGM_SITUATION_VERSION, source_id=source_id,
+        source_text_sha256=hashlib.sha256(text.encode()).hexdigest(), roles=fields))
+
+
+def build_rgm_situation_memory(source, roles, verification):
+    """Package reviewed directional roles as a native RGM snapshot.
+
+    The function preserves a prior review decision and exact source binding. It
+    deliberately does not infer a relationship from text or treat an integrity
+    receipt as semantic validation.
+    """
+    if not isinstance(source, dict) or not isinstance(source.get("provenance"), dict):
+        raise ValueError("exact RGM source provenance is required")
+    text = source.get("text")
+    proof = source["provenance"]
+    if not isinstance(text, str) or not text.strip() or proof.get("source_text") != text:
+        raise ValueError("RGM source text and provenance disagree")
+    text_sha = hashlib.sha256(text.encode()).hexdigest()
+    document_hash = proof.get("extracted_text_sha256")
+    if (document_hash is not None
+        and (not isinstance(document_hash, str) or len(document_hash) != 64
+             or any(char not in "0123456789abcdef" for char in document_hash))):
+        raise ValueError("RGM extracted-document checksum is invalid")
+    if (not all(type(proof.get(key)) is int for key in ("start", "end"))
+        or proof["end"] - proof["start"] != len(text)):
+        raise ValueError("RGM source range does not match its text")
+    document_id = proof.get("document_id")
+    pdf_sha = proof.get("pdf_sha256")
+    if isinstance(document_id, str) and document_id.startswith("sha256:"):
+        if document_id != "sha256:" + str(pdf_sha):
+            raise ValueError("RGM document and PDF identities disagree")
+        expected_source_id = "SRC-" + hashlib.sha256(
+            (document_id + f":{proof['start']}:{proof['end']}").encode()).hexdigest()[:16]
+        if source.get("source_id") != expected_source_id:
+            raise ValueError("RGM source identity does not match its document range")
+    fields, offsets = _validate_rgm_source_roles(roles, text)
+    expected_receipt = rgm_role_record_receipt(source, fields)
+    if (not isinstance(verification, dict)
+        or verification.get("status") != "frozen_verified"
+        or not isinstance(verification.get("method"), str)
+        or not verification["method"].strip()
+        or verification.get("role_record_sha256") != expected_receipt):
+        raise ValueError("a matching frozen reviewed-role receipt is required")
+
+    labels = []
+    for role in ("failure_party", "cover_payer", "repayment_from", "repayment_to"):
+        value = fields.get(role)
+        if value is not None and value not in labels:
+            labels.append(value)
+    if not labels:
+        raise ValueError("reviewed roles contain no structural parties")
+    entity_ids = {label: "party:" + hashlib.sha256(label.encode()).hexdigest()[:16] for label in labels}
+    entities = [dict(id=entity_ids[label], kind="party", label=label) for label in labels]
+    relations = []
+    if fields.get("failure_party") and fields.get("cover_payer"):
+        relations.append(dict(id="failure_to_replacement_cover", kind="triggers_replacement_cover",
+            source=entity_ids[fields["failure_party"]], target=entity_ids[fields["cover_payer"]],
+            source_role="failure_party", target_role="cover_payer"))
+    if fields.get("repayment_from") and fields.get("repayment_to"):
+        relations.append(dict(id="reimbursement_direction", kind="reimburses",
+            source=entity_ids[fields["repayment_from"]], target=entity_ids[fields["repayment_to"]],
+            source_role="repayment_from", target_role="repayment_to"))
+    if not relations:
+        raise ValueError("reviewed roles contain no complete directional relationship")
+
+    from gateway.vendor.rgm17d.memory.rgm import build_rgm_snapshot_projection, build_snapshot_memory_record
+    projection = build_rgm_snapshot_projection(
+        source_domain="project_document",
+        memory_kind="verified_document_situation",
+        entities=entities,
+        relations=relations,
+        evidence_gain=1.0,
+        outcome_kind="reviewed_structure_retained",
+        graph_projection=dict(schema=RGM_SITUATION_VERSION, source_id=source["source_id"],
+            source_text_sha256=text_sha, role_record_sha256=expected_receipt,
+            role_offsets=offsets, relation_count=len(relations)),
+        novelty_score=.35,
+    )
+    record = build_snapshot_memory_record(projection=projection)
+    document_ref = dict(kind="rgm_document_chunk", source_id=source["source_id"],
+        source_text_sha256=text_sha, provenance=copy.deepcopy(proof),
+        verification=copy.deepcopy(verification))
+    record.source_refs.append(document_ref)
+    record.content_hash = record.checksum = native_digest(record.source_refs)
+    record.meaning_hashes.append(expected_receipt)
+    return record
+
+
+def read_rgm_situation_memory(record):
+    """Read one persisted RGM situation while preserving direction and source."""
+    if getattr(record, "anchor_type", None) != "snapshot_projection":
+        raise ValueError("RGM record is not a structural snapshot")
+    refs = getattr(record, "source_refs", None)
+    if not isinstance(refs, list) or len(refs) != 2:
+        raise ValueError("RGM situation requires one projection and one document source")
+    if getattr(record, "content_hash", None) != native_digest(refs) or record.checksum != record.content_hash:
+        raise ValueError("RGM structural record checksum changed")
+    projection = next((item for item in refs if item.get("kind") == "rgm_snapshot_projection"), None)
+    source = next((item for item in refs if item.get("kind") == "rgm_document_chunk"), None)
+    if projection is None or source is None or projection.get("memory_kind") != "verified_document_situation":
+        raise ValueError("RGM structural record has the wrong native shape")
+    graph = projection.get("graph_projection")
+    verification = source.get("verification")
+    provenance = source.get("provenance")
+    if (not isinstance(graph, dict) or graph.get("schema") != RGM_SITUATION_VERSION
+        or graph.get("source_id") != source.get("source_id")
+        or graph.get("source_text_sha256") != source.get("source_text_sha256")
+        or graph.get("role_record_sha256") != (verification or {}).get("role_record_sha256")
+        or not isinstance(provenance, dict)
+        or hashlib.sha256(str(provenance.get("source_text", "")).encode()).hexdigest()
+            != source.get("source_text_sha256")
+        or not all(type(provenance.get(key)) is int for key in ("start", "end"))
+        or provenance["end"] - provenance["start"] != len(provenance.get("source_text", ""))):
+        raise ValueError("RGM structural relation is not bound to its source")
+    relations = projection.get("relations")
+    entities = projection.get("entities")
+    if not isinstance(relations, list) or not relations or not isinstance(entities, list):
+        raise ValueError("RGM structural record is empty")
+    labels = {item.get("id"): item.get("label") for item in entities}
+    decoded = []
+    for relation in relations:
+        source_label = labels.get(relation.get("source"))
+        target_label = labels.get(relation.get("target"))
+        if not source_label or not target_label:
+            raise ValueError("RGM relation endpoint is unbound")
+        decoded.append(dict(relation, source_label=source_label, target_label=target_label))
+    return dict(schema=RGM_SITUATION_VERSION, source_id=source["source_id"],
+        source_text_sha256=source["source_text_sha256"], provenance=copy.deepcopy(provenance),
+        role_record_sha256=graph["role_record_sha256"], relations=decoded)
+
+
 def interpret_native_question(text, fields):
     """Preserve literal party relations and separate a tested claim from givens.
 

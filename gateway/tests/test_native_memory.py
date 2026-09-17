@@ -82,6 +82,62 @@ def _native_answer_profile(count=3):
         question_instruction_sha256=hashlib.sha256(QUESTION_PRECISION_INSTRUCTION.encode()).hexdigest())
 
 
+def _reviewed_rgm_situation():
+    from gateway.native_memory import EVIDENCE_ROLE_FIELDS, rgm_role_record_receipt
+    text = ("If TfNSW fails to demonstrate insurance compliance, SM may obtain replacement cover. "
+            "TfNSW must reimburse SM on demand.")
+    digest = hashlib.sha256(text.encode()).hexdigest()
+    source = dict(source_id="SRC-reviewed", text=text, provenance=dict(
+        document_id="document-contract", chunk_id="chunk-23-5", clause="23.5",
+        start=100, end=100 + len(text), source_text=text,
+        extracted_text_sha256=digest))
+    roles = {key: None for key in EVIDENCE_ROLE_FIELDS}
+    roles.update(request=None, failure_party="TfNSW", cover_payer="SM",
+        repayment_from="TfNSW", repayment_to="SM", repayment_when="on demand")
+    verification = dict(status="frozen_verified", method="reviewed role-bound source record",
+        role_record_sha256=rgm_role_record_receipt(source, roles))
+    return source, roles, verification
+
+
+def test_reviewed_rgm_situation_survives_native_write_and_reload():
+    from gateway.native_memory import build_rgm_situation_memory, read_rgm_situation_memory
+    from gateway.vendor.rgm17d.memory.rgm import ReflectionGatedMemory
+    source, roles, verification = _reviewed_rgm_situation()
+    record = build_rgm_situation_memory(source, roles, verification)
+    rgm = ReflectionGatedMemory()
+    assert rgm.write_memory(record)
+    restored = ReflectionGatedMemory()
+    restored.restore(rgm.serialize())
+    result = read_rgm_situation_memory(next(iter(restored.state.anchors.values())))
+    assert result["source_id"] == source["source_id"]
+    assert result["provenance"] == source["provenance"]
+    assert [(row["kind"], row["source_label"], row["target_label"])
+            for row in result["relations"]] == [
+        ("triggers_replacement_cover", "TfNSW", "SM"),
+        ("reimburses", "TfNSW", "SM"),
+    ]
+
+
+@pytest.mark.parametrize("damage", ["roles", "source_text", "stored_relation"])
+def test_reviewed_rgm_situation_rejects_changed_roles_source_or_record(damage):
+    from gateway.native_memory import build_rgm_situation_memory, read_rgm_situation_memory
+    source, roles, verification = _reviewed_rgm_situation()
+    if damage == "roles":
+        roles = dict(roles, failure_party="SM", cover_payer="TfNSW")
+        with pytest.raises(ValueError, match="reviewed-role receipt"):
+            build_rgm_situation_memory(source, roles, verification)
+        return
+    if damage == "source_text":
+        source = dict(source, text=source["text"].replace("must reimburse", "must not reimburse"))
+        with pytest.raises(ValueError, match="text and provenance disagree"):
+            build_rgm_situation_memory(source, roles, verification)
+        return
+    record = build_rgm_situation_memory(source, roles, verification)
+    record.source_refs[0]["relations"][0]["target"] = record.source_refs[0]["relations"][0]["source"]
+    with pytest.raises(ValueError, match="checksum changed"):
+        read_rgm_situation_memory(record)
+
+
 def _rgm_reader_packet():
     text = "23.2 Premiums\nAuthority must pay the premiums, unless the exception applies."
     ref = dict(corpus_id="corpus", chunk_id="chunk_1", doc_id="document", start=100,
