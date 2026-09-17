@@ -900,8 +900,13 @@ source→target roles; reimbursement uses actor→recipient roles. Further revie
 RGM sources describing the same relationship bind to that existing ToM memory;
 they do not teach the same matrix at another address. This lets one distributed
 return release several exact evidence locations without duplicating the learned
-relationship. The current integration is deliberately bounded to six unique
-relationship memories, matching the six orthogonal addresses already tested. A
+relationship. A source that explicitly negates a relationship or declares
+supersession cannot be attached to the positive memory. If such evidence is in
+the current RGM candidates, ToM does not narrow the evidence set and the answer
+fails closed until source authority is resolved. The current schema does not yet
+decide which conflicting source is legally effective. The current integration
+is deliberately bounded to six unique relationship memories, matching the six
+orthogonal addresses already tested. A
 new relationship must write non-overlapping tree locations; otherwise it is
 rejected. Only the newest large checkpoint and reference archive are retained.
 

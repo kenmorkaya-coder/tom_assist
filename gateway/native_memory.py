@@ -452,6 +452,38 @@ def _validate_rgm_source_roles(roles, text):
     return fields, offsets
 
 
+def reviewed_source_conflict(text, relation_kind=None):
+    """Detect conflict language the reviewed structural schema cannot represent."""
+    import re
+    if not isinstance(text, str):
+        raise ValueError("reviewed source text is invalid")
+    authority = [
+        r"\b(?:supersed(?:e|es|ed|ing)|revok(?:e|es|ed|ing)|delet(?:e|es|ed|ing))\b",
+        r"\bno longer\b",
+        r"\bceases? to apply\b",
+        r"\bis (?:hereby )?replaced\b",
+        r"\breplaces? (?:clause|section|agreement|obligation|requirement)\b",
+    ]
+    if any(re.search(pattern, text, re.I) for pattern in authority):
+        return "source authority or supersession is not modelled"
+    if relation_kind in (None, "reimbursement"):
+        repayment = [
+            r"\b(?:must|shall|will|does|did|is|are|was|were|has|have)\s+(?:not|never)\s+(?:reimburse|repay)\b",
+            r"\b(?:not|never)\s+(?:be\s+)?(?:reimbursed|repaid)\b",
+        ]
+        if any(re.search(pattern, text, re.I) for pattern in repayment):
+            return "source explicitly negates reimbursement"
+    if relation_kind in (None, "replacement_cover"):
+        cover = [
+            r"\b(?:does|did|has|have|will|must|shall|may|can)\s+(?:not|never)\s+fail\b",
+            r"\b(?:may|can|must|shall|will|does|did)\s+(?:not|never)\s+"
+            r"(?:arrange|effect|obtain|maintain|buy|purchase|pay for)\b",
+        ]
+        if any(re.search(pattern, text, re.I) for pattern in cover):
+            return "source explicitly negates the replacement-cover relationship"
+    return None
+
+
 def rgm_role_record_receipt(source, roles):
     """Seal an already-reviewed role record; this does not prove its meaning."""
     if not isinstance(source, dict) or not isinstance(roles, dict):
@@ -461,6 +493,9 @@ def rgm_role_record_receipt(source, roles):
     if not isinstance(text, str) or not text.strip() or not isinstance(source_id, str) or not source_id:
         raise ValueError("exact source identity and text are required")
     fields, _ = _validate_rgm_source_roles(roles, text)
+    conflict = reviewed_source_conflict(text)
+    if conflict is not None:
+        raise ValueError("reviewed relationship cannot be stored: " + conflict)
     return native_digest(dict(schema=RGM_SITUATION_VERSION, source_id=source_id,
         source_text_sha256=hashlib.sha256(text.encode()).hexdigest(), roles=fields))
 
@@ -485,6 +520,17 @@ def bind_recalled_rgm_evidence(packet, structural):
     memories = packet.get("memories") if isinstance(packet, dict) else None
     if not isinstance(memories, list):
         raise ValueError("RGM packet memories are invalid")
+    if isinstance(structural, dict) and structural.get("status") == "source_authority_unresolved":
+        conflicts = structural.get("conflict_sources")
+        if (not isinstance(conflicts, list) or not conflicts
+            or any(not isinstance(item, dict)
+                or set(item) != {"source_id", "reason"}
+                or not isinstance(item["source_id"], str) or not item["source_id"]
+                or not isinstance(item["reason"], str) or not item["reason"]
+                for item in conflicts)):
+            raise ValueError("unresolved source conflicts are invalid")
+        return [], dict(mode="unresolved_source_authority", source_ids=[],
+            conflict_sources=copy.deepcopy(conflicts), candidate_count=len(memories), selected_count=0)
     recalled = structural.get("recalled_source_ids", []) if isinstance(structural, dict) else []
     if not recalled:
         return memories, dict(mode="all_rgm_candidates", source_ids=[], candidate_count=len(memories))
@@ -1510,6 +1556,12 @@ class RgmDocumentService:
             situation = read_rgm_situation_memory(next(iter(rgm.state.anchors.values())))
             if situation != encoded["situation"] or stored["content_hash"] != situation["source_text_sha256"]:
                 raise ValueError("stored reviewed situation changed after persistence")
+            roles = encoded.get("roles")
+            text = situation["provenance"]["source_text"]
+            _validate_rgm_source_roles(roles, text)
+            conflict = reviewed_source_conflict(text)
+            if conflict is not None:
+                raise ValueError("stored reviewed relationship has unresolved source conflict: " + conflict)
             rows.append(dict(stored, encoded=encoded, situation=situation))
         return rows
 
@@ -1778,6 +1830,15 @@ class RgmDocumentService:
         query = reviewed_query_situation(question, memories)
         if query["status"] != "complete":
             return dict(status="no_query_structure", recalled_source_ids=[], query_structure=query,
+                whole_tree_score=False, all_branch_cell_coordinates_compared=False)
+        conflicts = []
+        for memory in packet["memories"]:
+            reason = reviewed_source_conflict(memory.get("content"), query["fields"]["relation_kind"])
+            if reason is not None:
+                conflicts.append(dict(source_id=rgm_candidate_source_id(memory), reason=reason))
+        if conflicts:
+            return dict(status="source_authority_unresolved", recalled_source_ids=[],
+                conflict_sources=conflicts, query_structure=query,
                 whole_tree_score=False, all_branch_cell_coordinates_compared=False)
         profile = self._tom_runtime_profile(project_id)
         result = self.tom_worker("rgm_tom_recall", dict(_tom_profile=profile,

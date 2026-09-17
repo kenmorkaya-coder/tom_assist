@@ -1064,8 +1064,46 @@ def test_multiple_rgm_sources_bind_to_one_tom_relationship_without_second_tree_w
         recall_payload = calls[-1][1]
         assert len(recall_payload["memories"]) == 2
         assert all(len(memory["source_ids"]) == 2 for memory in recall_payload["memories"])
+
+        conflict_text = ("1.1 Amendment\nIf Orchid fails to demonstrate compliance, Rowan may obtain "
+            "replacement cover. Orchid must not reimburse Rowan on demand.\n"
+            "1.2 Notice\nOrchid must notify Rowan of a leak within two days.")
+        conflict = service.ingest("project", library, dict(explicit_user_action=True,
+            display_name="Conflicting amendment", content=conflict_text, media_type="text/plain"))
+        with pytest.raises(ValueError, match="explicitly negates reimbursement"):
+            service.learn_situation("project", library, dict(explicit_user_action=True,
+                document_id=conflict["document_id"], chunk_index=0, roles=roles))
+
+        blocked = service.answer("project", library, "Does Orchid reimburse Rowan?")
+        blocked_trace = blocked["trace"]["retrieval"]["reviewed_tom_memory"]
+        assert blocked["status"] == "not_supported"
+        assert blocked["sources"] == []
+        assert blocked["purity"]["tree_calls"] == 0
+        assert blocked_trace["status"] == "source_authority_unresolved"
+        assert blocked_trace["evidence_scope"]["mode"] == "unresolved_source_authority"
+        assert blocked_trace["evidence_scope"]["selected_count"] == 0
+        assert blocked_trace["conflict_sources"] == blocked_trace["evidence_scope"]["conflict_sources"]
+        assert [call[0] for call in calls] == ["rgm_tom_learn", "rgm_tom_recall"]
     finally:
         library.db.close()
+
+
+def test_reviewed_relationship_rejects_negated_or_superseding_source():
+    from gateway.native_memory import EVIDENCE_ROLE_FIELDS, rgm_role_record_receipt
+    roles = dict(request=None, **{key: None for key in EVIDENCE_ROLE_FIELDS})
+    roles.update(failure_party="Orchid", cover_payer="Rowan",
+        repayment_from="Orchid", repayment_to="Rowan", repayment_when="on demand")
+    negated = dict(source_id="source-negated",
+        text=("If Orchid fails to demonstrate compliance, Rowan may obtain replacement cover. "
+            "Orchid must not reimburse Rowan on demand."))
+    with pytest.raises(ValueError, match="explicitly negates reimbursement"):
+        rgm_role_record_receipt(negated, roles)
+
+    superseding = dict(source_id="source-superseding",
+        text=("This amendment supersedes clause 1.1. If Orchid fails to demonstrate compliance, "
+            "Rowan may obtain replacement cover. Orchid must reimburse Rowan on demand."))
+    with pytest.raises(ValueError, match="authority or supersession"):
+        rgm_role_record_receipt(superseding, roles)
 
 
 def test_reviewed_tom_return_binds_reader_to_its_exact_rgm_source():
