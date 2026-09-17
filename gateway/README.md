@@ -97,6 +97,28 @@ is still limited to two reviewed mirrored relationships. It does not establish
 automatic relationship extraction, a broad accuracy gain, or superiority over
 every historical RGM branch-event experiment.
 
+The next `--rgm500-sequence-discrimination` test isolates event order. Two
+controlled records contain exactly the same entities, actions and native-RGM
+word vector; only the event sequence changes. Across four unseen phrasings and
+both record/teaching orders, RGM retained both records in 8/8 trials. Its native
+vectors tied, so rank fusion followed insertion order in 8/8 and changed the
+first result for all four questions when insertion was reversed. RGM therefore
+put the correct sequence first in 4/8. The ToM temporal-link memories wrote to
+381 and 387 distinct branch/slot locations with zero overlap. Their complete
+native activation maps selected the correct sequence in 8/8, while the
+untrained tree opened no memory.
+
+Only the explicit temporal-link 32×32 matrix was taught; the two event loads
+were held equal and excluded. No branch was averaged and no whole-tree score was
+calculated. Complete routed inputs, signed terminal fields, slot scores and
+activation maps for both teaching orders remain in two roughly 58.4 MB archives
+under Passport `rgm500_sequence_discrimination_v1/`. The first completed report
+used an incorrect acceptance rule that confused the native-vector tie with the
+later rank-fusion scores; it is retained as
+`MISCLASSIFIED_BY_ACCEPTANCE_RULE`. The rerun changed only that diagnostic rule.
+This establishes a controlled sequence-memory gain, not automatic sequence
+extraction or performance on natural project event histories.
+
 The result establishes a useful integration boundary: RGM retains exact text
 and provenance, while a verified directed situation can address a distinct
 distributed ToM memory. It does not validate automatic relationship extraction.

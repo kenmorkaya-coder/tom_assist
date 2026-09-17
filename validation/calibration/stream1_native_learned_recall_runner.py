@@ -5039,6 +5039,314 @@ def rgm500_relational_discrimination_comparison():
     print(json.dumps(dict(status=run["status"], findings=run["findings"]), indent=2), flush=True)
 
 
+def rgm500_sequence_discrimination_comparison():
+    """Isolate event order: equal word bags, opposite learned sequences."""
+    import subprocess
+    from types import SimpleNamespace
+
+    sys.path.insert(0, str(ASSIST))
+    sys.path.insert(0, str(ROOT / "src"))
+    from gateway.event_graph_compiler import compile_graph
+    from gateway.native_memory import NativeEvidenceLibrary
+    from gateway.typed_event_graph import VERSION as graph_version
+    from tom_matrix import Stream1Tree
+    from tom_matrix.relations.precision_routing import capture_precision_readings, precision_route_from_readings
+
+    seal = NativeEvidenceLibrary._seal
+    key = "native_rgm500_sequence_discrimination_comparison"
+    saved = json.loads(RESULT.read_text())
+    if key in saved:
+        raise FileExistsError("Preserve the frozen sequence comparison")
+    historical = {name: seal(value) for name, value in saved.items()}
+    rgm_root = Path("/Users/kenmorkaya/PycharmProjects/tom_master17D")
+    rgm_files = [rgm_root / "memory/rgm.py", rgm_root / "interface/stm_ltm_retrieval.py",
+        rgm_root / "interface/chat_adapter.py", rgm_root / "state/state_types.py"]
+    rgm_hashes = {str(path.relative_to(rgm_root)): sha(path) for path in rgm_files}
+    rgm_status = subprocess.run(["git", "status", "--porcelain"], cwd=rgm_root,
+        check=True, capture_output=True, text=True).stdout
+    checkpoint = ROOT / "artifacts/runs/native_500_branch_fixture_v1/native_500_branch_fixture.pkl"
+    checkpoint_sha256 = "39377bce42eea2e3c75474c3f61013fbc49cbf23e5ebcea28676071ee7a164d1"
+    if sha(checkpoint) != checkpoint_sha256:
+        raise RuntimeError("Approved 500-branch fixture changed")
+    folder = BULK / "rgm500_sequence_discrimination_v1"
+    folder.mkdir(exist_ok=True)
+
+    sources = [
+        dict(id="inspect_before_continue", source_id="SEQ-inspect-before-continue",
+            text="Cobalt works inspects Cobalt monitor then Cobalt officer continues",
+            inspect_before_continue=True),
+        dict(id="continue_before_inspect", source_id="SEQ-continue-before-inspect",
+            text="Cobalt officer continues then Cobalt works inspects Cobalt monitor",
+            inspect_before_continue=False),
+    ]
+    questions = [
+        dict(id="SQ1", text=("Cobalt monitor inspection by Cobalt works occurs before "
+            "continuation by Cobalt officer"), expected_source=sources[0]["source_id"],
+            inspect_before_continue=True),
+        dict(id="SQ2", text=("Continuation by Cobalt officer occurs before Cobalt monitor "
+            "inspection by Cobalt works"), expected_source=sources[1]["source_id"],
+            inspect_before_continue=False),
+        dict(id="SQ3", text=("Before Cobalt officer continues Cobalt works inspects Cobalt "
+            "monitor"), expected_source=sources[0]["source_id"],
+            inspect_before_continue=True),
+        dict(id="SQ4", text=("Before Cobalt works inspects Cobalt monitor Cobalt officer "
+            "continues"), expected_source=sources[1]["source_id"],
+            inspect_before_continue=False),
+    ]
+
+    def sequence_graph(text, inspect_before_continue):
+        entities = []
+        for identifier, name in (("works", "Cobalt works"), ("monitor", "Cobalt monitor"),
+                                 ("officer", "Cobalt officer")):
+            start = text.index(name)
+            entities.append(dict(id=identifier, name=name,
+                mentions=[dict(start=start, end=start+len(name), quote=name)]))
+        evidence = [dict(start=0, end=len(text), quote=text)]
+        events = [
+            dict(id="inspect", action="inspect",
+                roles=dict(actor="works", object="monitor", source=None, target=None,
+                    recipient=None, authority=None), modality="obligation", negated=False,
+                condition=None, exception=None, complement=None, revision=None, time=None,
+                evidence=copy.deepcopy(evidence)),
+            dict(id="continue", action="continue",
+                roles=dict(actor="officer", object=None, source=None, target=None,
+                    recipient=None, authority=None), modality="permission", negated=False,
+                condition=None, exception=None, complement=None, revision=None, time=None,
+                evidence=copy.deepcopy(evidence)),
+        ]
+        before, after = (("inspect", "continue") if inspect_before_continue
+            else ("continue", "inspect"))
+        return dict(version=graph_version, entities=entities, predicates=[], conditions=[],
+            events=events, links=[dict(id="sequence", kind="before", source=before,
+                target=after, evidence=copy.deepcopy(evidence))], unresolved=[])
+
+    records = sources + questions
+    compiled = [compile_graph(sequence_graph(row["text"], row["inspect_before_continue"]),
+        row["text"]) for row in records]
+    if not all([load["kind"] for load in item["loads"]] == ["event", "event", "link"]
+               for item in compiled):
+        raise RuntimeError("Sequence compiler did not preserve separate event and link loads")
+    matrices = np.stack([np.asarray(item["loads"][2]["matrix"]) for item in compiled])
+    if (not np.array_equal(matrices[0], matrices[2])
+        or not np.array_equal(matrices[0], matrices[4])
+        or not np.array_equal(matrices[1], matrices[3])
+        or not np.array_equal(matrices[1], matrices[5])
+        or np.array_equal(matrices[0], matrices[1])):
+        raise RuntimeError("Sequence matrices do not isolate event order")
+
+    run = dict(status="RUNNING", historical_sections=historical,
+        scope=("Two controlled records contain the same entities, actions and word bag but "
+            "opposite event order. Four unseen phrasings run across both record/teaching orders."),
+        one_changed_variable=("Allow the complete branch-position-preserving ToM memory-slot "
+            "activation map to select one of the unchanged full-RGM candidates."),
+        sources=[{key:value for key,value in row.items() if key != "inspect_before_continue"}
+            for row in sources],
+        questions=[{key:value for key,value in row.items() if key != "inspect_before_continue"}
+            for row in questions], trials=[], native_runs={},
+        rgm=dict(entrypoint="interface.stm_ltm_retrieval.retrieve_ltm_with_stm_triggers",
+            max_items=2, max_chars=10000, native_configuration=True,
+            branch_state="No legacy branch state was fabricated for the document retrieval path.",
+            source_hashes=rgm_hashes),
+        tom=dict(checkpoint=str(checkpoint), checkpoint_sha256=checkpoint_sha256,
+            input="Only the explicit temporal-link 32x32 matrix; event loads are held equal and not taught.",
+            selection="Exact equality of the complete native memory-slot activation map.",
+            whole_tree_score=False, branches_averaged=False, model_calls=0))
+
+    sys.addaudithook(audit)
+    sys.path.insert(0, str(rgm_root))
+    from memory.rgm import ReflectionGatedMemory, MemoryRecord, PolicyOutcome
+    from state.state_types import MetricsSnapshot
+    from interface import stm_ltm_retrieval
+
+    probe = ReflectionGatedMemory()
+    source_vectors = [probe.vector_store._encode(row["text"]) for row in sources]
+    if source_vectors[0] != source_vectors[1]:
+        raise RuntimeError("RGM source vectors differ; event order was not isolated")
+    run["rgm"]["source_vectors_equal"] = True
+    run["rgm"]["source_vector_sha256"] = seal(source_vectors[0])
+
+    for order_name, order in (("forward", [0, 1]), ("reverse", [1, 0])):
+        tree = Stream1Tree.restore(checkpoint)
+        control = Stream1Tree.restore(checkpoint)
+        start_state = tree.state_hash()
+        write_sets = [None, None]
+        targets = addresses()[:2]
+        for index in order:
+            before = {bank: unit.updates.copy() for bank, unit in tree.paired_units.items()}
+            tree.teaching_enabled = True
+            try:
+                tree.observe(matrices[index], targets[index], event_id=f"sequence-{sources[index]['id']}")
+            finally:
+                tree.teaching_enabled = False
+            writes = set()
+            for bank, unit in tree.paired_units.items():
+                previous = before.get(bank, np.zeros_like(unit.updates))
+                writes.update((bank, int(slot)) for slot in np.flatnonzero(unit.updates != previous))
+            if not writes:
+                raise RuntimeError("Sequence teaching produced no native writes")
+            write_sets[index] = writes
+        if write_sets[0] & write_sets[1]:
+            raise RuntimeError("Opposite sequence memories overlap")
+        learned_state = tree.state_hash()
+        readings = capture_precision_readings(tree)
+        control_readings = capture_precision_readings(control)
+        branch_order = list(readings["order"])
+        tips = [branch for branch in branch_order if not readings["children"][branch]]
+        control_tips = [branch for branch in control_readings["order"]
+            if not control_readings["children"][branch]]
+        capacity = len(next(iter(tree.paired_units.values())).occupied)
+
+        def capture(current, current_readings, current_tips, value):
+            before = current.state_hash()
+            path = precision_route_from_readings(value, current_readings)
+            _, returned, selected = current._terminal_returns(path)
+            field = np.stack([returned[branch] for branch in current_tips])
+            routed = np.stack([path.local[branch] for branch in current_readings["order"]])
+            active = np.zeros((len(current_tips), capacity), dtype=bool)
+            scores = np.zeros((len(current_tips), capacity))
+            keys = set()
+            for row, branch in enumerate(current_tips):
+                scores[row] = selected[branch]["scores"]
+                active[row, selected[branch]["active"]] = True
+                keys.update((current.paired_placement[branch], int(slot))
+                    for slot in selected[branch]["active"])
+            if current.state_hash() != before or not all(np.isfinite(value).all()
+                    for value in (field, routed, scores)):
+                raise RuntimeError("Sequence capture changed state or returned invalid cells")
+            return dict(field=field, routed=routed, active=active, scores=scores, keys=keys)
+
+        source_captures = [capture(tree, readings, tips, matrices[index]) for index in range(2)]
+        query_captures = [capture(tree, readings, tips, matrices[index])
+            for index in range(2, len(matrices))]
+        control_captures = [capture(control, control_readings, control_tips, matrices[index])
+            for index in range(2, len(matrices))]
+        arrays = dict(branch_ids=np.asarray(branch_order),
+            parents=np.asarray([readings["parents"].get(branch) or "" for branch in branch_order]),
+            terminal_branch_ids=np.asarray(tips), temporal_link_matrices=matrices)
+        placement = {bank:branch for branch,bank in tree.paired_placement.items()}
+        for index, writes in enumerate(write_sets):
+            ordered = sorted(writes)
+            arrays[f"source_{index}_write_bank_ids"] = np.asarray([bank for bank,_ in ordered])
+            arrays[f"source_{index}_write_branch_ids"] = np.asarray([placement[bank] for bank,_ in ordered])
+            arrays[f"source_{index}_write_slots"] = np.asarray([slot for _,slot in ordered])
+        for index, captured in enumerate(source_captures):
+            for field in ("field", "routed", "active", "scores"):
+                arrays[f"source_{index}_{field}"] = captured[field]
+        for question, captured, cold in zip(questions, query_captures, control_captures, strict=True):
+            for field in ("field", "routed", "active", "scores"):
+                arrays[f"query_{question['id']}_{field}"] = captured[field]
+                arrays[f"untrained_{question['id']}_{field}"] = cold[field]
+
+        archive = folder / f"{order_name}_native_fields.npz"
+        np.savez_compressed(archive, **arrays)
+        run["native_runs"][order_name] = dict(teaching_order=order,
+            start_state=start_state, learned_state=learned_state,
+            learned_branches=len(tree.nodes), terminal_branches=len(tips),
+            source_write_counts=[len(value) for value in write_sets],
+            source_write_overlap=len(write_sets[0] & write_sets[1]),
+            tree_unchanged_during_reads=tree.state_hash() == learned_state,
+            untrained_tree_unchanged=control.state_hash() == start_state,
+            archive=dict(path=str(archive), bytes=archive.stat().st_size,
+                sha256=sha(archive), keys=sorted(arrays)))
+
+        for question, captured, cold in zip(questions, query_captures, control_captures, strict=True):
+            memory = ReflectionGatedMemory()
+            anchors = {}
+            for index in order:
+                source = sources[index]
+                record = MemoryRecord(id=source["source_id"], content=source["text"],
+                    content_summary=source["text"], source_refs=[dict(fixture="sequence-order")],
+                    S=.9, C=.9, H=.1, novelty_score=.5, anchor_strength=.5,
+                    policy_outcome=PolicyOutcome.PERMIT)
+                if not memory.write_memory(record):
+                    raise RuntimeError("RGM refused a controlled sequence source")
+                anchors[source["source_id"]] = dict(id=source["source_id"],
+                    content=source["text"], content_summary=source["text"],
+                    source_refs=[dict(fixture="sequence-order")], anchor_type="reference_doc",
+                    semantic_tags=["sequence-order"], anchor_strength=.5)
+            state = SimpleNamespace(memory=SimpleNamespace(anchors=anchors, active_doc_ids=[]),
+                metrics=MetricsSnapshot(S=.9, C=.9, H=.1), branches={}, tick=0,
+                conversation_history=[], pending_interaction=None)
+            controller = SimpleNamespace(state=state, rgm=memory, continuity_id=None)
+            recalled, telemetry = stm_ltm_retrieval.retrieve_ltm_with_stm_triggers(
+                controller, stm_ltm_retrieval.compute_retrieval_triggers([], None, None),
+                max_items=2, max_chars=10000, user_text=question["text"])
+            candidates = [row["id"] for row in recalled]
+            native_matches = [sources[index]["source_id"] for index,writes in enumerate(write_sets)
+                if captured["keys"] == writes]
+            selected = [source_id for source_id in native_matches if source_id in candidates]
+            scores = dict(zip(telemetry.get("rrf_topk_ids", []),
+                telemetry.get("rrf_topk_scores", [])))
+            run["trials"].append(dict(order=order_name, question_id=question["id"],
+                expected_source=question["expected_source"], rgm_candidate_ids=candidates,
+                rgm_scores=scores, rgm_tied=len(scores) == 2 and len(set(scores.values())) == 1,
+                rgm_source_vectors_tied=True,
+                rgm_first_is_first_inserted=bool(candidates
+                    and candidates[0] == sources[order[0]]["source_id"]),
+                rgm_top1_correct=bool(candidates and candidates[0] == question["expected_source"]),
+                tom_complete_slot_map_matches=native_matches,
+                rgm_plus_tom_source_ids=selected,
+                rgm_plus_tom_correct=selected == [question["expected_source"]],
+                untrained_active_slots=len(cold["keys"]),
+                tom_signed_terminal_field_sha256=hashlib.sha256(captured["field"].tobytes()).hexdigest()))
+
+    trials = run["trials"]
+    first_by_order = {(row["order"], row["question_id"]):row["rgm_candidate_ids"][0]
+        for row in trials}
+    run["findings"] = dict(trials=len(trials), unique_questions=len(questions),
+        rgm_native_vector_tied_trials=sum(row["rgm_source_vectors_tied"] for row in trials),
+        rgm_fused_score_tied_trials=sum(row["rgm_tied"] for row in trials),
+        rgm_first_follows_insertion_order=sum(row["rgm_first_is_first_inserted"] for row in trials),
+        insertion_order_changed_rgm_first=sum(
+            first_by_order[("forward", question["id"])]
+                != first_by_order[("reverse", question["id"])] for question in questions),
+        rgm_correct_source_in_candidates=sum(row["expected_source"] in row["rgm_candidate_ids"]
+            for row in trials),
+        rgm_top1_correct=sum(row["rgm_top1_correct"] for row in trials),
+        rgm_plus_tom_top1_correct=sum(row["rgm_plus_tom_correct"] for row in trials),
+        wrong_rgm_first_repaired=sum(not row["rgm_top1_correct"] and row["rgm_plus_tom_correct"]
+            for row in trials),
+        exact_single_tom_matches=sum(len(row["tom_complete_slot_map_matches"]) == 1
+            for row in trials),
+        untrained_activations=sum(row["untrained_active_slots"] for row in trials),
+        result=("RGM preserves both exact records, but its order-insensitive native vectors tie "
+            "and rank fusion resolves the tie by insertion order. ToM's learned sequence state "
+            "resolves the event order."))
+    expected = len(trials)
+    passed = (run["findings"]["rgm_native_vector_tied_trials"] == expected
+        and run["findings"]["rgm_first_follows_insertion_order"] == expected
+        and run["findings"]["insertion_order_changed_rgm_first"] == len(questions)
+        and run["findings"]["rgm_correct_source_in_candidates"] == expected
+        and run["findings"]["rgm_top1_correct"] == expected//2
+        and run["findings"]["rgm_plus_tom_top1_correct"] == expected
+        and run["findings"]["exact_single_tom_matches"] == expected
+        and run["findings"]["untrained_activations"] == 0
+        and all(row["source_write_overlap"] == 0 and row["tree_unchanged_during_reads"]
+            and row["untrained_tree_unchanged"] for row in run["native_runs"].values()))
+    run["status"] = "COMPLETE_TOM_SEQUENCE_GAIN" if passed else "COMPLETE_NO_PROVEN_GAIN"
+    run["limitations"] = [
+        "This is a controlled synthetic sequence-isolation test, not a natural document benchmark.",
+        "The typed temporal links are supplied and verified; automatic sequence extraction is not tested.",
+        "No legacy RGM branch state was fabricated. The comparison targets the product document/context path.",
+        "ToM identifies event order; RGM retains the exact records and provenance in the product architecture.",
+    ]
+    run["rgm_source_repository_unchanged"] = (
+        rgm_status == subprocess.run(["git", "status", "--porcelain"], cwd=rgm_root,
+            check=True, capture_output=True, text=True).stdout
+        and rgm_hashes == {str(path.relative_to(rgm_root)):sha(path) for path in rgm_files})
+    run["runner_sha256"] = sha(Path(__file__))
+    if not run["rgm_source_repository_unchanged"]:
+        raise RuntimeError("RGM source repository changed during sequence comparison")
+    latest = json.loads(RESULT.read_text())
+    if {name:seal(value) for name,value in latest.items()} != historical:
+        raise RuntimeError("Historical result changed before sequence comparison commit")
+    latest[key] = run
+    RESULT.write_text(json.dumps(latest, indent=2, ensure_ascii=False) + "\n")
+    print(json.dumps(dict(status=run["status"], findings=run["findings"],
+        archives={name:value["archive"] for name,value in run["native_runs"].items()}),
+        indent=2), flush=True)
+
+
 def rgm500_structural_bridge(order):
     """Real RGM chunks -> verified situation graph -> native distributed memory."""
     sys.path.insert(0, str(ASSIST))
@@ -7390,6 +7698,9 @@ if __name__ == "__main__":
         sys.exit(0)
     if sys.argv[1:] == ["--rgm500-relational-discrimination"]:
         rgm500_relational_discrimination_comparison()
+        sys.exit(0)
+    if sys.argv[1:] == ["--rgm500-sequence-discrimination"]:
+        rgm500_sequence_discrimination_comparison()
         sys.exit(0)
     if len(sys.argv) == 3 and sys.argv[1] == "--rgm500-bridge":
         rgm500_bridge(sys.argv[2])
