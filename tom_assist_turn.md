@@ -1,6 +1,104 @@
 # One Turn Through Tom Assist
 
-## Current architecture and Gemma inspection integration — 15 September 2026
+The current capability reference is maintained separately in
+[tom_assist_capability.md](tom_assist_capability.md). This file remains the
+chronological evidence and decision record.
+
+## Current end-to-end flow — 18 September 2026
+
+The current document-answer path has two complementary retrieval lanes. RGM
+(Reflection-Gated Memory) keeps and finds exact text. ToM recognises a reviewed
+relationship or event order and can reopen every exact RGM source bound to that
+learned structure. The two lanes meet at evidence checking.
+
+```text
+                              USER QUESTION
+                                    |
+                  +-----------------+-----------------+
+                  |                                   |
+                  v                                   v
+          RGM SEMANTIC ACCESS                 QUERY STRUCTURE CHECK
+       likely exact text passages          admitted relationship/order?
+                  |                                   |
+                  |                          no ------+------ yes
+                  |                                   |
+                  |                                   v
+                  |                      DISTRIBUTED ToM RECALL
+                  |                    complete native branch identity
+                  |                    + signed 32x32 fields + slot maps
+                  |                    never one whole-tree score
+                  |                                   |
+                  |                                   v
+                  |                        BOUND RGM SOURCE IDs
+                  |                                   |
+                  +-----------------+-----------------+
+                                    |
+                                    v
+                         EXACT RGM SOURCE PASSAGES
+                         text + provenance + offsets
+                                    |
+                                    v
+                     CONFLICT AND AUTHORITY CHECK
+                 conflicting sources stay visible together
+                                    |
+                                    v
+                            EVIDENCE CHECKER
+             supported / partly supported / not supported / ambiguous
+                                    |
+                                    v
+                            LANGUAGE MODEL
+                  words only the evidence-approved result
+                                    |
+                                    v
+                       ANSWER WITH SOURCE REFERENCES
+```
+
+Reviewed structural memory enters the system through a separate, explicit
+path. Detection does not teach the tree. A person must inspect and save each
+source.
+
+```text
+                       AUTHENTICATED RGM PASSAGES
+                                    |
+                                    v
+                       READ-ONLY STRUCTURE SCAN
+                   exact passage + matched event phrases
+                   zero tree calls; zero automatic learning
+                                    |
+                                    v
+                         STRUCTURES TO REVIEW
+                                    |
+                            explicit Save only
+                                    |
+                                    v
+                    SOURCE-LOCAL VALIDATION REPEATED
+                                    |
+                  +-----------------+-----------------+
+                  |                                   |
+                  v                                   v
+          NEW REVIEWED STRUCTURE              EXISTING STRUCTURE
+       teach distributed ToM memory       bind another exact RGM source
+                  |                            zero new tree writes
+                  +-----------------+-----------------+
+                                    |
+                                    v
+                    REVIEWED STRUCTURE + SOURCE LINKS
+```
+
+The normal conversation path remains governed separately:
+
+```text
+draft held in Tom Assist
+  -> read project record and experience tree without changing them
+  -> build a visible, bounded context packet
+  -> user allows send
+  -> capture the provider's answer
+  -> check it against the exact packet and project constraints
+  -> user accepts, rejects or edits
+  -> accepted experience may be committed to the experience tree
+```
+
+## Earlier Gemma inspection integration — 15 September 2026
 
 This section distinguishes the existing application from the opt-in inspection
 harness implemented on `codex/gemma-lora-typed-event-graph`. It supersedes the older “only sent turns” description below: sending
@@ -682,7 +780,7 @@ Do not treat the binary prototype index, legacy document Tree, dynamic native
 runner and recall-only Stream 1 checkpoint as interchangeable. No converter,
 Tree, production wiring or frozen evidence was changed in this audit.
 
-### The existing application
+### The core application at that point
 
 ```text
 Message held in the app
@@ -997,163 +1095,81 @@ matrix discrimination and downstream temporal/authority checks. No production
 migration, checkpoint promotion, Stream 1 modification or new learning is authorized
 or claimed by this implementation.
 
-## Historical workflow narrative
+## Workflow development history
 
-Two boxes were marked UNSOLVED. They had the same root cause: the code could
-look things up, but it could not look without touching, and it could not read
-meaning out of ordinary writing.
+The earlier diagram in this section described the 3 September state, when the
+17-channel prose parser was built but switched off. That diagram became
+misleading after the native distributed-memory and RGM integration work. The
+progression is now:
 
-The first box (the tree) was RESOLVED on 31 Aug 2026 — see ORCHESTRATOR_REVIEW_4.md
-and ORCHESTRATOR_REVIEW_5.md: drafts photograph the tree; only sent turns make it
-bend, learn, rotate and re-seat its front row; the record and the library never
-forget anything.
-
-The second box (reading meaning out of ordinary writing) is BUILT AND SWITCHED
-OFF as of 3 Sep 2026. A local parser now reads a passage and returns typed facts,
-each tied to the exact words it came from, refusing rather than guessing when the
-words are ambiguous. A compiler turns those facts into the seventeen numbers the
-tree reads, and every number now carries its own evidence, its formula and, when
-it is zero, the reason. It is switched off because on ordinary writing most of
-those numbers still come out empty, and the standing rule is that a load with
-empty channels never reaches the tree.
-
+```text
+31 August
+  pure preview proved: looking does not change the experience tree
+       |
+       v
+3 September
+  evidence-bound 17-channel prose parser built but kept off
+  because ordinary prose produced incomplete loads
+       |
+       v
+15-16 September
+  native 32x32 distributed tree returns isolated and causally tested
+  RGM document ingestion, source recovery and evidence reading integrated
+       |
+       v
+17 September
+  reviewed relationship direction and event order stored in the small ToM tree
+  exact RGM passages bound to learned distributed structures
+       |
+       v
+18 September
+  read-only structure review queue added
+  explicit Save teaches or binds; detection never teaches automatically
+  learned structures can reopen exact sources even with zero RGM candidates
 ```
-                                 YOUR MESSAGE
-                                       |
-                                       v
-                             HELD BEFORE SENDING
-                       nothing leaves until you say so
-                                       |
-                 +---------------------+---------------------+
-                 |                                           |
-                 v                                           v
-        THE PROJECT RECORD                         THE EXPERIENCE TREE
-         goals / decisions                        a structure that bends
-        limits / dead ends                              under load
-          open questions                          the bend IS the memory
-                 |                                         v
-                 |                             +--------------------------+
-                 |                             |  RESOLVED 31 AUG 2026    |
-                 |                             |                          |
-                 |                             |  drafts photograph;      |
-                 |                             |  commits experience.     |
-                 |                             |  only sent turns bend,   |
-                 |                             |  teach, rotate, re-seat  |
-                 |                             |  (REVIEW 4 + REVIEW 5)   |
-                 |                             +--------------------------+
-                 |                                           |
-                 +---------------------+---------------------+
-                                       v
-                               WHAT GETS PICKED
-                                       |
-              +------------------------+------------------------+
-              v                        v                        v
-          throw out            the tree picks a           write it out
-        wrong project           region and asks          plainly, and say
-         out of date           which memories live       it beats the old
-      already replaced             in it                    chat above
-              |                        |                        |
-              +------------------------+------------------------+
-                                       v
-                            ADDED TO YOUR MESSAGE
-                    a few lines, never a recap of the chat
-                                       |
-                                       v
-                                   CHATGPT
-                         not ours. we only watch it.
-                                       |
-                                       v
-                                  THE ANSWER
-                            an opinion, not a fact
-                                       |
-                                       v
-                         CHECKED AGAINST WHAT WE SENT
-                                       |
-              +------------------------+------------------------+
-              v                        v                        v
-        does it clash            does it drop             does it redo
-       with a decision            a limit you             work already
-        already made              already set               finished
-              |                        |                        |
-              +------------------------+------------------------+
-                                       v
-             +---------------------------------------------------+
-             |  BUILT, SWITCHED OFF - 3 SEP 2026                 |
-             |                                                   |
-             |  a parser now turns a paragraph into facts tied   |
-             |  to the exact words, and refuses when unsure.     |
-             |  the checker can act on those facts.              |
-             |  it stays off because most of the seventeen       |
-             |  numbers still come out empty on real writing,    |
-             |  and empty never reaches the tree.                |
-             +---------------------------------------------------+
-                                       |
-                                       v
-                                  YOU DECIDE
-                   accept / reject / edit, never automatic
-                                       |
-                                       v
-                                    SAVED
-                  added to the record. nothing overwritten.
-                       what was offered and what you
-                        actually used is now recorded.
-                                       |
-                                       v
-                               BECOMES HISTORY
-                         the next message starts here
-```
+
+The 17-channel general prose-loading lane remains separate and default off. The
+live bounded structural-memory lane uses explicitly reviewed 32×32 inputs and
+complete native distributed returns. The current end-to-end diagrams are at the
+top of this document.
 
 ## What remembers what
 
-Nothing is ever deleted. Things move off the front shelf, and the move itself is
-written down.
+Each memory system has a different job. Project history and source records are
+retained or superseded with an audit trail instead of being silently rewritten.
 
-```
-                          THE FRONT SHELF
-                  what is in play right now, bounded
-                     ( 4,096 items, then it must
-                       make room for something )
+```text
+                         ONE TOM ASSIST PROJECT
                                   |
-                     falls off, for one of two
-                     reasons: it faded, or the
-                       shelf ran out of room
+       +--------------------------+--------------------------+
+       |                          |                          |
+       v                          v                          v
+ PROJECT RECORD            CONVERSATION MEMORY          RGM DOCUMENT MEMORY
+ goals, decisions,         front shelf: active          exact source text
+ constraints, rejected     long shelf: retained         chunks and offsets
+ paths and open work       movement reasons logged      hashes and provenance
+       |                          |                          |
+       +--------------------------+--------------------------+
+                                  |
+                 +----------------+----------------+
+                 |                                 |
+                 v                                 v
+          EXPERIENCE TREE                REVIEWED STRUCTURAL ToM TREE
+      changed only by governed          changed only by explicit teaching
+      accepted conversation turns       of an approved 32x32 structure
+      the changed shape is memory       complete distributed state is memory
+                 |                                 |
+                 v                                 v
+      helps select project context      recognises relationship direction
+                                        and event order, then returns exact
+                                        pointers into RGM document memory
+                 |                                 |
+                 +----------------+----------------+
+                                  |
                                   v
-                          THE LONG SHELF
-                  everything ever kept, unbounded.
-                  the original words are never
-                  rewritten, only re-shelved.
-                                  |
-        +-------------------------+-------------------------+
-        v                         v                         v
-   WHY IT MOVED              WHY EACH TURN            WHAT WAS OFFERED
-  every demotion,            SCORED AS IT DID          AND WHAT YOU USED
-   with its reason           the frozen working         written down since
-                              behind the numbers          3 Sep 2026,
-                                                        read by nothing yet
-
-                              THE DOCUMENTS
-                     stored whole, split for finding,
-                      permanent inside one project.
-                     every chunk has a receipt in the
-                      PROJECT'S DOCUMENT INDEX and an
-                       address in Tom Assist's separate
-                       10K-derived DOCUMENT TREE.
-
-                   ingestion pushes that document tree.
-                   preview only reads it. documents never
-                     push the EXPERIENCE TREE and never
-                         cross a project boundary.
-```
-
-And beside all of that, a different kind of memory entirely:
-
-```
-                              THE TREE
-                  it does not hold what happened.
-                     it was changed by it.
-                  the bend, the wear, the way it
-                  now leans, is the memory. every
-                  later message meets that shape.
+                           OUTCOME RECORD
+                  what was offered and what was used
+                         is retained for later work
 ```
 
 Four things it still does not remember.
@@ -1177,15 +1193,20 @@ document text.
 
 ## What is honest about the middle of that picture
 
-There are now two different tree jobs. Accepted conversation experience drives
-the project's experience Tree only after the governed commit. Documents never
-drive that Tree. At document ingestion, each immutable chunk is embedded,
-compiled into a fully positive evidence-addressed 17D load, projected through
-the pinned 8D routing basis and applied to that project's dedicated copy of the
-canonical Python 10K 8D/17D Tree held under its `tom/document-index/` directory. The
-whole document and exact source offsets remain in the project-local permanent
-library; the document Tree stores structural territory and receipts, not the
-contract prose.
+There are now three separate tree jobs. Accepted conversation experience drives
+the project's experience Tree only after the governed commit. The legacy
+document-index Tree receives evidence-addressed 17-channel document loads and
+remains distinct from the matrix-native structural work. The reviewed
+structural-memory path uses the approved small Stream 1 ToM tree and explicit
+signed 32×32 inputs. These trees are not interchangeable.
+
+Documents never drive the experience Tree. At legacy document ingestion, each
+immutable chunk is embedded, compiled into a fully positive evidence-addressed
+17-channel load, projected through the pinned eight-component routing basis and
+applied to that project's dedicated copy of the canonical Python 10K Tree held
+under its `tom/document-index/` directory. The whole document and exact source
+offsets remain in the project-local permanent library; the document-index Tree
+stores structural territory and receipts, not the contract prose.
 
 At preview, Tom Assist projects the question through the same document address
 path and reads the document Tree without stepping it. Candidate chunks must
@@ -1196,6 +1217,13 @@ excluded unit keeps its clause address, Tree receipt, actor support and reason.
 The resulting cited document evidence may enter the visible packet, but it is
 never presented as committed Tom state and never becomes experience merely by
 being retrieved.
+
+In the reviewed structural path, a validated source relationship is compiled
+into a signed 32×32 input and taught only after explicit review. Query-time
+recall preserves native branch identity, every signed 32×32 field and exact slot
+maps. Matching returns source pointers into RGM; RGM remains responsible for
+the exact text. The structural return is never reduced to a branch average or a
+whole-tree score.
 
 What was offered to you and what you actually used is now written down. Nothing
 reads it yet. It is accumulating so that a later decision can be made on real
@@ -2169,15 +2197,33 @@ The owner redirected the architecture away from making ToM reproduce every
 document detail. The tested division of labour is now:
 
 ```text
-question
-   ↓
-RGM: retain and retrieve exact chunks, text and provenance
-   ↓
-ToM: recognise a learned relationship, direction or event-order pattern
-   ↓
-RGM: resolve every exact source linked to that learned structure
-   ↓
-evidence checking and answer wording
+                              question
+                                  |
+                    +-------------+-------------+
+                    |                           |
+                    v                           v
+          RGM semantic retrieval       reviewed query structure
+          likely exact passages        relationship / event order
+                    |                           |
+                    |                           v
+                    |                 ToM distributed recall
+                    |              branch identity + signed 32x32
+                    |                fields + exact slot maps
+                    |                           |
+                    |                           v
+                    |                   bound RGM source IDs
+                    |                           |
+                    +-------------+-------------+
+                                  |
+                                  v
+                      exact RGM text and provenance
+                                  |
+                                  v
+                    conflict and evidence checking
+                                  |
+                                  v
+                     supported wording or clear
+                     partial / unsupported / ambiguous result
 ```
 
 RGM is not classified as a simple vector store. The broader audit of
