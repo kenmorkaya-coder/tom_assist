@@ -1,0 +1,170 @@
+{
+  "version": "tom-assist-rgm-tom-middleton-live-answer/2",
+  "status": "COMPLETE",
+  "outcome": "PASS",
+  "claim_boundary": "One explicitly reviewed Middleton procedure, one correct question, one reversed-order control and one absent-state control through the production RGM, ToM and local evidence-reader path.",
+  "source": {
+    "path": "/Volumes/My Passport for Mac/tom_as projects/2026 05 19 - Middleton Submission/Appendix C - Mitigation Measures.pdf",
+    "sha256": "7e31e674bd1f9f36a20ef81cf6485c8a7e48091a70a942c38f9f0daaac9c9c3a",
+    "document_id": "document-2d4f260726b9cc1b96cdf293e4a296aa",
+    "chunk_count": 3,
+    "candidate_id": "RGMCAND-a451f7c6186817022e0c",
+    "source_id": "SRC-aaa43cf06e5c3b18",
+    "chunk_index": 2
+  },
+  "queue": {
+    "scanned_chunks": 3,
+    "candidate_count": 1,
+    "tree_calls": 0,
+    "automatic_learning": false,
+    "reviewed": true
+  },
+  "learning": {
+    "write_count": 768,
+    "relationship_count": 2
+  },
+  "initial_failure": {
+    "outcome": "FAIL",
+    "checks": {
+      "queue_detected_without_tree_call": true,
+      "correct_structure_recalled": true,
+      "reversed_structure_rejected": true,
+      "absent_structure_rejected": true,
+      "reversed_answer_refused": false,
+      "absent_answer_refused": false,
+      "tree_unchanged": true,
+      "no_whole_tree_score": true
+    },
+    "diagnosis": "The language reader treated semantically related evidence as support after ToM rejected the reversed and absent structures."
+  },
+  "answers": [
+    {
+      "kind": "correct",
+      "question": "Which process stops nearby work before the manager notifies Police and Heritage NSW?",
+      "status": "supported",
+      "engine": "rgm+tom",
+      "answer": "All works within the vicinity of the find must immediately stop. The find must be cordoned  off \nand signage installed to avoid accidental impact. \no The site supervisor or other nominated manager must notify the NSW Police and Heritage \nNSW (Enviroline 131 555).\n[Appendix C - Mitigation Measures.pdf \u00b7 chunk_2]",
+      "source_ids": [
+        "rgm-corpus-81271eb0bcabc76c7eea39e951dcb1b22b9674743dd8da244dfdbfd4a783af26/chunk_2"
+      ],
+      "structural_source_ids": [
+        "SRC-aaa43cf06e5c3b18"
+      ],
+      "structural_status": "recalled",
+      "structural_recalled_source_ids": [
+        "SRC-aaa43cf06e5c3b18"
+      ],
+      "evidence_scope": {
+        "mode": "reviewed_tom_sources",
+        "source_ids": [
+          "SRC-aaa43cf06e5c3b18"
+        ],
+        "candidate_count": 3,
+        "selected_count": 1
+      },
+      "reader_status": "supported",
+      "reader_method": null,
+      "reader_model_calls": null,
+      "whole_tree_score": false,
+      "complete_distributed_return_compared": true,
+      "tree_calls": 1
+    },
+    {
+      "kind": "reversed",
+      "question": "Which procedure notifies Police and Heritage NSW before work stops around human remains?",
+      "status": "not_supported",
+      "engine": "rgm+tom",
+      "answer": "No. The reviewed source records the opposite event order.\n[Appendix C - Mitigation Measures.pdf \u00b7 chunk_2]",
+      "source_ids": [
+        "SRC-aaa43cf06e5c3b18"
+      ],
+      "structural_source_ids": [
+        "SRC-aaa43cf06e5c3b18"
+      ],
+      "structural_status": "reviewed_structure_contradiction",
+      "structural_recalled_source_ids": [
+        "SRC-aaa43cf06e5c3b18"
+      ],
+      "evidence_scope": {
+        "mode": "reviewed_tom_sources",
+        "source_ids": [
+          "SRC-aaa43cf06e5c3b18"
+        ],
+        "candidate_count": 3,
+        "selected_count": 1
+      },
+      "reader_status": "not_supported",
+      "reader_method": "reviewed_structural_contradiction",
+      "reader_model_calls": 0,
+      "whole_tree_score": false,
+      "complete_distributed_return_compared": false,
+      "tree_calls": 0
+    },
+    {
+      "kind": "absent",
+      "question": "What procedure requires excavation to continue after human remains are found?",
+      "status": "not_supported",
+      "engine": "rgm+tom",
+      "answer": "No. The reviewed procedure requires nearby work to stop after human remains are discovered; it does not require excavation to continue.\n[Appendix C - Mitigation Measures.pdf \u00b7 chunk_2]",
+      "source_ids": [
+        "SRC-aaa43cf06e5c3b18"
+      ],
+      "structural_source_ids": [
+        "SRC-aaa43cf06e5c3b18"
+      ],
+      "structural_status": "reviewed_structure_contradiction",
+      "structural_recalled_source_ids": [
+        "SRC-aaa43cf06e5c3b18"
+      ],
+      "evidence_scope": {
+        "mode": "reviewed_tom_sources",
+        "source_ids": [
+          "SRC-aaa43cf06e5c3b18"
+        ],
+        "candidate_count": 3,
+        "selected_count": 1
+      },
+      "reader_status": "not_supported",
+      "reader_method": "reviewed_structural_contradiction",
+      "reader_model_calls": 0,
+      "whole_tree_score": false,
+      "complete_distributed_return_compared": false,
+      "tree_calls": 0
+    }
+  ],
+  "checks": {
+    "queue_candidate_is_reviewed": true,
+    "queue_scan_has_no_tree_call": true,
+    "correct_answer_supported": true,
+    "reversed_answer_is_sourced_no": true,
+    "absent_answer_is_sourced_no": true,
+    "controls_skip_language_reader": true,
+    "controls_skip_tree": true,
+    "tree_unchanged": true,
+    "no_whole_tree_score": true
+  },
+  "tree": {
+    "before": {
+      "checkpoint_sha256": "16417dfebb261f50331e9389e9a105677aaeb4a82354e35d22590bd57d19165e",
+      "checkpoint_size": 233213726,
+      "checkpoint_mtime_ns": 1789696468000000000,
+      "state_hash": "d8b66790c29315149b90eea188c84aed1d37e0259f57f496b1f74a4aa6b7b750",
+      "reference_sha256": "b149755816c7ee5e9b42e4b95093b9bd0ced1217083dbd7fdb56457e7a93ecd8",
+      "reference_size": 6091380
+    },
+    "after": {
+      "checkpoint_sha256": "16417dfebb261f50331e9389e9a105677aaeb4a82354e35d22590bd57d19165e",
+      "checkpoint_size": 233213726,
+      "checkpoint_mtime_ns": 1789696468000000000,
+      "state_hash": "d8b66790c29315149b90eea188c84aed1d37e0259f57f496b1f74a4aa6b7b750",
+      "reference_sha256": "b149755816c7ee5e9b42e4b95093b9bd0ced1217083dbd7fdb56457e7a93ecd8",
+      "reference_size": 6091380
+    },
+    "unchanged": true,
+    "checkpoint_path": "/Volumes/My Passport for Mac/tom_assist_test_results/native_learned_recall/middleton_human_remains_e2e_v1/middleton-human-remains-e2e-v1/tree-2.pkl",
+    "reference_path": "/Volumes/My Passport for Mac/tom_assist_test_results/native_learned_recall/middleton_human_remains_e2e_v1/middleton-human-remains-e2e-v1/references-2.npz",
+    "branch_count": 513,
+    "terminal_branch_count": 393
+  },
+  "temporary_database_deleted": true
+}

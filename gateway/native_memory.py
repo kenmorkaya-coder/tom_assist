@@ -1033,6 +1033,10 @@ def reviewed_query_situation(question, memories):
         r"\b(?:notify|notifies|notified|notifying|notification|inform|informs|informed)"
         r".{0,120}(?:police|heritage\s+nsw|authorit(?:y|ies))\b", question,
         re.I | re.S)
+    continue_work = re.search(
+        r"\b(?:(?:work|works|excavation).{0,50}(?:continue|continues|continued)|"
+        r"continu(?:e|es|ed|ing).{0,50}(?:work|works|excavation))\b",
+        question, re.I | re.S)
     if (discovery is not None and stop_work is not None
         and notify_authorities is not None
         and discovery.start() < stop_work.start() < notify_authorities.start()
@@ -1066,6 +1070,22 @@ def reviewed_query_situation(question, memories):
                     end=notify_authorities.end(), text=notify_authorities.group()),
             ],
             method="explicit stop-work and authority-notification order resolved from the question")
+    if (discovery is not None and continue_work is not None
+        and ("human_remains_discovered", "stop_work") in available_temporal):
+        fields = dict(relation_kind="before",
+            source_event="human_remains_discovered", target_event="continue_work")
+        return dict(status="complete", fields=fields,
+            opposed_by=remains_chain[0],
+            contradiction_message=(
+                "No. The reviewed procedure requires nearby work to stop after human remains "
+                "are discovered; it does not require excavation to continue."),
+            spans=[
+                dict(field="human_remains_discovered", start=discovery.start(),
+                    end=discovery.end(), text=discovery.group()),
+                dict(field="continue_work", start=continue_work.start(),
+                    end=continue_work.end(), text=continue_work.group()),
+            ],
+            method="explicit continue-work state resolved against the reviewed stop-work relationship")
     failure = re.search(
         r"\b(?:fail(?:s|ed|ure)?|not\s+done|does\s+not\s+comply|required\s+action\s+is\s+not\s+done)\b",
         question, re.I)
@@ -2258,30 +2278,36 @@ class RgmDocumentService:
         for row in rows:
             source_id = row["situation"]["source_id"]
             reviewed_by_source[source_id] = reviewed_by_source.get(source_id, 0) + 1
-        motif_digest = native_digest(dict(roles=None,
-            temporal_motif=FAILURE_STEP_IN_COST_MOTIF))
+        motifs = [
+            (FAILURE_STEP_IN_COST_MOTIF, _failure_step_in_cost_matches),
+            (HUMAN_REMAINS_STOP_NOTIFY_MOTIF,
+                _human_remains_stop_notify_matches),
+        ]
         chunks = library.document_chunks(active_only=True)
         candidates = []
         for chunk in chunks:
             text = chunk["text"]
             if hashlib.sha256(text.encode()).hexdigest() != chunk["text_sha256"]:
                 raise ValueError("retained RGM source text changed")
-            matches = _failure_step_in_cost_matches(text)
-            if matches is None:
-                continue
-            source_id = rgm_candidate_source_id(dict(evidence_reference=dict(
-                doc_id=chunk["document_id"], start=chunk["start"], end=chunk["end"])))
-            candidates.append(dict(
-                candidate_id="RGMCAND-" + native_digest(dict(
-                    source_id=source_id, motif=FAILURE_STEP_IN_COST_MOTIF))[:20],
-                source_id=source_id, document_id=chunk["document_id"],
-                display_name=chunk["display_name"], chunk_id=f"chunk_{chunk['chunk_index']}",
-                chunk_index=chunk["chunk_index"], text=text,
-                temporal_motif=copy.deepcopy(FAILURE_STEP_IN_COST_MOTIF),
-                events=[dict(kind=name, start=match.start(), end=match.end(),
-                    text=match.group()) for name, match in matches.items()],
-                reviewed=(source_id, motif_digest) in reviewed,
-                reviewed_structure_count=reviewed_by_source.get(source_id, 0)))
+            for motif, matcher in motifs:
+                matches = matcher(text)
+                if matches is None:
+                    continue
+                source_id = rgm_candidate_source_id(dict(evidence_reference=dict(
+                    doc_id=chunk["document_id"], start=chunk["start"], end=chunk["end"])))
+                motif_digest = native_digest(dict(roles=None,
+                    temporal_motif=motif))
+                candidates.append(dict(
+                    candidate_id="RGMCAND-" + native_digest(dict(
+                        source_id=source_id, motif=motif))[:20],
+                    source_id=source_id, document_id=chunk["document_id"],
+                    display_name=chunk["display_name"], chunk_id=f"chunk_{chunk['chunk_index']}",
+                    chunk_index=chunk["chunk_index"], text=text,
+                    temporal_motif=copy.deepcopy(motif),
+                    events=[dict(kind=name, start=match.start(), end=match.end(),
+                        text=match.group()) for name, match in matches.items()],
+                    reviewed=(source_id, motif_digest) in reviewed,
+                    reviewed_structure_count=reviewed_by_source.get(source_id, 0)))
         return dict(status="ready", candidates=candidates,
             scanned_chunks=len(chunks),
             automatic_learning=False, tree_calls=0)
@@ -2465,6 +2491,30 @@ class RgmDocumentService:
                 break
             matched.append(candidates_for_relationship[0])
         if not matched:
+            opposed = query.get("opposed_by")
+            if opposed is None and len(query_relationships) == 1:
+                relationship = query_relationships[0]
+                if relationship.get("relation_kind") == "before":
+                    opposed = dict(relation_kind="before",
+                        source_event=relationship.get("target_event"),
+                        target_event=relationship.get("source_event"))
+            opposite = ([memory for memory in memories
+                if self._relationship_key(memory) == self._relationship_key(opposed)]
+                if isinstance(opposed, dict) else [])
+            if len(opposite) == 1:
+                active_source_ids = {row["situation"]["source_id"] for row in rows
+                    if row["situation"]["provenance"]["document_id"] in active_documents}
+                contradiction_sources = [source_id for source_id in opposite[0]["source_ids"]
+                    if source_id in active_source_ids]
+                if contradiction_sources:
+                    message = query.get("contradiction_message") or (
+                        "No. The reviewed source records the opposite event order.")
+                    return dict(status="reviewed_structure_contradiction",
+                        recalled_source_ids=contradiction_sources,
+                        query_structure=query, reviewed_relationship=opposed,
+                        contradiction_message=message, whole_tree_score=False,
+                        all_branch_cell_coordinates_compared=False, query_routes=0,
+                        tree_unchanged=True)
             return dict(status="no_matching_structure", recalled_source_ids=[],
                 query_structure=query, whole_tree_score=False,
                 all_branch_cell_coordinates_compared=False)
@@ -2561,7 +2611,9 @@ class RgmDocumentService:
 
     def _restore_recalled_sources(self, library, packet, structural):
         """Reopen exact RGM passages linked by a recalled ToM structure."""
-        if not isinstance(structural, dict) or structural.get("status") != "recalled":
+        if (not isinstance(structural, dict)
+            or structural.get("status") not in {
+                "recalled", "reviewed_structure_contradiction"}):
             return packet
         wanted = structural.get("recalled_source_ids")
         if not isinstance(wanted, list) or not wanted or len(wanted) != len(set(wanted)):
@@ -2768,12 +2820,32 @@ class RgmDocumentService:
             structural["evidence_scope"] = evidence_scope
             retrieval["reviewed_tom_memory"] = structural
             structural_sources = []
-            if structural.get("status") == "recalled":
+            if structural.get("status") in {
+                "recalled", "reviewed_structure_contradiction"}:
                 for memory in reader_memories:
                     ref = memory["evidence_reference"]
                     structural_sources.append(dict(source_id=rgm_candidate_source_id(memory),
                         text=memory["content"], provenance={**ref,
                             "display_name": retrieval["titles"][ref["corpus_id"]]}))
+            if structural.get("status") == "reviewed_structure_contradiction":
+                lines = [structural["contradiction_message"]]
+                for source in structural_sources:
+                    proof = source["provenance"]
+                    lines.append(f"[{proof['display_name']} · {proof['chunk_id']}]")
+                reading = dict(status="not_supported",
+                    method="reviewed_structural_contradiction", model_calls=0,
+                    answers=[dict(question=question, text=None,
+                        status="not_supported")], parts=[])
+                if library.documents() != inventory or self._model_identity() != model_identity:
+                    raise ValueError("document collection changed while answering; answer discarded")
+                return dict(status="not_supported", answer="\n".join(lines),
+                    sources=structural_sources, structural_sources=structural_sources,
+                    authority_review=authority_review, scope=RGM_TOM_DOCUMENT_SCOPE,
+                    engine="rgm+tom", trace=dict(version=RGM_DOCUMENT_VERSION,
+                        vendor_sha256=vendor, retrieval=retrieval, reading=reading),
+                    purity=dict(tree_calls=0, training_calls=0, provider_sends=0,
+                        whole_tree_score=False,
+                        complete_distributed_return_compared=False))
             if reader_memories:
                 reader_packet = dict(memories=[{k: m[k] for k in ("id", "content", "evidence_reference")}
                     for m in reader_memories])

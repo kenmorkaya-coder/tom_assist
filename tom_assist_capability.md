@@ -84,7 +84,7 @@ Counts, plots and branch magnitudes are display telemetry only.
 | Event-order memory | Bounded | Distinguishes records containing the same entities and actions in a different order. | Demonstrated with supplied temporal links; automatic temporal extraction is not established. |
 | Shared structural memory | Bounded | Learns a reviewed structure once and binds exact evidence from several source locations without teaching the tree again. | Supported for the admitted structures listed below. |
 | Structural source recovery | Bounded | Reopens exact RGM passages from a learned structure even when ordinary RGM retrieval supplies no correct initial candidate. | Requires an already reviewed and learned structure. |
-| Structure review queue | Bounded | Scans authenticated RGM chunks for the admitted failure/action/cost pattern, shows exact trigger phrases, and requires an explicit Save for each source. | Scanning is read-only and cannot teach the tree automatically. |
+| Structure review queue | Bounded | Scans authenticated RGM chunks for the admitted failure/action/cost and human-remains/stop-work/notification patterns, shows exact trigger phrases, and requires an explicit Save for each source. | Scanning is read-only and cannot teach the tree automatically. |
 | Dense 17-channel prose loading | Shadow, default off | Extracts evidence-bound structured candidates and records diagnostics. | Ordinary prose still leaves too many channels empty for authorised tree admission. |
 | Outcome memory | Capture only | Records what context was offered and what the user actually used. | Nothing reads this history yet. |
 
@@ -202,10 +202,29 @@ archive were identical before and after all recall checks. The large artifacts
 remain on Passport. This is one explicitly reviewed procedure, not evidence of
 automatic event extraction or general planning-document understanding.
 
+The same reviewed structure was then exercised through the live answer path.
+The first run failed: the tree rejected the reversed and absent relationships,
+but the final evidence reader treated the topically relevant RGM passage as
+support anyway. The fault was therefore at the final evidence boundary, not in
+the tree return.
+
+The repair makes a reviewed opposite relationship authoritative at that
+boundary. Tom Assist reopens the exact bound RGM source and returns a sourced
+No without calling the language reader or the tree again. On the repaired run,
+the correct-order question returned the exact source through one complete
+distributed ToM recall. The reversed-order and false continue-excavation
+questions both returned `not_supported`, showed the same exact source, made
+zero language-model calls and made zero tree calls. Conflicting sources remain
+a separate case and are still all displayed.
+
 ### Explicit review before learning
 
-The Memory screen exposes **Structures to review** for the bounded
-failure/action/cost structure. The scan:
+The Memory screen exposes **Structures to review** for two bounded structures:
+
+- failure, substitute action and cost recovery; and
+- human remains discovered, work stopped and authorities notified.
+
+The scan:
 
 - reads only active authenticated RGM chunks;
 - shows the exact passage and the three locally matched event phrases;
@@ -252,9 +271,8 @@ The live reviewed bridge currently supports:
 
 The two three-event structures are represented by two independently routed
 learned relationships. Both complete distributed returns and both exact slot
-maps must match before their source reopens. The human-remains structure has
-been proven in a separate bounded test project; it is not yet exposed by the
-desktop review queue.
+maps must match before their source reopens. Both structures are exposed by the
+desktop review queue and still require an explicit per-source Save.
 
 ## What is not established
 
@@ -286,7 +304,7 @@ recall does not train the tree. The current implementation uses the approved
 small Stream 1 tree for bounded testing and keeps large checkpoints and full
 field archives outside Git on the Passport drive.
 
-The latest integrated review-queue verification recorded:
+The earlier integrated review-queue verification recorded:
 
 - **252** relevant gateway tests passing;
 - **19** desktop tests passing;
@@ -297,7 +315,9 @@ These counts describe the relevant integration suite at the recorded revision;
 they are not a general accuracy score.
 
 The later unseen-document access repair passed all **144** native-memory tests.
-The Middleton sequence extension passes all **146** native-memory tests.
+The Middleton live-answer repair passes all **147** native-memory tests. The
+desktop suite passes **20** tests, TypeScript checking passes, and the production
+desktop interface build passes.
 The broader gateway run recorded 590 passes, one expected skip, one unrelated
 event-graph fixture-overlap failure, and five sandbox-only local-socket setup
 errors. The affected OAuth file passed **8/8** when rerun with local socket
@@ -318,6 +338,8 @@ Compact and reviewable evidence is retained in the repository:
   — compact third-document RGM-versus-ToM result; and
 - [validation/runs/rgm-tom-middleton-sequence-generalisation.json](validation/runs/rgm-tom-middleton-sequence-generalisation.json)
   — compact different-project-family order-discrimination result; and
+- [validation/runs/rgm-tom-middleton-live-answer.json](validation/runs/rgm-tom-middleton-live-answer.json)
+  — initial live-answer failure, diagnosis and repaired end-to-end result; and
 - [gateway/tests/test_native_memory.py](gateway/tests/test_native_memory.py) —
   source binding, structural recall, conflict and evidence-boundary checks.
 
@@ -329,13 +351,11 @@ They are evidence artifacts, not application source.
 
 The next work should extend capability one variable at a time:
 
-1. Add the proven human-remains sequence to the explicit desktop review queue,
-   without automatic teaching.
-2. Run the live answer path and verify that its exact RGM passage is shown for
-   the correct order while reversed and absent structures return no structural
-   evidence.
-3. Measure false positives and misses in the expanded read-only review queue
+1. Measure false positives and misses in the expanded read-only review queue
    before admitting any further structure.
+2. Review a second independently worded human-remains source, bind it without a
+   second tree write, and verify that both exact sources reopen.
+3. Exercise conflict and explicit-authority handling for this temporal motif.
 4. Keep exact evidence selection and conflict presentation separate from
    structural recall.
 5. Do not introduce branch averaging, a whole-tree score or automatic teaching

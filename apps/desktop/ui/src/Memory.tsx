@@ -20,16 +20,21 @@ type StructureCandidate = {
   chunk_id: string;
   chunk_index: number;
   text: string;
-  temporal_motif: {
-    relation_kind: "sequence";
-    source_event: "failure";
-    intermediate_event: "substitute_action";
-    target_event: "cost_recovery";
-  };
+  temporal_motif:
+    | { relation_kind: "sequence"; source_event: "failure";
+        intermediate_event: "substitute_action"; target_event: "cost_recovery" }
+    | { relation_kind: "sequence"; source_event: "human_remains_discovered";
+        intermediate_event: "stop_work"; target_event: "notify_authorities" };
   events: { kind: string; start: number; end: number; text: string }[];
   reviewed: boolean;
   reviewed_structure_count: number;
 };
+
+function structureLabel(candidate: StructureCandidate) {
+  return candidate.temporal_motif.source_event === "human_remains_discovered"
+    ? "Save human remains discovered → stop work → notify authorities"
+    : "Save failure → substitute action → cost recovery";
+}
 
 function count(value: number | undefined) {
   return Number.isFinite(value) ? Number(value).toLocaleString() : "—";
@@ -177,7 +182,7 @@ export function Memory({
       </div>
       {canImport && documents.length > 0 && <section aria-label="Review detected document structures">
         <h3>Structures to review</h3>
-        <p>Find passages that locally state: a required action fails, another party acts, and the cost is recovered. Nothing is saved in ToM until you review a passage and press Save.</p>
+        <p>Find passages that locally state either a failure/action/cost sequence or a human-remains discovery/stop-work/authority-notification sequence. Nothing is saved in ToM until you review a passage and press Save.</p>
         <button disabled={candidateScanBusy || Boolean(savingCandidate)}
           onClick={() => void findStructureCandidates()}>
           {candidateScanBusy ? "Checking document passages…" : "Find structures to review"}
@@ -198,7 +203,7 @@ export function Memory({
                 onClick={() => void saveStructureCandidate(candidate)}>
                 {candidate.reviewed ? "Already reviewed in ToM"
                   : savingCandidate === candidate.candidate_id ? "Saving reviewed structure…"
-                    : "Save failure → substitute action → cost recovery"}
+                    : structureLabel(candidate)}
               </button>
             </div>
           </article>)}
