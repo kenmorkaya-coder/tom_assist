@@ -997,16 +997,19 @@ tested. A
 new structure must write non-overlapping tree locations; otherwise it is
 rejected. Only the newest large checkpoint and reference archive are retained.
 
-The same review panel supports two admitted event structures: reviewed notice
-before a meeting, and failure followed by substitute action followed
-by cost recovery. The latter is retained as two separate ordered relationships;
-both complete distributed returns and native slot maps must match before their
-shared source locations reopen. Reviewing another passage with the same
-structure binds its immutable RGM source pointer without another ToM write.
-Both admitted ordered structures can reopen their reviewed sources from an
+The bounded bridge supports three reviewed event structures: notice before a
+meeting; failure followed by substitute action followed by cost recovery; and
+human remains discovered followed by work stopping followed by authority
+notification. Each multi-event structure is retained as separate ordered
+relationships. Every complete distributed return and native slot map must
+match before its source locations reopen. Reviewing another passage with the
+same structure binds its immutable RGM source pointer without another ToM
+write. These ordered structures can reopen their reviewed sources from an
 explicitly ordered query even when RGM supplies no correct initial candidate.
-Party and repayment relationships remain candidate-gated. This does not perform
-automatic motif extraction or accept arbitrary event graphs.
+Party and repayment relationships remain candidate-gated. The read-only review
+queue currently scans only the failure/substitute/cost structure; the other
+structures still require an explicit bounded review action. This does not
+perform automatic motif extraction or accept arbitrary event graphs.
 
 The failure/substitute/cost source guard checks one local procedure rather than
 combining keywords from anywhere in a long RGM chunk. On the two frozen contract

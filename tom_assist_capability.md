@@ -173,6 +173,35 @@ This result is limited to one new document, one already learned structure and
 three question wordings. It does not establish automatic structure discovery or
 general accuracy on unseen documents.
 
+### Different project family and different sequence
+
+The next check used the five-page Middleton planning mitigation document rather
+than Sydney Metro contract material. Its reviewed procedure states:
+
+```text
+human remains discovered
+    → nearby work stops and the area is secured
+    → Police and Heritage NSW are notified
+```
+
+RGM retrieved the passage for both correct structural questions. It also
+retrieved the same passage for the reversed question and for the false request
+to continue excavation after human remains were found. RGM therefore supplied
+strong topic access but did not enforce the event order or the stop-work state.
+
+A fresh copy of the approved circa-500-branch tree learned the two ordered
+relationships. ToM recalled the exact source for the correct pair and complete
+chain, rejected the reversed order, and did not admit the absent continue-work
+structure. The correct pair used one native route and the chain used two. Each
+route compared the complete signed branch-local 32×32 return and exact native
+slot map. No whole-tree score or branch averaging was used.
+
+The learned tree contained 513 branches and 393 terminal return branches. Its
+233,213,726-byte checkpoint, state hash and 6,091,380-byte full-field reference
+archive were identical before and after all recall checks. The large artifacts
+remain on Passport. This is one explicitly reviewed procedure, not evidence of
+automatic event extraction or general planning-document understanding.
+
 ### Explicit review before learning
 
 The Memory screen exposes **Structures to review** for the bounded
@@ -215,13 +244,17 @@ The live reviewed bridge currently supports:
 
 1. the bounded mirrored insurance relationships used for party and repayment
    direction;
-2. reviewed notice before a meeting; and
+2. reviewed notice before a meeting;
 3. failure before substitute action, followed by substitute action before cost
-   recovery.
+   recovery; and
+4. human remains discovered before work stops, followed by work stopping before
+   authority notification.
 
-The last structure is represented by two independently routed learned
-relationships. Both complete distributed returns and both exact slot maps must
-match before their shared sources reopen.
+The two three-event structures are represented by two independently routed
+learned relationships. Both complete distributed returns and both exact slot
+maps must match before their source reopens. The human-remains structure has
+been proven in a separate bounded test project; it is not yet exposed by the
+desktop review queue.
 
 ## What is not established
 
@@ -263,7 +296,8 @@ The latest integrated review-queue verification recorded:
 These counts describe the relevant integration suite at the recorded revision;
 they are not a general accuracy score.
 
-The later unseen-document access repair passes all **144** native-memory tests.
+The later unseen-document access repair passed all **144** native-memory tests.
+The Middleton sequence extension passes all **146** native-memory tests.
 The broader gateway run recorded 590 passes, one expected skip, one unrelated
 event-graph fixture-overlap failure, and five sandbox-only local-socket setup
 errors. The affected OAuth file passed **8/8** when rerun with local socket
@@ -282,6 +316,8 @@ Compact and reviewable evidence is retained in the repository:
   — immutable native-memory result sections; and
 - [validation/runs/rgm-tom-unseen-document-generalisation.json](validation/runs/rgm-tom-unseen-document-generalisation.json)
   — compact third-document RGM-versus-ToM result; and
+- [validation/runs/rgm-tom-middleton-sequence-generalisation.json](validation/runs/rgm-tom-middleton-sequence-generalisation.json)
+  — compact different-project-family order-discrimination result; and
 - [gateway/tests/test_native_memory.py](gateway/tests/test_native_memory.py) —
   source binding, structural recall, conflict and evidence-boundary checks.
 
@@ -293,13 +329,13 @@ They are evidence artifacts, not application source.
 
 The next work should extend capability one variable at a time:
 
-1. Repeat the successful third-document check on an independent contract family
-   and a different already reviewed structure, without changing the tree or
-   selector.
-2. Measure false positives and misses in the read-only review queue before
-   admitting another structure.
-3. Add a new reviewed structure only after its source-local recognition,
-   native distributed return and destructive controls are independently proven.
+1. Add the proven human-remains sequence to the explicit desktop review queue,
+   without automatic teaching.
+2. Run the live answer path and verify that its exact RGM passage is shown for
+   the correct order while reversed and absent structures return no structural
+   evidence.
+3. Measure false positives and misses in the expanded read-only review queue
+   before admitting any further structure.
 4. Keep exact evidence selection and conflict presentation separate from
    structural recall.
 5. Do not introduce branch averaging, a whole-tree score or automatic teaching
