@@ -932,6 +932,29 @@ def test_rgm_endpoint_uses_project_library_without_initializing_tree(tmp_path, m
     assert not (tmp_path / "projects" / "other").exists()
 
 
+def test_rgm_document_collection_uses_tested_4096_chunk_capacity(monkeypatch):
+    import gateway.document_ingestion as ingestion
+    import gateway.native_memory as native_memory
+    import gateway.vendor.rgm17d.interface.doc_ingest as doc_ingest
+
+    monkeypatch.setattr(doc_ingest, "detect_headings_in_plain_text",
+        lambda text: (text, {"method": "fixture"}))
+    monkeypatch.setattr(ingestion, "build_rgm_document_corpus",
+        lambda text, *_args, **_kwargs: {"chunks": [{} for _ in text]})
+
+    def document(size):
+        text = "x" * size
+        return dict(document_id="document-a", display_name="Capacity fixture",
+            content=text, content_sha256=hashlib.sha256(text.encode()).hexdigest(),
+            tombstoned_at=None)
+
+    assert native_memory.RGM_DOCUMENT_MAX_CHUNKS == 4096
+    prepared = native_memory.prepare_rgm_project_documents("project", [document(4096)])
+    assert len(prepared[0]["corpus"]["chunks"]) == 4096
+    with pytest.raises(ValueError, match="tested RGM capacity of 4096 chunks"):
+        native_memory.prepare_rgm_project_documents("project", [document(4097)])
+
+
 def test_rgm_desktop_import_uses_local_chunker_and_never_initializes_tree(tmp_path, monkeypatch):
     from gateway.evidence_gateway import EvidenceTomGateway
     from gateway.native_memory import RgmDocumentService

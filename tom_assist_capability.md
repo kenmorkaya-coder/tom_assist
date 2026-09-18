@@ -75,7 +75,7 @@ Counts, plots and branch magnitudes are display telemetry only.
 | Governed message preparation | Available | Holds a draft, prepares bounded project context, and sends only after the user allows it. | Provider behaviour remains external to Tom Assist. |
 | Read-only preview | Available | Reads current state and tree-derived context without advancing the tree or memory clock. | A committed sent turn is required before experience learning occurs. |
 | Experience-tree learning | Available | A committed turn changes the project's experience tree; draft inspection does not. | The tree does not store the literal transcript. |
-| Local document library | Available | Stores imported source text, chunks, source offsets, checksums and project-local provenance. | Imported text without PDF provenance does not receive invented page numbers. |
+| Local document library | Available | Stores imported source text, chunks, source offsets, checksums and project-local provenance. The tested active collection bound is 4,096 RGM chunks. | Imported text without PDF provenance does not receive invented page numbers. Collections above 4,096 chunks are rejected before model work. |
 | Exact evidence answering | Available in the opt-in document path | Returns source quotations and expandable original passages, with exact-span and source-integrity checks. | Oversized or altered evidence is rejected rather than silently shortened or repaired. |
 | Multiple supporting sources | Available | Keeps and displays every exact source linked to an accepted answer or reviewed structural memory. | The evidence reader may still decline broad questions even when relevant structural sources were found. |
 | Conflicting sources | Available | Shows both sides with provenance and returns an ambiguous result while authority is unresolved. The human-remains path recognises a retrieved source that reverses stop/notify order or permits work to continue after discovery. | Neither ToM nor the language model silently chooses a winner. |
@@ -421,10 +421,10 @@ They are evidence artifacts, not application source.
 
 The next work should extend capability one variable at a time:
 
-1. Obtain a genuine pair of conflicting procedure versions from one real
-   project and test the explicit temporal-authority action. The November 2021
-   and June 2023 SCAW plan revisions were checked and agree on stop → notify,
-   so they are a passed no-false-conflict control rather than an authority test.
+1. Extend source-authority review to the genuine SCAW remediation-plan revision
+   pair. RGM already retrieves the old draft statement and the later revision
+   history that removes it from the same 2,201-chunk collection. The current
+   authority action cannot yet scope or apply that plan-status revision.
 2. Keep exact evidence selection and conflict presentation separate from
    structural recall.
 3. Do not introduce branch averaging, a whole-tree score or automatic teaching

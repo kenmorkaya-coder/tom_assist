@@ -1,5 +1,5 @@
 {
-  "version": "tom-assist-rgm-tom-middleton-live-answer/10",
+  "version": "tom-assist-rgm-tom-middleton-live-answer/11",
   "status": "COMPLETE",
   "outcome": "PASS",
   "claim_boundary": "One explicitly reviewed Middleton procedure, one correct question, one reversed-order control and one absent-state control through the production RGM, ToM and local evidence-reader path.",
@@ -1067,5 +1067,129 @@
       "oauth_unix_socket_module_outside_sandbox": "8 passed"
     },
     "claim_boundary": "This makes already-recorded explicit authority decisions inspectable. It does not decide source authority, edit a decision, or close the remaining real same-project conflicting-version gate."
+  },
+  "same_project_remediation_plan_revision": {
+    "version": "tom-assist-same-project-remediation-plan-revision/1",
+    "status": "RETRIEVAL_COMPLETE_AUTHORITY_SCOPE_PENDING",
+    "outcome": "PASS_REAL_REVISION_RETRIEVAL",
+    "project": "Sydney Metro Western Sydney Airport SCAW",
+    "claim_boundary": "The production RGM path retrieves the real old-draft and later-revision evidence from the full pair. This does not yet prove conflict presentation or a controlling-source decision for plan status because the current source-authority scopes do not represent this claim.",
+    "sources": [
+      {
+        "label": "Revision 04",
+        "display_name": "SMWSASCA-CPU-OHE-SF153-EW-RPT-232000.04.S3.04.01.pdf",
+        "path": "/Volumes/My Passport for Mac/tom_as projects/sydney_metro_wsa/SCAW Design Files/01 Alignment/SCAEW2320_SMF Final/SMWSASCA-CPU-OHE-SF153-EW-RPT-232000.04.S3.04.01.pdf",
+        "pdf_sha256": "3a33f13ca8ce3644cd43693ee596a75169678ba715e30cf381df06f6c10d1115",
+        "pdf_bytes": 21942643,
+        "extracted_text_sha256": "945861a8d3869ee12076fab15cb8fdc047ef94963f17647b0f3ad811bbe9c3dd",
+        "extracted_chars": 396292,
+        "chunk_count": 887,
+        "exact_section_chunk": 76,
+        "exact_section_source_id": "SRC-0c5f925da498f205",
+        "verified_statement": "The plan is currently a draft under site-auditor review; the approved plan will be attached to a future submission."
+      },
+      {
+        "label": "Revision 05",
+        "display_name": "SMWSASCA-CPU-OHE-SF153-EW-RPT-232000.05.AA.05.01.pdf",
+        "path": "/Volumes/My Passport for Mac/tom_as projects/sydney_metro_wsa/SCAW Design Files/01 Alignment/SCAEW2320_SMF Final/SMWSASCA-CPU-OHE-SF153-EW-RPT-232000.05.AA.05.01.pdf",
+        "pdf_sha256": "592d0ce2c7012b2010668bfee56aaa87b09a963eb108693c28d71eb3fd2d41e3",
+        "pdf_bytes": 22891493,
+        "extracted_text_sha256": "1335736ba296867eb3c2ae9d52bfb4a3907f6e47f0656b61879505e848b1e5e1",
+        "extracted_chars": 432647,
+        "chunk_count": 1314,
+        "exact_section_chunk": 86,
+        "exact_section_source_id": "SRC-d2a2e1572f3d9403",
+        "verified_statement": "The draft note was removed; revised plan SMWSASCA-CPU-1NL-NL000-CT-RPT-000028 is attached in Appendix M."
+      }
+    ],
+    "initial_capacity_diagnostic": {
+      "product_bound_before_change": 512,
+      "combined_chunks": 2201,
+      "result": "rejected before embeddings; no silent pruning",
+      "shadow_capacity": 4096,
+      "shadow_result": "all 2201 chunks admitted and searched before the product setting changed"
+    },
+    "production_capacity": {
+      "collection_bound": 4096,
+      "request_local_rgm_capacity": 4096,
+      "cache_version": "tom-assist-rgm-document-answers/2",
+      "larger_collection_policy": "reject before model work"
+    },
+    "retrieval": {
+      "questions": [
+        {
+          "question": "Is the Remediation Action Plan for Encapsulation of Contaminated Soil still in draft format?",
+          "native_vector_top_three": [
+            {
+              "revision": "05",
+              "chunk_index": 74,
+              "rank": 1,
+              "score": 0.8329676349541734,
+              "returned": true,
+              "evidence": "draft-only notes removed"
+            },
+            {
+              "revision": "04",
+              "chunk_index": 71,
+              "rank": 2,
+              "score": 0.8122522092860143,
+              "returned": true,
+              "evidence": "draft plan attached"
+            },
+            {
+              "revision": "05",
+              "chunk_index": 79,
+              "rank": 3,
+              "score": 0.7901634819207083,
+              "returned": true,
+              "evidence": "Appendix M revised plan"
+            }
+          ],
+          "exact_long_clause_ranks": {
+            "revision_04": 78,
+            "revision_05": 89
+          }
+        },
+        {
+          "question": "What is the current status of the remediation action plan for the contaminated soil containment cell?",
+          "native_vector_top_three_returned": [
+            true,
+            false,
+            true
+          ],
+          "exact_long_clause_ranks": {
+            "revision_04": 95,
+            "revision_05": 102
+          }
+        },
+        {
+          "question": "Which remediation action plan is attached in Appendix M?",
+          "native_vector_top_three_returned": [
+            true,
+            true,
+            true
+          ],
+          "exact_long_clause_ranks": {
+            "revision_04": 527,
+            "revision_05": 786
+          }
+        }
+      ],
+      "semantic_interpretation": "The short genuine revision-history passages carry the retrieval signal; the exact long Section 4.3.4 chunks are not top-ranked.",
+      "final_packet_source_limit": 10
+    },
+    "controls": {
+      "production_extraction": true,
+      "production_rgm_chunking": true,
+      "frozen_minilm": true,
+      "native_vector_pass": true,
+      "contextual_vector_pass": true,
+      "reciprocal_rank_fusion": true,
+      "tree_calls": 0,
+      "automatic_learning": false,
+      "temporary_database_deleted": true,
+      "large_artifact_created": false
+    },
+    "remaining_gate": "Present both plan-status versions and apply an explicit exact-source controlling decision without inferring authority from filenames or dates."
   }
 }

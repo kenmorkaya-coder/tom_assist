@@ -949,7 +949,7 @@ In Memory, enter a local PDF, TXT or Markdown path and explicitly choose
 **Import document**. With this option enabled, extraction uses the copied RGM
 reader, and ingestion stores its lossless chunks and MiniLM vectors directly in
 the project library without initializing a tree. Files are limited to 100 MB,
-extracted text to two million characters, and the active collection to 512
+extracted text to two million characters, and the active collection to 4,096
 chunks. Original file/text hashes are retained. In Chat,
 **Answer from project documents** reads only that project's active imported
 text. It does not send the question to a cloud provider or commit a conversation
@@ -1185,8 +1185,26 @@ The original APP03 wording now returns “No”, followed by clause 23.5 showing
 TfNSW reimburses SM. This was verified in the actual isolated desktop window and
 its source disclosure opens to the same clause.
 
-The experimental project collection is bounded to 512 RGM chunks, matching the
-unchanged native capacity. Larger collections are rejected before model work;
-no source is silently pruned to make them fit. Changing that bound needs a
-separate capacity check. The encoder implementation hash also binds vector
+The experimental project collection is bounded to 4,096 RGM chunks. The
+request-local copied RGM is constructed with that same explicit capacity, so no
+source is silently pruned to make the collection fit. This bound was raised only
+after a 2,201-chunk shadow run admitted and searched two genuine SCAW report
+revisions without changing the product setting. Larger collections are still
+rejected before model work. The encoder implementation hash also binds vector
 caches, so code changes cannot silently reuse old encoding results.
+
+The same two reports were then searched through the updated production path.
+Revision 04 contributed 887 chunks and Revision 05 contributed 1,314. For three
+questions about whether the contaminated-soil Remediation Action Plan was still
+a draft and which plan was attached in Appendix M, the copied RGM returned the
+short revision-history passages at ranks one to three. Those passages state that
+Revision 04 attached a draft plan and Revision 05 removed the draft note and
+attached a revised plan. The longer complete Section 4.3.4 passages ranked much
+lower, so retrieval success here comes from the genuine revision-history text,
+not from an exact full-clause match.
+
+This run proves retrieval over the complete 2,201-chunk pair. It does not yet
+prove that the app will present both versions as a source-authority conflict or
+apply a controlling-source decision to this kind of plan-status claim. Current
+authority scopes remain limited to the reviewed relationship types and the
+bounded human-remains event sequence.

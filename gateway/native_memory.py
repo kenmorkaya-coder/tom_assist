@@ -1809,8 +1809,9 @@ class NativeMemoryService:
             self._inference_lock.release()
 
 
-RGM_DOCUMENT_VERSION = "tom-assist-rgm-document-answers/1"
+RGM_DOCUMENT_VERSION = "tom-assist-rgm-document-answers/2"
 RGM_DOCUMENT_SCOPE = "Experimental document answers: RGM retrieval and local evidence reading. ToM tree recall is not used."
+RGM_DOCUMENT_MAX_CHUNKS = 4096
 RGM_TOM_DOCUMENT_SCOPE = ("Project document answers: RGM finds exact evidence; reviewed structures may also "
     "reactivate their persistent distributed ToM memory before evidence is checked.")
 RGM_TOM_BRIDGE_VERSION_V1 = "tom-assist-rgm-tom-reviewed-situations/1"
@@ -1854,8 +1855,9 @@ def prepare_rgm_project_documents(project_id, documents):
         corpus = build_rgm_document_corpus(text, heading_text, dict(project_id=project_id,
             document_id=doc["document_id"], display_name=doc["display_name"], content_sha256=doc["content_sha256"]))
         prepared.append(dict(document=doc, corpus=corpus, heading_telemetry=telemetry))
-    if sum(len(d["corpus"]["chunks"]) for d in prepared) > 512:
-        raise ValueError("experimental collection exceeds the unchanged RGM capacity of 512 chunks")
+    if sum(len(d["corpus"]["chunks"]) for d in prepared) > RGM_DOCUMENT_MAX_CHUNKS:
+        raise ValueError(
+            f"experimental collection exceeds the tested RGM capacity of {RGM_DOCUMENT_MAX_CHUNKS} chunks")
     return prepared
 
 
@@ -1874,7 +1876,7 @@ def retrieve_rgm_project_documents(library, prepared, question, vectors):
     from gateway.semantic_chunks import _unit_vector
     for vector in vectors.values():
         _unit_vector(vector, "RGM passage vector")
-    rgm = ReflectionGatedMemory()
+    rgm = ReflectionGatedMemory(capacity=RGM_DOCUMENT_MAX_CHUNKS)
     rgm.vector_store = VectorStore(dim=384)
     rgm.vector_store._encode = lambda text: vectors[hashlib.sha256(text.encode()).hexdigest()]
     anchors, registry, originals, titles = {}, {}, {}, {}
