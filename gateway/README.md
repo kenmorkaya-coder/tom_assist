@@ -1203,8 +1203,18 @@ attached a revised plan. The longer complete Section 4.3.4 passages ranked much
 lower, so retrieval success here comes from the genuine revision-history text,
 not from an exact full-clause match.
 
-This run proves retrieval over the complete 2,201-chunk pair. It does not yet
-prove that the app will present both versions as a source-authority conflict or
-apply a controlling-source decision to this kind of plan-status claim. Current
-authority scopes remain limited to the reviewed relationship types and the
-bounded human-remains event sequence.
+The live answer path now admits this exact contaminated-soil plan-status claim
+as a bounded source-authority scope. Across all three questions it presents the
+same exact pair: Revision 05 chunk 74, which removes the draft-only note, and
+Revision 04 chunk 71, which says Appendix M contains the draft plan. It returns
+**Ambiguous** until an explicit decision becomes effective. It does not infer a
+winner from filenames, revision numbers, dates or amendment wording.
+
+A temporary real-project run recorded Revision 05 chunk 74 as controlling.
+Before the effective time both passages remained visible and the result stayed
+ambiguous. From the effective time, only chunk 74 reached the evidence reader;
+the decision also appeared in the read-only authority history. Conflict
+presentation made zero language-model calls. The resolved reader check used a
+deterministic exact-quote control, so this proves source selection and not
+general answer wording. The complete path made zero ToM calls and did not change
+the tree.

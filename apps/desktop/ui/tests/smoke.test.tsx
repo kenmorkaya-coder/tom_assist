@@ -624,7 +624,7 @@ it("shows exact active and future source-authority decisions as read-only histor
     if (payload.action === "status") return {
       ready: true, engine: "rgm+tom", structural_memory: {
       configured: true, learned_situations: 2, learned_structural_memories: 2, capacity: 6,
-      source_authority_links: 2,
+      source_authority_links: 3,
     } };
     if (payload.action === "source_authority_history") return {
       as_of: "2026-09-18T00:00:00.000000Z", read_only: true,
@@ -658,6 +658,20 @@ it("shows exact active and future source-authority decisions as read-only histor
               provenance: { display_name: "Original agreement", chunk_id: "chunk_2",
                 chunk_index: 2, start: 50, end: 80 } }],
           },
+          { decision_id: "AUTH-plan", relation_kind: "document_status", effective_status: "active",
+            authority_scope: { kind: "source_claim", claim_type: "document_status",
+              subject: "remediation_action_plan_for_encapsulation_of_contaminated_soil" },
+            effective_at: "2026-09-18T00:00:00.000000Z", created_at: "2026-09-18T00:00:00.000000Z",
+            reason: "Revision 05 controls the plan status",
+            controlling_source: { source_id: "SRC-rev05", text: "The draft-only note was removed.",
+              text_sha256: "e".repeat(64), document_active: true,
+              provenance: { display_name: "Revision 05", chunk_id: "chunk_74",
+                chunk_index: 74, start: 0, end: 32 } },
+            replaced_sources: [{ source_id: "SRC-rev04", text: "The plan is a draft.",
+              text_sha256: "f".repeat(64), document_active: true,
+              provenance: { display_name: "Revision 04", chunk_id: "chunk_71",
+                chunk_index: 71, start: 0, end: 20 } }],
+          },
         ],
     };
     throw new Error("unexpected action");
@@ -665,10 +679,11 @@ it("shows exact active and future source-authority decisions as read-only histor
   render(<Memory projectId={project.id} backend={backend} />);
   await screen.findByRole("heading", { name: "Source authority history" });
   expect(screen.getByText("human remains discovered → stop work → notify authorities")).toBeTruthy();
+  expect(screen.getByText("remediation action plan for encapsulation of contaminated soil")).toBeTruthy();
   expect(screen.getByText("The project procedure is controlling")).toBeTruthy();
   expect(screen.getByText("Project procedure · chunk_1")).toBeTruthy();
   expect(screen.getByText("Stop work, then notify Police.")).toBeTruthy();
-  expect(screen.getByText("Active")).toBeTruthy();
+  expect(screen.getAllByText("Active")).toHaveLength(2);
   expect(screen.getByText("Future")).toBeTruthy();
   fireEvent.click(screen.getAllByText("Replaced sources (1)")[0]!);
   expect(screen.getByText("Council procedure · chunk_4")).toBeTruthy();

@@ -66,7 +66,7 @@ type SourceAuthorityDecision = {
   relation_kind: string;
   authority_scope: { kind: string; relation_kind?: string; temporal_motif?: {
     source_event: string; intermediate_event: string; target_event: string;
-  } };
+  }; claim_type?: string; subject?: string };
   controlling_source: AuthoritySource;
   replaced_sources: AuthoritySource[];
   effective_at: string;
@@ -113,6 +113,7 @@ function authorityScopeLabel(decision: SourceAuthorityDecision) {
   const motif = decision.authority_scope.temporal_motif;
   if (motif) return [motif.source_event, motif.intermediate_event, motif.target_event]
     .map((value) => value.replaceAll("_", " ")).join(" → ");
+  if (decision.authority_scope.subject) return decision.authority_scope.subject.replaceAll("_", " ");
   return (decision.authority_scope.relation_kind ?? decision.relation_kind).replaceAll("_", " ");
 }
 

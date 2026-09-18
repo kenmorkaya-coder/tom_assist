@@ -1924,6 +1924,98 @@ def test_explicit_temporal_authority_selects_either_exact_source_without_tree_re
         library.db.close()
 
 
+@pytest.mark.parametrize("controller", ["draft", "revised"])
+def test_remediation_plan_revision_shows_both_sources_and_applies_exact_authority(
+    tmp_path, controller,
+):
+    from gateway.native_memory import (REMEDIATION_PLAN_STATUS_AUTHORITY_SCOPE,
+        RgmDocumentService, read_rgm_source_evidence)
+    from gateway.permanent_library import PermanentLibrary
+    library = PermanentLibrary(tmp_path / f"plan-status-authority-{controller}.sqlite3")
+    operations = []
+
+    def worker(operation, payload):
+        operations.append(operation)
+        if operation == "rgm_embed":
+            return dict(vectors={hashlib.sha256(text.encode()).hexdigest():
+                [1.0] + [0.0] * 383 for text in payload["texts"]})
+        assert operation == "rgm_read"
+        def generate(_instruction, data, _limit):
+            source = data["sources"][0]
+            return dict(raw=json.dumps(dict(status="supported",
+                source_id=source["source_id"], answer_quote=source["text"])))
+        return read_rgm_source_evidence(payload["question"], payload["packet"], generate)
+
+    service = RgmDocumentService(worker=worker, model_identity="fixture-model")
+    draft_text = ("Appendix M includes the draft Douglas Partners Remediation Action Plan for "
+        "Encapsulation of Contaminated Soil. The plan is currently in draft format because it is "
+        "under review by the site auditor.")
+    revised_appendix_text = ("Appendix M was updated to include the revised Douglas Partners "
+        "Remediation Action Plan for Encapsulation of Contaminated Soil.")
+    revised_text = ("Section 4.3.4 was updated for the Remediation Action Plan for Encapsulation "
+        "of Contaminated Soil to remove the notes specifying that the plan is only a draft.")
+    question = ("What is the current status of the Remediation Action Plan for Encapsulation "
+        "of Contaminated Soil?")
+    try:
+        service.ingest("project", library, dict(explicit_user_action=True,
+            display_name="Revision 04", content=draft_text, media_type="text/plain"))
+        service.ingest("project", library, dict(explicit_user_action=True,
+            display_name="Revision 05 appendix", content=revised_appendix_text,
+            media_type="text/plain"))
+        service.ingest("project", library, dict(explicit_user_action=True,
+            display_name="Revision 05 change note", content=revised_text,
+            media_type="text/plain"))
+        unresolved = service.answer("project", library, question,
+            as_of="2026-09-17T00:00:00Z")
+        assert unresolved["status"] == "ambiguous"
+        assert {source["text"] for source in unresolved["sources"]} == {
+            draft_text, revised_text}
+        assert draft_text in unresolved["answer"] and revised_text in unresolved["answer"]
+        review = unresolved["authority_review"]
+        assert review["relation_kind"] == "document_status"
+        assert review["authority_scope"] == REMEDIATION_PLAN_STATUS_AUTHORITY_SCOPE
+        assert review["can_record"] is True
+        assert unresolved["purity"]["tree_calls"] == 0
+        assert "rgm_read" not in operations
+
+        draft_id = review["current_sources"][0]["source_id"]
+        revised_id = review["conflict_sources"][0]["source_id"]
+        chosen_id, replaced_id = ((draft_id, revised_id)
+            if controller == "draft" else (revised_id, draft_id))
+        recorded = service.resolve_source_authority("project", library, dict(
+            explicit_user_action=True, relation_kind="document_status",
+            authority_scope=review["authority_scope"],
+            superseding_source_id=chosen_id, superseded_source_ids=[replaced_id],
+            effective_at="2026-09-18T00:00:00Z",
+            reason="Explicit project source decision"))
+        assert recorded["link_count"] == 1 and recorded["tree_calls"] == 0
+        history = service.source_authority_history(
+            library, as_of="2026-09-18T00:00:00Z")
+        assert history["decisions"][0]["authority_scope"] == REMEDIATION_PLAN_STATUS_AUTHORITY_SCOPE
+        assert history["decisions"][0]["controlling_source"]["source_id"] == chosen_id
+
+        before = service.answer("project", library, question,
+            as_of="2026-09-17T23:59:59Z")
+        assert before["status"] == "ambiguous" and len(before["sources"]) == 2
+        after = service.answer("project", library, question,
+            as_of="2026-09-18T00:00:00Z")
+        expected = draft_text if controller == "draft" else revised_text
+        assert after["status"] == "supported"
+        assert [source["text"] for source in after["sources"]] == [expected]
+        trace = after["trace"]["retrieval"]["reviewed_tom_memory"]
+        assert trace["status"] == "source_authority_resolved"
+        assert trace["evidence_scope"]["mode"] == "explicit_source_authority"
+        assert after["purity"]["tree_calls"] == 0
+        with pytest.raises(ValueError, match="cannot form a cycle"):
+            service.resolve_source_authority("project", library, dict(
+                explicit_user_action=True, relation_kind="document_status",
+                authority_scope=review["authority_scope"],
+                superseding_source_id=replaced_id, superseded_source_ids=[chosen_id],
+                effective_at="2026-09-18T00:00:00Z", reason="Invalid reverse decision"))
+    finally:
+        library.db.close()
+
+
 def test_live_answer_exposes_every_exact_source_linked_by_temporal_memory(tmp_path, monkeypatch):
     import gateway.native_memory as native_memory
     from gateway.native_memory import RgmDocumentService, read_rgm_source_evidence

@@ -78,8 +78,8 @@ Counts, plots and branch magnitudes are display telemetry only.
 | Local document library | Available | Stores imported source text, chunks, source offsets, checksums and project-local provenance. The tested active collection bound is 4,096 RGM chunks. | Imported text without PDF provenance does not receive invented page numbers. Collections above 4,096 chunks are rejected before model work. |
 | Exact evidence answering | Available in the opt-in document path | Returns source quotations and expandable original passages, with exact-span and source-integrity checks. | Oversized or altered evidence is rejected rather than silently shortened or repaired. |
 | Multiple supporting sources | Available | Keeps and displays every exact source linked to an accepted answer or reviewed structural memory. | The evidence reader may still decline broad questions even when relevant structural sources were found. |
-| Conflicting sources | Available | Shows both sides with provenance and returns an ambiguous result while authority is unresolved. The human-remains path recognises a retrieved source that reverses stop/notify order or permits work to continue after discovery. | Neither ToM nor the language model silently chooses a winner. |
-| Explicit source authority | Available | Lets the user choose either exact conflicting passage as controlling, name the passages it replaces, and provide an effective time and reason. The Memory screen shows a read-only history with exact controlling and replaced passages, provenance, scope, reason and Active/Future status. Party decisions are scoped to one relationship; the human-remains decision is scoped to its exact discovery → stop → notify motif. Superseded evidence remains retained. | Authority is never inferred from filenames, dates or amendment wording. Other temporal motifs are not admitted yet. The history cannot edit or revoke a decision. |
+| Conflicting sources | Available | Shows both sides with provenance and returns an ambiguous result while authority is unresolved. Bounded checks cover the human-remains event order and the contaminated-soil Remediation Action Plan's draft/revised status. | Neither ToM nor the language model silently chooses a winner. Other claim families are not automatically classified. |
+| Explicit source authority | Available | Lets the user choose either exact conflicting passage as controlling, name the passages it replaces, and provide an effective time and reason. The Memory screen shows a read-only history with exact controlling and replaced passages, provenance, scope, reason and Active/Future status. Party decisions are scoped to one relationship; event and plan-status decisions use exact bounded scopes. Superseded evidence remains retained. | Authority is never inferred from filenames, dates or amendment wording. Other temporal motifs and source-claim types are not admitted yet. The history cannot edit or revoke a decision. |
 | Relationship direction | Bounded | Distinguishes who acted on whom in the reviewed mirrored insurance relationships. | Demonstrated on two clauses and four questions, not arbitrary relations. |
 | Event-order memory | Bounded | Distinguishes records containing the same entities and actions in a different order. | Demonstrated with supplied temporal links; automatic temporal extraction is not established. |
 | Shared structural memory | Bounded | Learns a reviewed structure once and binds exact evidence from several source locations without teaching the tree again. | Supported for the admitted structures listed below. |
@@ -95,7 +95,7 @@ Counts, plots and branch magnitudes are display telemetry only.
 Every explicit source-authority record can now be inspected on the Memory
 screen. The read-only history is rebuilt from the verified project library. It
 shows the exact controlling passage, every exact replaced passage, source and
-chunk provenance, the bounded relationship or event-sequence scope, effective
+chunk provenance, the bounded relationship, event-sequence or source-claim scope, effective
 time, recorded reason and whether the decision is active or future-dated.
 
 The server revalidates the stored record, source identities, passage hashes and
@@ -308,8 +308,8 @@ returning a structural contradiction. If one exact source says discovery then
 stop work then notify authorities, while another says notification comes before
 stopping or says work may continue, the result is **Ambiguous** and both exact
 passages are shown. This check makes no tree call and no language-model call.
-The application does not yet offer a temporal-authority recording action, so it
-cannot designate either sequence as controlling.
+The application offers an exact temporal-authority action for this admitted
+motif. It still requires a user decision and never selects a sequence itself.
 
 This was also exercised with two real PDFs. The Middleton NSW mitigation
 document says to stop work and then notify Police and Heritage NSW. A Northern
@@ -320,6 +320,15 @@ reported **Ambiguous** without a tree call or language-model call. Because the
 documents concern different projects and jurisdictions, this proves conflict
 presentation only; it does not establish that the two rules govern the same
 work or that either source has authority over the other.
+
+The same mechanism now covers one bounded real source claim. Across two genuine
+SCAW SMF Final Package revisions, Revision 04 says the contaminated-soil
+Remediation Action Plan is a draft and Revision 05 removes that note and attaches
+a revised plan. Production RGM retrieval over all 2,201 chunks returned the same
+exact Revision 04 and Revision 05 change-note passages for three phrasings. The
+app showed both, remained ambiguous before the effective time, then supplied
+only the explicitly selected passage to evidence reading. This does not
+generalise source-claim detection beyond that admitted plan-status family.
 
 The language model receives request-local source aliases. The gateway binds an
 accepted alias back to the complete server-owned source identity before the
@@ -392,6 +401,13 @@ event-graph fixture-overlap failure, and five sandbox-only local-socket setup
 errors. The affected OAuth file passed **8/8** when rerun with local socket
 binding available.
 
+The bounded remediation-plan authority change passes **162** native-memory
+tests and **22** desktop tests. TypeScript checking and the production desktop
+build pass. The broader gateway run recorded **608** passes, one expected skip,
+the same unrelated event-graph fixture-overlap failure and five sandbox-only
+Unix-socket setup errors; the complete OAuth socket module again passed **8/8**
+with local socket binding available.
+
 ## Evidence locations
 
 Compact and reviewable evidence is retained in the repository:
@@ -421,10 +437,8 @@ They are evidence artifacts, not application source.
 
 The next work should extend capability one variable at a time:
 
-1. Extend source-authority review to the genuine SCAW remediation-plan revision
-   pair. RGM already retrieves the old draft statement and the later revision
-   history that removes it from the same 2,201-chunk collection. The current
-   authority action cannot yet scope or apply that plan-status revision.
+1. Test a second real same-project claim family before generalising the bounded
+   plan-status classifier or its authority scope.
 2. Keep exact evidence selection and conflict presentation separate from
    structural recall.
 3. Do not introduce branch averaging, a whole-tree score or automatic teaching

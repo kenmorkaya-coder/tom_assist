@@ -1,5 +1,5 @@
 {
-  "version": "tom-assist-rgm-tom-middleton-live-answer/11",
+  "version": "tom-assist-rgm-tom-middleton-live-answer/12",
   "status": "COMPLETE",
   "outcome": "PASS",
   "claim_boundary": "One explicitly reviewed Middleton procedure, one correct question, one reversed-order control and one absent-state control through the production RGM, ToM and local evidence-reader path.",
@@ -1070,10 +1070,10 @@
   },
   "same_project_remediation_plan_revision": {
     "version": "tom-assist-same-project-remediation-plan-revision/1",
-    "status": "RETRIEVAL_COMPLETE_AUTHORITY_SCOPE_PENDING",
-    "outcome": "PASS_REAL_REVISION_RETRIEVAL",
+    "status": "COMPLETE",
+    "outcome": "PASS_REAL_REVISION_AUTHORITY",
     "project": "Sydney Metro Western Sydney Airport SCAW",
-    "claim_boundary": "The production RGM path retrieves the real old-draft and later-revision evidence from the full pair. This does not yet prove conflict presentation or a controlling-source decision for plan status because the current source-authority scopes do not represent this claim.",
+    "claim_boundary": "The production RGM path retrieves the genuine old-draft and later-revision evidence and the bounded plan-status authority path presents and resolves that exact claim. This is not a general amendment, revision or legal-authority detector.",
     "sources": [
       {
         "label": "Revision 04",
@@ -1190,6 +1190,63 @@
       "temporary_database_deleted": true,
       "large_artifact_created": false
     },
-    "remaining_gate": "Present both plan-status versions and apply an explicit exact-source controlling decision without inferring authority from filenames or dates."
+    "remaining_gate": "Test a second genuine same-project source-claim family before generalising this bounded plan-status scope.",
+    "authority_integration": {
+      "scope": {
+        "kind": "source_claim",
+        "claim_type": "document_status",
+        "subject": "remediation_action_plan_for_encapsulation_of_contaminated_soil"
+      },
+      "same_exact_pair_across_three_questions": true,
+      "revised_source": {
+        "source_id": "SRC-5990146a80425787",
+        "display_name": "SMWSASCA-CPU-OHE-SF153-EW-RPT-232000.05.AA.05.01.pdf",
+        "chunk_id": "chunk_74"
+      },
+      "draft_source": {
+        "source_id": "SRC-8f774187c8173b59",
+        "display_name": "SMWSASCA-CPU-OHE-SF153-EW-RPT-232000.04.S3.04.01.pdf",
+        "chunk_id": "chunk_71"
+      },
+      "before_decision": {
+        "status": "ambiguous",
+        "both_sources_presented": true,
+        "can_record": true,
+        "reader_model_calls": 0,
+        "tree_calls": 0
+      },
+      "decision_control": {
+        "selected_controlling_source_id": "SRC-5990146a80425787",
+        "recorded_links": 1,
+        "before_effective_time": "ambiguous",
+        "at_effective_time": "supported",
+        "evidence_scope": "explicit_source_authority",
+        "only_controlling_passage_supplied_to_reader": true,
+        "history_decisions": 1,
+        "resolved_reader": "deterministic exact-quote control",
+        "tree_calls": 0
+      },
+      "controlled_regressions": {
+        "either_side_can_be_selected": true,
+        "future_decision_inactive_before_effective_time": true,
+        "reverse_cycle_rejected": true,
+        "desktop_scope_round_trip": true
+      },
+      "authority_not_inferred_from": [
+        "filename",
+        "revision number",
+        "date",
+        "amendment wording"
+      ],
+      "verification": {
+        "native_memory_tests": "162 passed",
+        "desktop_tests": "22 passed",
+        "desktop_typecheck": "passed",
+        "desktop_production_build": "passed",
+        "broad_gateway_suite": "608 passed, 1 skipped; 1 pre-existing event-graph dataset-overlap failure; 5 sandbox-only Unix-socket errors",
+        "oauth_unix_socket_module_outside_sandbox": "8 passed",
+        "diff_check": "passed"
+      }
+    }
   }
 }
