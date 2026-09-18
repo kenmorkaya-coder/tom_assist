@@ -997,15 +997,16 @@ tested. A
 new structure must write non-overlapping tree locations; otherwise it is
 rejected. Only the newest large checkpoint and reference archive are retained.
 
-The same review panel supports two admitted event structures: written notice
-before a required meeting, and failure followed by substitute action followed
+The same review panel supports two admitted event structures: reviewed notice
+before a meeting, and failure followed by substitute action followed
 by cost recovery. The latter is retained as two separate ordered relationships;
 both complete distributed returns and native slot maps must match before their
 shared source locations reopen. Reviewing another passage with the same
-structure binds its immutable RGM source pointer without another ToM write. The
-failure/substitute/cost structure can reopen its reviewed sources even when RGM
-supplies no correct initial candidate. This does not perform automatic motif
-extraction or accept arbitrary event graphs.
+structure binds its immutable RGM source pointer without another ToM write.
+Both admitted ordered structures can reopen their reviewed sources from an
+explicitly ordered query even when RGM supplies no correct initial candidate.
+Party and repayment relationships remain candidate-gated. This does not perform
+automatic motif extraction or accept arbitrary event graphs.
 
 The failure/substitute/cost source guard checks one local procedure rather than
 combining keywords from anywhere in a long RGM chunk. On the two frozen contract
@@ -1022,9 +1023,10 @@ action, and the server repeats the source-local validation before teaching or
 binding it. One source passage may retain different reviewed structure types;
 it may not retain two conflicting versions of the same party relationship.
 
-During an answer, MiniLM/RGM still locates candidate source passages. When the
-question explicitly states a supported insurance relationship or an admitted
-event sequence, its reviewed structure is resolved from the query alone. Each
+During an answer, MiniLM/RGM still locates candidate source passages when they
+are available. When the question explicitly states an admitted event sequence,
+the reviewed temporal structure can be accessed from the query alone. Reviewed
+insurance relationships continue to require a matching candidate source. Each
 relationship is compiled into one 32×32 field and routed independently through
 the saved tree. The worker compares each complete returned
 branch-position-preserving signed field and exact native slot map with the

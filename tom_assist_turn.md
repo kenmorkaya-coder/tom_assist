@@ -18,7 +18,8 @@ learned structure. The two lanes meet at evidence checking.
                   |                                   |
                   v                                   v
           RGM SEMANTIC ACCESS                 QUERY STRUCTURE CHECK
-       likely exact text passages          admitted relationship/order?
+       likely exact text passages        ordered event, or candidate-bound
+                                             party relationship?
                   |                                   |
                   |                          no ------+------ yes
                   |                                   |
@@ -2313,17 +2314,18 @@ proves that the shared structural source index works on two real chunks.
 
 The existing reviewed RGM–ToM bridge now supports that one temporal motif in the
 live document path. A user can explicitly mark an exact RGM passage as stating
-written notice before a required meeting. The first passage teaches one
+reviewed notice before a meeting. The first passage teaches one
 temporal-link 32×32 matrix. Reviewing another passage with the same structure
 adds its exact source pointer to the existing memory and performs zero further
 tree writes. Automatic motif extraction remains disabled.
 
-Recall no longer limits a shared structural memory to sources already present
-in the initial RGM candidate packet. One authenticated candidate can open the
-ToM memory, after which the bridge reopens every active bound passage from the
-lossless RGM corpus and exposes them separately to the evidence reader and the
-desktop source display. Unknown or reversed event order does not call the tree
-and returns no structural source.
+Recall no longer limits a shared temporal memory to sources already present in
+the initial RGM candidate packet. An explicitly ordered query can open a
+reviewed temporal memory even when RGM supplies no candidate. The bridge then
+reopens every active bound passage from the lossless RGM corpus and exposes
+them separately to the evidence reader and desktop source display. Party and
+repayment memories remain candidate-gated. Unknown or reversed event order
+does not call the tree and returns no structural source.
 
 The real approved fixture was exercised through the same isolated native worker:
 507 branches, 387 terminal branches and 381 learned locations. Each of three
@@ -2620,3 +2622,62 @@ ordered query routes. All native branch/cell coordinates were compared, no
 whole-tree score was used, and the tree remained unchanged. This confirms that
 the review queue adds usable source provenance to the existing distributed
 structure rather than merely changing an interface label.
+
+### 2026-09-18 — unseen Noise and Vibration plan generalisation
+
+The next check changed only the document source. It used the previously unused
+`Noise and Vibration CEMP.pdf`, SHA-256
+`40e92ef553e75a9f37ed0159a5b326d2d1cc9a87668c86382e71b0ed8631c967`.
+The unchanged RGM extractor produced 205 chunks. Chunk 172 contains the source
+phrase `notification of any upcoming project community meetings / forums`, a
+third reviewed example of notice before a meeting.
+
+The first attempt stopped before any tree call. The bounded source grammar
+accepted `meeting` but not the ordinary plural `meetings`. The same omission
+existed in the query grammar. The repair added only that plural form to the four
+matching locations and added a focused regression check. It did not change the
+learned matrix, routing, selector or tree.
+
+The repaired diagnostic used an isolated SQLite backup of the live project.
+The live database was not written. Across three fixed wording variants, ordinary
+RGM considered 210 native candidates and did not return the new source in any
+top-10 packet. The returned packet sizes were 7, 8 and 10.
+
+Explicitly reviewing the new source bound it to the existing notice-before-
+meeting memory with zero tree writes. The memory then owned three exact source
+locations. Before the access repair, ToM recovered all three locations for two
+questions where RGM happened to return an older bound source. The third question
+and all empty-packet controls stopped at `no_candidate_situation`. Telemetry
+therefore located the remaining problem in the access gate, before the tree.
+
+The failure/substitute-action/cost path already allowed an explicit ordered
+query to access its reviewed memory without an initial RGM candidate. That same
+rule now applies to all admitted `before` relationships. Party and repayment
+relationships remain candidate-gated. After this one-variable change:
+
+- RGM alone missed the new source in **3/3** questions;
+- RGM plus ToM returned all three reviewed notice sources in **3/3**;
+- an empty RGM candidate packet also returned all three sources in **3/3**;
+- every ToM return preserved complete branch-local signed 32×32 fields and
+  exact native slot maps; and
+- no branch averaging or whole-tree score was used.
+
+The 242,504,340-byte saved tree had SHA-256
+`323a40e31a9b56b9c06d8ea22a9a6ef14c5263953f9bfa6349e4d1db4a5341fd`
+and state hash
+`bc634d0071db4b296c58b50d6bc2b6da0979ef46bdc327b9f5e3fcb0d2740386`
+before and after the run. Its size, modification time, file hash and state hash
+were unchanged.
+
+This is a bounded third-document result, not general event understanding. The
+source still required explicit review, and only the previously learned
+notice-before-meeting structure was exercised. The compact result is
+`validation/runs/rgm-tom-unseen-document-generalisation.json`; no new large
+artifact was created.
+
+The complete native-memory file passes 144/144 after the repair, including an
+explicit control that party/repayment relationships remain candidate-gated.
+The broader sandboxed gateway run completed with 590 passes, one expected skip,
+one unrelated pre-existing event-graph fixture-overlap failure and five OAuth
+setup errors caused by denied local socket binding. The OAuth file was rerun
+outside that socket restriction and passed 8/8.

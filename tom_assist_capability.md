@@ -115,7 +115,7 @@ Interface Agreement clause 11 and D&C Deed clause 31 both contain the reviewed
 sequence:
 
 ```text
-written notice → required meeting
+written notice → meeting
 ```
 
 Across three structural questions, ordinary RGM retrieval returned only one of
@@ -149,6 +149,29 @@ After D&C clause 16.7 was explicitly reviewed and attached to the same learned
 structure, the same zero-candidate control returned all three source locations.
 The attachment made zero tree writes and did not change the tree or checkpoint
 hash.
+
+### Unseen third-document check
+
+The previously unused Noise and Vibration Construction Environmental Management
+Plan supplied a third reviewed notice-before-meeting source. Its full 205-chunk
+RGM corpus contained the target passage, but ordinary RGM did not return that
+passage for any of three fixed structural questions.
+
+After explicit review, the new source bound to the existing distributed memory
+with zero tree writes. RGM plus ToM returned all three reviewed notice sources
+for **3/3** questions. The same **3/3** result held with an empty initial RGM
+candidate packet. The complete branch-local signed 32×32 return and native slot
+map were compared each time; the 242.5 MB tree remained byte-for-byte unchanged.
+
+The diagnostic first exposed two access defects: plural `meetings` was absent
+from the bounded grammar, and the notice memory required an initial RGM hit even
+though the ordered query itself identified the reviewed structure. Those defects
+were repaired independently before the successful rerun. Party and repayment
+memories remain candidate-gated.
+
+This result is limited to one new document, one already learned structure and
+three question wordings. It does not establish automatic structure discovery or
+general accuracy on unseen documents.
 
 ### Explicit review before learning
 
@@ -192,7 +215,7 @@ The live reviewed bridge currently supports:
 
 1. the bounded mirrored insurance relationships used for party and repayment
    direction;
-2. written notice before a required meeting; and
+2. reviewed notice before a meeting; and
 3. failure before substitute action, followed by substitute action before cost
    recovery.
 
@@ -240,6 +263,12 @@ The latest integrated review-queue verification recorded:
 These counts describe the relevant integration suite at the recorded revision;
 they are not a general accuracy score.
 
+The later unseen-document access repair passes all **144** native-memory tests.
+The broader gateway run recorded 590 passes, one expected skip, one unrelated
+event-graph fixture-overlap failure, and five sandbox-only local-socket setup
+errors. The affected OAuth file passed **8/8** when rerun with local socket
+binding available.
+
 ## Evidence locations
 
 Compact and reviewable evidence is retained in the repository:
@@ -251,6 +280,8 @@ Compact and reviewable evidence is retained in the repository:
   boundaries;
 - [validation/runs/stream1-native-learned-recall.json](validation/runs/stream1-native-learned-recall.json)
   — immutable native-memory result sections; and
+- [validation/runs/rgm-tom-unseen-document-generalisation.json](validation/runs/rgm-tom-unseen-document-generalisation.json)
+  — compact third-document RGM-versus-ToM result; and
 - [gateway/tests/test_native_memory.py](gateway/tests/test_native_memory.py) —
   source binding, structural recall, conflict and evidence-boundary checks.
 
@@ -262,8 +293,9 @@ They are evidence artifacts, not application source.
 
 The next work should extend capability one variable at a time:
 
-1. Test the frozen reviewed structures on genuinely unseen contracts and
-   wording, without changing the tree or selector.
+1. Repeat the successful third-document check on an independent contract family
+   and a different already reviewed structure, without changing the tree or
+   selector.
 2. Measure false positives and misses in the read-only review queue before
    admitting another structure.
 3. Add a new reviewed structure only after its source-local recognition,

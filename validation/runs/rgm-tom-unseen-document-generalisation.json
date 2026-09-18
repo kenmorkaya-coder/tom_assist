@@ -1,0 +1,189 @@
+{
+  "version": "tom-assist-rgm-tom-unseen-document-generalisation/1",
+  "status": "COMPLETE",
+  "claim_boundary": "One previously unused Noise and Vibration plan, one reviewed notice-before-meeting source, and three frozen question wordings.",
+  "source": {
+    "path": "/Volumes/My Passport for Mac/tom_as projects/sydney_metro_wsa/SCAW Contract/Sched D3 - Planning Approvals/Construction Pland and On-Airport CEMPs/Noise and Vibration CEMP.pdf",
+    "pdf_sha256": "40e92ef553e75a9f37ed0159a5b326d2d1cc9a87668c86382e71b0ed8631c967",
+    "imported_document_id": "document-afe930284d6fb6dd445a94bf7e027e6e",
+    "imported_chunk_count": 205,
+    "target_chunk_index": 172,
+    "target_source_id": "SRC-41f60ffe7a95be61",
+    "target_text_sha256": "9337946f269f29ba39f9097f6d542812ec65cb8ebfdf078644b200ccffdca295",
+    "source_phrase": "notification of any upcoming project community meetings / forums"
+  },
+  "isolation": {
+    "source_database": "/private/tmp/tom-rgm-desktop-Dabg9F/projects/2f56a35d-d7f1-4509-8539-3507aeb9ca63/tom/library.sqlite3",
+    "source_database_sha256": "39e37d9467140bfeb99490e6b26ca27636f4b71bfcd5e9234eeb33c430f525e0",
+    "diagnostic_database": "/tmp/tom_assist_unseen_contract_scan/generalisation-run-3/library.sqlite3",
+    "source_database_unchanged": true,
+    "live_project_not_written": true
+  },
+  "rgm_alone": [
+    {
+      "question": "Which documents require notification before a community meeting?",
+      "target_in_top_10": false,
+      "target_rank": null,
+      "returned_count": 7,
+      "returned_source_ids": [
+        "SRC-ac7cfee039edc8e2",
+        "SRC-747e2c15f5f32032",
+        "SRC-619f750810d5752d",
+        "SRC-fd97484e9fb118bb",
+        "SRC-54dc5327446094fe",
+        "SRC-a3123068598dfb37",
+        "SRC-8d75452dad406ec0"
+      ],
+      "native_candidate_count": 210
+    },
+    {
+      "question": "Where does notice happen before people meet?",
+      "target_in_top_10": false,
+      "target_rank": null,
+      "returned_count": 8,
+      "returned_source_ids": [
+        "SRC-07994d18c7516fdd",
+        "SRC-a25dce667afe4a65",
+        "SRC-ac7cfee039edc8e2",
+        "SRC-d9e3286f54fcd27d",
+        "SRC-cdaccf96962b4ce0",
+        "SRC-54dc5327446094fe",
+        "SRC-fd97484e9fb118bb",
+        "SRC-08eb89551576b307"
+      ],
+      "native_candidate_count": 210
+    },
+    {
+      "question": "Find the sequence: notification, then a community meeting.",
+      "target_in_top_10": false,
+      "target_rank": null,
+      "returned_count": 10,
+      "returned_source_ids": [
+        "SRC-747e2c15f5f32032",
+        "SRC-fd97484e9fb118bb",
+        "SRC-ac7cfee039edc8e2",
+        "SRC-08eb89551576b307",
+        "SRC-035212aa002536bd",
+        "SRC-619f750810d5752d",
+        "SRC-8d75452dad406ec0",
+        "SRC-afdf1592bf2e56a8",
+        "SRC-c9c38985c00df2e5",
+        "SRC-7b1a9c0e45e15141"
+      ],
+      "native_candidate_count": 210
+    }
+  ],
+  "reviewed_binding": {
+    "write_count": 0,
+    "bound_existing_relationships": 1,
+    "notice_source_count": 3,
+    "target_source_id": "SRC-41f60ffe7a95be61"
+  },
+  "rgm_plus_tom": [
+    {
+      "question": "Which documents require notification before a community meeting?",
+      "status": "recalled",
+      "recalled_source_ids": [
+        "SRC-07994d18c7516fdd",
+        "SRC-54dc5327446094fe",
+        "SRC-41f60ffe7a95be61"
+      ],
+      "target_recalled": true,
+      "tree_unchanged": true,
+      "whole_tree_score": false,
+      "all_branch_cell_coordinates_compared": true,
+      "query_routes": 1,
+      "reason": null
+    },
+    {
+      "question": "Where does notice happen before people meet?",
+      "status": "recalled",
+      "recalled_source_ids": [
+        "SRC-07994d18c7516fdd",
+        "SRC-54dc5327446094fe",
+        "SRC-41f60ffe7a95be61"
+      ],
+      "target_recalled": true,
+      "tree_unchanged": true,
+      "whole_tree_score": false,
+      "all_branch_cell_coordinates_compared": true,
+      "query_routes": 1,
+      "reason": null
+    },
+    {
+      "question": "Find the sequence: notification, then a community meeting.",
+      "status": "recalled",
+      "recalled_source_ids": [
+        "SRC-07994d18c7516fdd",
+        "SRC-54dc5327446094fe",
+        "SRC-41f60ffe7a95be61"
+      ],
+      "target_recalled": true,
+      "tree_unchanged": true,
+      "whole_tree_score": false,
+      "all_branch_cell_coordinates_compared": true,
+      "query_routes": 1,
+      "reason": null
+    }
+  ],
+  "zero_rgm_candidates": [
+    {
+      "question": "Which documents require notification before a community meeting?",
+      "status": "recalled",
+      "recalled_source_ids": [
+        "SRC-07994d18c7516fdd",
+        "SRC-54dc5327446094fe",
+        "SRC-41f60ffe7a95be61"
+      ],
+      "target_recalled": true,
+      "tree_unchanged": true,
+      "whole_tree_score": false,
+      "all_branch_cell_coordinates_compared": true
+    },
+    {
+      "question": "Where does notice happen before people meet?",
+      "status": "recalled",
+      "recalled_source_ids": [
+        "SRC-07994d18c7516fdd",
+        "SRC-54dc5327446094fe",
+        "SRC-41f60ffe7a95be61"
+      ],
+      "target_recalled": true,
+      "tree_unchanged": true,
+      "whole_tree_score": false,
+      "all_branch_cell_coordinates_compared": true
+    },
+    {
+      "question": "Find the sequence: notification, then a community meeting.",
+      "status": "recalled",
+      "recalled_source_ids": [
+        "SRC-07994d18c7516fdd",
+        "SRC-54dc5327446094fe",
+        "SRC-41f60ffe7a95be61"
+      ],
+      "target_recalled": true,
+      "tree_unchanged": true,
+      "whole_tree_score": false,
+      "all_branch_cell_coordinates_compared": true
+    }
+  ],
+  "distributed_rule": {
+    "whole_tree_score_used": false,
+    "full_branch_cell_coordinates_required": true
+  },
+  "tree": {
+    "before": {
+      "sha256": "323a40e31a9b56b9c06d8ea22a9a6ef14c5263953f9bfa6349e4d1db4a5341fd",
+      "state_hash": "bc634d0071db4b296c58b50d6bc2b6da0979ef46bdc327b9f5e3fcb0d2740386",
+      "size": 242504340,
+      "mtime_ns": 1789653359000000000
+    },
+    "after": {
+      "sha256": "323a40e31a9b56b9c06d8ea22a9a6ef14c5263953f9bfa6349e4d1db4a5341fd",
+      "state_hash": "bc634d0071db4b296c58b50d6bc2b6da0979ef46bdc327b9f5e3fcb0d2740386",
+      "size": 242504340,
+      "mtime_ns": 1789653359000000000
+    },
+    "unchanged": true
+  }
+}
