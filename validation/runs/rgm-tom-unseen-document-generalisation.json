@@ -1,5 +1,5 @@
 {
-  "version": "tom-assist-rgm-tom-unseen-document-generalisation/1",
+  "version": "tom-assist-rgm-tom-unseen-document-generalisation/2",
   "status": "COMPLETE",
   "claim_boundary": "One previously unused Noise and Vibration plan, one reviewed notice-before-meeting source, and three frozen question wordings.",
   "source": {
@@ -185,5 +185,72 @@
       "mtime_ns": 1789653359000000000
     },
     "unchanged": true
+  },
+  "chain_evidence_completeness": {
+    "status": "PASS",
+    "project_id": "2f56a35d-d7f1-4509-8539-3507aeb9ca63",
+    "tree_state_hash": "bc634d0071db4b296c58b50d6bc2b6da0979ef46bdc327b9f5e3fcb0d2740386",
+    "diagnosis": {
+      "loader_failure": "version 5 zero-write source binding was omitted from the readable-version allow-list",
+      "reader_failure": "the two-route query structure was not propagated, so three ToM-returned sources were read as one combined candidate set",
+      "before": {
+        "question": "Find procedures where a failure is followed by substitute performance and then a debt.",
+        "tom_recalled_source_ids": [
+          "SRC-387184e2c3645928",
+          "SRC-5d392cf54bb8986a",
+          "SRC-f25e254030d06611"
+        ],
+        "reader_mode": "combined",
+        "answer_source_ids": [
+          "SRC-5d392cf54bb8986a"
+        ]
+      }
+    },
+    "repair": [
+      "accept persisted version 5 zero-write bindings to existing memories",
+      "retain the parsed query structure on aggregated multi-route returns",
+      "read each source independently only for the exact reviewed failure/substitute-action/cost-recovery chain"
+    ],
+    "after": [
+      {
+        "question": "Find procedures where a failure is followed by substitute performance and then a debt.",
+        "tom_recalled_source_ids": [
+          "SRC-387184e2c3645928",
+          "SRC-5d392cf54bb8986a",
+          "SRC-f25e254030d06611"
+        ],
+        "evidence_supported_source_ids": [
+          "SRC-5d392cf54bb8986a",
+          "SRC-f25e254030d06611"
+        ],
+        "excluded_source": {
+          "source_id": "SRC-387184e2c3645928",
+          "reason": "states action at SM cost but does not state a debt"
+        }
+      },
+      {
+        "question": "What procedures apply when a required action is not done, another party performs it, and the resulting cost is recovered?",
+        "tom_recalled_source_ids": [
+          "SRC-387184e2c3645928",
+          "SRC-5d392cf54bb8986a",
+          "SRC-f25e254030d06611"
+        ],
+        "evidence_supported_source_ids": [
+          "SRC-387184e2c3645928",
+          "SRC-5d392cf54bb8986a",
+          "SRC-f25e254030d06611"
+        ]
+      }
+    ],
+    "invariants": {
+      "query_routes": 2,
+      "whole_tree_score_used": false,
+      "all_branch_cell_coordinates_compared": true,
+      "tree_unchanged": true,
+      "tree_retrained": false
+    },
+    "tests": {
+      "native_memory": "169 passed"
+    }
   }
 }

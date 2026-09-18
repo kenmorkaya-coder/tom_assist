@@ -2658,6 +2658,33 @@ whole-tree score was used, and the tree remained unchanged. This confirms that
 the review queue adds usable source provenance to the existing distributed
 structure rather than merely changing an interface label.
 
+#### Multi-source evidence completeness repair
+
+The next end-to-end run used that unchanged three-source memory. It first found
+a persistence compatibility defect before recall: version 5 permits a reviewed
+source to bind to existing ToM memories with zero new memory records, but the
+current loader's zero-write allow-list accidentally omitted version 5. Adding
+that existing version to the allow-list restored the saved project without
+altering its database or tree.
+
+With the project readable, the broad debt wording showed the actual integration
+loss. ToM reopened all three source locations through two independent routes,
+preserved every branch-local signed 32×32 coordinate and left tree state
+`bc634d0071db4b296c58b50d6bc2b6da0979ef46bdc327b9f5e3fcb0d2740386`
+unchanged. The evidence reader received the three passages together and kept
+only D&C clause 13.6. The query structure was also missing from the aggregated
+two-route return, preventing the answer layer from identifying this bounded
+chain.
+
+The repair preserves the multi-route query structure and, only for the exact
+reviewed failure → substitute action → cost-recovery chain, checks every
+ToM-returned RGM passage independently. The same debt wording now returns D&C
+clauses 13.6 and 16.7; it correctly excludes M12 clause 14.4 because that source
+says `at the cost of SM` rather than `debt`. Changing only the wording to ask
+about cost recovery returns all three clauses. No ranking, tree threshold,
+learned state, branch identity or 32×32 cell was changed. The native-memory test
+file passes 169 tests.
+
 ### 2026-09-18 — unseen Noise and Vibration plan generalisation
 
 The next check changed only the document source. It used the previously unused

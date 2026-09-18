@@ -2563,6 +2563,7 @@ class RgmDocumentService:
         if (not isinstance(memories, list)
             or (not memories and encoded.get("version") not in {
                 RGM_TOM_BRIDGE_VERSION_V3, RGM_TOM_BRIDGE_VERSION_V4,
+                RGM_TOM_BRIDGE_VERSION_V5,
                 RGM_TOM_BRIDGE_VERSION})
             or len({memory.get("memory_id") for memory in memories}) != len(memories)):
             raise ValueError("stored reviewed ToM memories are invalid")
@@ -3219,6 +3220,7 @@ class RgmDocumentService:
             root_assembly_calls=sum(result.get("root_assembly_calls", 0) for result in results),
             whole_tree_score=False, all_branch_cell_coordinates_compared=True,
             query_routes=len(results),
+            query_structure=query,
             access_mode="reviewed multi-event structure routed independently through ToM")
 
     def _restore_recalled_sources(self, library, packet, structural):
@@ -3476,11 +3478,16 @@ class RgmDocumentService:
                     for m in reader_memories])
                 read_each = (structural.get("status") == "recalled"
                     and len(reader_memories) > 1
-                    and structural.get("query_structure", {}).get("fields") == {
+                    and (structural.get("query_structure", {}).get("fields") == {
                         "relation_kind": "before",
                         "source_event": "contamination_discovered",
                         "target_event": "notification",
-                    })
+                    } or structural.get("query_structure", {}).get("relationships") == [
+                        {"relation_kind": "before", "source_event": "failure",
+                            "target_event": "substitute_action"},
+                        {"relation_kind": "before", "source_event": "substitute_action",
+                            "target_event": "cost_recovery"},
+                    ]))
                 reading = self.worker("rgm_read", dict(question=question,
                     packet=reader_packet, **({"read_each": True} if read_each else {})))
             else:
