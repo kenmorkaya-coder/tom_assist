@@ -78,7 +78,7 @@ Counts, plots and branch magnitudes are display telemetry only.
 | Local document library | Available | Stores imported source text, chunks, source offsets, checksums and project-local provenance. | Imported text without PDF provenance does not receive invented page numbers. |
 | Exact evidence answering | Available in the opt-in document path | Returns source quotations and expandable original passages, with exact-span and source-integrity checks. | Oversized or altered evidence is rejected rather than silently shortened or repaired. |
 | Multiple supporting sources | Available | Keeps and displays every exact source linked to an accepted answer or reviewed structural memory. | The evidence reader may still decline broad questions even when relevant structural sources were found. |
-| Conflicting sources | Available | Shows both sides with provenance and returns an ambiguous result while authority is unresolved. | Neither ToM nor the language model silently chooses a winner. |
+| Conflicting sources | Available | Shows both sides with provenance and returns an ambiguous result while authority is unresolved. The human-remains path now recognises a retrieved source that reverses stop/notify order or permits work to continue after discovery. | Neither ToM nor the language model silently chooses a winner. Temporal authority cannot yet be recorded through the current authority action. |
 | Explicit source authority | Available | Lets the user record that one exact source supersedes named older sources, with time and reason, while retaining the older evidence. | Authority is never inferred from filenames, dates or amendment wording. |
 | Relationship direction | Bounded | Distinguishes who acted on whom in the reviewed mirrored insurance relationships. | Demonstrated on two clauses and four questions, not arbitrary relations. |
 | Event-order memory | Bounded | Distinguishes records containing the same entities and actions in a different order. | Demonstrated with supplied temporal links; automatic temporal extraction is not established. |
@@ -290,6 +290,14 @@ Conflicting sources do not stop the answer. Tom Assist presents all conflicting
 and currently bound passages. It does not combine fragments from opposing
 sources into a fabricated answer.
 
+The bounded human-remains answer path also checks retrieved RGM passages before
+returning a structural contradiction. If one exact source says discovery then
+stop work then notify authorities, while another says notification comes before
+stopping or says work may continue, the result is **Ambiguous** and both exact
+passages are shown. This check makes no tree call and no language-model call.
+The application does not yet offer a temporal-authority recording action, so it
+cannot designate either sequence as controlling.
+
 The language model receives request-local source aliases. The gateway binds an
 accepted alias back to the complete server-owned source identity before the
 answer leaves the application. Unknown aliases, altered text and invalid source
@@ -353,7 +361,7 @@ These counts describe the relevant integration suite at the recorded revision;
 they are not a general accuracy score.
 
 The later unseen-document access repair passed all **144** native-memory tests.
-The read-only review accuracy repair passes all **152** native-memory tests. The
+The temporal source-conflict repair passes all **155** native-memory tests. The
 desktop suite passes **20** tests, TypeScript checking passes, and the production
 desktop interface build passes.
 The broader gateway run recorded 595 passes, one expected skip, one unrelated
@@ -390,8 +398,11 @@ They are evidence artifacts, not application source.
 
 The next work should extend capability one variable at a time:
 
-1. Exercise conflict and explicit-authority handling for this temporal motif.
-2. Keep exact evidence selection and conflict presentation separate from
+1. Exercise the temporal-conflict path on two real documents that state opposing
+   procedures.
+2. Add an explicit user-controlled temporal-authority action before allowing one
+   temporal source to supersede another.
+3. Keep exact evidence selection and conflict presentation separate from
    structural recall.
-3. Do not introduce branch averaging, a whole-tree score or automatic teaching
+4. Do not introduce branch averaging, a whole-tree score or automatic teaching
    to make a failed result look successful.

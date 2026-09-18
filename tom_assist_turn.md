@@ -2912,3 +2912,33 @@ made zero tree calls, performed no automatic learning and deleted its temporary
 databases. The compact result is in `review_accuracy_check` inside
 `validation/runs/rgm-tom-middleton-live-answer.json`. The four controls are now
 permanent regression cases; all 152 native-memory tests pass.
+
+### 2026-09-18 — temporal source-conflict presentation
+
+The next diagnostic held the reviewed tree memory fixed and added one retrieved
+RGM source that stated an opposing human-remains procedure. The first run
+failed: Tom Assist returned a sourced **No** from the reviewed stop-then-notify
+procedure and omitted the retrieved source that said notify before stopping.
+The cause was precise. The reviewed-structure contradiction shortcut ran before
+the answer path checked RGM passages for exact opposing temporal evidence.
+
+The bounded answer path now performs that source check first. It recognises two
+oppositions to the reviewed discovery → stop work → notify sequence:
+
+1. discovery → notify authorities → stop work; and
+2. discovery → continue work.
+
+For either opposition, Tom Assist returns **Ambiguous** and shows the reviewed
+source and every exact conflicting retrieved source with provenance. It does
+not choose a winner, call the tree, call the language reader or alter learned
+memory. Temporal authority recording remains unavailable, so an operator cannot
+apply the existing party-relationship authority action to event order.
+
+Three controlled paths now pass: a question phrased in the reversed order, a
+question phrased in the reviewed order, and a continue-work question. Each
+returns both exact sources. The production-ingestion regression was then rerun
+over the same 611 real chunks and remained 15 true positives, zero false
+positives and zero false negatives, with zero tree calls and no automatic
+learning. All 155 native-memory tests pass. Compact evidence is stored in the
+`temporal_source_conflict` section of
+`validation/runs/rgm-tom-middleton-live-answer.json`.
