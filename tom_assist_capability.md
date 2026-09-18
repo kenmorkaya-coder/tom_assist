@@ -78,8 +78,8 @@ Counts, plots and branch magnitudes are display telemetry only.
 | Local document library | Available | Stores imported source text, chunks, source offsets, checksums and project-local provenance. | Imported text without PDF provenance does not receive invented page numbers. |
 | Exact evidence answering | Available in the opt-in document path | Returns source quotations and expandable original passages, with exact-span and source-integrity checks. | Oversized or altered evidence is rejected rather than silently shortened or repaired. |
 | Multiple supporting sources | Available | Keeps and displays every exact source linked to an accepted answer or reviewed structural memory. | The evidence reader may still decline broad questions even when relevant structural sources were found. |
-| Conflicting sources | Available | Shows both sides with provenance and returns an ambiguous result while authority is unresolved. The human-remains path now recognises a retrieved source that reverses stop/notify order or permits work to continue after discovery. | Neither ToM nor the language model silently chooses a winner. Temporal authority cannot yet be recorded through the current authority action. |
-| Explicit source authority | Available | Lets the user record that one exact source supersedes named older sources, with time and reason, while retaining the older evidence. | Authority is never inferred from filenames, dates or amendment wording. |
+| Conflicting sources | Available | Shows both sides with provenance and returns an ambiguous result while authority is unresolved. The human-remains path recognises a retrieved source that reverses stop/notify order or permits work to continue after discovery. | Neither ToM nor the language model silently chooses a winner. |
+| Explicit source authority | Available | Lets the user choose either exact conflicting passage as controlling, name the passages it replaces, and provide an effective time and reason. Party decisions are scoped to one relationship; the human-remains decision is scoped to its exact discovery → stop → notify motif. Superseded evidence remains retained. | Authority is never inferred from filenames, dates or amendment wording. Other temporal motifs are not admitted yet. |
 | Relationship direction | Bounded | Distinguishes who acted on whom in the reviewed mirrored insurance relationships. | Demonstrated on two clauses and four questions, not arbitrary relations. |
 | Event-order memory | Bounded | Distinguishes records containing the same entities and actions in a different order. | Demonstrated with supplied temporal links; automatic temporal extraction is not established. |
 | Shared structural memory | Bounded | Learns a reviewed structure once and binds exact evidence from several source locations without teaching the tree again. | Supported for the admitted structures listed below. |
@@ -408,11 +408,10 @@ They are evidence artifacts, not application source.
 
 The next work should extend capability one variable at a time:
 
-1. Add an explicit user-controlled temporal-authority action before allowing one
-   temporal source to supersede another.
-2. Test that authority action on competing versions within one real project,
+1. Test the explicit temporal-authority action on competing versions within one
+   real project,
    rather than documents from different jurisdictions.
-3. Keep exact evidence selection and conflict presentation separate from
+2. Keep exact evidence selection and conflict presentation separate from
    structural recall.
-4. Do not introduce branch averaging, a whole-tree score or automatic teaching
+3. Do not introduce branch averaging, a whole-tree score or automatic teaching
    to make a failed result look successful.

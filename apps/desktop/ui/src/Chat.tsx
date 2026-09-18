@@ -778,7 +778,10 @@ type NativeAnswer = {
   authority_review?: {
     status: "unresolved";
     can_record: boolean;
-    relation_kind: "replacement_cover" | "reimbursement";
+    relation_kind: "replacement_cover" | "reimbursement" | "before";
+    authority_scope?: { kind: "temporal_motif"; temporal_motif: {
+      relation_kind: "sequence"; source_event: string; intermediate_event: string; target_event: string;
+    } } | null;
     conflict_sources: AuthoritySource[];
     current_sources: AuthoritySource[];
   } | null;
@@ -791,7 +794,9 @@ type AuthoritySource = { source_id: string; text: string; reason?: string; activ
 function SourceAuthorityReview({ project, backend, review }: {
   project: Project; backend: DesktopBackend; review: NonNullable<NativeAnswer["authority_review"]>;
 }) {
-  const [newer, setNewer] = useState(review.conflict_sources[0]?.source_id ?? "");
+  const choices = [...review.conflict_sources, ...review.current_sources].filter(
+    (source, index, all) => all.findIndex((item) => item.source_id === source.source_id) === index);
+  const [newer, setNewer] = useState(review.conflict_sources[0]?.source_id ?? choices[0]?.source_id ?? "");
   const [older, setOlder] = useState<string[]>([]);
   const [effectiveAt, setEffectiveAt] = useState("");
   const [reason, setReason] = useState("");
@@ -808,6 +813,7 @@ function SourceAuthorityReview({ project, backend, review }: {
       await backend.chat(project.id, "conversation.native_answer", {
         action: "resolve_source_authority", explicit_user_action: true,
         project_state_version: project.state_version, relation_kind: review.relation_kind,
+        authority_scope: review.authority_scope,
         superseding_source_id: newer, superseded_source_ids: older,
         effective_at: effectiveAt.trim(), reason: reason.trim(),
       });
@@ -817,10 +823,11 @@ function SourceAuthorityReview({ project, backend, review }: {
   }
   return <section class="source-authority-review" aria-label="Resolve conflicting source authority">
     <h4>Conflicting source authority</h4>
-    <p>Choose the exact newer passage and every older passage it replaces for this relationship. This does not change the ToM tree.</p>
-    <label>New controlling passage<select aria-label="New controlling passage" value={newer}
-      onChange={(event) => setNewer(event.currentTarget.value)} disabled={busy}>
-      {review.conflict_sources.map((source) => <option value={source.source_id} key={source.source_id}>
+    <p>Choose the controlling passage and every passage it replaces for this exact relationship or event sequence. This does not change the ToM tree.</p>
+    <label>Controlling passage<select aria-label="Controlling passage" value={newer}
+      onChange={(event) => { const selected = event.currentTarget.value; setNewer(selected);
+        setOlder((current) => current.filter((sourceId) => sourceId !== selected)); }} disabled={busy}>
+      {choices.map((source) => <option value={source.source_id} key={source.source_id}>
         {source.provenance.display_name ?? source.provenance.doc_id} · passage {source.provenance.chunk_index + 1}
       </option>)}
     </select></label>
@@ -830,13 +837,13 @@ function SourceAuthorityReview({ project, backend, review }: {
     </details>)}
     {!review.can_record && <p>The recorded controlling passage was not among the retrieved evidence. No new authority decision can be made from this result.</p>}
     {review.can_record && <>
-    <fieldset disabled={busy}><legend>Older passages replaced</legend>
-      {review.current_sources.map((source) => <div key={source.source_id}>
+    <fieldset disabled={busy}><legend>Passages replaced</legend>
+      {choices.filter((source) => source.source_id !== newer).map((source) => <div key={source.source_id}>
         <label><input type="checkbox" aria-label={`Replace ${source.provenance.display_name ?? source.provenance.doc_id} passage ${source.provenance.chunk_index + 1}`}
           checked={older.includes(source.source_id)} onChange={() => toggle(source.source_id)} />
           {source.provenance.display_name ?? source.provenance.doc_id} · passage {source.provenance.chunk_index + 1}
         </label>
-        <details><summary>View older passage</summary>
+        <details><summary>View passage</summary>
           <p style={{ whiteSpace: "pre-wrap" }}>{source.text}</p>
         </details>
       </div>)}

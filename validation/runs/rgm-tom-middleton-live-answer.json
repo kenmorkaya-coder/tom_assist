@@ -1,5 +1,5 @@
 {
-  "version": "tom-assist-rgm-tom-middleton-live-answer/7",
+  "version": "tom-assist-rgm-tom-middleton-live-answer/8",
   "status": "COMPLETE",
   "outcome": "PASS",
   "claim_boundary": "One explicitly reviewed Middleton procedure, one correct question, one reversed-order control and one absent-state control through the production RGM, ToM and local evidence-reader path.",
@@ -43,7 +43,7 @@
       "question": "Which process stops nearby work before the manager notifies Police and Heritage NSW?",
       "status": "supported",
       "engine": "rgm+tom",
-      "answer": "All works within the vicinity of the find must immediately stop. The find must be cordoned  off \nand signage installed to avoid accidental impact. \no The site supervisor or other nominated manager must notify the NSW Police and Heritage \nNSW (Enviroline 131 555).\n[Appendix C - Mitigation Measures.pdf \u00b7 chunk_2]",
+      "answer": "All works within the vicinity of the find must immediately stop. The find must be cordoned  off \nand signage installed to avoid accidental impact. \no The site supervisor or other nominated manager must notify the NSW Police and Heritage \nNSW (Enviroline 131 555).\n[Appendix C - Mitigation Measures.pdf · chunk_2]",
       "source_ids": [
         "rgm-corpus-81271eb0bcabc76c7eea39e951dcb1b22b9674743dd8da244dfdbfd4a783af26/chunk_2"
       ],
@@ -74,7 +74,7 @@
       "question": "Which procedure notifies Police and Heritage NSW before work stops around human remains?",
       "status": "not_supported",
       "engine": "rgm+tom",
-      "answer": "No. The reviewed source records the opposite event order.\n[Appendix C - Mitigation Measures.pdf \u00b7 chunk_2]",
+      "answer": "No. The reviewed source records the opposite event order.\n[Appendix C - Mitigation Measures.pdf · chunk_2]",
       "source_ids": [
         "SRC-aaa43cf06e5c3b18"
       ],
@@ -105,7 +105,7 @@
       "question": "What procedure requires excavation to continue after human remains are found?",
       "status": "not_supported",
       "engine": "rgm+tom",
-      "answer": "No. The reviewed procedure requires nearby work to stop after human remains are discovered; it does not require excavation to continue.\n[Appendix C - Mitigation Measures.pdf \u00b7 chunk_2]",
+      "answer": "No. The reviewed procedure requires nearby work to stop after human remains are discovered; it does not require excavation to continue.\n[Appendix C - Mitigation Measures.pdf · chunk_2]",
       "source_ids": [
         "SRC-aaa43cf06e5c3b18"
       ],
@@ -937,5 +937,40 @@
       "automatic_learning": false,
       "native_memory_tests": "157 passed"
     }
+  },
+  "temporal_source_authority": {
+    "version": "tom-assist-temporal-source-authority/1",
+    "status": "COMPLETE",
+    "outcome": "PASS",
+    "scope": {
+      "kind": "temporal_motif",
+      "temporal_motif": {
+        "relation_kind": "sequence",
+        "source_event": "human_remains_discovered",
+        "intermediate_event": "stop_work",
+        "target_event": "notify_authorities"
+      }
+    },
+    "controls": {
+      "either_exact_source_can_be_selected": true,
+      "generic_before_scope_rejected": true,
+      "effective_time_enforced": true,
+      "cycle_rejected": true,
+      "source_text_hashes_bound": true,
+      "superseded_source_retained": true
+    },
+    "answer_behavior": {
+      "before_effective_time": "ambiguous with both exact sources",
+      "after_effective_time": "only the user-selected exact source reaches evidence checking",
+      "tree_calls": 0,
+      "tree_changed": false,
+      "whole_tree_score": false
+    },
+    "verification": {
+      "native_memory_tests": "159 passed",
+      "desktop_tests": "21 passed",
+      "desktop_typecheck": "passed"
+    },
+    "claim_boundary": "Controlled exact-source cases prove the bounded authority mechanism. They do not decide which source legally governs a real project."
   }
 }

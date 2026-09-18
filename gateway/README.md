@@ -987,8 +987,10 @@ reports that the sources disagree and presents every exact conflicting and
 currently bound passage with its provenance. No model or ToM process chooses a
 winner. An optional explicit user action can record that one exact RGM passage
 supersedes one or more older passages for one relationship, with an effective
-timestamp and reason. The app never infers this authority from filenames, dates
-or amendment wording. Once effective, and only
+timestamp and reason. For the bounded human-remains procedure, either displayed
+side may be selected and the record is tied to the exact discovery → stop work
+→ notify-authorities motif rather than the generic word `before`. The app never
+infers this authority from filenames, dates or amendment wording. Once effective, and only
 when every competing reviewed source has been covered, the newer passage goes
 to evidence checking without a tree call. Older text and the ToM memory remain
 unchanged for audit. The current integration is deliberately bounded to six
@@ -1098,8 +1100,12 @@ sequence. A source that puts notification before stopping, or permits work to
 continue after discovery, is shown beside the reviewed stop-then-notify source.
 The result is `ambiguous`; both exact source identities and passages are
 preserved. This path makes zero tree calls and zero language-reader calls. The
-existing authority action is deliberately unavailable for these temporal
-relationships, so neither sequence can be selected silently.
+explicit authority action is available for this exact temporal motif. It shows
+both passages and lets the user select either one as controlling, name the
+passage it replaces, and provide an effective time and reason. Before that time
+the result remains `ambiguous`. After that time only the selected exact passage
+reaches evidence checking. The decision does not call or change ToM. Other
+event motifs cannot use this bounded authority scope.
 
 The same boundary was then run through production RGM extraction, chunking,
 MiniLM encoding and retrieval with two real PDFs. The Middleton NSW mitigation

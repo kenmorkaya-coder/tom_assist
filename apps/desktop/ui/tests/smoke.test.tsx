@@ -550,6 +550,50 @@ it("records explicit source authority when current evidence conflicts", async ()
     reason: "Executed amendment replaces the original clause" });
 });
 
+it("lets the user choose either side of an exact temporal conflict", async () => {
+  const backend = new FakeDesktopBackend();
+  const project = await backend.seedDemo();
+  const authorityScope = { kind: "temporal_motif" as const, temporal_motif: {
+    relation_kind: "sequence" as const, source_event: "human_remains_discovered",
+    intermediate_event: "stop_work", target_event: "notify_authorities",
+  } };
+  const chat = vi.spyOn(backend, "chat").mockImplementation(async (_project, _method, payload) => {
+    if (payload.action === "status") return { ready: true, engine: "rgm+tom", scope: "Project documents." };
+    if (payload.action === "resolve_source_authority") return { status: "recorded", link_count: 1 };
+    return {
+      status: "ambiguous", answer: "The available sources disagree.", sources: [],
+      authority_review: { status: "unresolved", can_record: true, relation_kind: "before",
+        authority_scope: authorityScope,
+        conflict_sources: [{ source_id: "SRC-notify-first", text: "Call Police, then stop work.",
+          reason: "source states authority notification before work stopping", active: true,
+          provenance: { display_name: "Council procedure", doc_id: "document-new", chunk_index: 4, start: 0, end: 28 } }],
+        current_sources: [{ source_id: "SRC-stop-first", text: "Stop work, then notify Police.", active: true,
+          provenance: { display_name: "Project procedure", doc_id: "document-old", chunk_index: 1, start: 0, end: 29 } }],
+      },
+    };
+  });
+  render(<NativeMemoryAnswer project={project} draft="What happens when remains are found?" backend={backend} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Answer from project documents" }));
+  await screen.findByRole("heading", { name: "Needs clarification" });
+  fireEvent.change(screen.getByLabelText("Controlling passage"), {
+    target: { value: "SRC-stop-first" },
+  });
+  fireEvent.click(screen.getByLabelText("Replace Council procedure passage 5"));
+  fireEvent.input(screen.getByLabelText("Source authority effective time"), {
+    target: { value: "2026-09-18T00:00:00+10:00" },
+  });
+  fireEvent.input(screen.getByLabelText("Source authority reason"), {
+    target: { value: "The project procedure is the controlling instruction" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Record source supersession" }));
+  await screen.findByText("Source authority recorded. Ask the question again to apply it.");
+  expect(chat.mock.calls[2]![2]).toMatchObject({ action: "resolve_source_authority",
+    explicit_user_action: true, relation_kind: "before", authority_scope: authorityScope,
+    superseding_source_id: "SRC-stop-first", superseded_source_ids: ["SRC-notify-first"],
+    effective_at: "2026-09-18T00:00:00+10:00",
+    reason: "The project procedure is the controlling instruction" });
+});
+
 it("imports a local document only after an explicit action", async () => {
   const { Memory } = await import("../src/Memory");
   const backend = new FakeDesktopBackend();

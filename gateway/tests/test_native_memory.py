@@ -1770,12 +1770,99 @@ def test_live_answer_presents_both_sides_of_temporal_source_conflict(
             reviewed_text, conflicting_text}
         assert reviewed_text in result["answer"] and conflicting_text in result["answer"]
         assert result["authority_review"]["relation_kind"] == "before"
-        assert result["authority_review"]["can_record"] is False
+        assert result["authority_review"]["can_record"] is True
+        assert result["authority_review"]["authority_scope"] == {
+            "kind": "temporal_motif", "temporal_motif": HUMAN_REMAINS_STOP_NOTIFY_MOTIF}
         trace = result["trace"]["retrieval"]["reviewed_tom_memory"]
         assert trace["status"] == "source_authority_unresolved"
         assert trace["evidence_scope"]["mode"] == "all_conflicting_sources"
         assert result["purity"]["tree_calls"] == 0
         assert "rgm_read" not in document_operations
+    finally:
+        library.db.close()
+
+
+@pytest.mark.parametrize("controller", ["reviewed", "conflicting"])
+def test_explicit_temporal_authority_selects_either_exact_source_without_tree_recall(
+    tmp_path, controller,
+):
+    from gateway.native_memory import (HUMAN_REMAINS_STOP_NOTIFY_MOTIF,
+        RgmDocumentService, read_rgm_source_evidence)
+    from gateway.permanent_library import PermanentLibrary
+    library = PermanentLibrary(tmp_path / f"temporal-authority-{controller}.sqlite3")
+    tom_calls = []
+    document_operations = []
+    def document_worker(operation, payload):
+        document_operations.append(operation)
+        if operation == "rgm_embed":
+            return dict(vectors={hashlib.sha256(text.encode()).hexdigest():
+                [1.0] + [0.0] * 383 for text in payload["texts"]})
+        assert operation == "rgm_read"
+        def generate(_instruction, data, _limit):
+            source = data["sources"][0]
+            return dict(raw=json.dumps(dict(status="supported",
+                source_id=source["source_id"], answer_quote=source["text"])))
+        return read_rgm_source_evidence(payload["question"], payload["packet"], generate)
+    service = RgmDocumentService(worker=document_worker, model_identity="fixture-model",
+        tom_worker=_reviewed_tom_worker(tom_calls), tom_profile=_reviewed_tom_profile())
+    reviewed_text = ("If human remains are discovered, all works must immediately stop. "
+        "The site supervisor must then notify NSW Police and Heritage NSW.")
+    conflicting_text = ("If human remains are found, the site supervisor must notify NSW Police "
+        "and Heritage NSW before all works are stopped.")
+    question = "Which procedure stops work before the manager notifies Police and Heritage NSW?"
+    try:
+        reviewed_document = service.ingest("project", library, dict(explicit_user_action=True,
+            display_name="Stop then notify procedure", content=reviewed_text,
+            media_type="text/plain"))
+        learned = service.learn_situation("project", library, dict(explicit_user_action=True,
+            document_id=reviewed_document["document_id"], chunk_index=0,
+            temporal_motif=HUMAN_REMAINS_STOP_NOTIFY_MOTIF))
+        service.ingest("project", library, dict(explicit_user_action=True,
+            display_name="Notify then stop procedure", content=conflicting_text,
+            media_type="text/plain"))
+        unresolved = service.answer("project", library, question,
+            as_of="2026-09-17T00:00:00Z")
+        review = unresolved["authority_review"]
+        conflicting_id = review["conflict_sources"][0]["source_id"]
+        reviewed_id = learned["source_id"]
+        chosen_id, replaced_id = ((reviewed_id, conflicting_id)
+            if controller == "reviewed" else (conflicting_id, reviewed_id))
+        with pytest.raises(ValueError, match="supported relationship"):
+            service.resolve_source_authority("project", library, dict(
+                explicit_user_action=True, relation_kind="before",
+                authority_scope={"kind": "relationship", "relation_kind": "before"},
+                superseding_source_id=chosen_id, superseded_source_ids=[replaced_id],
+                effective_at="2026-09-18T00:00:00Z", reason="Explicit procedure decision"))
+        recorded = service.resolve_source_authority("project", library, dict(
+            explicit_user_action=True, relation_kind="before",
+            authority_scope=review["authority_scope"],
+            superseding_source_id=chosen_id, superseded_source_ids=[replaced_id],
+            effective_at="2026-09-18T00:00:00Z", reason="Explicit procedure decision"))
+        assert recorded["link_count"] == 1 and recorded["tree_calls"] == 0
+        assert recorded["authority_scope"] == review["authority_scope"]
+
+        before = service.answer("project", library, question,
+            as_of="2026-09-17T23:59:59Z")
+        assert before["status"] == "ambiguous" and len(before["sources"]) == 2
+        after = service.answer("project", library, question,
+            as_of="2026-09-18T00:00:00Z")
+        trace = after["trace"]["retrieval"]["reviewed_tom_memory"]
+        assert after["status"] == "supported"
+        chosen_text = reviewed_text if controller == "reviewed" else conflicting_text
+        assert [source["text"] for source in after["sources"]] == [chosen_text]
+        assert trace["status"] == "source_authority_resolved"
+        assert trace["authoritative_source_ids"] == [chosen_id]
+        assert trace["authority_scope"] == review["authority_scope"]
+        assert trace["evidence_scope"]["mode"] == "explicit_source_authority"
+        assert after["purity"]["tree_calls"] == 0
+        assert tom_calls and [call[0] for call in tom_calls] == ["rgm_tom_learn"]
+        assert document_operations.count("rgm_read") == 1
+        with pytest.raises(ValueError, match="cannot form a cycle"):
+            service.resolve_source_authority("project", library, dict(
+                explicit_user_action=True, relation_kind="before",
+                authority_scope=review["authority_scope"],
+                superseding_source_id=replaced_id, superseded_source_ids=[chosen_id],
+                effective_at="2026-09-18T00:00:00Z", reason="Invalid reverse decision"))
     finally:
         library.db.close()
 
