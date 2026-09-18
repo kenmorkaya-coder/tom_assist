@@ -84,7 +84,7 @@ Counts, plots and branch magnitudes are display telemetry only.
 | Event-order memory | Bounded | Distinguishes records containing the same entities and actions in a different order. | Demonstrated with supplied temporal links; automatic temporal extraction is not established. |
 | Shared structural memory | Bounded | Learns a reviewed structure once and binds exact evidence from several source locations without teaching the tree again. | Supported for the admitted structures listed below. |
 | Structural source recovery | Bounded | Reopens exact RGM passages from a learned structure even when ordinary RGM retrieval supplies no correct initial candidate. | Requires an already reviewed and learned structure. |
-| Structure review queue | Bounded | Scans authenticated RGM chunks for the admitted failure/action/cost and human-remains/stop-work/notification patterns, shows exact trigger phrases, and requires an explicit Save for each source. | Scanning is read-only and cannot teach the tree automatically. |
+| Structure review queue | Bounded | Runs the copied RGM contextual-vector and native-vector passes, fuses their rankings, scans every active chunk with the admitted regex rules, then shows only passages that pass strict local event-order validation. | Semantic/vector hits alone cannot teach the tree; every source still requires explicit review and Save. |
 | Dense 17-channel prose loading | Shadow, default off | Extracts evidence-bound structured candidates and records diagnostics. | Ordinary prose still leaves too many channels empty for authorised tree admission. |
 | Outcome memory | Capture only | Records what context was offered and what the user actually used. | Nothing reads this history yet. |
 
@@ -227,15 +227,42 @@ The Memory screen exposes **Structures to review** for two bounded structures:
 The scan:
 
 - reads only active authenticated RGM chunks;
+- runs the RGM contextual vector pass and native vector-store pass;
+- combines those rankings with Reciprocal Rank Fusion;
+- independently runs the source regex over every active chunk;
+- requires the exact local events in the required order after joining those
+  discovery channels;
 - shows the exact passage and the three locally matched event phrases;
 - makes zero tree calls;
 - performs no automatic learning; and
 - repeats source-local validation when the user chooses Save.
 
+A second source document, the Middleton Aboriginal Cultural Heritage
+Assessment, expresses the same procedure as `immediately cease all works`.
+The first read-only scan found zero candidates across its 42 RGM chunks. The
+cause was narrow and visible: the bounded source grammar accepted `stop` but
+not `cease`. Adding only the `cease all works` wording exposed the procedure in
+the document summary and in the main recommendation.
+
+The main recommendation was reviewed and attached to the two existing learned
+relationships with **zero new tree writes**. One actual two-route ToM recall
+then reopened the exact Appendix C and Appendix AB passages together. The
+513-branch checkpoint, complete signed 32×32 reference fields and state hash
+were unchanged. This establishes bounded shared-source binding across two
+differently worded documents; it does not establish general paraphrase parsing.
+
 On the two frozen contract corpora, the local-procedure detector found 12 valid
 passages across 563 native chunks. Nearby clauses lacking substitute
 performance and a deliberately separated phrase control were rejected. This is
 a bounded source-admission rule, not a general structure extractor.
+
+The integration was checked on the unchanged 42-chunk Appendix AB document.
+The native RGM vector pass ranked the two valid human-remains passages at 2 and
+1, and Reciprocal Rank Fusion placed them at 1 and 4. The contextual pass found
+one at rank 4. The full-source regex/order check found and validated both. A
+control passage containing related words without an ordered local procedure was
+found semantically and rejected before review. The queue made zero tree calls
+and performed no automatic learning.
 
 ## Evidence and answer behaviour
 
@@ -315,10 +342,10 @@ These counts describe the relevant integration suite at the recorded revision;
 they are not a general accuracy score.
 
 The later unseen-document access repair passed all **144** native-memory tests.
-The Middleton live-answer repair passes all **147** native-memory tests. The
+The RGM sweep integration repair passes all **149** native-memory tests. The
 desktop suite passes **20** tests, TypeScript checking passes, and the production
 desktop interface build passes.
-The broader gateway run recorded 590 passes, one expected skip, one unrelated
+The broader gateway run recorded 595 passes, one expected skip, one unrelated
 event-graph fixture-overlap failure, and five sandbox-only local-socket setup
 errors. The affected OAuth file passed **8/8** when rerun with local socket
 binding available.
@@ -339,7 +366,8 @@ Compact and reviewable evidence is retained in the repository:
 - [validation/runs/rgm-tom-middleton-sequence-generalisation.json](validation/runs/rgm-tom-middleton-sequence-generalisation.json)
   — compact different-project-family order-discrimination result; and
 - [validation/runs/rgm-tom-middleton-live-answer.json](validation/runs/rgm-tom-middleton-live-answer.json)
-  — initial live-answer failure, diagnosis and repaired end-to-end result; and
+  — initial live-answer failure, repaired end-to-end result and differently
+  worded shared-source binding; and
 - [gateway/tests/test_native_memory.py](gateway/tests/test_native_memory.py) —
   source binding, structural recall, conflict and evidence-boundary checks.
 
@@ -353,10 +381,8 @@ The next work should extend capability one variable at a time:
 
 1. Measure false positives and misses in the expanded read-only review queue
    before admitting any further structure.
-2. Review a second independently worded human-remains source, bind it without a
-   second tree write, and verify that both exact sources reopen.
-3. Exercise conflict and explicit-authority handling for this temporal motif.
-4. Keep exact evidence selection and conflict presentation separate from
+2. Exercise conflict and explicit-authority handling for this temporal motif.
+3. Keep exact evidence selection and conflict presentation separate from
    structural recall.
-5. Do not introduce branch averaging, a whole-tree score or automatic teaching
+4. Do not introduce branch averaging, a whole-tree score or automatic teaching
    to make a failed result look successful.

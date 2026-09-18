@@ -686,7 +686,7 @@ class EvidenceTomGateway(base.TomGateway):
                         scope=RGM_TOM_DOCUMENT_SCOPE if structural["learned_situations"] else RGM_DOCUMENT_SCOPE,
                         structural_memory=structural)
                 if action == "review_candidates":
-                    return 200, service.review_candidates(library)
+                    return 200, service.review_candidates(project_id, library)
                 if action == "learn_situation":
                     return 200, service.learn_situation(project_id, library, payload)
                 if action == "resolve_source_authority":

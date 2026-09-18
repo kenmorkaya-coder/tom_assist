@@ -66,10 +66,20 @@ source.
 ```text
                        AUTHENTICATED RGM PASSAGES
                                     |
+                  +-----------------+-----------------+
+                  |                                   |
+                  v                                   v
+        RGM SEMANTIC QUERY SWEEPS            FULL-SOURCE REGEX SCAN
+          contextual vector pass              every active RGM chunk
+          native RGM vector pass
+          Reciprocal Rank Fusion
+                  |                                   |
+                  +-----------------+-----------------+
+                                    |
                                     v
-                       READ-ONLY STRUCTURE SCAN
-                   exact passage + matched event phrases
-                   zero tree calls; zero automatic learning
+                    STRICT LOCAL EVENT-ORDER CHECK
+                 semantic hits cannot bypass this check
+                 zero tree calls; zero automatic learning
                                     |
                                     v
                          STRUCTURES TO REVIEW
@@ -2797,3 +2807,69 @@ deleted.
 
 Verification passes all 147 native-memory tests and all 20 desktop tests.
 TypeScript checking and the production desktop interface build also pass.
+
+### 2026-09-18 — second human-remains source without a duplicate memory
+
+The next check changed only the source wording. It used `Appendix AB -
+Aboriginal Cultural Heritage Assessment.pdf`, SHA-256
+`11929bf098a5684884871fddd969fefe0aeab23d81e23dc23c700b4774e04421`.
+The existing RGM path produced 42 chunks. The procedure says suspected human
+remains are discovered, personnel must `immediately cease all works`, secure
+the area, and notify NSW Police and Heritage NSW.
+
+The first read-only scan returned zero candidates. No tree call occurred. The
+diagnosis was exact: the bounded source grammar accepted `stop work` but did
+not accept `cease all works`. The repair added only that stop-work wording. It
+did not change the motif, tree, routes, selector or question grammar.
+
+The unchanged document then produced two valid queue candidates: its summary
+at RGM chunk 1 and its main recommendation at chunk 39. The main recommendation
+was explicitly reviewed. Appendix C had already written the two learned event
+relationships; Appendix AB bound to those same relationships with:
+
+- **0** new tree writes;
+- **2** existing relationship bindings; and
+- **2** learned relationship memories in total.
+
+An actual two-route ToM recall with an empty RGM candidate packet reopened both
+exact passages: Appendix C chunk 2 and Appendix AB chunk 39. It compared every
+native branch/cell coordinate and used no whole-tree score. The 513-branch
+checkpoint, 393 terminal branches, complete reference fields, file sizes,
+hashes, modification times and tree state hash were identical before binding,
+after binding and after recall.
+
+The temporary duplicate checkpoint and temporary database were deleted. The
+compact evidence is retained in the `shared_source_binding` section of
+`validation/runs/rgm-tom-middleton-live-answer.json`. The native-memory suite
+now passes 148/148.
+
+### 2026-09-18 — RGM semantic and vector sweep integration repair
+
+The next diagnosis found an integration gap in that review queue. The copied
+RGM machinery already implemented two vector candidate passes and Reciprocal
+Rank Fusion, but the queue never called it. It ran only the final regex scan.
+The semantic sweep was therefore absent from structure discovery even though
+RGM itself supported it.
+
+The repaired queue now runs four bounded structure queries through the copied
+RGM retrieval path. For every query it runs the contextual vector pass, the
+native RGM vector-store pass and Reciprocal Rank Fusion. Independently, it runs
+the regex rules across every active source chunk. The two result sets are
+joined, but a passage appears in the review queue only if the exact local
+events are present in the required order. A semantic or vector hit alone cannot
+authorize a candidate or teach ToM.
+
+The unchanged 42-chunk Appendix AB document verified the repaired path. RGM's
+native vector pass ranked the two human-remains passages at ranks 2 and 1. Rank
+fusion placed them at ranks 1 and 4. The contextual vector pass found the
+summary passage at rank 4 and did not place the main recommendation in its top
+ten. The independent regex/order pass found both, so both became validated
+review candidates. Eleven other semantic source hits, representing twelve
+source-and-structure pairings, were rejected by the strict local check.
+
+A separate control passage contained related words but no ordered procedure.
+It entered the semantic candidate set and was rejected: zero regex candidates
+and zero review candidates. The complete review made zero tree calls and no
+automatic learning. The Memory screen now shows the discovery channels and
+ranks for each candidate. Verification passes all 149 native-memory tests and
+all 20 desktop tests; TypeScript checking passes.

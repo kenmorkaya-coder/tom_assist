@@ -437,6 +437,16 @@ FAILURE_STEP_IN_COST_MOTIF = dict(
 HUMAN_REMAINS_STOP_NOTIFY_MOTIF = dict(
     relation_kind="sequence", source_event="human_remains_discovered",
     intermediate_event="stop_work", target_event="notify_authorities")
+RGM_REVIEW_SEMANTIC_SWEEPS = [
+    (FAILURE_STEP_IN_COST_MOTIF, (
+        "a required duty fails another party performs substitute work and recovers the resulting cost",
+        "failure to comply step in arrange replacement work costs become a debt or reimbursement",
+    )),
+    (HUMAN_REMAINS_STOP_NOTIFY_MOTIF, (
+        "suspected human remains are discovered work stops and police and heritage authorities are notified",
+        "unexpected human remains found cease all works secure the area notify police heritage authorities",
+    )),
+]
 
 
 def _failure_step_in_cost_matches(text):
@@ -522,7 +532,8 @@ def _human_remains_stop_notify_matches(text):
             r"(?:uncovered|found|discovered).{0,100}human\s+remains)\b"),
         "stop_work": (
             r"\b(?:(?:all\s+)?works?.{0,80}(?:must\s+)?(?:immediately\s+)?stop|"
-            r"stop(?:ping|ped|s)?.{0,40}works?)\b"),
+            r"stop(?:ping|ped|s)?.{0,40}works?|"
+            r"(?:immediately\s+)?cease(?:s|d|ing)?\s+(?:all\s+)?works?)\b"),
         "notify_authorities": (
             r"\b(?:notify|notifies|notified|notification|inform|informs|informed)"
             r".{0,180}(?:police|heritage\s+nsw|authorit(?:y|ies))\b"),
@@ -2267,8 +2278,16 @@ class RgmDocumentService:
             automatic_extraction=False, whole_tree_score=False,
             state=(rows[-1]["encoded"]["tree"] if rows else None))
 
-    def review_candidates(self, library):
-        """List bounded source-local motif candidates without teaching ToM."""
+    def review_candidates(self, project_id, library):
+        """Run the RGM retrieval sweeps and strict source checks without teaching ToM."""
+        if not NativeMemoryService._inference_lock.acquire(blocking=False):
+            raise ValueError("another local document operation is running")
+        try:
+            return self._review_candidates(project_id, library)
+        finally:
+            NativeMemoryService._inference_lock.release()
+
+    def _review_candidates(self, project_id, library):
         rows = self._situation_rows(library)
         reviewed = {(row["situation"]["source_id"], native_digest(
             dict(roles=row["encoded"].get("roles"),
@@ -2284,33 +2303,154 @@ class RgmDocumentService:
                 _human_remains_stop_notify_matches),
         ]
         chunks = library.document_chunks(active_only=True)
-        candidates = []
+        if not chunks:
+            return dict(status="ready", candidates=[], scanned_chunks=0,
+                automatic_learning=False, tree_calls=0,
+                discovery=dict(strategy="rgm_two_vector_passes_rrf_plus_source_regex",
+                    rgm_query_count=0, contextual_vector_candidate_count=0,
+                    native_vector_candidate_count=0, rgm_semantic_candidate_count=0,
+                    regex_candidate_count=0, validated_candidate_count=0,
+                    semantic_rejected_count=0, sweeps=[]))
+        inventory = library.documents()
+        documents = [library.document(item["document_id"], include_chunks=False)
+            for item in inventory]
+        prepared = prepare_rgm_project_documents(project_id, documents)
+        source_texts = [item["document"]["content"][chunk["start"]:chunk["end"]]
+            for item in prepared for chunk in item["corpus"]["chunks"]]
+        semantic_queries = [query for _, queries in RGM_REVIEW_SEMANTIC_SWEEPS
+            for query in queries]
+        unique = {hashlib.sha256(text.encode()).hexdigest(): text
+            for text in source_texts + semantic_queries if text.strip()}
+        vendor = verify_vendored_rgm()
+        cache_identity = self._cache_identity(vendor, self._model_identity())
+        vectors, missing = {}, {}
+        for digest, text in unique.items():
+            cached = library.get("rgm-vector-" + cache_identity + "-" + digest)
+            if cached and cached["content"] == text and cached["content_hash"] == digest:
+                vectors[digest] = cached["record"]["vector"]
+            else:
+                missing[digest] = text
+        if missing:
+            result = self.worker("rgm_embed", dict(texts=list(missing.values())))
+            if set(result.get("vectors", {})) != set(missing):
+                raise ValueError("RGM review sweep encoder omitted or introduced a source")
+            from gateway.semantic_chunks import _unit_vector
+            for digest, vector in result["vectors"].items():
+                _unit_vector(vector, "RGM review sweep vector")
+                vectors[digest] = vector
+
+        source_by_identity = {}
+        source_by_id = {}
         for chunk in chunks:
-            text = chunk["text"]
-            if hashlib.sha256(text.encode()).hexdigest() != chunk["text_sha256"]:
-                raise ValueError("retained RGM source text changed")
-            for motif, matcher in motifs:
+            source_id = rgm_candidate_source_id(dict(evidence_reference=dict(
+                doc_id=chunk["document_id"], start=chunk["start"], end=chunk["end"])))
+            source_by_identity[f"{chunk['document_id']}/chunk_{chunk['chunk_index']}"] = source_id
+            source_by_id[source_id] = chunk
+
+        def source_ids(identities):
+            return [source_by_identity[identity] for identity in identities
+                if identity in source_by_identity]
+
+        sweep_rows = []
+        semantic_ids = set()
+        semantic_by_motif = {}
+        pass_ranks = {"contextual_vector": {}, "native_vector": {}, "rrf": {}}
+        for motif, queries in RGM_REVIEW_SEMANTIC_SWEEPS:
+            motif_digest = native_digest(dict(roles=None, temporal_motif=motif))
+            semantic_by_motif.setdefault(motif_digest, set())
+            for query in queries:
+                packet, telemetry = retrieve_rgm_project_documents(
+                    library, prepared, query, vectors)
+                native = telemetry["native"]
+                channel_ids = {
+                    "contextual_vector": source_ids(native["score_top_ids"]),
+                    "native_vector": source_ids(native["cos_top_ids"]),
+                    "rrf": source_ids(native["rrf_topk_ids"]),
+                }
+                for channel, ids in channel_ids.items():
+                    for rank, source_id in enumerate(ids, 1):
+                        key = (motif_digest, source_id)
+                        previous = pass_ranks[channel].get(key)
+                        pass_ranks[channel][key] = rank if previous is None else min(previous, rank)
+                returned = [rgm_candidate_source_id(memory)
+                    for memory in packet["memories"]]
+                semantic_ids.update(returned)
+                semantic_by_motif[motif_digest].update(returned)
+                sweep_rows.append(dict(motif=copy.deepcopy(motif), query=query,
+                    contextual_vector_candidate_count=native["score_candidates"],
+                    native_vector_candidate_count=native["rgm_candidates"],
+                    candidate_union_count=native["candidate_union_size"],
+                    vector_pass_overlap_count=native["overlap_count"],
+                    contextual_vector_source_ids=channel_ids["contextual_vector"],
+                    native_vector_source_ids=channel_ids["native_vector"],
+                    rrf_source_ids=channel_ids["rrf"],
+                    returned_source_ids=returned))
+
+        regex_matches = {}
+        regex_ids = set()
+        for motif, matcher in motifs:
+            motif_digest = native_digest(dict(roles=None, temporal_motif=motif))
+            for source_id, chunk in source_by_id.items():
+                text = chunk["text"]
+                if hashlib.sha256(text.encode()).hexdigest() != chunk["text_sha256"]:
+                    raise ValueError("retained RGM source text changed")
                 matches = matcher(text)
-                if matches is None:
-                    continue
-                source_id = rgm_candidate_source_id(dict(evidence_reference=dict(
-                    doc_id=chunk["document_id"], start=chunk["start"], end=chunk["end"])))
+                if matches is not None:
+                    regex_ids.add(source_id)
+                    regex_matches[(source_id, motif_digest)] = matches
+
+        candidates = []
+        semantic_pairs = {(motif_digest, source_id)
+            for motif_digest, source_ids in semantic_by_motif.items()
+            for source_id in source_ids}
+        validated_pairs = set()
+        for source_id in sorted(regex_ids | semantic_ids):
+            chunk = source_by_id[source_id]
+            for motif, matcher in motifs:
                 motif_digest = native_digest(dict(roles=None,
                     temporal_motif=motif))
+                pair = (motif_digest, source_id)
+                matches = regex_matches.get((source_id, motif_digest))
+                if matches is None and source_id in semantic_by_motif.get(motif_digest, set()):
+                    matches = matcher(chunk["text"])
+                if matches is None:
+                    continue
+                validated_pairs.add(pair)
                 candidates.append(dict(
                     candidate_id="RGMCAND-" + native_digest(dict(
                         source_id=source_id, motif=motif))[:20],
                     source_id=source_id, document_id=chunk["document_id"],
                     display_name=chunk["display_name"], chunk_id=f"chunk_{chunk['chunk_index']}",
-                    chunk_index=chunk["chunk_index"], text=text,
+                    chunk_index=chunk["chunk_index"], text=chunk["text"],
                     temporal_motif=copy.deepcopy(motif),
                     events=[dict(kind=name, start=match.start(), end=match.end(),
                         text=match.group()) for name, match in matches.items()],
+                    discovery_channels=dict(
+                        rgm_semantic_sweep=source_id in semantic_by_motif.get(motif_digest, set()),
+                        rgm_contextual_vector_pass=pair in pass_ranks["contextual_vector"],
+                        rgm_native_vector_pass=pair in pass_ranks["native_vector"],
+                        rgm_rrf_fusion=pair in pass_ranks["rrf"],
+                        source_regex=(source_id, motif_digest) in regex_matches),
+                    discovery_ranks={name: ranks.get(pair)
+                        for name, ranks in pass_ranks.items()},
                     reviewed=(source_id, motif_digest) in reviewed,
                     reviewed_structure_count=reviewed_by_source.get(source_id, 0)))
+        candidates.sort(key=lambda row: (
+            row["document_id"], row["chunk_index"], row["candidate_id"]))
         return dict(status="ready", candidates=candidates,
             scanned_chunks=len(chunks),
-            automatic_learning=False, tree_calls=0)
+            automatic_learning=False, tree_calls=0,
+            discovery=dict(strategy="rgm_two_vector_passes_rrf_plus_source_regex",
+                rgm_query_count=len(sweep_rows),
+                contextual_vector_candidate_count=len({source_id for _, source_id
+                    in pass_ranks["contextual_vector"]}),
+                native_vector_candidate_count=len({source_id for _, source_id
+                    in pass_ranks["native_vector"]}),
+                rgm_semantic_candidate_count=len(semantic_ids),
+                regex_candidate_count=len(regex_ids),
+                validated_candidate_count=len(candidates),
+                semantic_rejected_count=len(semantic_pairs - validated_pairs),
+                sweeps=sweep_rows))
 
     def learn_situation(self, project_id, library, payload):
         if not NativeMemoryService._inference_lock.acquire(blocking=False):

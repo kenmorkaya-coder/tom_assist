@@ -1021,12 +1021,31 @@ rejected. This remains a bounded admission check for an explicitly reviewed
 motif; it does not automatically teach every detected passage.
 
 Memory now exposes a read-only **Structures to review** scan for those two
-bounded motifs. It lists the exact RGM passage and the three matched event
-phrases. The
-scan makes no tree call. Each candidate requires a separate explicit Save
-action, and the server repeats the source-local validation before teaching or
-binding it. One source passage may retain different reviewed structure types;
-it may not retain two conflicting versions of the same party relationship.
+bounded motifs. It runs the copied RGM contextual-vector pass and native
+vector-store pass, combines them with Reciprocal Rank Fusion, and independently
+runs the motif regex over every active source chunk. The union is then subject
+to strict source-local event-presence and event-order validation. A semantic or
+vector hit cannot bypass that check. The screen lists the discovery channels,
+the exact RGM passage and the three matched event phrases. The scan makes no
+tree call. Each candidate requires a separate explicit Save action, and the
+server repeats source-local validation before teaching or binding it. One source
+passage may retain different reviewed structure types; it may not retain two
+conflicting versions of the same party relationship.
+
+The first read-only scan of a second human-remains source found no candidate
+because it says `immediately cease all works` rather than `work stops`. The
+source grammar now admits that bounded wording. The unchanged 42-chunk RGM
+document then exposed two exact passages. Reviewing its main recommendation
+bound the source to the two existing human-remains relationships with zero new
+tree writes. One actual distributed recall reopened both differently worded
+documents, while the checkpoint, full branch-local 32×32 references and tree
+state remained unchanged.
+
+On that unchanged 42-chunk document, the native RGM vector pass ranked the two
+valid passages at 2 and 1; Reciprocal Rank Fusion placed them at 1 and 4. The
+contextual pass found the summary at rank 4. Both passed the independent regex
+and event-order check. A related-word control entered the semantic set but
+stated no ordered procedure, so it produced no review candidate.
 
 During an answer, MiniLM/RGM still locates candidate source passages when they
 are available. When the question explicitly states an admitted event sequence,

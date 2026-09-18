@@ -585,7 +585,12 @@ it("lists source-local structure candidates and teaches only after review", asyn
   const chat = vi.spyOn(backend, "chat").mockImplementation(async (_id, _method, payload) => {
     if (payload.action === "status") return { ready: true, engine: "rgm+tom",
       structural_memory: { configured: true, learned_situations: 0, capacity: 6 } };
-    if (payload.action === "review_candidates") return { candidates: [{
+    if (payload.action === "review_candidates") return { discovery: {
+      strategy: "rgm_two_vector_passes_rrf_plus_source_regex", rgm_query_count: 4,
+      contextual_vector_candidate_count: 1, native_vector_candidate_count: 1,
+      rgm_semantic_candidate_count: 1, regex_candidate_count: 1,
+      validated_candidate_count: 1, semantic_rejected_count: 0,
+    }, candidates: [{
       candidate_id: "RGMCAND-a", source_id: "SRC-a", document_id: "document-a",
       display_name: "Agreement.pdf", chunk_id: "chunk_0", chunk_index: 0,
       text: "Orchid fails. Rowan acts. The cost is a debt due.", temporal_motif: motif,
@@ -593,7 +598,10 @@ it("lists source-local structure candidates and teaches only after review", asyn
         { kind: "failure", start: 7, end: 12, text: "fails" },
         { kind: "substitute_action", start: 20, end: 24, text: "acts" },
         { kind: "cost_recovery", start: 40, end: 48, text: "debt due" },
-      ], reviewed: false, reviewed_structure_count: 1,
+      ], reviewed: false, reviewed_structure_count: 1, discovery_channels: {
+        rgm_semantic_sweep: true, rgm_contextual_vector_pass: true,
+        rgm_native_vector_pass: true, rgm_rrf_fusion: true, source_regex: true,
+      },
     }] };
     if (payload.action === "learn_situation") return { duplicate: false, write_count: 0 };
     throw new Error("unexpected action");
@@ -601,6 +609,8 @@ it("lists source-local structure candidates and teaches only after review", asyn
   render(<Memory projectId={project.id} backend={backend} />);
   fireEvent.click(await screen.findByRole("button", { name: "Find structures to review" }));
   await screen.findByText(/Detected: failure/);
+  await screen.findByText(/RGM semantic candidates: 1/);
+  expect(screen.getByText(/Found by: RGM semantic sweep · contextual vector pass/)).toBeTruthy();
   expect(chat.mock.calls.filter((call) => call[2].action === "learn_situation")).toHaveLength(0);
   expect(screen.getByText(/already has 1 other reviewed structure/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", {
@@ -630,7 +640,12 @@ it("offers the reviewed human-remains sequence without teaching during detection
   const chat = vi.spyOn(backend, "chat").mockImplementation(async (_id, _method, payload) => {
     if (payload.action === "status") return { ready: true, engine: "rgm+tom",
       structural_memory: { configured: true, learned_situations: 0, capacity: 6 } };
-    if (payload.action === "review_candidates") return { candidates: [{
+    if (payload.action === "review_candidates") return { discovery: {
+      strategy: "rgm_two_vector_passes_rrf_plus_source_regex", rgm_query_count: 4,
+      contextual_vector_candidate_count: 1, native_vector_candidate_count: 1,
+      rgm_semantic_candidate_count: 1, regex_candidate_count: 1,
+      validated_candidate_count: 1, semantic_rejected_count: 0,
+    }, candidates: [{
       candidate_id: "RGMCAND-middleton", source_id: "SRC-middleton",
       document_id: "document-middleton", display_name: "Mitigation Measures.pdf",
       chunk_id: "chunk_2", chunk_index: 2,
@@ -639,7 +654,10 @@ it("offers the reviewed human-remains sequence without teaching during detection
         { kind: "human_remains_discovered", start: 0, end: 27, text: "Human remains are uncovered" },
         { kind: "stop_work", start: 29, end: 39, text: "Work stops" },
         { kind: "notify_authorities", start: 41, end: 69, text: "manager notifies Police" },
-      ], reviewed: false, reviewed_structure_count: 0,
+      ], reviewed: false, reviewed_structure_count: 0, discovery_channels: {
+        rgm_semantic_sweep: true, rgm_contextual_vector_pass: true,
+        rgm_native_vector_pass: true, rgm_rrf_fusion: true, source_regex: true,
+      },
     }] };
     if (payload.action === "learn_situation") return { duplicate: false, write_count: 768 };
     throw new Error("unexpected action");
