@@ -44,8 +44,21 @@ learned structure. The two lanes meet at evidence checking.
                          text + provenance + offsets
                                     |
                                     v
-                     CONFLICT AND AUTHORITY CHECK
-                 conflicting sources stay visible together
+                         SOURCE CONFLICT CHECK
+                  +-----------------+-----------------+
+                  | no                                | yes
+                  |                                   v
+                  |                     SHOW EVERY EXACT SOURCE
+                  |                     return ambiguous while no
+                  |                     effective decision exists
+                  |                                   |
+                  |                                   v
+                  |                     EXPLICIT USER AUTHORITY
+                  |                  exact relationship/event motif
+                  |                  controlling + replaced passages
+                  |                    effective time + reason
+                  |                                   |
+                  +-----------------+-----------------+
                                     |
                                     v
                             EVIDENCE CHECKER
@@ -2931,8 +2944,9 @@ oppositions to the reviewed discovery → stop work → notify sequence:
 For either opposition, Tom Assist returns **Ambiguous** and shows the reviewed
 source and every exact conflicting retrieved source with provenance. It does
 not choose a winner, call the tree, call the language reader or alter learned
-memory. Temporal authority recording remains unavailable, so an operator cannot
-apply the existing party-relationship authority action to event order.
+memory. At this stage temporal authority recording remained unavailable, so an
+operator could not apply the party-relationship authority action to event
+order. The later temporal-authority change below closes that bounded gap.
 
 Three controlled paths now pass: a question phrased in the reversed order, a
 question phrased in the reviewed order, and a continue-work question. Each
@@ -2972,7 +2986,8 @@ The full gateway check then ingested the three-chunk Middleton PDF and the
 the copied RGM retrieval. RGM returned Middleton chunk 2 and Northern Midlands
 chunk 63. Tom Assist returned **Ambiguous** and displayed both exact passages
 with provenance. The answer made zero tree calls, zero language-reader calls
-and no whole-tree score. Temporal authority remained unavailable.
+and no whole-tree score. Temporal authority remained unavailable during this
+real-document diagnostic.
 
 These documents concern different projects and jurisdictions. The result proves
 that real opposing source text remains visible; it does not say the documents
@@ -2985,3 +3000,27 @@ set: 15 true positives, zero false positives and zero false negatives, with no
 tree calls or automatic learning. All 157 native-memory tests pass. Compact
 evidence is in `real_document_temporal_conflict` inside
 `validation/runs/rgm-tom-middleton-live-answer.json`.
+
+### 2026-09-18 — explicit temporal source authority
+
+The next change added a user-controlled decision for the bounded human-remains
+conflict. It does not treat every `before` relationship as the same thing. Each
+record is tied to the exact discovery → stop work → notify-authorities motif,
+the exact retained passage identities and text hashes, an effective time, and
+the user's reason.
+
+The app displays both sides in the authority form. The user may choose either
+the reviewed stop-then-notify passage or the conflicting notify-then-stop
+passage as controlling, then identify the passage it replaces. Before the
+record's effective time, the answer remains **Ambiguous** and shows both
+sources. From the effective time onward, only the chosen exact passage reaches
+evidence checking. The superseded text stays in the RGM library and the ToM
+tree is neither called nor changed.
+
+Two controlled end-to-end cases exercised both possible choices. Both rejected
+a generic `before` scope, rejected a reverse link that would create a cycle,
+kept both sources visible before the effective time, and selected only the
+chosen source afterward. The gateway suite passes **159** checks. The desktop
+suite passes **21** checks and confirms the exact motif scope is returned to the
+gateway. This proves the bounded authority mechanism; it does not decide which
+of the two real documents governs a project.
