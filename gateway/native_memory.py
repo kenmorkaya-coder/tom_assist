@@ -2093,6 +2093,44 @@ class RgmDocumentService:
                 active[record["superseded_source_id"]] = record["superseding_source_id"]
         return active
 
+    @classmethod
+    def source_authority_history(cls, library, as_of=None):
+        """Return verified authority decisions without changing the library or tree."""
+        from datetime import datetime, timezone
+        instant = _canonical_utc_instant(
+            as_of or datetime.now(timezone.utc).isoformat(), "authority history as_of")
+        sources = cls._source_index(library)
+
+        def public_source(source_id):
+            source = sources[source_id]
+            return dict(source_id=source_id, text=source["text"],
+                text_sha256=source["text_sha256"], document_active=source["active"],
+                provenance=copy.deepcopy(source["provenance"]))
+
+        grouped = {}
+        for row in cls._authority_rows(library):
+            record = row["authority"]
+            decision_key = native_digest(dict(
+                authority_scope=row["authority_scope"],
+                superseding_source_id=record["superseding_source_id"],
+                superseding_source_text_sha256=record["superseding_source_text_sha256"],
+                effective_at=record["effective_at"], reason=record["reason"],
+                created_at=record["created_at"]))
+            decision = grouped.setdefault(decision_key, dict(
+                decision_id="AUTH-" + decision_key[:16],
+                relation_kind=record["relation_kind"],
+                authority_scope=copy.deepcopy(row["authority_scope"]),
+                controlling_source=public_source(record["superseding_source_id"]),
+                replaced_sources=[], effective_at=record["effective_at"],
+                reason=record["reason"], created_at=record["created_at"],
+                effective_status=("active" if record["effective_at"] <= instant else "future")))
+            decision["replaced_sources"].append(public_source(record["superseded_source_id"]))
+        decisions = list(grouped.values())
+        for decision in decisions:
+            decision["replaced_sources"].sort(key=lambda item: item["source_id"])
+        decisions.sort(key=lambda item: (item["created_at"], item["decision_id"]), reverse=True)
+        return dict(as_of=instant, decisions=decisions, read_only=True, tree_calls=0)
+
     def resolve_source_authority(self, project_id, library, payload):
         if not NativeMemoryService._inference_lock.acquire(blocking=False):
             raise ValueError("another local document operation is running")

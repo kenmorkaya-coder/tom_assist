@@ -999,6 +999,13 @@ tested. A
 new structure must write non-overlapping tree locations; otherwise it is
 rejected. Only the newest large checkpoint and reference archive are retained.
 
+The Memory screen also exposes a read-only source-authority history. It rebuilds
+each entry from the validated project-library record and its exact retained
+passages, then shows the controlling source, replaced sources, provenance,
+bounded scope, effective time, reason and Active/Future status. Separate user
+actions remain separate audit entries. Reading this history makes zero tree
+calls and cannot edit, revoke or infer an authority decision.
+
 The bounded bridge supports three reviewed event structures: notice before a
 meeting; failure followed by substitute action followed by cost recovery; and
 human remains discovered followed by work stopping followed by authority

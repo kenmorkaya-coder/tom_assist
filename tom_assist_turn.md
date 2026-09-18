@@ -58,6 +58,12 @@ learned structure. The two lanes meet at evidence checking.
                   |                  controlling + replaced passages
                   |                    effective time + reason
                   |                                   |
+                  |                                   v
+                  |                     READ-ONLY AUTHORITY HISTORY
+                  |                     exact passages + provenance
+                  |                     scope + time + reason
+                  |                     active or future-dated
+                  |                                   |
                   +-----------------+-----------------+
                                     |
                                     v
@@ -3047,3 +3053,17 @@ performed no automatic learning and did not invent a conflict from the later
 revision number or date. It is not a successful real authority-resolution
 test, because the sources agree. That gate still requires two genuine versions
 from one project that actually state different procedures.
+
+### 2026-09-18 — read-only source-authority history
+
+The Memory screen now shows every recorded source-authority decision from the
+selected project's verified library. Each entry displays the bounded scope, the
+exact controlling passage, every exact replaced passage, source/chunk
+provenance, the effective time, the user's reason and an Active or Future
+status. Separate user actions remain separate entries; several replacements
+recorded in one action are grouped together.
+
+The server checks the retained record content, hashes, source bindings and cycle
+constraints before returning the history. The view is read-only, makes zero
+tree calls and cannot edit or revoke a decision. Superseded source text remains
+available for audit.

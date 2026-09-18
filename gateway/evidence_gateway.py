@@ -662,7 +662,8 @@ class EvidenceTomGateway(base.TomGateway):
             try:
                 project_id = base._safe_project_id(payload.get("project_id"))
                 action = payload.get("action", "answer")
-                if action not in {"status", "answer", "review_candidates", "learn_situation", "resolve_source_authority"}:
+                if action not in {"status", "answer", "review_candidates", "learn_situation",
+                    "resolve_source_authority", "source_authority_history"}:
                     raise ValueError("unsupported document answer action")
                 if action == "answer" and payload.get("explicit_answer") is not True:
                     raise ValueError("explicit local answer action required")
@@ -691,6 +692,8 @@ class EvidenceTomGateway(base.TomGateway):
                     return 200, service.learn_situation(project_id, library, payload)
                 if action == "resolve_source_authority":
                     return 200, service.resolve_source_authority(project_id, library, payload)
+                if action == "source_authority_history":
+                    return 200, service.source_authority_history(library)
                 return 200, service.answer(project_id, library, payload.get("question"))
             except (ValueError, KeyError, OSError) as error:
                 return 400, {"error": error.__class__.__name__, "message": str(error)}
