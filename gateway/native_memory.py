@@ -522,7 +522,8 @@ def _human_remains_stop_notify_matches(text):
             r"(?:uncovered|found|discovered).{0,100}human\s+remains)\b"),
         "stop_work": (
             r"\b(?:(?:all\s+)?works?.{0,80}(?:must\s+)?(?:immediately\s+)?stop|"
-            r"stop(?:ping|ped|s)?.{0,40}works?)\b"),
+            r"stop(?:ping|ped|s)?.{0,40}works?|"
+            r"(?:immediately\s+)?cease(?:s|d|ing)?\s+(?:all\s+)?works?)\b"),
         "notify_authorities": (
             r"\b(?:notify|notifies|notified|notification|inform|informs|informed)"
             r".{0,180}(?:police|heritage\s+nsw|authorit(?:y|ies))\b"),

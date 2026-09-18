@@ -1,5 +1,5 @@
 {
-  "version": "tom-assist-rgm-tom-middleton-live-answer/2",
+  "version": "tom-assist-rgm-tom-middleton-live-answer/3",
   "status": "COMPLETE",
   "outcome": "PASS",
   "claim_boundary": "One explicitly reviewed Middleton procedure, one correct question, one reversed-order control and one absent-state control through the production RGM, ToM and local evidence-reader path.",
@@ -166,5 +166,158 @@
     "branch_count": 513,
     "terminal_branch_count": 393
   },
-  "temporary_database_deleted": true
+  "temporary_database_deleted": true,
+  "shared_source_binding": {
+    "version": "tom-assist-rgm-tom-middleton-shared-source/1",
+    "status": "COMPLETE",
+    "outcome": "PASS",
+    "initial_scan_failure": {
+      "candidate_count": 0,
+      "scanned_chunks": 42,
+      "diagnosis": "The bounded source grammar accepted stop but not the document wording cease all works."
+    },
+    "repair": "Admit only the bounded cease-all-works wording in the stop-work source event.",
+    "sources": {
+      "first": {
+        "path": "/Volumes/My Passport for Mac/tom_as projects/2026 05 19 - Middleton Submission/Appendix C - Mitigation Measures.pdf",
+        "pdf_sha256": "7e31e674bd1f9f36a20ef81cf6485c8a7e48091a70a942c38f9f0daaac9c9c3a",
+        "extracted_text_sha256": "6cf39fca2ab28934f854d1df35a86a6d39cbac89adfda65bcef9cec86baf8374",
+        "document_id": "document-6cf39fca2ab28934f854d1df35a86a6d",
+        "chunk_count": 3,
+        "reviewed_chunk_index": 2,
+        "source_id": "SRC-9d8cbc0c04312130"
+      },
+      "second": {
+        "path": "/Volumes/My Passport for Mac/tom_as projects/2026 05 19 - Middleton Submission/Appendix AB - Aboriginal Cultural Heritage Assessment.pdf",
+        "pdf_sha256": "11929bf098a5684884871fddd969fefe0aeab23d81e23dc23c700b4774e04421",
+        "extracted_text_sha256": "031ead1f43434e2a74f649a6e17f2b40566ffdf9bcbe491f6a188e9fa7924dc9",
+        "document_id": "document-031ead1f43434e2a74f649a6e17f2b40",
+        "chunk_count": 42,
+        "candidate_chunk_indexes": [
+          1,
+          39
+        ],
+        "reviewed_chunk_index": 39,
+        "source_id": "SRC-dfde6a8b9534fd7b",
+        "matched_events": [
+          {
+            "kind": "human_remains_discovered",
+            "start": 1929,
+            "end": 1985,
+            "text": "human remains\n\nIf suspected human remains are discovered"
+          },
+          {
+            "kind": "stop_work",
+            "start": 2162,
+            "end": 2189,
+            "text": "Immediately cease all works"
+          },
+          {
+            "kind": "notify_authorities",
+            "start": 2295,
+            "end": 2355,
+            "text": "Notify the NSW Police and the Environment Line (Heritage NSW"
+          }
+        ]
+      }
+    },
+    "queue": {
+      "scanned_chunks": 45,
+      "second_source_candidate_count": 2,
+      "tree_calls": 0,
+      "automatic_learning": false
+    },
+    "learning": {
+      "first_write_count": 768,
+      "second_write_count": 0,
+      "second_bound_existing_relationships": 2,
+      "reviewed_source_records": 2,
+      "learned_relationship_memories": 2
+    },
+    "recall": {
+      "question": "Find where human remains are discovered, work stops, and the manager then notifies authorities.",
+      "status": "recalled",
+      "query_routes": 2,
+      "recalled_source_ids": [
+        "SRC-9d8cbc0c04312130",
+        "SRC-dfde6a8b9534fd7b"
+      ],
+      "all_branch_cell_coordinates_compared": true,
+      "whole_tree_score": false,
+      "tree_unchanged": true,
+      "evidence_scope": {
+        "mode": "reviewed_tom_sources",
+        "source_ids": [
+          "SRC-9d8cbc0c04312130",
+          "SRC-dfde6a8b9534fd7b"
+        ],
+        "candidate_count": 2,
+        "selected_count": 2
+      },
+      "reopened_sources": [
+        {
+          "source_id": "SRC-9d8cbc0c04312130",
+          "document_id": "document-6cf39fca2ab28934f854d1df35a86a6d",
+          "display_name": "Appendix C - Mitigation Measures.pdf",
+          "chunk_id": "chunk_2",
+          "start": 7931,
+          "end": 10714,
+          "text_sha256": "41258e500f220da2a98b060b58d8d2eceeb44a06a426e8b200ac90854c6a96db"
+        },
+        {
+          "source_id": "SRC-dfde6a8b9534fd7b",
+          "document_id": "document-031ead1f43434e2a74f649a6e17f2b40",
+          "display_name": "Appendix AB - Aboriginal Cultural Heritage Assessment.pdf",
+          "chunk_id": "chunk_39",
+          "start": 90227,
+          "end": 93644,
+          "text_sha256": "2dfdd55d0f60057cb3a6c593bf88fe8907a8416f064c047b10b56469e9198e6c"
+        }
+      ]
+    },
+    "tree": {
+      "before_second_source": {
+        "checkpoint_path": "/Volumes/My Passport for Mac/tom_assist_test_results/native_learned_recall/middleton_human_remains_shared_source_probe/middleton-shared-source-probe/tree-2.pkl",
+        "checkpoint_sha256": "d7450c88fab0c095ef0ddb66f2bc8d2b4ce3d87132900a7b882df00e5a72ace9",
+        "checkpoint_size": 233213726,
+        "checkpoint_mtime_ns": 1789698262000000000,
+        "reference_path": "/Volumes/My Passport for Mac/tom_assist_test_results/native_learned_recall/middleton_human_remains_shared_source_probe/middleton-shared-source-probe/references-2.npz",
+        "reference_sha256": "45d48be1d069f9f83f6da4b8f39d44e1d4adf15e44e330919bf7b78ff05513a2",
+        "reference_size": 6091376,
+        "reference_mtime_ns": 1789698263000000000,
+        "state_hash": "d8b66790c29315149b90eea188c84aed1d37e0259f57f496b1f74a4aa6b7b750",
+        "branch_count": 513,
+        "terminal_branch_count": 393
+      },
+      "after_second_source": {
+        "checkpoint_path": "/Volumes/My Passport for Mac/tom_assist_test_results/native_learned_recall/middleton_human_remains_shared_source_probe/middleton-shared-source-probe/tree-2.pkl",
+        "checkpoint_sha256": "d7450c88fab0c095ef0ddb66f2bc8d2b4ce3d87132900a7b882df00e5a72ace9",
+        "checkpoint_size": 233213726,
+        "checkpoint_mtime_ns": 1789698262000000000,
+        "reference_path": "/Volumes/My Passport for Mac/tom_assist_test_results/native_learned_recall/middleton_human_remains_shared_source_probe/middleton-shared-source-probe/references-2.npz",
+        "reference_sha256": "45d48be1d069f9f83f6da4b8f39d44e1d4adf15e44e330919bf7b78ff05513a2",
+        "reference_size": 6091376,
+        "reference_mtime_ns": 1789698263000000000,
+        "state_hash": "d8b66790c29315149b90eea188c84aed1d37e0259f57f496b1f74a4aa6b7b750",
+        "branch_count": 513,
+        "terminal_branch_count": 393
+      },
+      "after_recall": {
+        "checkpoint_path": "/Volumes/My Passport for Mac/tom_assist_test_results/native_learned_recall/middleton_human_remains_shared_source_probe/middleton-shared-source-probe/tree-2.pkl",
+        "checkpoint_sha256": "d7450c88fab0c095ef0ddb66f2bc8d2b4ce3d87132900a7b882df00e5a72ace9",
+        "checkpoint_size": 233213726,
+        "checkpoint_mtime_ns": 1789698262000000000,
+        "reference_path": "/Volumes/My Passport for Mac/tom_assist_test_results/native_learned_recall/middleton_human_remains_shared_source_probe/middleton-shared-source-probe/references-2.npz",
+        "reference_sha256": "45d48be1d069f9f83f6da4b8f39d44e1d4adf15e44e330919bf7b78ff05513a2",
+        "reference_size": 6091376,
+        "reference_mtime_ns": 1789698263000000000,
+        "state_hash": "d8b66790c29315149b90eea188c84aed1d37e0259f57f496b1f74a4aa6b7b750",
+        "branch_count": 513,
+        "terminal_branch_count": 393
+      },
+      "unchanged": true
+    },
+    "temporary_database_deleted": true,
+    "temporary_duplicate_tree_deleted": true
+  }
 }

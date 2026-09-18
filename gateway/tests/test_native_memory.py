@@ -1491,6 +1491,12 @@ def test_human_remains_stop_notify_receipt_requires_one_local_ordered_procedure(
     assert len(rgm_temporal_motif_receipt(
         dict(source_id="SRC-human-remains", text=valid),
         HUMAN_REMAINS_STOP_NOTIFY_MOTIF)) == 64
+    cease_wording = ("If suspected human remains are discovered in the Project Area, "
+        "immediately cease all works at that location, secure the area, and notify "
+        "the NSW Police and Heritage NSW.")
+    assert len(rgm_temporal_motif_receipt(
+        dict(source_id="SRC-human-remains-cease", text=cease_wording),
+        HUMAN_REMAINS_STOP_NOTIFY_MOTIF)) == 64
     reversed_text = ("If human remains are found, the supervisor must notify Police before "
         "all works immediately stop.")
     with pytest.raises(ValueError, match="one local human-remains"):
@@ -1558,6 +1564,61 @@ def test_reviewed_human_remains_chain_uses_tom_for_order_and_rejects_controls(tm
         assert absent["status"] == "reviewed_structure_contradiction"
         assert absent["recalled_source_ids"] == [learned["source_id"]]
         assert len(calls) == calls_before_controls
+    finally:
+        library.db.close()
+
+
+def test_human_remains_cease_wording_binds_existing_memory_without_tree_write(tmp_path):
+    from gateway.native_memory import (HUMAN_REMAINS_STOP_NOTIFY_MOTIF,
+        RgmDocumentService, bind_recalled_rgm_evidence,
+        rgm_candidate_source_id)
+    from gateway.permanent_library import PermanentLibrary
+    library = PermanentLibrary(tmp_path / "human-remains-shared-source.sqlite3")
+    calls = []
+    service = RgmDocumentService(worker=_rgm_app_worker([]), model_identity="fixture-model",
+        tom_worker=_reviewed_tom_worker(calls), tom_profile=_reviewed_tom_profile())
+    first_text = ("Clearly identifiable human remains were uncovered. All works within the "
+        "vicinity must immediately stop. The manager must notify NSW Police and Heritage NSW.")
+    second_text = ("Suspected human remains are discovered in the Project Area. Immediately "
+        "cease all works at that location, secure the area, and notify the NSW Police and "
+        "Heritage NSW.")
+    try:
+        first_document = service.ingest("project", library, dict(explicit_user_action=True,
+            display_name="Mitigation Measures", content=first_text, media_type="text/plain"))
+        first = service.learn_situation("project", library, dict(explicit_user_action=True,
+            document_id=first_document["document_id"], chunk_index=0,
+            temporal_motif=HUMAN_REMAINS_STOP_NOTIFY_MOTIF))
+        assert first["write_count"] == 2
+        calls_after_first = len(calls)
+
+        second_document = service.ingest("project", library, dict(explicit_user_action=True,
+            display_name="Cultural Heritage Assessment", content=second_text,
+            media_type="text/plain"))
+        candidate = next(row for row in service.review_candidates(library)["candidates"]
+            if row["document_id"] == second_document["document_id"])
+        assert [event["kind"] for event in candidate["events"]] == [
+            "human_remains_discovered", "stop_work", "notify_authorities"]
+        assert candidate["events"][1]["text"] == "Immediately cease all works"
+        second = service.learn_situation("project", library, dict(explicit_user_action=True,
+            document_id=second_document["document_id"], chunk_index=0,
+            temporal_motif=HUMAN_REMAINS_STOP_NOTIFY_MOTIF))
+        assert second["write_count"] == 0
+        assert second["bound_existing_relationships"] == 2
+        assert len(calls) == calls_after_first
+
+        recalled = service.recall_situations("project", library, dict(memories=[]),
+            "Human remains are discovered, work stops, and the manager then notifies authorities.",
+            "2026-09-18T00:00:00Z")
+        expected = {first["source_id"], second["source_id"]}
+        assert recalled["status"] == "recalled"
+        assert set(recalled["recalled_source_ids"]) == expected
+        assert recalled["all_branch_cell_coordinates_compared"] is True
+        assert recalled["whole_tree_score"] is False
+        expanded = service._restore_recalled_sources(library, dict(memories=[]), recalled)
+        selected, scope = bind_recalled_rgm_evidence(expanded, recalled)
+        assert {rgm_candidate_source_id(memory) for memory in selected} == expected
+        assert {memory["content"] for memory in selected} == {first_text, second_text}
+        assert scope["selected_count"] == 2
     finally:
         library.db.close()
 

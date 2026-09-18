@@ -2797,3 +2797,38 @@ deleted.
 
 Verification passes all 147 native-memory tests and all 20 desktop tests.
 TypeScript checking and the production desktop interface build also pass.
+
+### 2026-09-18 — second human-remains source without a duplicate memory
+
+The next check changed only the source wording. It used `Appendix AB -
+Aboriginal Cultural Heritage Assessment.pdf`, SHA-256
+`11929bf098a5684884871fddd969fefe0aeab23d81e23dc23c700b4774e04421`.
+The existing RGM path produced 42 chunks. The procedure says suspected human
+remains are discovered, personnel must `immediately cease all works`, secure
+the area, and notify NSW Police and Heritage NSW.
+
+The first read-only scan returned zero candidates. No tree call occurred. The
+diagnosis was exact: the bounded source grammar accepted `stop work` but did
+not accept `cease all works`. The repair added only that stop-work wording. It
+did not change the motif, tree, routes, selector or question grammar.
+
+The unchanged document then produced two valid queue candidates: its summary
+at RGM chunk 1 and its main recommendation at chunk 39. The main recommendation
+was explicitly reviewed. Appendix C had already written the two learned event
+relationships; Appendix AB bound to those same relationships with:
+
+- **0** new tree writes;
+- **2** existing relationship bindings; and
+- **2** learned relationship memories in total.
+
+An actual two-route ToM recall with an empty RGM candidate packet reopened both
+exact passages: Appendix C chunk 2 and Appendix AB chunk 39. It compared every
+native branch/cell coordinate and used no whole-tree score. The 513-branch
+checkpoint, 393 terminal branches, complete reference fields, file sizes,
+hashes, modification times and tree state hash were identical before binding,
+after binding and after recall.
+
+The temporary duplicate checkpoint and temporary database were deleted. The
+compact evidence is retained in the `shared_source_binding` section of
+`validation/runs/rgm-tom-middleton-live-answer.json`. The native-memory suite
+now passes 148/148.

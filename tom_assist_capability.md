@@ -232,6 +232,20 @@ The scan:
 - performs no automatic learning; and
 - repeats source-local validation when the user chooses Save.
 
+A second source document, the Middleton Aboriginal Cultural Heritage
+Assessment, expresses the same procedure as `immediately cease all works`.
+The first read-only scan found zero candidates across its 42 RGM chunks. The
+cause was narrow and visible: the bounded source grammar accepted `stop` but
+not `cease`. Adding only the `cease all works` wording exposed the procedure in
+the document summary and in the main recommendation.
+
+The main recommendation was reviewed and attached to the two existing learned
+relationships with **zero new tree writes**. One actual two-route ToM recall
+then reopened the exact Appendix C and Appendix AB passages together. The
+513-branch checkpoint, complete signed 32×32 reference fields and state hash
+were unchanged. This establishes bounded shared-source binding across two
+differently worded documents; it does not establish general paraphrase parsing.
+
 On the two frozen contract corpora, the local-procedure detector found 12 valid
 passages across 563 native chunks. Nearby clauses lacking substitute
 performance and a deliberately separated phrase control were rejected. This is
@@ -315,7 +329,7 @@ These counts describe the relevant integration suite at the recorded revision;
 they are not a general accuracy score.
 
 The later unseen-document access repair passed all **144** native-memory tests.
-The Middleton live-answer repair passes all **147** native-memory tests. The
+The Middleton shared-source repair passes all **148** native-memory tests. The
 desktop suite passes **20** tests, TypeScript checking passes, and the production
 desktop interface build passes.
 The broader gateway run recorded 590 passes, one expected skip, one unrelated
@@ -339,7 +353,8 @@ Compact and reviewable evidence is retained in the repository:
 - [validation/runs/rgm-tom-middleton-sequence-generalisation.json](validation/runs/rgm-tom-middleton-sequence-generalisation.json)
   — compact different-project-family order-discrimination result; and
 - [validation/runs/rgm-tom-middleton-live-answer.json](validation/runs/rgm-tom-middleton-live-answer.json)
-  — initial live-answer failure, diagnosis and repaired end-to-end result; and
+  — initial live-answer failure, repaired end-to-end result and differently
+  worded shared-source binding; and
 - [gateway/tests/test_native_memory.py](gateway/tests/test_native_memory.py) —
   source binding, structural recall, conflict and evidence-boundary checks.
 
@@ -353,10 +368,8 @@ The next work should extend capability one variable at a time:
 
 1. Measure false positives and misses in the expanded read-only review queue
    before admitting any further structure.
-2. Review a second independently worded human-remains source, bind it without a
-   second tree write, and verify that both exact sources reopen.
-3. Exercise conflict and explicit-authority handling for this temporal motif.
-4. Keep exact evidence selection and conflict presentation separate from
+2. Exercise conflict and explicit-authority handling for this temporal motif.
+3. Keep exact evidence selection and conflict presentation separate from
    structural recall.
-5. Do not introduce branch averaging, a whole-tree score or automatic teaching
+4. Do not introduce branch averaging, a whole-tree score or automatic teaching
    to make a failed result look successful.
