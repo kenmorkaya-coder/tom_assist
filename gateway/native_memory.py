@@ -434,6 +434,9 @@ NOTICE_MEETING_MOTIF = dict(
 FAILURE_STEP_IN_COST_MOTIF = dict(
     relation_kind="sequence", source_event="failure",
     intermediate_event="substitute_action", target_event="cost_recovery")
+HUMAN_REMAINS_STOP_NOTIFY_MOTIF = dict(
+    relation_kind="sequence", source_event="human_remains_discovered",
+    intermediate_event="stop_work", target_event="notify_authorities")
 
 
 def _failure_step_in_cost_matches(text):
@@ -506,6 +509,36 @@ def _failure_step_in_cost_matches(text):
             span = max(match.end() for match in matches.values()) - min(
                 match.start() for match in matches.values())
             candidates.append((span, matches))
+    return min(candidates, key=lambda item: item[0])[1] if candidates else None
+
+
+def _human_remains_stop_notify_matches(text):
+    """Locate one local human-remains discovery -> stop-work -> notify procedure."""
+    import itertools
+    import re
+    patterns = {
+        "human_remains_discovered": (
+            r"\b(?:human\s+remains.{0,100}(?:uncovered|found|discovered)|"
+            r"(?:uncovered|found|discovered).{0,100}human\s+remains)\b"),
+        "stop_work": (
+            r"\b(?:(?:all\s+)?works?.{0,80}(?:must\s+)?(?:immediately\s+)?stop|"
+            r"stop(?:ping|ped|s)?.{0,40}works?)\b"),
+        "notify_authorities": (
+            r"\b(?:notify|notifies|notified|notification|inform|informs|informed)"
+            r".{0,180}(?:police|heritage\s+nsw|authorit(?:y|ies))\b"),
+    }
+    found = {name: list(re.finditer(pattern, text, re.I | re.S))
+        for name, pattern in patterns.items()}
+    candidates = []
+    for discovery, stop, notify in itertools.product(
+        found["human_remains_discovered"], found["stop_work"],
+        found["notify_authorities"]):
+        matches = dict(human_remains_discovered=discovery,
+            stop_work=stop, notify_authorities=notify)
+        if discovery.start() < stop.start() < notify.start():
+            span = notify.end() - discovery.start()
+            if span <= 1200:
+                candidates.append((span, matches))
     return min(candidates, key=lambda item: item[0])[1] if candidates else None
 
 
@@ -599,6 +632,11 @@ def rgm_temporal_motif_receipt(source, motif):
         if matches is None:
             raise ValueError(
                 "the exact source must contain one local failure, substitute action, and cost-recovery procedure")
+    elif motif == HUMAN_REMAINS_STOP_NOTIFY_MOTIF:
+        matches = _human_remains_stop_notify_matches(text)
+        if matches is None:
+            raise ValueError(
+                "the exact source must contain one local human-remains discovery, stop-work, and notification procedure")
     else:
         raise ValueError("unsupported reviewed event motif")
     return native_digest(dict(schema=RGM_SITUATION_VERSION, source_id=source_id,
@@ -725,6 +763,11 @@ def build_rgm_situation_memory(source, roles, verification, *, temporal_motif=No
             if matches is None:
                 raise ValueError("reviewed event motif is absent from its exact source")
             offsets = {name: [match.start(), match.end()] for name, match in matches.items()}
+        elif temporal_motif == HUMAN_REMAINS_STOP_NOTIFY_MOTIF:
+            matches = _human_remains_stop_notify_matches(text)
+            if matches is None:
+                raise ValueError("reviewed event motif is absent from its exact source")
+            offsets = {name: [match.start(), match.end()] for name, match in matches.items()}
         else:
             raise ValueError("unsupported reviewed event motif")
     if (not isinstance(verification, dict)
@@ -754,6 +797,17 @@ def build_rgm_situation_memory(source, roles, verification, *, temporal_motif=No
                     target=entity_ids[temporal_motif["intermediate_event"]],
                     source_role="source_event", target_role="target_event"),
                 dict(id="substitute_action_before_cost_recovery", kind="before",
+                    source=entity_ids[temporal_motif["intermediate_event"]],
+                    target=entity_ids[temporal_motif["target_event"]],
+                    source_role="source_event", target_role="target_event"),
+            ]
+        elif temporal_motif == HUMAN_REMAINS_STOP_NOTIFY_MOTIF:
+            relations = [
+                dict(id="human_remains_discovered_before_stop_work", kind="before",
+                    source=entity_ids[temporal_motif["source_event"]],
+                    target=entity_ids[temporal_motif["intermediate_event"]],
+                    source_role="source_event", target_role="target_event"),
+                dict(id="stop_work_before_notify_authorities", kind="before",
                     source=entity_ids[temporal_motif["intermediate_event"]],
                     target=entity_ids[temporal_motif["target_event"]],
                     source_role="source_event", target_role="target_event"),
@@ -962,6 +1016,56 @@ def reviewed_query_situation(question, memories):
     ]
     available_temporal = {
         (item.get("source_event"), item.get("target_event")) for item in temporal}
+    remains_chain = [
+        dict(relation_kind="before", source_event="human_remains_discovered",
+            target_event="stop_work"),
+        dict(relation_kind="before", source_event="stop_work",
+            target_event="notify_authorities"),
+    ]
+    discovery = re.search(
+        r"\b(?:human\s+remains.{0,80}(?:uncovered|found|discovered)|"
+        r"(?:uncovered|found|discovered).{0,80}human\s+remains)\b", question,
+        re.I | re.S)
+    stop_work = re.search(
+        r"\b(?:(?:all\s+)?works?.{0,60}(?:stop|stops|stopped)|"
+        r"stop(?:ping|ped|s)?.{0,30}works?)\b", question, re.I | re.S)
+    notify_authorities = re.search(
+        r"\b(?:notify|notifies|notified|notifying|notification|inform|informs|informed)"
+        r".{0,120}(?:police|heritage\s+nsw|authorit(?:y|ies))\b", question,
+        re.I | re.S)
+    if (discovery is not None and stop_work is not None
+        and notify_authorities is not None
+        and discovery.start() < stop_work.start() < notify_authorities.start()
+        and {(item["source_event"], item["target_event"])
+            for item in remains_chain} <= available_temporal):
+        return dict(status="complete", fields=remains_chain[0],
+            relationships=remains_chain,
+            motif="human_remains_discovery_stop_work_notify_authorities",
+            spans=[
+                dict(field="human_remains_discovered", start=discovery.start(),
+                    end=discovery.end(), text=discovery.group()),
+                dict(field="stop_work", start=stop_work.start(),
+                    end=stop_work.end(), text=stop_work.group()),
+                dict(field="notify_authorities", start=notify_authorities.start(),
+                    end=notify_authorities.end(), text=notify_authorities.group()),
+            ],
+            method="explicit human-remains, stop-work, notification sequence resolved from the question")
+    if (stop_work is not None and notify_authorities is not None
+        and ("stop_work", "notify_authorities") in available_temporal):
+        reversed_order = bool(re.search(
+            r"\b(?:notify|notifies|notified|notifying|inform|informs|informed)\b"
+            r".{0,160}\bbefore\b.{0,160}\b(?:work|works)\b.{0,40}\bstop",
+            question, re.I | re.S))
+        fields = (dict(relation_kind="before", source_event="notify_authorities",
+            target_event="stop_work") if reversed_order else remains_chain[1])
+        return dict(status="complete", fields=fields,
+            spans=[
+                dict(field="stop_work", start=stop_work.start(),
+                    end=stop_work.end(), text=stop_work.group()),
+                dict(field="notify_authorities", start=notify_authorities.start(),
+                    end=notify_authorities.end(), text=notify_authorities.group()),
+            ],
+            method="explicit stop-work and authority-notification order resolved from the question")
     failure = re.search(
         r"\b(?:fail(?:s|ed|ure)?|not\s+done|does\s+not\s+comply|required\s+action\s+is\s+not\s+done)\b",
         question, re.I)

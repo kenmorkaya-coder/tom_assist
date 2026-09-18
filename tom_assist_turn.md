@@ -2681,3 +2681,61 @@ The broader sandboxed gateway run completed with 590 passes, one expected skip,
 one unrelated pre-existing event-graph fixture-overlap failure and five OAuth
 setup errors caused by denied local socket binding. The OAuth file was rerun
 outside that socket restriction and passed 8/8.
+
+### 2026-09-18 — Middleton event-order generalisation
+
+The next diagnostic changed both project family and reviewed structure. It used
+`Appendix C - Mitigation Measures.pdf` from the Middleton planning submission,
+SHA-256
+`7e31e674bd1f9f36a20ef81cf6485c8a7e48091a70a942c38f9f0daaac9c9c3a`.
+The unchanged RGM extractor produced three chunks. Chunk 2 contains a local
+procedure in which clearly identifiable human remains are uncovered, nearby
+work immediately stops, the find is secured, and Police and Heritage NSW are
+notified.
+
+The baseline isolated database contained six documents and eight native RGM
+chunks. RGM returned the target for both correct structural questions, but it
+also returned it at rank 1 for the reversed notification-before-stop question
+and rank 2 for the false continue-excavation question. This showed that RGM had
+good access to the topic while leaving the event order and stop/continue state
+unresolved.
+
+One bounded source grammar and two event relations were then added:
+
+```text
+human_remains_discovered → stop_work → notify_authorities
+```
+
+The source guard requires those three events to occur locally in that order. A
+reversed-source control is rejected. Query parsing admits either the explicit
+stop-work-before-notification pair or the complete three-event chain. Reversed
+order is represented as a different relationship and is rejected before a tree
+call; a continue-work question contains no admitted structure.
+
+A fresh copy of the approved small Stream 1 fixture learned the two relations.
+The resulting tree had 513 branches and 393 terminal return branches. The
+correct pair recalled the exact RGM source through one route, and the complete
+chain recalled it through two independent routes. The reversed and absent
+controls returned no structural source. The topic-only question remained an
+RGM question because it did not state an ordered relationship.
+
+Every successful route compared the complete signed branch-local 32×32 field
+and exact native slot map. There was no whole-tree score or branch averaging.
+The 233,213,726-byte checkpoint had SHA-256
+`9eb96cf72ed2a413fba3f37e2097f773cb6e87d2490e589d95919376c9b1bc13`
+and state hash
+`d8b66790c29315149b90eea188c84aed1d37e0259f57f496b1f74a4aa6b7b750`
+before and after recall. The 6,091,380-byte full-field archive also retained its
+SHA-256
+`b149755816c7ee5e9b42e4b95093b9bd0ced1217083dbd7fdb56457e7a93ecd8`.
+
+The large checkpoint and field archive are stored only under
+`/Volumes/My Passport for Mac/tom_assist_test_results/native_learned_recall/middleton_human_remains_v1/`.
+The compact result is
+`validation/runs/rgm-tom-middleton-sequence-generalisation.json`. Temporary
+diagnostic databases were deleted. The native-memory suite passes 146/146.
+
+This remains a bounded test of one explicitly reviewed procedure. It does not
+show automatic structure discovery, arbitrary event-graph parsing or general
+accuracy across planning documents. The desktop review queue does not yet
+offer this new structure.

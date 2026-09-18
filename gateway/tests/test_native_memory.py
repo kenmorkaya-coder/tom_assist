@@ -1001,6 +1001,10 @@ def _reviewed_tom_worker(calls, *, damage=None):
                 dict(relation_kind="before", source_event="notify", target_event="meeting"),
                 dict(relation_kind="before", source_event="failure", target_event="substitute_action"),
                 dict(relation_kind="before", source_event="substitute_action", target_event="cost_recovery"),
+                dict(relation_kind="before", source_event="human_remains_discovered",
+                    target_event="stop_work"),
+                dict(relation_kind="before", source_event="stop_work",
+                    target_event="notify_authorities"),
             )
             def key(item):
                 endpoints = (("source_event", "target_event") if item["relation_kind"] == "before"
@@ -1474,6 +1478,74 @@ def test_reviewed_failure_step_in_cost_chain_recalls_sources_without_rgm_candida
         assert returned["linked_source_count"] == 2
         assert [call[0] for call in calls] == [
             "rgm_tom_learn", "rgm_tom_recall", "rgm_tom_recall"]
+    finally:
+        library.db.close()
+
+
+def test_human_remains_stop_notify_receipt_requires_one_local_ordered_procedure():
+    from gateway.native_memory import (HUMAN_REMAINS_STOP_NOTIFY_MOTIF,
+        rgm_temporal_motif_receipt)
+    valid = ("Should clearly identifiable human remains be uncovered, all works within the "
+        "vicinity must immediately stop. The site supervisor must notify the NSW Police and "
+        "Heritage NSW.")
+    assert len(rgm_temporal_motif_receipt(
+        dict(source_id="SRC-human-remains", text=valid),
+        HUMAN_REMAINS_STOP_NOTIFY_MOTIF)) == 64
+    reversed_text = ("If human remains are found, the supervisor must notify Police before "
+        "all works immediately stop.")
+    with pytest.raises(ValueError, match="one local human-remains"):
+        rgm_temporal_motif_receipt(
+            dict(source_id="SRC-reversed", text=reversed_text),
+            HUMAN_REMAINS_STOP_NOTIFY_MOTIF)
+
+
+def test_reviewed_human_remains_chain_uses_tom_for_order_and_rejects_controls(tmp_path):
+    from gateway.native_memory import (HUMAN_REMAINS_STOP_NOTIFY_MOTIF,
+        RgmDocumentService)
+    from gateway.permanent_library import PermanentLibrary
+    library = PermanentLibrary(tmp_path / "human-remains-chain.sqlite3")
+    calls = []
+    service = RgmDocumentService(worker=_rgm_app_worker([]), model_identity="fixture-model",
+        tom_worker=_reviewed_tom_worker(calls), tom_profile=_reviewed_tom_profile())
+    text = ("Unexpected finds procedure\nShould clearly identifiable human remains be uncovered "
+        "anywhere within the site, all works within the vicinity must immediately stop. The find "
+        "must be cordoned off. The site supervisor must notify the NSW Police and Heritage NSW.")
+    try:
+        document = service.ingest("project", library, dict(explicit_user_action=True,
+            display_name="Middleton mitigation measures", content=text,
+            media_type="text/plain"))
+        learned = service.learn_situation("project", library, dict(
+            explicit_user_action=True, document_id=document["document_id"], chunk_index=0,
+            temporal_motif=HUMAN_REMAINS_STOP_NOTIFY_MOTIF))
+        assert learned["write_count"] == 2
+
+        pair = service.recall_situations("project", library, dict(memories=[]),
+            "Which process stops work before the manager notifies Police and Heritage NSW?",
+            "2026-09-18T00:00:00Z")
+        assert pair["status"] == "recalled"
+        assert pair["recalled_source_ids"] == [learned["source_id"]]
+        assert pair["whole_tree_score"] is False
+        assert pair["all_branch_cell_coordinates_compared"] is True
+
+        chain = service.recall_situations("project", library, dict(memories=[]),
+            "Find where human remains are discovered, work stops, and the manager then notifies authorities.",
+            "2026-09-18T00:00:00Z")
+        assert chain["status"] == "recalled"
+        assert chain["recalled_source_ids"] == [learned["source_id"]]
+        assert chain["query_routes"] == 2
+        assert chain["whole_tree_score"] is False
+        assert chain["all_branch_cell_coordinates_compared"] is True
+
+        calls_before_controls = len(calls)
+        reversed_result = service.recall_situations("project", library, dict(memories=[]),
+            "Which procedure notifies Police before work stops around human remains?",
+            "2026-09-18T00:00:00Z")
+        assert reversed_result["status"] == "no_matching_structure"
+        absent = service.recall_situations("project", library, dict(memories=[]),
+            "What procedure requires excavation to continue after human remains are found?",
+            "2026-09-18T00:00:00Z")
+        assert absent["status"] == "no_query_structure"
+        assert len(calls) == calls_before_controls
     finally:
         library.db.close()
 

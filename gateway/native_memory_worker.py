@@ -75,11 +75,15 @@ def native_memory_worker():
                 if kind == "before":
                     pair = (item.get("source_event"), item.get("target_event"))
                     actions = dict(notify="notify", meeting="approve", failure="stop",
-                        substitute_action="replace", cost_recovery="discharge")
+                        substitute_action="replace", cost_recovery="discharge",
+                        human_remains_discovered="inspect", stop_work="stop",
+                        notify_authorities="notify")
                     if pair not in {
                         ("notify", "meeting"),
                         ("failure", "substitute_action"),
                         ("substitute_action", "cost_recovery"),
+                        ("human_remains_discovered", "stop_work"),
+                        ("stop_work", "notify_authorities"),
                     }:
                         raise ValueError("unsupported reviewed temporal motif")
                     text = " ".join(pair) if query else item["text"]

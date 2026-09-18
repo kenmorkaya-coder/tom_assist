@@ -1,0 +1,159 @@
+{
+  "version": "tom-assist-rgm-tom-middleton-sequence-generalisation/1",
+  "status": "COMPLETE",
+  "claim_boundary": "One Middleton mitigation document, one explicitly reviewed human-remains discovery/stop-work/notification sequence, two correct structural queries and three controls.",
+  "source": {
+    "path": "/Volumes/My Passport for Mac/tom_as projects/2026 05 19 - Middleton Submission/Appendix C - Mitigation Measures.pdf",
+    "sha256": "7e31e674bd1f9f36a20ef81cf6485c8a7e48091a70a942c38f9f0daaac9c9c3a",
+    "target_source_id": "SRC-aaa43cf06e5c3b18"
+  },
+  "rgm_alone": {
+    "imported_chunk_count": 3,
+    "project_document_count": 6,
+    "project_chunk_count": 8,
+    "target_chunk_index": 2,
+    "target_source_id": "SRC-aaa43cf06e5c3b18",
+    "results": [
+      {
+        "kind": "topic_only",
+        "question": "What procedure applies after clearly identifiable human remains are uncovered?",
+        "target_in_packet": true,
+        "target_rank": 1,
+        "packet_size": 5,
+        "native_candidate_count": 8
+      },
+      {
+        "kind": "correct_pair",
+        "question": "Which process stops nearby work before the manager notifies Police and Heritage NSW?",
+        "target_in_packet": true,
+        "target_rank": 2,
+        "packet_size": 5,
+        "native_candidate_count": 8
+      },
+      {
+        "kind": "correct_chain",
+        "question": "Find where human remains are discovered, work stops, and the manager then notifies authorities.",
+        "target_in_packet": true,
+        "target_rank": 1,
+        "packet_size": 5,
+        "native_candidate_count": 8
+      },
+      {
+        "kind": "reversed",
+        "question": "Which procedure notifies Police and Heritage NSW before work stops around human remains?",
+        "target_in_packet": true,
+        "target_rank": 1,
+        "packet_size": 5,
+        "native_candidate_count": 8
+      },
+      {
+        "kind": "absent",
+        "question": "What procedure requires excavation to continue after human remains are found?",
+        "target_in_packet": true,
+        "target_rank": 2,
+        "packet_size": 5,
+        "native_candidate_count": 8
+      }
+    ],
+    "live_database_unchanged": true
+  },
+  "tom": {
+    "target_source_id": "SRC-aaa43cf06e5c3b18",
+    "learned_relationship_count": 2,
+    "write_count": 768,
+    "tree": {
+      "before": {
+        "checkpoint_sha256": "9eb96cf72ed2a413fba3f37e2097f773cb6e87d2490e589d95919376c9b1bc13",
+        "checkpoint_size": 233213726,
+        "checkpoint_mtime_ns": 1789695645000000000,
+        "state_hash": "d8b66790c29315149b90eea188c84aed1d37e0259f57f496b1f74a4aa6b7b750",
+        "reference_sha256": "b149755816c7ee5e9b42e4b95093b9bd0ced1217083dbd7fdb56457e7a93ecd8",
+        "reference_size": 6091380
+      },
+      "after": {
+        "checkpoint_sha256": "9eb96cf72ed2a413fba3f37e2097f773cb6e87d2490e589d95919376c9b1bc13",
+        "checkpoint_size": 233213726,
+        "checkpoint_mtime_ns": 1789695645000000000,
+        "state_hash": "d8b66790c29315149b90eea188c84aed1d37e0259f57f496b1f74a4aa6b7b750",
+        "reference_sha256": "b149755816c7ee5e9b42e4b95093b9bd0ced1217083dbd7fdb56457e7a93ecd8",
+        "reference_size": 6091380
+      },
+      "unchanged": true,
+      "checkpoint_path": "/Volumes/My Passport for Mac/tom_assist_test_results/native_learned_recall/middleton_human_remains_v1/middleton-human-remains-v1/tree-2.pkl",
+      "reference_path": "/Volumes/My Passport for Mac/tom_assist_test_results/native_learned_recall/middleton_human_remains_v1/middleton-human-remains-v1/references-2.npz",
+      "branch_count": 513,
+      "terminal_branch_count": 393
+    },
+    "recalls": [
+      {
+        "kind": "topic_only",
+        "question": "What procedure applies after clearly identifiable human remains are uncovered?",
+        "status": "no_query_structure",
+        "recalled_source_ids": [],
+        "target_recalled": false,
+        "query_routes": 0,
+        "whole_tree_score": false,
+        "all_branch_cell_coordinates_compared": false,
+        "tree_unchanged": null,
+        "reason": "question_source_party_not_unique"
+      },
+      {
+        "kind": "correct_pair",
+        "question": "Which process stops nearby work before the manager notifies Police and Heritage NSW?",
+        "status": "recalled",
+        "recalled_source_ids": [
+          "SRC-aaa43cf06e5c3b18"
+        ],
+        "target_recalled": true,
+        "query_routes": 1,
+        "whole_tree_score": false,
+        "all_branch_cell_coordinates_compared": true,
+        "tree_unchanged": true,
+        "reason": null
+      },
+      {
+        "kind": "correct_chain",
+        "question": "Find where human remains are discovered, work stops, and the manager then notifies authorities.",
+        "status": "recalled",
+        "recalled_source_ids": [
+          "SRC-aaa43cf06e5c3b18"
+        ],
+        "target_recalled": true,
+        "query_routes": 2,
+        "whole_tree_score": false,
+        "all_branch_cell_coordinates_compared": true,
+        "tree_unchanged": true,
+        "reason": null
+      },
+      {
+        "kind": "reversed",
+        "question": "Which procedure notifies Police and Heritage NSW before work stops around human remains?",
+        "status": "no_matching_structure",
+        "recalled_source_ids": [],
+        "target_recalled": false,
+        "query_routes": 0,
+        "whole_tree_score": false,
+        "all_branch_cell_coordinates_compared": false,
+        "tree_unchanged": null,
+        "reason": null
+      },
+      {
+        "kind": "absent",
+        "question": "What procedure requires excavation to continue after human remains are found?",
+        "status": "no_query_structure",
+        "recalled_source_ids": [],
+        "target_recalled": false,
+        "query_routes": 0,
+        "whole_tree_score": false,
+        "all_branch_cell_coordinates_compared": false,
+        "tree_unchanged": null,
+        "reason": "question_source_party_not_unique"
+      }
+    ]
+  },
+  "distributed_rule": {
+    "whole_tree_score_used": false,
+    "full_branch_cell_coordinates_required": true
+  },
+  "temporary_diagnostic_databases_deleted": true
+}
