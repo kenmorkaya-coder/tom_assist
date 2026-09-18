@@ -1,5 +1,5 @@
 {
-  "version": "tom-assist-rgm-tom-middleton-live-answer/12",
+  "version": "tom-assist-rgm-tom-middleton-live-answer/13",
   "status": "COMPLETE",
   "outcome": "PASS",
   "claim_boundary": "One explicitly reviewed Middleton procedure, one correct question, one reversed-order control and one absent-state control through the production RGM, ToM and local evidence-reader path.",
@@ -1248,5 +1248,75 @@
         "diff_check": "passed"
       }
     }
+  },
+  "same_project_watermark_revision": {
+    "version": "tom-assist-same-project-watermark-revision/1",
+    "status": "COMPLETE",
+    "outcome": "PASS_DIRECT_CHANGE_EVIDENCE",
+    "project": "Sydney Metro Western Sydney Airport SCAW",
+    "claim_boundary": "A retained Revision 05 passage explicitly states the earlier watermark state and its removal. This proves retrieval and evidence-grounded answering for that transition; it is not a general document-state extractor or a source-authority conflict.",
+    "collection": {
+      "revision_04_chunks": 887,
+      "revision_05_chunks": 1314,
+      "total_chunks": 2201,
+      "production_extraction": true,
+      "production_rgm_chunking": true,
+      "frozen_minilm": true,
+      "native_vector_pass": true,
+      "contextual_vector_pass": true,
+      "reciprocal_rank_fusion": true
+    },
+    "retrieval": {
+      "explicit_change_source": {
+        "display_name": "SMWSASCA-CPU-OHE-SF153-EW-RPT-232000.05.AA.05.01.pdf",
+        "chunk_id": "chunk_72",
+        "source_id": "SRC-7a6ce59f86a5c620",
+        "statement": "This Rev 05 submission primarily includes removal of the For Review watermark which was on the previous Rev 04 Issued for Review submission."
+      },
+      "questions": [
+        {
+          "question": "Does Revision 05 still carry the For Review watermark from Revision 04?",
+          "change_source_rank": 1
+        },
+        {
+          "question": "What was the main document-status change from Revision 04 to Revision 05?",
+          "change_source_rank": 6
+        },
+        {
+          "question": "Was the previous For Review watermark removed?",
+          "change_source_rank": 1
+        }
+      ],
+      "final_packet_source_limit": 10,
+      "old_state_pair_stable_across_questions": false,
+      "diagnosis": "The later change note is stable evidence. The phrase For Review also appears in unrelated review material, so an arbitrary older chunk must not be treated as the opposing state."
+    },
+    "production_reader": {
+      "question": "Does Revision 05 still carry the For Review watermark from Revision 04?",
+      "status": "supported",
+      "source_display_name": "SMWSASCA-CPU-OHE-SF153-EW-RPT-232000.05.AA.05.01.pdf",
+      "source_chunk_id": "chunk_72",
+      "source_section_id": "section_66",
+      "answer_start": 45328,
+      "answer_end": 45474,
+      "model_peak_bytes": 15138471706,
+      "source_provenance_preserved": true
+    },
+    "architecture_decision": {
+      "result_type": "supported historical change",
+      "authority_record_required": false,
+      "authority_scope_generalised": false,
+      "production_rule_changed": false,
+      "reason": "One authenticated later passage states both the previous state and the change; the sources do not present an unresolved disagreement."
+    },
+    "controls": {
+      "tree_calls": 0,
+      "training_calls": 0,
+      "whole_tree_score": false,
+      "automatic_learning": false,
+      "temporary_database_deleted": true,
+      "large_artifact_created": false
+    },
+    "next_gate": "Test a different real same-project claim family whose sources genuinely disagree; do not send an explicit historical transition through source authority."
   }
 }

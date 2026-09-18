@@ -3134,3 +3134,29 @@ including TypeScript checking and the production build. The broader gateway
 run reports 608 passes and one skip, with the unchanged unrelated event-graph
 fixture-overlap failure and five sandbox-only Unix-socket setup errors. The
 complete OAuth socket module passes 8/8 with local socket binding available.
+
+### 2026-09-18 — second real source-change family
+
+The second family tested the `For Review` watermark across the same complete
+Revision 04 and Revision 05 SCAW reports. The production RGM path again searched
+all 2,201 chunks. Revision 05 chunk 72 explicitly states that the watermark on
+the previous Revision 04 Issued for Review submission was removed. That exact
+change note ranked 1, 6 and 1 for three differently worded questions.
+
+This diagnostic did not reproduce the remediation-plan conflict. The later
+passage itself records both the historical state and the transition. The older
+document does not yield one stable opposing passage: the words `for review`
+also occur in issue history, review sheets and ordinary review instructions.
+Treating one such old chunk as the controlling opposite would be arbitrary.
+
+The production local reader was then run on the direct question, “Does Revision
+05 still carry the For Review watermark from Revision 04?” It returned
+**Supported** and quoted the removal statement from Revision 05 chunk 72 with
+the exact file and chunk provenance. Peak local model allocation was
+15,138,471,706 bytes. The run made zero ToM calls, no training calls, no
+whole-tree score and no authority record, and deleted its temporary database.
+
+The architectural result is that explicit historical change evidence should
+go straight to evidence reading. Source authority remains for genuine
+unresolved disagreements. No classifier, threshold or tree behaviour was
+changed for this result.
