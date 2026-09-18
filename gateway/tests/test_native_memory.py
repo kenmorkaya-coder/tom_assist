@@ -1082,6 +1082,10 @@ def test_reviewed_rgm_situation_is_persisted_taught_and_used_during_answer(tmp_p
         assert len(rows) == 1 and rows[0]["content_hash"] == hashlib.sha256(rows[0]["content"].encode()).hexdigest()
         assert service.learn_situation("project", library, payload)["duplicate"]
         question = "If Orchid fails to demonstrate compliance, can Rowan obtain replacement cover?"
+        candidate_gated = service.recall_situations("project", library,
+            dict(memories=[]), question, "2026-09-18T00:00:00Z")
+        assert candidate_gated["status"] == "no_candidate_situation"
+        assert candidate_gated["recalled_source_ids"] == []
         result = service.answer("project", library, question)
         assert result["status"] == "supported" and result["engine"] == "rgm+tom"
         assert result["purity"]["tree_calls"] == 1
@@ -1279,6 +1283,17 @@ def test_reviewed_notice_before_meeting_memory_reopens_every_bound_rgm_source(tm
             assert returned["rgm_access_candidate_count"] == 1
             assert returned["linked_source_count"] == 2
 
+        query_only = service.recall_situations("project", library, dict(memories=[]),
+            "Which procedures require notification before community meetings?",
+            "2026-09-17T00:00:00Z")
+        assert query_only["status"] == "recalled"
+        assert set(query_only["recalled_source_ids"]) == expected_ids
+        service._restore_recalled_sources(library, dict(memories=[]), query_only)
+        assert query_only["rgm_access_candidate_count"] == 0
+        assert query_only["linked_source_count"] == 2
+        assert query_only["whole_tree_score"] is False
+        assert query_only["all_branch_cell_coordinates_compared"] is True
+
         calls_before = len(calls)
         reversed_result = service.recall_situations("project", library, packet,
             "Does the meeting happen before the written notice?", "2026-09-17T00:00:00Z")
@@ -1287,6 +1302,20 @@ def test_reviewed_notice_before_meeting_memory_reopens_every_bound_rgm_source(tm
         assert len(calls) == calls_before
     finally:
         library.db.close()
+
+
+def test_reviewed_notice_motif_accepts_plural_meetings_in_source_and_query():
+    from gateway.native_memory import (NOTICE_MEETING_MOTIF,
+        reviewed_query_situation, rgm_temporal_motif_receipt)
+    source = dict(source_id="SRC-community-plan", text=(
+        "The notification must include details of upcoming project community meetings and forums."))
+    receipt = rgm_temporal_motif_receipt(source, NOTICE_MEETING_MOTIF)
+    assert len(receipt) == 64
+    query = reviewed_query_situation(
+        "Which procedures require notification before community meetings?",
+        [dict(relation_kind="before", source_event="notify", target_event="meeting")])
+    assert query["status"] == "complete"
+    assert query["fields"] == NOTICE_MEETING_MOTIF
 
 
 @pytest.mark.parametrize("text", [

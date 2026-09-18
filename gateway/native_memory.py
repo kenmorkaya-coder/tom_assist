@@ -590,7 +590,7 @@ def rgm_temporal_motif_receipt(source, motif):
     if motif == NOTICE_MEETING_MOTIF:
         matches = {
             "notice": re.search(r"\b(?:notice|notification|notify|notifies|notified)\b", text, re.I),
-            "meeting": re.search(r"\b(?:meet|meets|meeting)\b", text, re.I),
+            "meeting": re.search(r"\b(?:meet|meets|meeting|meetings)\b", text, re.I),
         }
         if any(match is None for match in matches.values()):
             raise ValueError("the exact source must contain both the reviewed notice and meeting events")
@@ -717,7 +717,7 @@ def build_rgm_situation_memory(source, roles, verification, *, temporal_motif=No
         expected_receipt = rgm_temporal_motif_receipt(source, temporal_motif)
         if temporal_motif == NOTICE_MEETING_MOTIF:
             patterns = dict(notice=r"\b(?:notice|notification|notify|notifies|notified)\b",
-                meeting=r"\b(?:meet|meets|meeting)\b")
+                meeting=r"\b(?:meet|meets|meeting|meetings)\b")
             offsets = {name: [match.start(), match.end()] for name, pattern in patterns.items()
                 for match in [re.search(pattern, text, re.I)]}
         elif temporal_motif == FAILURE_STEP_IN_COST_MOTIF:
@@ -989,11 +989,11 @@ def reviewed_query_situation(question, memories):
             method="explicit failure, substitute-action, cost-recovery sequence resolved from the question")
     if temporal:
         notice = re.search(r"\b(?:notice|notification|notify|notifies|notified)\b", question, re.I)
-        meeting = re.search(r"\b(?:meet|meets|meeting)\b", question, re.I)
+        meeting = re.search(r"\b(?:meet|meets|meeting|meetings)\b", question, re.I)
         ordered = re.search(r"\b(?:before|followed\s+by|then|sequence)\b", question, re.I)
         if notice is not None and meeting is not None and ordered is not None:
             reversed_order = bool(re.search(
-                r"\b(?:meet|meets|meeting)\b.{0,100}\bbefore\b.{0,100}"
+                r"\b(?:meet|meets|meeting|meetings)\b.{0,100}\bbefore\b.{0,100}"
                 r"\b(?:notice|notification|notify|notifies|notified)\b", question, re.I | re.S))
             fields = (dict(relation_kind="before", source_event="meeting", target_event="notify")
                 if reversed_order else dict(relation_kind="before", source_event="notify",
@@ -2415,13 +2415,17 @@ class RgmDocumentService:
                 conflict_sources=authority_issues,
                 reviewed_source_ids=review_targets, query_structure=query,
                 whole_tree_score=False, all_branch_cell_coordinates_compared=False)
-        structural_chain = query.get("motif") == "failure_substitute_action_cost_recovery"
-        if not selected and not structural_chain:
+        # Reviewed ordered-event memories may be accessed by their explicit
+        # query structure. Party and repayment memories remain candidate-gated.
+        query_driven_temporal = bool(query_relationships) and all(
+            relationship.get("relation_kind") == "before"
+            for relationship in query_relationships)
+        if not selected and not query_driven_temporal:
             return dict(status="no_candidate_situation", recalled_source_ids=[],
                 query_structure=query, whole_tree_score=False,
                 all_branch_cell_coordinates_compared=False)
         profile = self._tom_runtime_profile(project_id)
-        access_source_ids = (query_sources if structural_chain else
+        access_source_ids = (query_sources if query_driven_temporal else
             [row["situation"]["source_id"] for row in selected])
         results = []
         for relationship in query_relationships:
