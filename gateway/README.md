@@ -1101,6 +1101,18 @@ preserved. This path makes zero tree calls and zero language-reader calls. The
 existing authority action is deliberately unavailable for these temporal
 relationships, so neither sequence can be selected silently.
 
+The same boundary was then run through production RGM extraction, chunking,
+MiniLM encoding and retrieval with two real PDFs. The Middleton NSW mitigation
+document says stop then notify. A Northern Midlands Council planning attachment
+says call Police first, then notify workers that earth-disturbance work must
+cease. The original bounded parser missed the second document because it used
+`skeletal material`, `call Police` and `works cease`. Those three verified
+wording variants are now admitted without changing the event order or the
+1,200-character source-local span. The answer returned `ambiguous` with both
+exact chunks and made zero tree and language-reader calls. The documents have
+different project and jurisdiction scopes, so the result does not assign legal
+authority.
+
 Document-style party names such as `Transport for NSW` / `TfNSW` and
 `Sydney Metro` / `SM` are matched mechanically. If the question does not state
 one complete relationship, ToM makes no selection claim and the existing RGM

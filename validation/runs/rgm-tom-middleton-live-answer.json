@@ -1,5 +1,5 @@
 {
-  "version": "tom-assist-rgm-tom-middleton-live-answer/6",
+  "version": "tom-assist-rgm-tom-middleton-live-answer/7",
   "status": "COMPLETE",
   "outcome": "PASS",
   "claim_boundary": "One explicitly reviewed Middleton procedure, one correct question, one reversed-order control and one absent-state control through the production RGM, ToM and local evidence-reader path.",
@@ -865,8 +865,77 @@
       "automatic_learning": false
     },
     "verification": {
-      "native_memory_tests": "155 passed",
+      "native_memory_tests": "157 passed",
       "git_diff_check": "passed"
+    }
+  },
+  "real_document_temporal_conflict": {
+    "version": "tom-assist-real-temporal-conflict/1",
+    "status": "COMPLETE",
+    "outcome": "PASS",
+    "claim_boundary": "Production RGM extraction, chunking, MiniLM encoding and retrieval over two real documents from different projects and jurisdictions. This proves conflict presentation, not which procedure legally controls either project.",
+    "sources": [
+      {
+        "display_name": "Appendix C - Mitigation Measures.pdf",
+        "path": "/Volumes/My Passport for Mac/tom_as projects/2026 05 19 - Middleton Submission/Appendix C - Mitigation Measures.pdf",
+        "file_sha256": "7e31e674bd1f9f36a20ef81cf6485c8a7e48091a70a942c38f9f0daaac9c9c3a",
+        "bytes": 233952,
+        "chunk_count": 3,
+        "returned_chunk_id": "chunk_2",
+        "returned_source_id": "SRC-aaa43cf06e5c3b18",
+        "returned_text_sha256": "7cf0b1b046a2a160715964f5dc8c8eeefc26ebe9cc3494bc348c3644e87d4575",
+        "procedure": "Human remains are uncovered, work stops, then NSW Police and Heritage NSW are notified."
+      },
+      {
+        "display_name": "2023-09-18-Attachments-p901-1000-rs.pdf",
+        "official_url": "https://northernmidlands.tas.gov.au/source-assets/files/2023-Agendas-Minutes/2023-09-18-Attachments-p901-1000-rs.pdf",
+        "file_sha256": "be2b580fcbcbf23294b46816a09b6e61599da6fa710d859c127fff17c079ffb6",
+        "bytes": 3236176,
+        "chunk_count": 136,
+        "returned_chunk_id": "chunk_63",
+        "returned_source_id": "SRC-6b10b81dfd7c2db6",
+        "returned_text_sha256": "f64348edd028bf90ce8d44d420c67e7cd02d9e3468c4088369f6c10888cca931",
+        "procedure": "For discovered skeletal material, call Police immediately, then notify workers that earth-disturbance work must cease."
+      }
+    ],
+    "initial_real_source_diagnostic": {
+      "rgm_extraction_chars": 211276,
+      "opposite_order_recognised": false,
+      "diagnosis": "The bounded parser did not admit skeletal material, call Police, or earth-disturbance works cease as verified variants of the three existing events."
+    },
+    "repair": {
+      "new_discovery_wording": "discovery or uncovering of skeletal material or skeletal remains",
+      "new_notification_wording": "call, contact or advise Police or another admitted authority",
+      "new_stop_wording": "works cease",
+      "event_order_unchanged": true,
+      "source_local_span_unchanged": 1200
+    },
+    "answer": {
+      "question": "Which procedure stops work before the manager notifies Police and Heritage NSW?",
+      "status": "ambiguous",
+      "source_count": 2,
+      "structural_status": "source_authority_unresolved",
+      "both_exact_passages_presented": true,
+      "production_minilm_used": true,
+      "production_rgm_retrieval_used": true,
+      "tree_calls": 0,
+      "language_model_calls": 0,
+      "whole_tree_score": false,
+      "temporal_authority_recording_available": false
+    },
+    "storage": {
+      "temporary_database_deleted": true,
+      "downloaded_pdf_retained": false,
+      "large_artifact_created": false
+    },
+    "regression": {
+      "production_ingestion_chunks": 611,
+      "true_positive_count": 15,
+      "false_positive_count": 0,
+      "false_negative_count": 0,
+      "tree_calls": 0,
+      "automatic_learning": false,
+      "native_memory_tests": "157 passed"
     }
   }
 }

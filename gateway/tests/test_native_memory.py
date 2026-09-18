@@ -1582,6 +1582,11 @@ def test_reviewed_human_remains_chain_uses_tom_for_order_and_rejects_controls(tm
         "but this passage states no ordered event chain."),
     ("reversed-order", "If human remains are found, the supervisor must notify Police and "
         "Heritage NSW before all works immediately stop."),
+    ("real-government-reversed-order", "Discovery of Skeletal Material. Step 1: Call the "
+        "Police immediately. Under no circumstances should the suspected skeletal material "
+        "be touched or disturbed. Step 2: Any person who believes they have uncovered "
+        "skeletal material should notify all employees or contractors working in the immediate "
+        "area that all earth disturbance works cease immediately."),
     ("incomplete", "The Contractor fails to comply. The resulting loss is a debt due from "
         "the Contractor."),
     ("separated", "The Contractor fails to act and the Principal may carry out such work. "
@@ -1720,6 +1725,13 @@ def test_live_answer_returns_sourced_no_for_reviewed_temporal_contradictions(tmp
         "If human remains are discovered, excavation may continue while the manager "
         "notifies NSW Police and Heritage NSW.",
         "What procedure requires excavation to continue after human remains are found?"),
+    ("real-government-wording",
+        "Discovery of Skeletal Material. Step 1: Call the Police immediately. Under no "
+        "circumstances should the suspected skeletal material be touched or disturbed. "
+        "Step 2: Any person who believes they have uncovered skeletal material should "
+        "notify all employees or contractors working in the immediate area that all earth "
+        "disturbance works cease immediately.",
+        "Which procedure stops work before the manager notifies Police and Heritage NSW?"),
 ])
 def test_live_answer_presents_both_sides_of_temporal_source_conflict(
     tmp_path, name, conflicting_text, question,

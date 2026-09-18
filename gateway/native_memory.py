@@ -529,14 +529,18 @@ def _human_remains_order_matches(text, order):
     patterns = {
         "human_remains_discovered": (
             r"\b(?:human\s+remains.{0,100}(?:uncovered|found|discovered)|"
-            r"(?:uncovered|found|discovered).{0,100}human\s+remains)\b"),
+            r"(?:uncovered|found|discovered).{0,100}human\s+remains|"
+            r"discovery\s+of\s+(?:suspected\s+)?skeletal\s+(?:material|remains)|"
+            r"skeletal\s+(?:material|remains).{0,100}(?:uncovered|found|discovered)|"
+            r"(?:uncovered|found|discovered).{0,100}skeletal\s+(?:material|remains))\b"),
         "stop_work": (
             r"\b(?:(?:all\s+)?works?.{0,80}(?:must\s+)?(?:immediately\s+)?"
-            r"stop(?:ping|ped|s)?|"
+            r"(?:stop(?:ping|ped|s)?|cease(?:s|d|ing)?)|"
             r"stop(?:ping|ped|s)?.{0,40}works?|"
             r"(?:immediately\s+)?cease(?:s|d|ing)?\s+(?:all\s+)?works?)\b"),
         "notify_authorities": (
-            r"\b(?:notify|notifies|notified|notification|inform|informs|informed)"
+            r"\b(?:notify|notifies|notified|notification|inform|informs|informed|"
+            r"call|calls|called|contact|contacts|contacted|advise|advises|advised)"
             r".{0,180}(?:police|heritage\s+nsw|authorit(?:y|ies))\b"),
     }
     found = {name: list(re.finditer(pattern, text, re.I | re.S))
