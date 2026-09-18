@@ -437,6 +437,9 @@ FAILURE_STEP_IN_COST_MOTIF = dict(
 HUMAN_REMAINS_STOP_NOTIFY_MOTIF = dict(
     relation_kind="sequence", source_event="human_remains_discovered",
     intermediate_event="stop_work", target_event="notify_authorities")
+CONTAMINATION_DISCOVERY_NOTICE_MOTIF = dict(
+    relation_kind="before", source_event="contamination_discovered",
+    target_event="notification")
 RGM_REVIEW_SEMANTIC_SWEEPS = [
     (FAILURE_STEP_IN_COST_MOTIF, (
         "a required duty fails another party performs substitute work and recovers the resulting cost",
@@ -445,6 +448,10 @@ RGM_REVIEW_SEMANTIC_SWEEPS = [
     (HUMAN_REMAINS_STOP_NOTIFY_MOTIF, (
         "suspected human remains are discovered work stops and police and heritage authorities are notified",
         "unexpected human remains found cease all works secure the area notify police heritage authorities",
+    )),
+    (CONTAMINATION_DISCOVERY_NOTICE_MOTIF, (
+        "contamination is discovered notify the responsible project party and provide the required notice",
+        "discovery of unidentified contamination requires notification to the other contractual party",
     )),
 ]
 
@@ -593,6 +600,25 @@ def _human_remains_continue_work_matches(text):
     return min(candidates, key=lambda item: item[0])[1] if candidates else None
 
 
+def _contamination_discovery_notice_matches(text):
+    """Locate one local contamination-discovery then notification obligation."""
+    import itertools
+    import re
+    discoveries = list(re.finditer(
+        r"\b(?:if|when)\b.{0,140}\bdiscover(?:s|ed|ing|y)?\b.{0,80}"
+        r"\b(?:unidentified\s+)?contamination\b", text, re.I | re.S))
+    notices = list(re.finditer(
+        r"\b(?:must\s+)?(?:immediately\s+)?notify\b.{0,100}"
+        r"\b(?:principal['’]s\s+representative|other\s+party)\b", text,
+        re.I | re.S))
+    candidates = []
+    for discovery, notice in itertools.product(discoveries, notices):
+        if discovery.start() < notice.start() and notice.end() - discovery.start() <= 800:
+            candidates.append((notice.end() - discovery.start(), dict(
+                contamination_discovered=discovery, notification=notice)))
+    return min(candidates, key=lambda item: item[0])[1] if candidates else None
+
+
 def _validate_rgm_source_roles(roles, text):
     """Validate the frozen source-role shape without applying question intent rules."""
     import re
@@ -688,6 +714,11 @@ def rgm_temporal_motif_receipt(source, motif):
         if matches is None:
             raise ValueError(
                 "the exact source must contain one local human-remains discovery, stop-work, and notification procedure")
+    elif motif == CONTAMINATION_DISCOVERY_NOTICE_MOTIF:
+        matches = _contamination_discovery_notice_matches(text)
+        if matches is None:
+            raise ValueError(
+                "the exact source must contain one local contamination-discovery and notification procedure")
     else:
         raise ValueError("unsupported reviewed event motif")
     return native_digest(dict(schema=RGM_SITUATION_VERSION, source_id=source_id,
@@ -819,6 +850,11 @@ def build_rgm_situation_memory(source, roles, verification, *, temporal_motif=No
             if matches is None:
                 raise ValueError("reviewed event motif is absent from its exact source")
             offsets = {name: [match.start(), match.end()] for name, match in matches.items()}
+        elif temporal_motif == CONTAMINATION_DISCOVERY_NOTICE_MOTIF:
+            matches = _contamination_discovery_notice_matches(text)
+            if matches is None:
+                raise ValueError("reviewed event motif is absent from its exact source")
+            offsets = {name: [match.start(), match.end()] for name, match in matches.items()}
         else:
             raise ValueError("unsupported reviewed event motif")
     if (not isinstance(verification, dict)
@@ -863,6 +899,11 @@ def build_rgm_situation_memory(source, roles, verification, *, temporal_motif=No
                     target=entity_ids[temporal_motif["target_event"]],
                     source_role="source_event", target_role="target_event"),
             ]
+        elif temporal_motif == CONTAMINATION_DISCOVERY_NOTICE_MOTIF:
+            relations = [dict(id="contamination_discovered_before_notification", kind="before",
+                source=entity_ids[temporal_motif["source_event"]],
+                target=entity_ids[temporal_motif["target_event"]],
+                source_role="source_event", target_role="target_event")]
         else:
             raise ValueError("unsupported reviewed event motif")
     else:
@@ -1137,6 +1178,24 @@ def reviewed_query_situation(question, memories):
                     end=continue_work.end(), text=continue_work.group()),
             ],
             method="explicit continue-work state resolved against the reviewed stop-work relationship")
+    contamination = re.search(
+        r"\b(?:(?:discover(?:s|ed|ing|y)?).{0,100}(?:unidentified\s+)?contamination|"
+        r"(?:unidentified\s+)?contamination.{0,100}(?:discover(?:s|ed|ing|y)?))\b",
+        question, re.I | re.S)
+    contamination_notice = re.search(
+        r"\b(?:notify|notifies|notified|notifying|notification|notifications|notice)\b",
+        question, re.I)
+    contamination_pair = ("contamination_discovered", "notification")
+    if (contamination is not None and contamination_notice is not None
+        and contamination_pair in available_temporal):
+        fields = dict(relation_kind="before", source_event=contamination_pair[0],
+            target_event=contamination_pair[1])
+        return dict(status="complete", fields=fields,
+            spans=[dict(field="contamination_discovered", start=contamination.start(),
+                end=contamination.end(), text=contamination.group()),
+                dict(field="notification", start=contamination_notice.start(),
+                    end=contamination_notice.end(), text=contamination_notice.group())],
+            method="explicit contamination-discovery and notification situation resolved from the question")
     failure = re.search(
         r"\b(?:fail(?:s|ed|ure)?|not\s+done|does\s+not\s+comply|required\s+action\s+is\s+not\s+done)\b",
         question, re.I)
@@ -1472,6 +1531,40 @@ def check_rgm_cited_repayment_claim(question, sources):
         scope="One complete explicitly cited clause and one explicit yes/no repayment direction.")
 
 
+def check_rgm_broad_contamination_notification(question, sources):
+    """Return one exact local notice provision for an unscoped broad request.
+
+    PDF page furniture may split one legal provision. The source matcher has
+    already proved the discovery-before-notification structure, so retain one
+    contiguous source span through the end of that obligation instead of
+    accepting a model quote that silently jumps over intervening characters.
+    """
+    import re
+    if (len(sources) != 1
+        or re.search(r"\b(?:clause\s+\d|SCAW|M12|SAS\s+Interface|D&C\s+Deed)\b",
+            question, re.I)
+        or not re.search(r"\b(?:discover\w*|discovery)\b.{0,120}\bcontamination\b|"
+            r"\bcontamination\b.{0,120}\b(?:discover\w*|discovery)\b",
+            question, re.I | re.S)
+        or not re.search(r"\b(?:notify\w*|notification|notifications|notice)\b",
+            question, re.I)):
+        return dict(status="not_applicable")
+    source = sources[0]
+    matches = _contamination_discovery_notice_matches(source["text"])
+    if matches is None:
+        return dict(status="not_applicable")
+    start = matches["contamination_discovered"].start()
+    boundary = re.search(r"(?<!\d)\.(?=\s|$)",
+        source["text"][matches["notification"].end():])
+    end = (-1 if boundary is None else
+        matches["notification"].end() + boundary.end())
+    if end < 0 or end - start > 3500:
+        return dict(status="unresolved", reason="local notification provision has no bounded end")
+    return dict(status="supported", source_id=source["source_id"],
+        start=start, end=end, text=source["text"][start:end],
+        scope="One exact local contamination-discovery notification provision.")
+
+
 def read_rgm_source_evidence(question, packet, generate, *, spacing_resolver=None):
     """Read only the selected full passages; bind every proposed quote to source.
 
@@ -1516,9 +1609,14 @@ def read_rgm_source_evidence(question, packet, generate, *, spacing_resolver=Non
         generation = generate(RGM_PASSAGE_READER_INSTRUCTION, dict(question=part,
             sources=[dict(source_id=s["source_id"], text=s["text"]) for s in reader_sources]), 1024)
         chain_check = check_rgm_replacement_chain(part,sources)
+        contamination_check = check_rgm_broad_contamination_notification(part, sources)
         recheck = None
         try:
-            if chain_check["status"] == "supported":
+            if contamination_check["status"] == "supported":
+                selection = validate_evidence_reading(json.dumps(dict(status="supported",
+                    source_id=contamination_check["source_id"],
+                    answer_quote=contamination_check["text"])), sources)
+            elif chain_check["status"] == "supported":
                 matched=chain_check["matches"][0]
                 selection=validate_evidence_reading(json.dumps(dict(status="supported",source_id=matched["source_id"],answer_quote=matched["text"])),sources)
             elif chain_check["status"] in ("not_supported","ambiguous","needs_evidence_reading"):
@@ -1576,7 +1674,8 @@ def read_rgm_source_evidence(question, packet, generate, *, spacing_resolver=Non
         except (ValueError, TypeError, KeyError) as exc:
             selection = dict(status="invalid", source_id=None, answer_quote=None,
                 error=f"{type(exc).__name__}: {exc}")
-        outcome=dict(question=part, generation=generation, selection=selection,chain_check=chain_check)
+        outcome=dict(question=part, generation=generation, selection=selection,
+            chain_check=chain_check, contamination_check=contamination_check)
         if recheck is not None:outcome["refusal_recheck"]=recheck
         outcomes.append(outcome)
     statuses = [p["selection"]["status"] for p in outcomes]
@@ -1596,6 +1695,48 @@ def read_rgm_source_evidence(question, packet, generate, *, spacing_resolver=Non
     return dict(status=status, planning=planning, parts=outcomes, answers=answers,
         candidate_ids=[s["source_id"] for s in sources],
         verification="Exact source spans verified; semantic support requires evaluation.")
+
+
+def read_each_rgm_source_evidence(question, packet, generate, *, spacing_resolver=None):
+    """Evaluate every ToM-returned passage independently and retain every support.
+
+    The ToM return decides which reviewed situations participate. The language
+    reader still has to prove that each exact passage answers the question. No
+    score, source priority or cross-source averaging is introduced here.
+    """
+    memories = packet.get("memories") if isinstance(packet, dict) else None
+    if (not isinstance(memories, list) or not 2 <= len(memories) <= RGM_TOM_MAX_MEMORIES
+        or len({rgm_candidate_source_id(memory) for memory in memories}) != len(memories)):
+        raise ValueError("independent evidence reading requires distinct reviewed sources")
+    results = [read_rgm_source_evidence(question, dict(memories=[memory]), generate,
+        spacing_resolver=spacing_resolver) for memory in memories]
+    plans = [result["planning"].get("parts") for result in results]
+    if any(parts != plans[0] for parts in plans[1:]):
+        raise ValueError("independent evidence reading changed question decomposition")
+    supported = [answer for result in results for answer in result["answers"]
+        if answer.get("text") is not None]
+    if len({answer["source_id"] for answer in supported}) != len(supported):
+        raise ValueError("independent evidence reading returned duplicate support")
+    statuses = [result["status"] for result in results]
+    if supported:
+        status = ("supported" if all(value in {"supported", "not_supported"}
+            for value in statuses) else "partial")
+        answers = supported
+    else:
+        status = ("invalid" if "invalid" in statuses else
+            "ambiguous" if "ambiguous" in statuses else "not_supported")
+        answers = results[0]["answers"]
+    return dict(status=status, planning=results[0]["planning"],
+        parts=[dict(source_candidate_ids=result["candidate_ids"],
+            status=result["status"], parts=result["parts"]) for result in results],
+        answers=answers,
+        candidate_ids=[identity for result in results for identity in result["candidate_ids"]],
+        source_results=[dict(status=result["status"],
+            candidate_ids=result["candidate_ids"], answers=result["answers"])
+            for result in results],
+        independent_source_reading=True,
+        verification=("Every ToM-returned source was evaluated independently; "
+            "all returned answer spans were verified against their own source."))
 
 
 def render_native_wording(raw, approved):
@@ -1818,7 +1959,8 @@ RGM_TOM_BRIDGE_VERSION_V1 = "tom-assist-rgm-tom-reviewed-situations/1"
 RGM_TOM_BRIDGE_VERSION_V2 = "tom-assist-rgm-tom-reviewed-situations/2"
 RGM_TOM_BRIDGE_VERSION_V3 = "tom-assist-rgm-tom-reviewed-situations/3"
 RGM_TOM_BRIDGE_VERSION_V4 = "tom-assist-rgm-tom-reviewed-situations/4"
-RGM_TOM_BRIDGE_VERSION = "tom-assist-rgm-tom-reviewed-situations/5"
+RGM_TOM_BRIDGE_VERSION_V5 = "tom-assist-rgm-tom-reviewed-situations/5"
+RGM_TOM_BRIDGE_VERSION = "tom-assist-rgm-tom-reviewed-situations/6"
 RGM_TOM_SITUATION_PREFIX = "rgm-tom-situation-"
 RGM_SOURCE_AUTHORITY_VERSION_V1 = "tom-assist-rgm-source-authority/1"
 RGM_SOURCE_AUTHORITY_VERSION_V2 = "tom-assist-rgm-source-authority/2"
@@ -2382,6 +2524,7 @@ class RgmDocumentService:
             if encoded.get("version") not in (
                 RGM_TOM_BRIDGE_VERSION_V1, RGM_TOM_BRIDGE_VERSION_V2,
                 RGM_TOM_BRIDGE_VERSION_V3, RGM_TOM_BRIDGE_VERSION_V4,
+                RGM_TOM_BRIDGE_VERSION_V5,
                 RGM_TOM_BRIDGE_VERSION,
             ):
                 raise ValueError("stored reviewed situation has an unsupported version")
@@ -2560,6 +2703,8 @@ class RgmDocumentService:
             (FAILURE_STEP_IN_COST_MOTIF, _failure_step_in_cost_matches),
             (HUMAN_REMAINS_STOP_NOTIFY_MOTIF,
                 _human_remains_stop_notify_matches),
+            (CONTAMINATION_DISCOVERY_NOTICE_MOTIF,
+                _contamination_discovery_notice_matches),
         ]
         chunks = library.document_chunks(active_only=True)
         if not chunks:
@@ -3057,6 +3202,7 @@ class RgmDocumentService:
                 raise ValueError("ToM recall did not preserve the distributed response")
             results.append(result)
         if len(results) == 1:
+            results[0]["query_structure"] = query
             return results[0]
         recalled_sets = [set(result.get("recalled_source_ids", [])) for result in results]
         recalled = [source_id for source_id in query_sources
@@ -3328,7 +3474,15 @@ class RgmDocumentService:
             if reader_memories:
                 reader_packet = dict(memories=[{k: m[k] for k in ("id", "content", "evidence_reference")}
                     for m in reader_memories])
-                reading = self.worker("rgm_read", dict(question=question, packet=reader_packet))
+                read_each = (structural.get("status") == "recalled"
+                    and len(reader_memories) > 1
+                    and structural.get("query_structure", {}).get("fields") == {
+                        "relation_kind": "before",
+                        "source_event": "contamination_discovered",
+                        "target_event": "notification",
+                    })
+                reading = self.worker("rgm_read", dict(question=question,
+                    packet=reader_packet, **({"read_each": True} if read_each else {})))
             else:
                 reading = dict(status="not_supported", answers=[dict(question=question, text=None, status="not_supported")], parts=[])
             # Rebind every outgoing citation to the current authenticated packet.

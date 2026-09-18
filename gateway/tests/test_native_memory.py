@@ -305,6 +305,75 @@ def test_rgm_refusal_recheck_stops_after_one_unsuccessful_reading():
     assert result["status"]=="not_supported" and len(calls)==2
 
 
+def test_independent_rgm_source_reading_keeps_every_supported_tom_source():
+    from gateway.native_memory import read_each_rgm_source_evidence
+    texts = [
+        ("deed", "If the SCAW Contractor discovers Unidentified Contamination, it must "
+            "immediately notify the Principal's Representative in writing."),
+        ("interface", "If a party discovers Contamination affecting a SAS Interface Zone, "
+            "it must notify the other party as soon as practicable and within 5 Business Days."),
+    ]
+    memories = []
+    for index, (name, text) in enumerate(texts):
+        start = 1000 * (index + 1)
+        memories.append(dict(id=f"chunk_{index}", content=text,
+            evidence_reference=dict(corpus_id=name, chunk_id=f"chunk_{index}",
+                doc_id=f"document-{name}", start=start, end=start + len(text),
+                text_sha256=hashlib.sha256(text.encode()).hexdigest())))
+    calls = []
+    def generate(_instruction, data, _limit):
+        calls.append(data)
+        source = data["sources"][0]
+        return dict(raw=json.dumps(dict(status="supported",
+            source_id=source["source_id"], answer_quote=source["text"])))
+    result = read_each_rgm_source_evidence(
+        "What notifications are required when contamination is discovered?",
+        dict(memories=memories), generate)
+    assert result["status"] == "supported"
+    assert result["independent_source_reading"] is True
+    assert len(calls) == 2 and len(result["answers"]) == 2
+    assert {answer["source_id"] for answer in result["answers"]} == {
+        "deed/chunk_0", "interface/chunk_1"}
+    assert all(answer["text"] in {text for _, text in texts}
+        for answer in result["answers"])
+
+
+def test_broad_contamination_reading_keeps_exact_cross_page_provisions():
+    from gateway.native_memory import read_each_rgm_source_evidence
+    texts = [
+        ("deed", "If the SCAW Contractor discovers Unidentified Contamination, it must: "
+            "(i) immediately notify the Principal's Representative in writing; "
+            "(ii) provide an initial report;\n158\nME_194867939_10\n"
+            "(iii) provide a further notification under clause 12.20(c) in writing, "
+            "and must do so at its cost. "
+            "(m) The next provision is unrelated."),
+        ("interface", "If a party discovers Contamination affecting a SAS Interface Zone, "
+            "it must notify the other party as soon as practicable and within 5 Business Days. "
+            "The next provision is unrelated."),
+    ]
+    memories = []
+    for index, (name, text) in enumerate(texts):
+        start = 1000 * (index + 1)
+        memories.append(dict(id=f"chunk_{index}", content=text,
+            evidence_reference=dict(corpus_id=name, chunk_id=f"chunk_{index}",
+                doc_id=f"document-{name}", start=start, end=start + len(text),
+                text_sha256=hashlib.sha256(text.encode()).hexdigest())))
+    def refuse(_instruction, _data, _limit):
+        return dict(raw=json.dumps(dict(status="not_supported",
+            source_id=None, answer_quote=None)))
+    result = read_each_rgm_source_evidence(
+        "What notifications are required when contamination is discovered?",
+        dict(memories=memories), refuse)
+    assert result["status"] == "supported"
+    assert len(result["answers"]) == 2
+    deed = next(answer for answer in result["answers"]
+        if answer["source_id"] == "deed/chunk_0")
+    assert "158\nME_194867939_10" in deed["text"]
+    assert "clause 12.20(c)" in deed["text"]
+    assert deed["text"].endswith("must do so at its cost.")
+    assert "The next provision" not in deed["text"]
+
+
 def _replacement_chain_source(**changes):
     roles=dict(failure_party="Cedar Authority",cover_payer="Orchid Transit",
                repayment_from="Cedar Authority",repayment_to="Orchid Transit")
@@ -1032,6 +1101,8 @@ def _reviewed_tom_worker(calls, *, damage=None):
                     target_event="stop_work"),
                 dict(relation_kind="before", source_event="stop_work",
                     target_event="notify_authorities"),
+                dict(relation_kind="before", source_event="contamination_discovered",
+                    target_event="notification"),
             )
             def key(item):
                 endpoints = (("source_event", "target_event") if item["relation_kind"] == "before"
@@ -1370,6 +1441,95 @@ def test_reviewed_notice_motif_accepts_plural_meetings_in_source_and_query():
 
 
 @pytest.mark.parametrize("text", [
+    ("If the SCAW Contractor discovers Unidentified Contamination, the SCAW Contractor "
+        "must immediately notify the Principal's Representative in writing."),
+    ("If a party discovers any Contamination in a SAS Interface Zone, it must notify "
+        "the other party as soon as practicable."),
+])
+def test_contamination_discovery_notification_motif_uses_one_local_procedure(text):
+    from gateway.native_memory import (CONTAMINATION_DISCOVERY_NOTICE_MOTIF,
+        reviewed_query_situation, rgm_temporal_motif_receipt)
+    assert len(rgm_temporal_motif_receipt(dict(source_id="SRC-notice", text=text),
+        CONTAMINATION_DISCOVERY_NOTICE_MOTIF)) == 64
+    memories = [dict(relation_kind="before",
+        source_event="contamination_discovered", target_event="notification")]
+    for question in (
+        "What notifications are required when contamination is discovered?",
+        "When the SCAW Contractor discovers Unidentified Contamination, who must it notify?",
+        "Who is notified after Contamination is discovered in a SAS Interface Zone?",
+    ):
+        query = reviewed_query_situation(question, memories)
+        assert query["status"] == "complete"
+        assert query["fields"] == CONTAMINATION_DISCOVERY_NOTICE_MOTIF
+    reversed_text = ("The Principal's Representative must be notified before the SCAW Contractor "
+        "discovers Unidentified Contamination.")
+    with pytest.raises(ValueError, match="one local contamination-discovery"):
+        rgm_temporal_motif_receipt(dict(source_id="SRC-reversed", text=reversed_text),
+            CONTAMINATION_DISCOVERY_NOTICE_MOTIF)
+
+
+def test_contamination_memory_reads_each_linked_source_independently(tmp_path, monkeypatch):
+    import gateway.native_memory as native_memory
+    from gateway.native_memory import (CONTAMINATION_DISCOVERY_NOTICE_MOTIF,
+        RgmDocumentService)
+    from gateway.permanent_library import PermanentLibrary
+    library = PermanentLibrary(tmp_path / "contamination-multiple-sources.sqlite3")
+    read_calls = []
+    def document_worker(operation, payload):
+        if operation == "rgm_embed":
+            return dict(vectors={hashlib.sha256(text.encode()).hexdigest():
+                [1.0] + [0.0] * 383 for text in payload["texts"]})
+        assert operation == "rgm_read"
+        read_calls.append(payload)
+        answers = []
+        for memory in payload["packet"]["memories"]:
+            proof = memory["evidence_reference"]
+            answers.append(dict(question=payload["question"], text=memory["content"],
+                source_id=proof["corpus_id"] + "/" + memory["id"],
+                start=proof["start"], end=proof["end"]))
+        return dict(status="supported", answers=answers, parts=[],
+            independent_source_reading=True)
+    service = RgmDocumentService(worker=document_worker, model_identity="fixture-model",
+        tom_worker=_reviewed_tom_worker([]), tom_profile=_reviewed_tom_profile())
+    documents = [
+        ("D&C deed", "If the SCAW Contractor discovers Unidentified Contamination, the "
+            "SCAW Contractor must immediately notify the Principal's Representative in writing."),
+        ("Interface agreement", "If a party discovers any Contamination in a SAS Interface "
+            "Zone, it must notify the other party as soon as practicable and within 5 Business Days."),
+    ]
+    try:
+        for name, text in documents:
+            document = service.ingest("project", library, dict(explicit_user_action=True,
+                display_name=name, content=text, media_type="text/plain"))
+            service.learn_situation("project", library, dict(explicit_user_action=True,
+                document_id=document["document_id"], chunk_index=0,
+                temporal_motif=CONTAMINATION_DISCOVERY_NOTICE_MOTIF))
+        rows = service._situation_rows(library)
+        first = rows[0]["situation"]; proof = first["provenance"]
+        first_memory = dict(id=proof["chunk_id"], content=proof["source_text"],
+            evidence_reference=dict(doc_id=proof["document_id"], chunk_id=proof["chunk_id"],
+                corpus_id=proof["corpus_id"], corpus_sha256=proof["corpus_sha256"],
+                section_id=proof["section_id"], start=proof["start"], end=proof["end"],
+                text_sha256=first["source_text_sha256"], provenance={}))
+        titles = {row["situation"]["provenance"]["corpus_id"]:
+            row["situation"]["provenance"]["display_name"] for row in rows}
+        monkeypatch.setattr(native_memory, "retrieve_rgm_project_documents",
+            lambda *_args, **_kwargs: (dict(memories=[first_memory]),
+                dict(native={}, candidates=1, titles=titles, tree_calls=0)))
+        result = service.answer("project", library,
+            "What notifications are required when contamination is discovered?")
+        assert result["status"] == "supported"
+        assert len(result["sources"]) == 2
+        assert read_calls[0]["read_each"] is True
+        trace = result["trace"]["retrieval"]["reviewed_tom_memory"]
+        assert trace["query_structure"]["fields"] == CONTAMINATION_DISCOVERY_NOTICE_MOTIF
+        assert trace["all_branch_cell_coordinates_compared"] is True
+        assert trace["whole_tree_score"] is False
+    finally:
+        library.db.close()
+
+
+@pytest.mark.parametrize("text", [
     ("If SM fails to promptly comply, TfNSW may, at the cost of SM, undertake all actions "
         "necessary to manage the emergency."),
     ("If TfNSW fails to promptly comply, SM may, at the cost of TfNSW, undertake all actions "
@@ -1570,7 +1730,7 @@ def test_reviewed_human_remains_chain_uses_tom_for_order_and_rejects_controls(tm
         review = service.review_candidates("project", library)
         assert review["tree_calls"] == 0 and review["automatic_learning"] is False
         assert review["discovery"]["strategy"] == "rgm_two_vector_passes_rrf_plus_source_regex"
-        assert review["discovery"]["rgm_query_count"] == 4
+        assert review["discovery"]["rgm_query_count"] == 6
         assert len(review["candidates"]) == 1
         candidate = review["candidates"][0]
         assert candidate["discovery_channels"] == {
@@ -1651,7 +1811,7 @@ def test_review_semantic_sweep_cannot_bypass_source_structure_validation(tmp_pat
         review = service.review_candidates("project", library)
         assert review["candidates"] == []
         assert review["discovery"]["rgm_semantic_candidate_count"] == 1
-        assert review["discovery"]["semantic_rejected_count"] == 2
+        assert review["discovery"]["semantic_rejected_count"] == 3
         assert review["discovery"]["regex_candidate_count"] == 0
         assert review["tree_calls"] == 0
     finally:

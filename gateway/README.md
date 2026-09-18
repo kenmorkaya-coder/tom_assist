@@ -1232,3 +1232,16 @@ source conflict. The older PDF does not provide one stable opposing passage,
 and `for review` also appears in unrelated review material. The gateway does
 not infer watermark state from filenames, revision numbers, absence, or phrase
 counts, and does not attach authority to an arbitrary old chunk.
+
+The reviewed bridge also admits one contamination-discovery → notification
+motif. Several exact RGM passages may bind to its one learned ToM relationship;
+only the first reviewed passage writes the tree. Query recall compares the
+complete native terminal-branch × 32 × 32 signed field and exact slot map, then
+reopens every active bound RGM source. No scalar tree score is used.
+
+For this motif, linked passages are read independently. A source-specific
+question keeps only the passage that directly answers it. An unscoped broad
+question keeps every directly supporting passage, so different obligations are
+shown together. If PDF page furniture interrupts one otherwise contiguous
+provision, the broad check returns the exact retained source span including that
+furniture; it never accepts a model quote that skips source characters.
