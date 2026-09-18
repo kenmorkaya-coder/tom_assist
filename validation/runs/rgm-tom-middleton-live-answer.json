@@ -1,5 +1,5 @@
 {
-  "version": "tom-assist-rgm-tom-middleton-live-answer/5",
+  "version": "tom-assist-rgm-tom-middleton-live-answer/6",
   "status": "COMPLETE",
   "outcome": "PASS",
   "claim_boundary": "One explicitly reviewed Middleton procedure, one correct question, one reversed-order control and one absent-state control through the production RGM, ToM and local evidence-reader path.",
@@ -807,6 +807,66 @@
       "compact_result_json": "valid",
       "real_document_positive_labels": 15,
       "controlled_negative_labels": 4
+    }
+  },
+  "temporal_source_conflict": {
+    "version": "tom-assist-temporal-source-conflict/1",
+    "status": "COMPLETE",
+    "outcome": "PASS",
+    "claim_boundary": "Controlled gateway integration with one reviewed human-remains procedure and one separately retained source that states an opposite event order or continue-work state.",
+    "initial_failure": {
+      "status": "not_supported",
+      "visible_source_count": 1,
+      "hidden_source": "The retrieved source stating notification before work stopping was omitted.",
+      "diagnosis": "The reviewed-structure contradiction shortcut returned a sourced No before checking retrieved RGM passages for exact opposing temporal evidence."
+    },
+    "repair": {
+      "scope": "The admitted human-remains discovery, stop-work and authority-notification structure only.",
+      "opposite_order": "Recognise a source-local discovery then notification then stopping sequence.",
+      "opposed_state": "Recognise a source-local discovery then continue-work statement.",
+      "answer_boundary": "Return ambiguous and present the reviewed source and every exact conflicting retrieved source together.",
+      "automatic_authority_choice": false,
+      "temporal_authority_recording_available": false
+    },
+    "cases": [
+      {
+        "case": "question asks notify before stop",
+        "status": "ambiguous",
+        "source_count": 2,
+        "tree_calls": 0,
+        "language_model_calls": 0
+      },
+      {
+        "case": "question asks stop before notify",
+        "status": "ambiguous",
+        "source_count": 2,
+        "tree_calls": 0,
+        "language_model_calls": 0
+      },
+      {
+        "case": "question asks continue work after discovery",
+        "status": "ambiguous",
+        "source_count": 2,
+        "tree_calls": 0,
+        "language_model_calls": 0
+      }
+    ],
+    "source_integrity": {
+      "both_exact_passages_presented": true,
+      "provenance_preserved": true,
+      "controlling_source_selected": false
+    },
+    "regression": {
+      "production_ingestion_chunks": 611,
+      "true_positive_count": 15,
+      "false_positive_count": 0,
+      "false_negative_count": 0,
+      "tree_calls": 0,
+      "automatic_learning": false
+    },
+    "verification": {
+      "native_memory_tests": "155 passed",
+      "git_diff_check": "passed"
     }
   }
 }

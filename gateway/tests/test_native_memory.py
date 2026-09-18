@@ -1707,6 +1707,67 @@ def test_live_answer_returns_sourced_no_for_reviewed_temporal_contradictions(tmp
         library.db.close()
 
 
+@pytest.mark.parametrize(("name", "conflicting_text", "question"), [
+    ("reversed-query",
+        "If human remains are found, the site supervisor must notify NSW Police and "
+        "Heritage NSW before all works are stopped.",
+        "Which procedure notifies Police before work stops around human remains?"),
+    ("forward-query",
+        "If human remains are found, the site supervisor must notify NSW Police and "
+        "Heritage NSW before all works are stopped.",
+        "Which procedure stops work before the manager notifies Police and Heritage NSW?"),
+    ("continue-work",
+        "If human remains are discovered, excavation may continue while the manager "
+        "notifies NSW Police and Heritage NSW.",
+        "What procedure requires excavation to continue after human remains are found?"),
+])
+def test_live_answer_presents_both_sides_of_temporal_source_conflict(
+    tmp_path, name, conflicting_text, question,
+):
+    from gateway.native_memory import (HUMAN_REMAINS_STOP_NOTIFY_MOTIF,
+        RgmDocumentService)
+    from gateway.permanent_library import PermanentLibrary
+    library = PermanentLibrary(tmp_path / f"human-remains-conflict-{name}.sqlite3")
+    tom_calls = []
+    document_operations = []
+    def document_worker(operation, payload):
+        document_operations.append(operation)
+        if operation != "rgm_embed":
+            raise AssertionError("an unresolved source conflict must not call the language reader")
+        return dict(vectors={hashlib.sha256(text.encode()).hexdigest():
+            [1.0] + [0.0] * 383 for text in payload["texts"]})
+    service = RgmDocumentService(worker=document_worker, model_identity="fixture-model",
+        tom_worker=_reviewed_tom_worker(tom_calls),
+        tom_profile=_reviewed_tom_profile())
+    reviewed_text = ("If human remains are discovered, all works must immediately stop. "
+        "The site supervisor must then notify NSW Police and Heritage NSW.")
+    try:
+        reviewed_document = service.ingest("project", library, dict(explicit_user_action=True,
+            display_name="Stop then notify procedure", content=reviewed_text,
+            media_type="text/plain"))
+        service.learn_situation("project", library, dict(explicit_user_action=True,
+            document_id=reviewed_document["document_id"], chunk_index=0,
+            temporal_motif=HUMAN_REMAINS_STOP_NOTIFY_MOTIF))
+        service.ingest("project", library, dict(explicit_user_action=True,
+            display_name=name, content=conflicting_text,
+            media_type="text/plain"))
+
+        result = service.answer("project", library, question)
+        assert result["status"] == "ambiguous"
+        assert {source["text"] for source in result["sources"]} == {
+            reviewed_text, conflicting_text}
+        assert reviewed_text in result["answer"] and conflicting_text in result["answer"]
+        assert result["authority_review"]["relation_kind"] == "before"
+        assert result["authority_review"]["can_record"] is False
+        trace = result["trace"]["retrieval"]["reviewed_tom_memory"]
+        assert trace["status"] == "source_authority_unresolved"
+        assert trace["evidence_scope"]["mode"] == "all_conflicting_sources"
+        assert result["purity"]["tree_calls"] == 0
+        assert "rgm_read" not in document_operations
+    finally:
+        library.db.close()
+
+
 def test_live_answer_exposes_every_exact_source_linked_by_temporal_memory(tmp_path, monkeypatch):
     import gateway.native_memory as native_memory
     from gateway.native_memory import RgmDocumentService, read_rgm_source_evidence

@@ -522,8 +522,8 @@ def _failure_step_in_cost_matches(text):
     return min(candidates, key=lambda item: item[0])[1] if candidates else None
 
 
-def _human_remains_stop_notify_matches(text):
-    """Locate one local human-remains discovery -> stop-work -> notify procedure."""
+def _human_remains_order_matches(text, order):
+    """Locate one local human-remains procedure in the supplied event order."""
     import itertools
     import re
     patterns = {
@@ -531,7 +531,8 @@ def _human_remains_stop_notify_matches(text):
             r"\b(?:human\s+remains.{0,100}(?:uncovered|found|discovered)|"
             r"(?:uncovered|found|discovered).{0,100}human\s+remains)\b"),
         "stop_work": (
-            r"\b(?:(?:all\s+)?works?.{0,80}(?:must\s+)?(?:immediately\s+)?stop|"
+            r"\b(?:(?:all\s+)?works?.{0,80}(?:must\s+)?(?:immediately\s+)?"
+            r"stop(?:ping|ped|s)?|"
             r"stop(?:ping|ped|s)?.{0,40}works?|"
             r"(?:immediately\s+)?cease(?:s|d|ing)?\s+(?:all\s+)?works?)\b"),
         "notify_authorities": (
@@ -546,10 +547,45 @@ def _human_remains_stop_notify_matches(text):
         found["notify_authorities"]):
         matches = dict(human_remains_discovered=discovery,
             stop_work=stop, notify_authorities=notify)
-        if discovery.start() < stop.start() < notify.start():
-            span = notify.end() - discovery.start()
+        ordered = [matches[name] for name in order]
+        if all(left.start() < right.start() for left, right in zip(ordered, ordered[1:])):
+            span = max(match.end() for match in ordered) - min(match.start() for match in ordered)
             if span <= 1200:
                 candidates.append((span, matches))
+    return min(candidates, key=lambda item: item[0])[1] if candidates else None
+
+
+def _human_remains_stop_notify_matches(text):
+    """Locate one local human-remains discovery -> stop-work -> notify procedure."""
+    return _human_remains_order_matches(text, (
+        "human_remains_discovered", "stop_work", "notify_authorities"))
+
+
+def _human_remains_notify_stop_matches(text):
+    """Locate the exact opposite local order for conflict presentation only."""
+    return _human_remains_order_matches(text, (
+        "human_remains_discovered", "notify_authorities", "stop_work"))
+
+
+def _human_remains_continue_work_matches(text):
+    """Locate a local discovery -> continue-work statement that opposes stop work."""
+    import itertools
+    import re
+    discoveries = list(re.finditer(
+        r"\b(?:human\s+remains.{0,100}(?:uncovered|found|discovered)|"
+        r"(?:uncovered|found|discovered).{0,100}human\s+remains)\b",
+        text, re.I | re.S))
+    continuations = list(re.finditer(
+        r"\b(?:(?:work|works|excavation).{0,50}(?:continue|continues|continued)|"
+        r"continu(?:e|es|ed|ing).{0,50}(?:work|works|excavation))\b",
+        text, re.I | re.S))
+    candidates = []
+    for discovery, continuation in itertools.product(discoveries, continuations):
+        if discovery.start() < continuation.start():
+            span = continuation.end() - discovery.start()
+            if span <= 1200:
+                candidates.append((span, dict(
+                    human_remains_discovered=discovery, continue_work=continuation)))
     return min(candidates, key=lambda item: item[0])[1] if candidates else None
 
 
@@ -2622,6 +2658,48 @@ class RgmDocumentService:
             return dict(status="no_query_structure", recalled_source_ids=[], query_structure=query,
                 whole_tree_score=False, all_branch_cell_coordinates_compared=False)
         query_relationships = query.get("relationships", [query["fields"]])
+        human_events = {"human_remains_discovered", "stop_work",
+            "notify_authorities", "continue_work"}
+        query_events = {relationship.get(key) for relationship in query_relationships
+            for key in ("source_event", "target_event")}
+        human_query = ("human_remains_discovered" in query_events
+            or {"stop_work", "notify_authorities"} <= query_events)
+        human_pairs = {
+            ("human_remains_discovered", "stop_work"),
+            ("stop_work", "notify_authorities"),
+        }
+        learned_human = [memory for memory in memories
+            if (memory.get("source_event"), memory.get("target_event")) in human_pairs]
+        learned_human_pairs = {(memory.get("source_event"), memory.get("target_event"))
+            for memory in learned_human}
+        if human_query and query_events <= human_events and human_pairs <= learned_human_pairs:
+            active_source_ids = {row["situation"]["source_id"] for row in rows
+                if row["situation"]["provenance"]["document_id"] in active_documents}
+            bound_sets = [set(memory["source_ids"]) for memory in learned_human]
+            reviewed_source_ids = [source_id for source_id in learned_human[0]["source_ids"]
+                if source_id in active_source_ids
+                and all(source_id in bound for bound in bound_sets)]
+            conflicts = []
+            seen_conflicts = set()
+            for memory in packet["memories"]:
+                proof = memory["evidence_reference"]
+                source_id = rgm_candidate_source_id(memory)
+                if (proof["doc_id"] not in active_documents
+                    or source_id in reviewed_source_ids or source_id in seen_conflicts):
+                    continue
+                if _human_remains_notify_stop_matches(memory.get("content", "")) is not None:
+                    seen_conflicts.add(source_id)
+                    conflicts.append(dict(source_id=source_id,
+                        reason="source states authority notification before work stopping"))
+                elif _human_remains_continue_work_matches(memory.get("content", "")) is not None:
+                    seen_conflicts.add(source_id)
+                    conflicts.append(dict(source_id=source_id,
+                        reason="source allows work to continue after human remains are discovered"))
+            if conflicts and reviewed_source_ids:
+                return dict(status="source_authority_unresolved", recalled_source_ids=[],
+                    conflict_sources=conflicts, reviewed_source_ids=reviewed_source_ids,
+                    query_structure=query, whole_tree_score=False,
+                    all_branch_cell_coordinates_compared=False)
         matched = []
         for relationship in query_relationships:
             candidates_for_relationship = [memory for memory in memories
@@ -2811,8 +2889,9 @@ class RgmDocumentService:
                 result["reason"] = reason
             return result
         current = [describe(source_id) for source_id in structural.get("reviewed_source_ids", [])]
-        return dict(status="unresolved", relation_kind=structural["query_structure"]["fields"]["relation_kind"],
-            can_record=bool(current),
+        relation_kind = structural["query_structure"]["fields"]["relation_kind"]
+        return dict(status="unresolved", relation_kind=relation_kind,
+            can_record=bool(current) and relation_kind in {"replacement_cover", "reimbursement"},
             conflict_sources=[describe(item["source_id"], item["reason"])
                 for item in structural["conflict_sources"]],
             current_sources=current)

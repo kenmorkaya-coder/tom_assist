@@ -1090,6 +1090,17 @@ relationship, Tom Assist reopens that relationship's exact RGM sources and
 returns a sourced `not_supported` result. This path makes no tree call and no
 language-model call. It does not choose between conflicting sources; conflicts
 remain visible together and follow the existing authority workflow.
+
+A later controlled conflict check found that this contradiction shortcut could
+still hide an exact RGM passage that stated the opposite procedure. The answer
+path now checks the retrieved passages first for the bounded human-remains
+sequence. A source that puts notification before stopping, or permits work to
+continue after discovery, is shown beside the reviewed stop-then-notify source.
+The result is `ambiguous`; both exact source identities and passages are
+preserved. This path makes zero tree calls and zero language-reader calls. The
+existing authority action is deliberately unavailable for these temporal
+relationships, so neither sequence can be selected silently.
+
 Document-style party names such as `Transport for NSW` / `TfNSW` and
 `Sydney Metro` / `SM` are matched mechanically. If the question does not state
 one complete relationship, ToM makes no selection claim and the existing RGM
