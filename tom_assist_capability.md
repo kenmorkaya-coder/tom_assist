@@ -264,6 +264,17 @@ control passage containing related words without an ordered local procedure was
 found semantically and rejected before review. The queue made zero tree calls
 and performed no automatic learning.
 
+A larger bounded check then used the production RGM file-ingestion path on 611
+real chunks across the complete M12 agreement, D&C Deed and two Middleton
+documents. It recovered all 15 previously hand-inspected valid passages and
+produced no additional candidates. Semantic return alone contained 7 of those
+15, the contextual vector top ten contained 7, the native vector top ten
+contained 8, and Reciprocal Rank Fusion contained 9. The full-source regex and
+local-order validator recovered all 15. Four related negative passages were
+returned semantically and all four were rejected before review. This is a
+bounded regression result over the already inspected structures, not general
+document accuracy.
+
 ## Evidence and answer behaviour
 
 The evidence layer can return four materially different results:
@@ -342,7 +353,7 @@ These counts describe the relevant integration suite at the recorded revision;
 they are not a general accuracy score.
 
 The later unseen-document access repair passed all **144** native-memory tests.
-The RGM sweep integration repair passes all **149** native-memory tests. The
+The read-only review accuracy repair passes all **152** native-memory tests. The
 desktop suite passes **20** tests, TypeScript checking passes, and the production
 desktop interface build passes.
 The broader gateway run recorded 595 passes, one expected skip, one unrelated
@@ -379,10 +390,8 @@ They are evidence artifacts, not application source.
 
 The next work should extend capability one variable at a time:
 
-1. Measure false positives and misses in the expanded read-only review queue
-   before admitting any further structure.
-2. Exercise conflict and explicit-authority handling for this temporal motif.
-3. Keep exact evidence selection and conflict presentation separate from
+1. Exercise conflict and explicit-authority handling for this temporal motif.
+2. Keep exact evidence selection and conflict presentation separate from
    structural recall.
-4. Do not introduce branch averaging, a whole-tree score or automatic teaching
+3. Do not introduce branch averaging, a whole-tree score or automatic teaching
    to make a failed result look successful.

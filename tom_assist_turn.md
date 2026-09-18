@@ -2873,3 +2873,42 @@ and zero review candidates. The complete review made zero tree calls and no
 automatic learning. The Memory screen now shows the discovery channels and
 ranks for each candidate. Verification passes all 149 native-memory tests and
 all 20 desktop tests; TypeScript checking passes.
+
+### 2026-09-18 — read-only review accuracy check
+
+The repaired discovery path was then checked against the complete production
+ingestion of four real PDFs. The positive labels were the passages previously
+inspected by hand: four M12 procedures, eight D&C Deed procedures and three
+Middleton human-remains procedures. The production RGM file reader and chunker
+produced 248 M12 chunks, 315 D&C chunks and 48 Middleton chunks, for 611 real
+chunks in total.
+
+The first harness attempt used `pdftotext -layout`. It produced incompatible
+contract corpora of 198 and 393 chunks, so its accuracy calculation was invalid
+and discarded. The final run used the same `source_path` import route as the
+desktop app. Under that reader, the known Appendix AB main recommendation is
+chunk 41 rather than chunk 39. Its exact discovery, cease-work and authority-
+notification wording was verified before the final score was calculated.
+
+The final read-only result was:
+
+- M12: **4/4** known valid passages, zero extras;
+- D&C Deed: **8/8** known valid passages, zero extras;
+- Middleton: **3/3** known valid passages, zero extras; and
+- combined: **15/15**, with zero false positives and zero false negatives in
+  this bounded labelled set.
+
+The channel telemetry explains why the combined design matters. Of the 15
+validated passages, the final semantic return contained 7, the contextual
+vector top ten contained 7, the native RGM vector top ten contained 8, and
+Reciprocal Rank Fusion contained 9. The independent full-source regex/order
+check recovered and validated all 15.
+
+Four negative controls were also run: topic-only wording, reversed event order,
+an incomplete procedure and the three event phrases separated beyond the local
+limit. RGM returned all four semantically, while the regex/order validator
+rejected all four. No review candidate was produced. The complete diagnostic
+made zero tree calls, performed no automatic learning and deleted its temporary
+databases. The compact result is in `review_accuracy_check` inside
+`validation/runs/rgm-tom-middleton-live-answer.json`. The four controls are now
+permanent regression cases; all 152 native-memory tests pass.
