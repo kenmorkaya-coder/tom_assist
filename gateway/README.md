@@ -1119,6 +1119,16 @@ exact chunks and made zero tree and language-reader calls. The documents have
 different project and jurisdiction scopes, so the result does not assign legal
 authority.
 
+A same-project revision control then compared the November 2021 contract copy
+of the SCAW Aboriginal Cultural Heritage CEMP with the official June 2023
+Revision 06. Production extraction created 367 and 106 chunks. The RGM semantic
+sweep, both vector passes, reciprocal-rank fusion and the strict source regex
+all found the relevant passage in each version. Both passages state discovery
+→ stop work → notify authorities. The review queue therefore returned two
+matching candidates and no opposing procedure, with zero tree calls and no
+automatic learning. Revision metadata alone never creates a conflict or an
+authority decision.
+
 Document-style party names such as `Transport for NSW` / `TfNSW` and
 `Sydney Metro` / `SM` are matched mechanically. If the question does not state
 one complete relationship, ToM makes no selection claim and the existing RGM

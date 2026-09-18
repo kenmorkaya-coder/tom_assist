@@ -408,9 +408,10 @@ They are evidence artifacts, not application source.
 
 The next work should extend capability one variable at a time:
 
-1. Test the explicit temporal-authority action on competing versions within one
-   real project,
-   rather than documents from different jurisdictions.
+1. Obtain a genuine pair of conflicting procedure versions from one real
+   project and test the explicit temporal-authority action. The November 2021
+   and June 2023 SCAW plan revisions were checked and agree on stop → notify,
+   so they are a passed no-false-conflict control rather than an authority test.
 2. Keep exact evidence selection and conflict presentation separate from
    structural recall.
 3. Do not introduce branch averaging, a whole-tree score or automatic teaching
