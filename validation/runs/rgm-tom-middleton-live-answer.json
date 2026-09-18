@@ -1,5 +1,5 @@
 {
-  "version": "tom-assist-rgm-tom-middleton-live-answer/4",
+  "version": "tom-assist-rgm-tom-middleton-live-answer/5",
   "status": "COMPLETE",
   "outcome": "PASS",
   "claim_boundary": "One explicitly reviewed Middleton procedure, one correct question, one reversed-order control and one absent-state control through the production RGM, ToM and local evidence-reader path.",
@@ -399,6 +399,414 @@
       "desktop_production_build": "passed",
       "broader_gateway": "595 passed, 1 skipped, 1 pre-existing event-graph fixture-overlap failure, 5 sandbox-only local-socket setup errors",
       "oauth_socket_rerun_outside_sandbox": "8 passed"
+    }
+  },
+  "review_accuracy_check": {
+    "version": "tom-assist-rgm-review-accuracy/1",
+    "status": "COMPLETE",
+    "outcome": "PASS",
+    "claim_boundary": "Fifteen previously manually inspected positive passages across four real documents, plus four controlled negative passages. This is a bounded regression check, not general document accuracy.",
+    "label_basis": "The contract chunk indexes are the twelve manually inspected positives already recorded in tom_assist_turn.md. Middleton labels are the three already reviewed procedures, mapped to the desktop RGM PDF extraction.",
+    "harness_correction": {
+      "invalid_first_attempt": "pdftotext -layout produced different contract corpora (198 M12 and 393 D&C chunks) from the frozen reviewed corpora (248 and 315); its accuracy calculation was discarded.",
+      "corrected_path": "The final run used the production document.ingest source_path path, copied RGM PDF reader, unchanged RGM chunker and local MiniLM.",
+      "middleton_index_mapping": "The production PDF reader produced 45 Appendix AB chunks. The previously reviewed main Recommendation 2 text is chunk 41 under this extraction, rather than chunk 39 under pdftotext -layout. Exact discovery, cease-work and notification text was verified before final scoring."
+    },
+    "totals": {
+      "scanned_chunks": 611,
+      "expected_count": 15,
+      "actual_count": 15,
+      "true_positive_count": 15,
+      "false_positive_count": 0,
+      "false_negative_count": 0,
+      "precision": 1.0,
+      "recall": 1.0
+    },
+    "discovery_channel_coverage_of_15_validated_passages": {
+      "rgm_semantic_sweep": 7,
+      "rgm_contextual_vector_pass": 7,
+      "rgm_native_vector_pass": 8,
+      "rgm_rrf_fusion": 9,
+      "source_regex": 15
+    },
+    "projects": {
+      "m12": {
+        "scanned_chunks": 248,
+        "expected_count": 4,
+        "actual_count": 4,
+        "true_positive_count": 4,
+        "false_positive_count": 0,
+        "false_negative_count": 0,
+        "sources": {
+          "m12": {
+            "path": "/Volumes/My Passport for Mac/tom_as projects/sydney_metro_wsa/SCAW Contract/SMWSA M12 Interface Agreement - Fully Executed 2 February 2022.pdf",
+            "pdf_sha256": "29383bf63b32d42edebbfafd85adca9e2ce7be9a1b38ad49a0d28f4d859077ba",
+            "document_id": "document-8dfdd27e054dfa253df1c0353123c713",
+            "chunk_count": 248,
+            "expected_chunk_indexes": [
+              62,
+              64,
+              78,
+              80
+            ]
+          }
+        },
+        "candidates": [
+          {
+            "source": "m12",
+            "chunk_index": 62,
+            "discovery_channels": {
+              "rgm_semantic_sweep": true,
+              "rgm_contextual_vector_pass": true,
+              "rgm_native_vector_pass": true,
+              "rgm_rrf_fusion": true,
+              "source_regex": true
+            },
+            "discovery_ranks": {
+              "contextual_vector": 1,
+              "native_vector": 1,
+              "rrf": 1
+            }
+          },
+          {
+            "source": "m12",
+            "chunk_index": 64,
+            "discovery_channels": {
+              "rgm_semantic_sweep": false,
+              "rgm_contextual_vector_pass": false,
+              "rgm_native_vector_pass": false,
+              "rgm_rrf_fusion": false,
+              "source_regex": true
+            },
+            "discovery_ranks": {
+              "contextual_vector": null,
+              "native_vector": null,
+              "rrf": null
+            }
+          },
+          {
+            "source": "m12",
+            "chunk_index": 78,
+            "discovery_channels": {
+              "rgm_semantic_sweep": false,
+              "rgm_contextual_vector_pass": false,
+              "rgm_native_vector_pass": true,
+              "rgm_rrf_fusion": true,
+              "source_regex": true
+            },
+            "discovery_ranks": {
+              "contextual_vector": null,
+              "native_vector": 8,
+              "rrf": 8
+            }
+          },
+          {
+            "source": "m12",
+            "chunk_index": 80,
+            "discovery_channels": {
+              "rgm_semantic_sweep": true,
+              "rgm_contextual_vector_pass": true,
+              "rgm_native_vector_pass": true,
+              "rgm_rrf_fusion": true,
+              "source_regex": true
+            },
+            "discovery_ranks": {
+              "contextual_vector": 6,
+              "native_vector": 6,
+              "rrf": 6
+            }
+          }
+        ],
+        "tree_calls": 0,
+        "automatic_learning": false
+      },
+      "dc_deed": {
+        "scanned_chunks": 315,
+        "expected_count": 8,
+        "actual_count": 8,
+        "true_positive_count": 8,
+        "false_positive_count": 0,
+        "false_negative_count": 0,
+        "sources": {
+          "dc_deed": {
+            "path": "/Volumes/My Passport for Mac/tom_as projects/sydney_metro_wsa/SCAW Contract/SCAW D_C Deed - Executed 1 March 2022.pdf",
+            "pdf_sha256": "a9dda3b6376d27bd76a01adc4a7692838b4271a9967c53f69fa6883dafc14f99",
+            "document_id": "document-33da0ae4890f77ca0a446bb3a132908c",
+            "chunk_count": 315,
+            "expected_chunk_indexes": [
+              171,
+              194,
+              195,
+              205,
+              261,
+              263,
+              265,
+              303
+            ]
+          }
+        },
+        "candidates": [
+          {
+            "source": "dc_deed",
+            "chunk_index": 171,
+            "discovery_channels": {
+              "rgm_semantic_sweep": false,
+              "rgm_contextual_vector_pass": false,
+              "rgm_native_vector_pass": false,
+              "rgm_rrf_fusion": false,
+              "source_regex": true
+            },
+            "discovery_ranks": {
+              "contextual_vector": null,
+              "native_vector": null,
+              "rrf": null
+            }
+          },
+          {
+            "source": "dc_deed",
+            "chunk_index": 194,
+            "discovery_channels": {
+              "rgm_semantic_sweep": false,
+              "rgm_contextual_vector_pass": false,
+              "rgm_native_vector_pass": false,
+              "rgm_rrf_fusion": false,
+              "source_regex": true
+            },
+            "discovery_ranks": {
+              "contextual_vector": null,
+              "native_vector": null,
+              "rrf": null
+            }
+          },
+          {
+            "source": "dc_deed",
+            "chunk_index": 195,
+            "discovery_channels": {
+              "rgm_semantic_sweep": true,
+              "rgm_contextual_vector_pass": true,
+              "rgm_native_vector_pass": true,
+              "rgm_rrf_fusion": true,
+              "source_regex": true
+            },
+            "discovery_ranks": {
+              "contextual_vector": 6,
+              "native_vector": 6,
+              "rrf": 6
+            }
+          },
+          {
+            "source": "dc_deed",
+            "chunk_index": 205,
+            "discovery_channels": {
+              "rgm_semantic_sweep": false,
+              "rgm_contextual_vector_pass": false,
+              "rgm_native_vector_pass": true,
+              "rgm_rrf_fusion": true,
+              "source_regex": true
+            },
+            "discovery_ranks": {
+              "contextual_vector": null,
+              "native_vector": 8,
+              "rrf": 8
+            }
+          },
+          {
+            "source": "dc_deed",
+            "chunk_index": 261,
+            "discovery_channels": {
+              "rgm_semantic_sweep": false,
+              "rgm_contextual_vector_pass": false,
+              "rgm_native_vector_pass": false,
+              "rgm_rrf_fusion": false,
+              "source_regex": true
+            },
+            "discovery_ranks": {
+              "contextual_vector": null,
+              "native_vector": null,
+              "rrf": null
+            }
+          },
+          {
+            "source": "dc_deed",
+            "chunk_index": 263,
+            "discovery_channels": {
+              "rgm_semantic_sweep": false,
+              "rgm_contextual_vector_pass": false,
+              "rgm_native_vector_pass": false,
+              "rgm_rrf_fusion": false,
+              "source_regex": true
+            },
+            "discovery_ranks": {
+              "contextual_vector": null,
+              "native_vector": null,
+              "rrf": null
+            }
+          },
+          {
+            "source": "dc_deed",
+            "chunk_index": 265,
+            "discovery_channels": {
+              "rgm_semantic_sweep": true,
+              "rgm_contextual_vector_pass": true,
+              "rgm_native_vector_pass": true,
+              "rgm_rrf_fusion": true,
+              "source_regex": true
+            },
+            "discovery_ranks": {
+              "contextual_vector": 4,
+              "native_vector": 4,
+              "rrf": 4
+            }
+          },
+          {
+            "source": "dc_deed",
+            "chunk_index": 303,
+            "discovery_channels": {
+              "rgm_semantic_sweep": false,
+              "rgm_contextual_vector_pass": false,
+              "rgm_native_vector_pass": false,
+              "rgm_rrf_fusion": false,
+              "source_regex": true
+            },
+            "discovery_ranks": {
+              "contextual_vector": null,
+              "native_vector": null,
+              "rrf": null
+            }
+          }
+        ],
+        "tree_calls": 0,
+        "automatic_learning": false
+      },
+      "middleton": {
+        "scanned_chunks": 48,
+        "expected_count": 3,
+        "actual_count": 3,
+        "true_positive_count": 3,
+        "false_positive_count": 0,
+        "false_negative_count": 0,
+        "sources": {
+          "middleton_c": {
+            "path": "/Volumes/My Passport for Mac/tom_as projects/2026 05 19 - Middleton Submission/Appendix C - Mitigation Measures.pdf",
+            "pdf_sha256": "7e31e674bd1f9f36a20ef81cf6485c8a7e48091a70a942c38f9f0daaac9c9c3a",
+            "document_id": "document-2d4f260726b9cc1b96cdf293e4a296aa",
+            "chunk_count": 3,
+            "expected_chunk_indexes": [
+              2
+            ]
+          },
+          "middleton_ab": {
+            "path": "/Volumes/My Passport for Mac/tom_as projects/2026 05 19 - Middleton Submission/Appendix AB - Aboriginal Cultural Heritage Assessment.pdf",
+            "pdf_sha256": "11929bf098a5684884871fddd969fefe0aeab23d81e23dc23c700b4774e04421",
+            "document_id": "document-3eb4ff246227b836f42c045989ff4c0e",
+            "chunk_count": 45,
+            "expected_chunk_indexes": [
+              1,
+              41
+            ]
+          }
+        },
+        "candidates": [
+          {
+            "source": "middleton_c",
+            "chunk_index": 2,
+            "discovery_channels": {
+              "rgm_semantic_sweep": true,
+              "rgm_contextual_vector_pass": true,
+              "rgm_native_vector_pass": false,
+              "rgm_rrf_fusion": true,
+              "source_regex": true
+            },
+            "discovery_ranks": {
+              "contextual_vector": 5,
+              "native_vector": null,
+              "rrf": 3
+            }
+          },
+          {
+            "source": "middleton_ab",
+            "chunk_index": 1,
+            "discovery_channels": {
+              "rgm_semantic_sweep": true,
+              "rgm_contextual_vector_pass": true,
+              "rgm_native_vector_pass": true,
+              "rgm_rrf_fusion": true,
+              "source_regex": true
+            },
+            "discovery_ranks": {
+              "contextual_vector": 2,
+              "native_vector": 2,
+              "rrf": 2
+            }
+          },
+          {
+            "source": "middleton_ab",
+            "chunk_index": 41,
+            "discovery_channels": {
+              "rgm_semantic_sweep": true,
+              "rgm_contextual_vector_pass": true,
+              "rgm_native_vector_pass": true,
+              "rgm_rrf_fusion": true,
+              "source_regex": true
+            },
+            "discovery_ranks": {
+              "contextual_vector": 1,
+              "native_vector": 1,
+              "rrf": 1
+            }
+          }
+        ],
+        "tree_calls": 0,
+        "automatic_learning": false
+      }
+    },
+    "negative_controls": {
+      "controls": {
+        "topic_only": {
+          "chunk_count": 1,
+          "semantic_return": true,
+          "validated_candidate": false
+        },
+        "reversed_order": {
+          "chunk_count": 1,
+          "semantic_return": true,
+          "validated_candidate": false
+        },
+        "incomplete": {
+          "chunk_count": 1,
+          "semantic_return": true,
+          "validated_candidate": false
+        },
+        "separated": {
+          "chunk_count": 1,
+          "semantic_return": true,
+          "validated_candidate": false
+        }
+      },
+      "scanned_chunks": 4,
+      "validated_candidate_count": 0,
+      "discovery": {
+        "strategy": "rgm_two_vector_passes_rrf_plus_source_regex",
+        "rgm_query_count": 4,
+        "contextual_vector_candidate_count": 4,
+        "native_vector_candidate_count": 4,
+        "rgm_semantic_candidate_count": 4,
+        "regex_candidate_count": 0,
+        "validated_candidate_count": 0,
+        "semantic_rejected_count": 8
+      },
+      "tree_calls": 0,
+      "automatic_learning": false
+    },
+    "tree_calls": 0,
+    "automatic_learning": false,
+    "temporary_databases_deleted": true,
+    "large_artifact_created": false,
+    "verification": {
+      "native_memory_tests": "152 passed",
+      "compact_result_json": "valid",
+      "real_document_positive_labels": 15,
+      "controlled_negative_labels": 4
     }
   }
 }

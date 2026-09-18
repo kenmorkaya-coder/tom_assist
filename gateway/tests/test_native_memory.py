@@ -1577,17 +1577,25 @@ def test_reviewed_human_remains_chain_uses_tom_for_order_and_rejects_controls(tm
         library.db.close()
 
 
-def test_review_semantic_sweep_cannot_bypass_source_structure_validation(tmp_path):
+@pytest.mark.parametrize(("name", "text"), [
+    ("topic-only", "Human remains, work, Police, costs, and reimbursement are discussed here, "
+        "but this passage states no ordered event chain."),
+    ("reversed-order", "If human remains are found, the supervisor must notify Police and "
+        "Heritage NSW before all works immediately stop."),
+    ("incomplete", "The Contractor fails to comply. The resulting loss is a debt due from "
+        "the Contractor."),
+    ("separated", "The Contractor fails to act and the Principal may carry out such work. "
+        + "Unrelated contract text. " * 100 + "A different overpayment is a debt due."),
+])
+def test_review_semantic_sweep_cannot_bypass_source_structure_validation(tmp_path, name, text):
     from gateway.native_memory import RgmDocumentService
     from gateway.permanent_library import PermanentLibrary
-    library = PermanentLibrary(tmp_path / "semantic-review-control.sqlite3")
+    library = PermanentLibrary(tmp_path / f"semantic-review-{name}.sqlite3")
     service = RgmDocumentService(worker=_rgm_app_worker([]), model_identity="fixture-model",
         tom_worker=_reviewed_tom_worker([]), tom_profile=_reviewed_tom_profile())
     try:
         service.ingest("project", library, dict(explicit_user_action=True,
-            display_name="Related words without a procedure",
-            content=("Human remains, work, Police, costs, and reimbursement are discussed here, "
-                "but this passage states no ordered event chain."), media_type="text/plain"))
+            display_name=name, content=text, media_type="text/plain"))
         review = service.review_candidates("project", library)
         assert review["candidates"] == []
         assert review["discovery"]["rgm_semantic_candidate_count"] == 1

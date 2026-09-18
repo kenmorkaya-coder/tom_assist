@@ -1047,6 +1047,17 @@ contextual pass found the summary at rank 4. Both passed the independent regex
 and event-order check. A related-word control entered the semantic set but
 stated no ordered procedure, so it produced no review candidate.
 
+The wider read-only check used the production file-import path over 611 chunks:
+248 from the M12 agreement, 315 from the D&C Deed and 48 from the two Middleton
+documents. It returned exactly the 15 passages that had already been inspected
+and labelled, with no extra candidate. The final semantic return contained 7 of
+the 15, the contextual vector top ten contained 7, the native RGM vector top ten
+contained 8, and rank fusion contained 9. The independent full-source
+regex/order check recovered all 15. Four negative controls were semantically
+returned and rejected before review: topic-only wording, reversed order, an
+incomplete procedure and phrases outside the local span. The scan made zero
+tree calls and performed no learning.
+
 During an answer, MiniLM/RGM still locates candidate source passages when they
 are available. When the question explicitly states an admitted event sequence,
 the reviewed temporal structure can be accessed from the query alone. Reviewed
