@@ -54,7 +54,7 @@ learned structure. The two lanes meet at evidence checking.
                   |                                   |
                   |                                   v
                   |                     EXPLICIT USER AUTHORITY
-                  |                  exact relationship/event motif
+                  |             exact relationship/event/source claim
                   |                  controlling + replaced passages
                   |                    effective time + reason
                   |                                   |
@@ -3067,3 +3067,70 @@ The server checks the retained record content, hashes, source bindings and cycle
 constraints before returning the history. The view is read-only, makes zero
 tree calls and cannot edit or revoke a decision. Superseded source text remains
 available for audit.
+
+### 2026-09-18 — real same-project remediation-plan revision
+
+A second same-project revision pair supplied the missing genuine state change.
+Revision 04 of the SCAW SMF Final Package says the contaminated-soil Remediation
+Action Plan is a draft under site-auditor review and that the approved plan will
+be attached to a future submission. Revision 05 removes that draft statement,
+identifies revised plan `SMWSASCA-CPU-1NL-NL000-CT-RPT-000028`, and says it is
+attached in Appendix M. The PDF and extracted-text hashes differ and were
+recorded for both sources.
+
+The first production import stopped before embedding because the two reports
+produced 2,201 RGM chunks, above the then-current 512-chunk collection bound.
+No source was pruned. A shadow run changed only the request-local RGM capacity
+to 4,096 and successfully admitted and searched all 2,201 chunks. The product
+bound and request-local RGM capacity were then changed together to 4,096, with
+collections above that size still rejected before model work. The document
+cache version was advanced so earlier vectors cannot be silently reused under
+the new collection contract.
+
+The updated production retrieval returned the real revision-history evidence.
+For the direct draft-status question, Revision 05 chunk 74 ranked first,
+Revision 04 chunk 71 ranked second and Revision 05 chunk 79 ranked third; all
+three were present in the final ten-source packet. The other two questions also
+returned the relevant short revision passages at the top. The complete Section
+4.3.4 source chunks ranked 78/89, 95/102 and 527/786, so the semantic and vector
+sweeps succeeded through the concise change-history evidence rather than the
+long clauses.
+
+This test used production PDF extraction, production RGM chunking, the frozen
+MiniLM encoder, the copied RGM native and contextual vector passes, Reciprocal
+Rank Fusion and the final RGM packet. It made zero ToM tree calls, performed no
+automatic learning and deleted the temporary database. It proves that the RGM
+integration can retrieve a genuine version change from the full pair. The next
+gap is explicit: the current source-authority scopes cannot yet represent this
+plan-status claim, so the app has not yet proved that it will show both versions
+and apply a user-recorded controlling-source decision for this case.
+
+### 2026-09-18 — bounded remediation-plan source authority
+
+That exact gap was then closed without changing retrieval or the ToM tree. The
+answer path recognises only the contaminated-soil Remediation Action Plan status
+family and classifies exact retrieved passages as either draft-under-review or
+revised-attached. It prefers the concise change notes and an opposing source
+from another retained document. This made the selected pair stable across the
+three fixed questions: Revision 05 chunk 74 and Revision 04 chunk 71.
+
+Before any decision, the live path returned **Ambiguous**, displayed both exact
+passages and enabled the existing source-authority form. Conflict presentation
+made zero language-model calls and zero ToM calls. A temporary real-project
+decision then marked Revision 05 chunk 74 as controlling with an effective time
+and reason. The same question remained ambiguous immediately before that time.
+At the effective time, the authority filter supplied only chunk 74 to a
+deterministic exact-quote reader, which returned supported evidence. The
+read-only authority history showed the controlling and replaced passages.
+
+Two controlled cases also chose each side in turn, rejected a reverse cycle and
+kept future decisions inactive. The desktop displays the source-claim scope and
+passes it back unchanged. This is a bounded plan-status capability, not a
+general amendment or legal-authority detector. Authority is still never
+inferred from dates, filenames or revision labels.
+
+Verification passes all 162 native-memory tests and all 22 desktop tests,
+including TypeScript checking and the production build. The broader gateway
+run reports 608 passes and one skip, with the unchanged unrelated event-graph
+fixture-overlap failure and five sandbox-only Unix-socket setup errors. The
+complete OAuth socket module passes 8/8 with local socket binding available.

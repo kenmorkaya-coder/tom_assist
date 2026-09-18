@@ -1809,8 +1809,9 @@ class NativeMemoryService:
             self._inference_lock.release()
 
 
-RGM_DOCUMENT_VERSION = "tom-assist-rgm-document-answers/1"
+RGM_DOCUMENT_VERSION = "tom-assist-rgm-document-answers/2"
 RGM_DOCUMENT_SCOPE = "Experimental document answers: RGM retrieval and local evidence reading. ToM tree recall is not used."
+RGM_DOCUMENT_MAX_CHUNKS = 4096
 RGM_TOM_DOCUMENT_SCOPE = ("Project document answers: RGM finds exact evidence; reviewed structures may also "
     "reactivate their persistent distributed ToM memory before evidence is checked.")
 RGM_TOM_BRIDGE_VERSION_V1 = "tom-assist-rgm-tom-reviewed-situations/1"
@@ -1820,12 +1821,50 @@ RGM_TOM_BRIDGE_VERSION_V4 = "tom-assist-rgm-tom-reviewed-situations/4"
 RGM_TOM_BRIDGE_VERSION = "tom-assist-rgm-tom-reviewed-situations/5"
 RGM_TOM_SITUATION_PREFIX = "rgm-tom-situation-"
 RGM_SOURCE_AUTHORITY_VERSION_V1 = "tom-assist-rgm-source-authority/1"
-RGM_SOURCE_AUTHORITY_VERSION = "tom-assist-rgm-source-authority/2"
+RGM_SOURCE_AUTHORITY_VERSION_V2 = "tom-assist-rgm-source-authority/2"
+RGM_SOURCE_AUTHORITY_VERSION = "tom-assist-rgm-source-authority/3"
 RGM_SOURCE_AUTHORITY_PREFIX = "rgm-source-authority-"
 HUMAN_REMAINS_AUTHORITY_SCOPE = dict(
     kind="temporal_motif", temporal_motif=HUMAN_REMAINS_STOP_NOTIFY_MOTIF)
+REMEDIATION_PLAN_STATUS_AUTHORITY_SCOPE = dict(
+    kind="source_claim", claim_type="document_status",
+    subject="remediation_action_plan_for_encapsulation_of_contaminated_soil")
 RGM_TOM_MAX_MEMORIES = 6
 RGM_TOM_BASE_CHECKPOINT_SHA256 = "39377bce42eea2e3c75474c3f61013fbc49cbf23e5ebcea28676071ee7a164d1"
+
+
+def _remediation_plan_status_question(question):
+    """Admit only the observed contaminated-soil plan-status question family."""
+    import re
+    if not isinstance(question, str):
+        raise ValueError("question is invalid")
+    text = " ".join(question.split())
+    plan = re.search(r"\bremediation\s+action\s+plan\b", text, re.I)
+    subject = re.search(
+        r"\b(?:encapsulation\s+of\s+contaminated\s+soil|contaminated\s+soil\s+containment\s+cell)\b",
+        text, re.I)
+    appendix = re.search(r"\bappendix\s+m\b", text, re.I)
+    status = re.search(r"\b(?:draft|status|current|attached|which\s+plan|revision|revised)\b", text, re.I)
+    return bool(plan and status and (subject or appendix))
+
+
+def _remediation_plan_status_side(text):
+    """Classify one exact source passage as the draft or revised plan state."""
+    import re
+    if not isinstance(text, str):
+        raise ValueError("source text is invalid")
+    value = " ".join(text.split())
+    subject = r"remediation\s+action\s+plan\s+for\s+encapsulation\s+of\s+contaminated\s+soil"
+    current = (
+        re.search(rf"\bremove\w*\b.{{0,180}}\b(?:only\s+a\s+draft|draft\s+format)\b", value, re.I)
+        and re.search(subject, value, re.I)
+    ) or re.search(rf"\brevised\b.{{0,100}}{subject}", value, re.I)
+    if current:
+        return "revised_attached"
+    draft = (re.search(rf"\bdraft\b.{{0,100}}{subject}", value, re.I)
+        or (re.search(subject, value, re.I)
+            and re.search(r"\bplan\s+is\s+currently\s+in\s+draft\s+format\b", value, re.I)))
+    return "draft_under_review" if draft else None
 
 
 def verify_vendored_rgm():
@@ -1854,8 +1893,9 @@ def prepare_rgm_project_documents(project_id, documents):
         corpus = build_rgm_document_corpus(text, heading_text, dict(project_id=project_id,
             document_id=doc["document_id"], display_name=doc["display_name"], content_sha256=doc["content_sha256"]))
         prepared.append(dict(document=doc, corpus=corpus, heading_telemetry=telemetry))
-    if sum(len(d["corpus"]["chunks"]) for d in prepared) > 512:
-        raise ValueError("experimental collection exceeds the unchanged RGM capacity of 512 chunks")
+    if sum(len(d["corpus"]["chunks"]) for d in prepared) > RGM_DOCUMENT_MAX_CHUNKS:
+        raise ValueError(
+            f"experimental collection exceeds the tested RGM capacity of {RGM_DOCUMENT_MAX_CHUNKS} chunks")
     return prepared
 
 
@@ -1874,7 +1914,7 @@ def retrieve_rgm_project_documents(library, prepared, question, vectors):
     from gateway.semantic_chunks import _unit_vector
     for vector in vectors.values():
         _unit_vector(vector, "RGM passage vector")
-    rgm = ReflectionGatedMemory()
+    rgm = ReflectionGatedMemory(capacity=RGM_DOCUMENT_MAX_CHUNKS)
     rgm.vector_store = VectorStore(dim=384)
     rgm.vector_store._encode = lambda text: vectors[hashlib.sha256(text.encode()).hexdigest()]
     anchors, registry, originals, titles = {}, {}, {}, {}
@@ -2023,23 +2063,34 @@ class RgmDocumentService:
         required_v1 = {"version", "relation_kind", "superseding_source_id",
             "superseded_source_id", "superseding_source_text_sha256",
             "superseded_source_text_sha256", "effective_at", "reason", "created_at"}
-        required_v2 = required_v1 | {"authority_scope"}
+        required_scoped = required_v1 | {"authority_scope"}
         sources = cls._source_index(library)
         rows = []
         outgoing = {}
         for stored in library.records_with_prefix(RGM_SOURCE_AUTHORITY_PREFIX):
             record = stored["record"]
             if (not isinstance(record, dict)
-                or frozenset(record) not in {frozenset(required_v1), frozenset(required_v2)}):
+                or frozenset(record) not in {frozenset(required_v1), frozenset(required_scoped)}):
                 raise ValueError("stored source-authority record has an invalid schema")
             if record["version"] == RGM_SOURCE_AUTHORITY_VERSION_V1:
                 if set(record) != required_v1 or record["relation_kind"] not in {
                     "replacement_cover", "reimbursement"}:
                     raise ValueError("stored source-authority record has an unsupported version or relationship")
                 scope = dict(kind="relationship", relation_kind=record["relation_kind"])
-            elif record["version"] == RGM_SOURCE_AUTHORITY_VERSION:
-                if (set(record) != required_v2 or record["relation_kind"] != "before"
+            elif record["version"] == RGM_SOURCE_AUTHORITY_VERSION_V2:
+                if (set(record) != required_scoped or record["relation_kind"] != "before"
                     or record["authority_scope"] != HUMAN_REMAINS_AUTHORITY_SCOPE):
+                    raise ValueError("stored source-authority record has an unsupported version or relationship")
+                scope = copy.deepcopy(record["authority_scope"])
+            elif record["version"] == RGM_SOURCE_AUTHORITY_VERSION:
+                supported = (
+                    record["relation_kind"] == "before"
+                    and record["authority_scope"] == HUMAN_REMAINS_AUTHORITY_SCOPE
+                ) or (
+                    record["relation_kind"] == "document_status"
+                    and record["authority_scope"] == REMEDIATION_PLAN_STATUS_AUTHORITY_SCOPE
+                )
+                if set(record) != required_scoped or not supported:
                     raise ValueError("stored source-authority record has an unsupported version or relationship")
                 scope = copy.deepcopy(record["authority_scope"])
             else:
@@ -2092,6 +2143,75 @@ class RgmDocumentService:
             if row["authority_scope_key"] == scope_key and record["effective_at"] <= instant:
                 active[record["superseded_source_id"]] = record["superseding_source_id"]
         return active
+
+    @classmethod
+    def _remediation_plan_authority(cls, library, packet, question, as_of):
+        """Expose the two retrieved plan states without inferring which one controls."""
+        import re
+        if not _remediation_plan_status_question(question):
+            return None
+        sources = cls._source_index(library)
+        candidates = {"draft_under_review": [], "revised_attached": []}
+        for memory in packet.get("memories", []):
+            source_id = rgm_candidate_source_id(memory)
+            source = sources.get(source_id)
+            text = memory.get("content", "")
+            side = _remediation_plan_status_side(text)
+            if source is not None and source["active"] and side is not None:
+                value = " ".join(text.split())
+                # The explicit change note removing the draft status is a more
+                # direct status statement than a general "revised plan" note.
+                if side == "revised_attached":
+                    priority = (0 if re.search(
+                        r"\bremove\w*\b.{0,180}\b(?:only\s+a\s+draft|draft\s+format)\b",
+                        value, re.I) else 1)
+                else:
+                    # Prefer the concise Appendix M revision entry over a long
+                    # embedded copy of the plan carrying the same draft label.
+                    priority = 0 if len(value) <= 1000 and re.search(
+                        r"\bappendix\s+m\b", value, re.I) else 1
+                candidates[side].append((priority, len(value), source_id,
+                    source["provenance"]["doc_id"]))
+        if any(not values for values in candidates.values()):
+            return None
+        revised = min(candidates["revised_attached"])
+        # Prefer the opposing state from another retained document when one is
+        # available. This establishes a real cross-source disagreement without
+        # using filenames, revision numbers or dates to infer authority.
+        draft_pool = [item for item in candidates["draft_under_review"]
+            if item[3] != revised[3]] or candidates["draft_under_review"]
+        draft = min(draft_pool)
+        old_id, revised_id = draft[2], revised[2]
+        involved = [old_id, revised_id]
+        authority = cls._active_authority(library, "document_status", as_of,
+            REMEDIATION_PLAN_STATUS_AUTHORITY_SCOPE)
+        endpoints = []
+        for source_id in involved:
+            seen = {source_id}
+            endpoint = authority.get(source_id, source_id)
+            while endpoint in authority:
+                if endpoint in seen:
+                    raise ValueError("stored source-authority links form a cycle")
+                seen.add(endpoint)
+                endpoint = authority[endpoint]
+            endpoints.append(endpoint)
+        authoritative = list(dict.fromkeys(endpoints))
+        query_structure = dict(status="complete",
+            fields=dict(relation_kind="document_status"), spans=[],
+            method="bounded contaminated-soil remediation-plan status question")
+        common = dict(authority_scope=copy.deepcopy(REMEDIATION_PLAN_STATUS_AUTHORITY_SCOPE),
+            query_structure=query_structure, whole_tree_score=False,
+            all_branch_cell_coordinates_compared=False)
+        if len(authoritative) == 1 and any(
+            source_id != authoritative[0] for source_id in involved):
+            return dict(status="source_authority_resolved", recalled_source_ids=[],
+                authoritative_source_ids=authoritative,
+                superseded_source_ids=[source_id for source_id in involved
+                    if source_id != authoritative[0]], **common)
+        return dict(status="source_authority_unresolved", recalled_source_ids=[],
+            conflict_sources=[dict(source_id=revised_id,
+                reason="later source removes the draft-only note and identifies a revised attached plan")],
+            reviewed_source_ids=[old_id], **common)
 
     @classmethod
     def source_authority_history(cls, library, as_of=None):
@@ -2151,6 +2271,10 @@ class RgmDocumentService:
             record_version = RGM_SOURCE_AUTHORITY_VERSION_V1
         elif relation_kind == "before" and authority_scope == HUMAN_REMAINS_AUTHORITY_SCOPE:
             authority_scope = copy.deepcopy(authority_scope)
+            record_version = RGM_SOURCE_AUTHORITY_VERSION_V2
+        elif (relation_kind == "document_status"
+            and authority_scope == REMEDIATION_PLAN_STATUS_AUTHORITY_SCOPE):
+            authority_scope = copy.deepcopy(authority_scope)
             record_version = RGM_SOURCE_AUTHORITY_VERSION
         else:
             raise ValueError("source authority requires one supported relationship")
@@ -2186,6 +2310,16 @@ class RgmDocumentService:
             controlling_side = temporal_side(newer_id)
             if any(temporal_side(source_id) == controlling_side for source_id in older_ids):
                 raise ValueError("temporal authority must resolve sources that express different procedures")
+        elif relation_kind == "document_status":
+            controlling_side = _remediation_plan_status_side(sources[newer_id]["text"])
+            replaced_sides = [_remediation_plan_status_side(sources[source_id]["text"])
+                for source_id in older_ids]
+            if (controlling_side not in {"draft_under_review", "revised_attached"}
+                or any(side not in {"draft_under_review", "revised_attached"}
+                    for side in replaced_sides)
+                or any(side == controlling_side for side in replaced_sides)):
+                raise ValueError(
+                    "plan-status authority must resolve exact passages that express different states")
         existing = self._authority_rows(library)
         scope_key = native_digest(authority_scope)
         outgoing = {(row["authority_scope_key"], row["authority"]["superseded_source_id"]):
@@ -2221,7 +2355,7 @@ class RgmDocumentService:
                     superseding_source_text_sha256=sources[newer_id]["text_sha256"],
                     superseded_source_text_sha256=sources[older_id]["text_sha256"],
                     effective_at=effective_at, reason=reason, created_at=created_at)
-                if record_version == RGM_SOURCE_AUTHORITY_VERSION:
+                if record_version != RGM_SOURCE_AUTHORITY_VERSION_V1:
                     record["authority_scope"] = copy.deepcopy(authority_scope)
                 content = json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
                 record_id = RGM_SOURCE_AUTHORITY_PREFIX + native_digest(dict(
@@ -2233,7 +2367,8 @@ class RgmDocumentService:
             library.db.execute("ROLLBACK")
             raise
         return dict(status="recorded", relation_kind=relation_kind,
-            authority_scope=(copy.deepcopy(authority_scope) if record_version == RGM_SOURCE_AUTHORITY_VERSION else None),
+            authority_scope=(copy.deepcopy(authority_scope)
+                if record_version != RGM_SOURCE_AUTHORITY_VERSION_V1 else None),
             superseding_source_id=newer_id, superseded_source_ids=copy.deepcopy(older_ids),
             effective_at=effective_at, link_count=len(pending), duplicate_count=duplicates,
             tree_calls=0)
@@ -3009,7 +3144,9 @@ class RgmDocumentService:
         can_record = (bool(current)
             and (relation_kind in {"replacement_cover", "reimbursement"}
                 or (relation_kind == "before"
-                    and authority_scope == HUMAN_REMAINS_AUTHORITY_SCOPE)))
+                    and authority_scope == HUMAN_REMAINS_AUTHORITY_SCOPE)
+                or (relation_kind == "document_status"
+                    and authority_scope == REMEDIATION_PLAN_STATUS_AUTHORITY_SCOPE)))
         return dict(status="unresolved", relation_kind=relation_kind,
             authority_scope=copy.deepcopy(authority_scope), can_record=can_record,
             conflict_sources=[describe(item["source_id"], item["reason"])
@@ -3120,16 +3257,19 @@ class RgmDocumentService:
                             content=missing[digest], content_summary="", content_hash=digest), dict(vector=vector))
             packet, retrieval = retrieve_rgm_project_documents(library, prepared, question, vectors)
             answer_as_of = _canonical_utc_instant(as_of or datetime.now(timezone.utc).isoformat(), "answer as_of")
-            structural = self.recall_situations(project_id, library, packet, question, answer_as_of)
+            structural = (self._remediation_plan_authority(
+                library, packet, question, answer_as_of)
+                or self.recall_situations(project_id, library, packet, question, answer_as_of))
             authority_review = self._authority_review(library, structural)
             if authority_review is not None:
                 presented, lines = {}, [
                     "The available sources disagree. No controlling source has been recorded."
                 ]
-                for label, source_rows in (
-                    ("Conflicting source", authority_review["conflict_sources"]),
-                    ("Current reviewed source", authority_review["current_sources"]),
-                ):
+                labels = (("Source stating the revised status", "Source stating the draft status")
+                    if authority_review.get("authority_scope") == REMEDIATION_PLAN_STATUS_AUTHORITY_SCOPE
+                    else ("Conflicting source", "Current reviewed source"))
+                for label, source_rows in zip(labels, (
+                    authority_review["conflict_sources"], authority_review["current_sources"])):
                     for source in source_rows:
                         if source["source_id"] in presented:
                             continue

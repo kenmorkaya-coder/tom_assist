@@ -949,7 +949,7 @@ In Memory, enter a local PDF, TXT or Markdown path and explicitly choose
 **Import document**. With this option enabled, extraction uses the copied RGM
 reader, and ingestion stores its lossless chunks and MiniLM vectors directly in
 the project library without initializing a tree. Files are limited to 100 MB,
-extracted text to two million characters, and the active collection to 512
+extracted text to two million characters, and the active collection to 4,096
 chunks. Original file/text hashes are retained. In Chat,
 **Answer from project documents** reads only that project's active imported
 text. It does not send the question to a cloud provider or commit a conversation
@@ -1185,8 +1185,36 @@ The original APP03 wording now returns “No”, followed by clause 23.5 showing
 TfNSW reimburses SM. This was verified in the actual isolated desktop window and
 its source disclosure opens to the same clause.
 
-The experimental project collection is bounded to 512 RGM chunks, matching the
-unchanged native capacity. Larger collections are rejected before model work;
-no source is silently pruned to make them fit. Changing that bound needs a
-separate capacity check. The encoder implementation hash also binds vector
+The experimental project collection is bounded to 4,096 RGM chunks. The
+request-local copied RGM is constructed with that same explicit capacity, so no
+source is silently pruned to make the collection fit. This bound was raised only
+after a 2,201-chunk shadow run admitted and searched two genuine SCAW report
+revisions without changing the product setting. Larger collections are still
+rejected before model work. The encoder implementation hash also binds vector
 caches, so code changes cannot silently reuse old encoding results.
+
+The same two reports were then searched through the updated production path.
+Revision 04 contributed 887 chunks and Revision 05 contributed 1,314. For three
+questions about whether the contaminated-soil Remediation Action Plan was still
+a draft and which plan was attached in Appendix M, the copied RGM returned the
+short revision-history passages at ranks one to three. Those passages state that
+Revision 04 attached a draft plan and Revision 05 removed the draft note and
+attached a revised plan. The longer complete Section 4.3.4 passages ranked much
+lower, so retrieval success here comes from the genuine revision-history text,
+not from an exact full-clause match.
+
+The live answer path now admits this exact contaminated-soil plan-status claim
+as a bounded source-authority scope. Across all three questions it presents the
+same exact pair: Revision 05 chunk 74, which removes the draft-only note, and
+Revision 04 chunk 71, which says Appendix M contains the draft plan. It returns
+**Ambiguous** until an explicit decision becomes effective. It does not infer a
+winner from filenames, revision numbers, dates or amendment wording.
+
+A temporary real-project run recorded Revision 05 chunk 74 as controlling.
+Before the effective time both passages remained visible and the result stayed
+ambiguous. From the effective time, only chunk 74 reached the evidence reader;
+the decision also appeared in the read-only authority history. Conflict
+presentation made zero language-model calls. The resolved reader check used a
+deterministic exact-quote control, so this proves source selection and not
+general answer wording. The complete path made zero ToM calls and did not change
+the tree.

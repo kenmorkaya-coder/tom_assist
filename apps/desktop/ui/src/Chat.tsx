@@ -778,10 +778,10 @@ type NativeAnswer = {
   authority_review?: {
     status: "unresolved";
     can_record: boolean;
-    relation_kind: "replacement_cover" | "reimbursement" | "before";
+    relation_kind: "replacement_cover" | "reimbursement" | "before" | "document_status";
     authority_scope?: { kind: "temporal_motif"; temporal_motif: {
       relation_kind: "sequence"; source_event: string; intermediate_event: string; target_event: string;
-    } } | null;
+    } } | { kind: "source_claim"; claim_type: "document_status"; subject: string } | null;
     conflict_sources: AuthoritySource[];
     current_sources: AuthoritySource[];
   } | null;
@@ -823,7 +823,7 @@ function SourceAuthorityReview({ project, backend, review }: {
   }
   return <section class="source-authority-review" aria-label="Resolve conflicting source authority">
     <h4>Conflicting source authority</h4>
-    <p>Choose the controlling passage and every passage it replaces for this exact relationship or event sequence. This does not change the ToM tree.</p>
+    <p>Choose the controlling passage and every passage it replaces for this exact relationship, event sequence or source claim. This does not change the ToM tree.</p>
     <label>Controlling passage<select aria-label="Controlling passage" value={newer}
       onChange={(event) => { const selected = event.currentTarget.value; setNewer(selected);
         setOlder((current) => current.filter((sourceId) => sourceId !== selected)); }} disabled={busy}>
