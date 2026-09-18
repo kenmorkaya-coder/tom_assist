@@ -298,6 +298,16 @@ passages are shown. This check makes no tree call and no language-model call.
 The application does not yet offer a temporal-authority recording action, so it
 cannot designate either sequence as controlling.
 
+This was also exercised with two real PDFs. The Middleton NSW mitigation
+document says to stop work and then notify Police and Heritage NSW. A Northern
+Midlands Council planning attachment says to call Police first and then notify
+workers that earth-disturbance work must cease. Production RGM extraction,
+chunking, MiniLM encoding and retrieval returned both exact chunks. Tom Assist
+reported **Ambiguous** without a tree call or language-model call. Because the
+documents concern different projects and jurisdictions, this proves conflict
+presentation only; it does not establish that the two rules govern the same
+work or that either source has authority over the other.
+
 The language model receives request-local source aliases. The gateway binds an
 accepted alias back to the complete server-owned source identity before the
 answer leaves the application. Unknown aliases, altered text and invalid source
@@ -361,9 +371,9 @@ These counts describe the relevant integration suite at the recorded revision;
 they are not a general accuracy score.
 
 The later unseen-document access repair passed all **144** native-memory tests.
-The temporal source-conflict repair passes all **155** native-memory tests. The
-desktop suite passes **20** tests, TypeScript checking passes, and the production
-desktop interface build passes.
+The real-document temporal-conflict repair passes all **157** native-memory
+tests. The desktop suite passes **20** tests, TypeScript checking passes, and the
+production desktop interface build passes.
 The broader gateway run recorded 595 passes, one expected skip, one unrelated
 event-graph fixture-overlap failure, and five sandbox-only local-socket setup
 errors. The affected OAuth file passed **8/8** when rerun with local socket
@@ -398,10 +408,10 @@ They are evidence artifacts, not application source.
 
 The next work should extend capability one variable at a time:
 
-1. Exercise the temporal-conflict path on two real documents that state opposing
-   procedures.
-2. Add an explicit user-controlled temporal-authority action before allowing one
+1. Add an explicit user-controlled temporal-authority action before allowing one
    temporal source to supersede another.
+2. Test that authority action on competing versions within one real project,
+   rather than documents from different jurisdictions.
 3. Keep exact evidence selection and conflict presentation separate from
    structural recall.
 4. Do not introduce branch averaging, a whole-tree score or automatic teaching

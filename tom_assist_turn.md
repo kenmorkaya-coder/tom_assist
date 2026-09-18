@@ -2942,3 +2942,46 @@ positives and zero false negatives, with zero tree calls and no automatic
 learning. All 155 native-memory tests pass. Compact evidence is stored in the
 `temporal_source_conflict` section of
 `validation/runs/rgm-tom-middleton-live-answer.json`.
+
+### 2026-09-18 — real-document temporal conflict
+
+The controlled conflict repair was then tested against real document ingestion.
+The local document screen first examined 17 likely heritage, environmental and
+planning PDFs with the production RGM reader. Six files contained the admitted
+human-remains procedure, and all six said stop work before notification. That
+collection therefore contained no genuine opposing source and was not presented
+as a conflict result.
+
+A public Northern Midlands Council planning attachment supplied a genuine
+opposite sequence. Its Palmerston Battery heritage procedure says:
+
+```text
+discovery of skeletal material
+    → call Police immediately
+    → notify workers that earth-disturbance work must cease
+```
+
+The first production-reader diagnostic failed to recognise that passage. The
+extraction was correct; the bounded parser admitted `human remains`, `notify`
+and `stop work`, but not the source's `skeletal material`, `call Police` and
+`works cease`. Only those verified wording variants were added. The required
+event order and 1,200-character source-local limit were unchanged.
+
+The full gateway check then ingested the three-chunk Middleton PDF and the
+136-chunk Northern Midlands PDF, encoded them with the configured MiniLM and ran
+the copied RGM retrieval. RGM returned Middleton chunk 2 and Northern Midlands
+chunk 63. Tom Assist returned **Ambiguous** and displayed both exact passages
+with provenance. The answer made zero tree calls, zero language-reader calls
+and no whole-tree score. Temporal authority remained unavailable.
+
+These documents concern different projects and jurisdictions. The result proves
+that real opposing source text remains visible; it does not say the documents
+govern the same work or decide which is legally controlling. The downloaded
+3.2 MB diagnostic PDF and temporary database were deleted after hashes and the
+official source URL were recorded. No large artifact was created.
+
+The expanded wording was checked against the unchanged 611-chunk production
+set: 15 true positives, zero false positives and zero false negatives, with no
+tree calls or automatic learning. All 157 native-memory tests pass. Compact
+evidence is in `real_document_temporal_conflict` inside
+`validation/runs/rgm-tom-middleton-live-answer.json`.
