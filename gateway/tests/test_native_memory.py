@@ -911,6 +911,10 @@ def test_rgm_endpoint_uses_project_library_without_initializing_tree(tmp_path, m
     def call(**payload): return gateway.handle("POST", "/document/native-memory/answer", dict(project_id="project", **payload))
     status, ready = call(action="status")
     assert status == 200 and ready["ready"] and ready["engine"] == "rgm"
+    assert ready["structural_memory"]["source_authority_links"] == 0
+    status, history = call(action="source_authority_history")
+    assert status == 200 and history == {
+        "as_of": history["as_of"], "decisions": [], "read_only": True, "tree_calls": 0}
     status, review = call(action="review_candidates")
     assert status == 200 and review["automatic_learning"] is False
     assert review["tree_calls"] == 0 and review["candidates"] == []
@@ -1194,6 +1198,26 @@ def test_multiple_rgm_sources_bind_to_one_tom_relationship_without_second_tree_w
             superseded_source_ids=[bound["source_id"]],
             effective_at="2026-09-01T00:00:00Z", reason="Reviewed amendment replaces both prior sources"))
         assert completed["link_count"] == 1
+        future_history = service.source_authority_history(
+            library, as_of="2026-08-31T23:59:59Z")
+        assert future_history["tree_calls"] == 0 and future_history["read_only"] is True
+        assert len(future_history["decisions"]) == 2
+        assert all(decision["effective_status"] == "future"
+            for decision in future_history["decisions"])
+        assert all(decision["authority_scope"] == {
+            "kind": "relationship", "relation_kind": "reimbursement"}
+            for decision in future_history["decisions"])
+        assert all(decision["controlling_source"]["source_id"] == conflict_source_id
+            for decision in future_history["decisions"])
+        assert {item["source_id"] for decision in future_history["decisions"]
+            for item in decision["replaced_sources"]} == {
+            initial["source_id"], bound["source_id"]}
+        assert all(decision["controlling_source"]["text"]
+            and all(item["text"] for item in decision["replaced_sources"])
+            for decision in future_history["decisions"])
+        assert all(decision["effective_status"] == "active" for decision in
+            service.source_authority_history(
+                library, as_of="2026-09-01T00:00:00Z")["decisions"])
         duplicate = service.resolve_source_authority("project", library, dict(
             explicit_user_action=True, relation_kind="reimbursement",
             superseding_source_id=conflict_source_id,
@@ -1840,6 +1864,16 @@ def test_explicit_temporal_authority_selects_either_exact_source_without_tree_re
             effective_at="2026-09-18T00:00:00Z", reason="Explicit procedure decision"))
         assert recorded["link_count"] == 1 and recorded["tree_calls"] == 0
         assert recorded["authority_scope"] == review["authority_scope"]
+        history = service.source_authority_history(
+            library, as_of="2026-09-18T00:00:00Z")
+        assert history["tree_calls"] == 0 and history["read_only"] is True
+        assert len(history["decisions"]) == 1
+        decision = history["decisions"][0]
+        assert decision["effective_status"] == "active"
+        assert decision["authority_scope"] == review["authority_scope"]
+        assert decision["controlling_source"]["source_id"] == chosen_id
+        assert [item["source_id"] for item in decision["replaced_sources"]] == [replaced_id]
+        assert decision["reason"] == "Explicit procedure decision"
 
         before = service.answer("project", library, question,
             as_of="2026-09-17T23:59:59Z")

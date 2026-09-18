@@ -999,6 +999,13 @@ tested. A
 new structure must write non-overlapping tree locations; otherwise it is
 rejected. Only the newest large checkpoint and reference archive are retained.
 
+The Memory screen also exposes a read-only source-authority history. It rebuilds
+each entry from the validated project-library record and its exact retained
+passages, then shows the controlling source, replaced sources, provenance,
+bounded scope, effective time, reason and Active/Future status. Separate user
+actions remain separate audit entries. Reading this history makes zero tree
+calls and cannot edit, revoke or infer an authority decision.
+
 The bounded bridge supports three reviewed event structures: notice before a
 meeting; failure followed by substitute action followed by cost recovery; and
 human remains discovered followed by work stopping followed by authority
@@ -1118,6 +1125,16 @@ wording variants are now admitted without changing the event order or the
 exact chunks and made zero tree and language-reader calls. The documents have
 different project and jurisdiction scopes, so the result does not assign legal
 authority.
+
+A same-project revision control then compared the November 2021 contract copy
+of the SCAW Aboriginal Cultural Heritage CEMP with the official June 2023
+Revision 06. Production extraction created 367 and 106 chunks. The RGM semantic
+sweep, both vector passes, reciprocal-rank fusion and the strict source regex
+all found the relevant passage in each version. Both passages state discovery
+→ stop work → notify authorities. The review queue therefore returned two
+matching candidates and no opposing procedure, with zero tree calls and no
+automatic learning. Revision metadata alone never creates a conflict or an
+authority decision.
 
 Document-style party names such as `Transport for NSW` / `TfNSW` and
 `Sydney Metro` / `SM` are matched mechanically. If the question does not state

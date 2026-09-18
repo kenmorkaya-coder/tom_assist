@@ -58,6 +58,12 @@ learned structure. The two lanes meet at evidence checking.
                   |                  controlling + replaced passages
                   |                    effective time + reason
                   |                                   |
+                  |                                   v
+                  |                     READ-ONLY AUTHORITY HISTORY
+                  |                     exact passages + provenance
+                  |                     scope + time + reason
+                  |                     active or future-dated
+                  |                                   |
                   +-----------------+-----------------+
                                     |
                                     v
@@ -3024,3 +3030,40 @@ chosen source afterward. The gateway suite passes **159** checks. The desktop
 suite passes **21** checks and confirms the exact motif scope is returned to the
 gateway. This proves the bounded authority mechanism; it does not decide which
 of the two real documents governs a project.
+
+### 2026-09-18 — same-project revision control
+
+The first real same-project check compared two genuine versions of the SCAW
+Aboriginal Cultural Heritage Construction Environmental Management Plan: the
+November 2021 contract copy and the official June 2023 Revision 06. The source
+texts were inspected before any authority test. Both versions say that work
+ceases first and authorities are notified afterward. They are different PDF
+and extracted-text hashes, but they do not contain competing procedures.
+
+Both complete PDFs were then run through the production RGM extraction,
+chunking, MiniLM semantic sweeps, native vector sweep, contextual vector sweep,
+Reciprocal Rank Fusion and full-source regex/order check. The documents produced
+367 and 106 chunks. The correct passage in each version was found by every
+discovery channel and admitted as the same discovery → stop work → notify
+authorities motif. Twenty-one semantic source/motif hits failed the strict local
+check and were rejected.
+
+The result is a passed negative control: Tom Assist made zero tree calls,
+performed no automatic learning and did not invent a conflict from the later
+revision number or date. It is not a successful real authority-resolution
+test, because the sources agree. That gate still requires two genuine versions
+from one project that actually state different procedures.
+
+### 2026-09-18 — read-only source-authority history
+
+The Memory screen now shows every recorded source-authority decision from the
+selected project's verified library. Each entry displays the bounded scope, the
+exact controlling passage, every exact replaced passage, source/chunk
+provenance, the effective time, the user's reason and an Active or Future
+status. Separate user actions remain separate entries; several replacements
+recorded in one action are grouped together.
+
+The server checks the retained record content, hashes, source bindings and cycle
+constraints before returning the history. The view is read-only, makes zero
+tree calls and cannot edit or revoke a decision. Superseded source text remains
+available for audit.

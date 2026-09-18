@@ -1,5 +1,5 @@
 {
-  "version": "tom-assist-rgm-tom-middleton-live-answer/8",
+  "version": "tom-assist-rgm-tom-middleton-live-answer/10",
   "status": "COMPLETE",
   "outcome": "PASS",
   "claim_boundary": "One explicitly reviewed Middleton procedure, one correct question, one reversed-order control and one absent-state control through the production RGM, ToM and local evidence-reader path.",
@@ -972,5 +972,100 @@
       "desktop_typecheck": "passed"
     },
     "claim_boundary": "Controlled exact-source cases prove the bounded authority mechanism. They do not decide which source legally governs a real project."
+  },
+  "same_project_revision_control": {
+    "version": "tom-assist-same-project-revision-control/1",
+    "status": "COMPLETE",
+    "outcome": "PASS_NO_FALSE_CONFLICT",
+    "project": "Sydney Metro Western Sydney Airport",
+    "claim_boundary": "The two genuine plan versions agree on event order. This proves that the production review path does not invent a conflict from revision metadata; it does not exercise real temporal-authority resolution.",
+    "sources": [
+      {
+        "label": "November 2021 contract copy",
+        "display_name": "Aboriginal Cultural Heritage CEMP.pdf",
+        "path": "/Volumes/My Passport for Mac/tom_as projects/sydney_metro_wsa/SCAW Contract/Sched D3 - Planning Approvals/Construction Pland and On-Airport CEMPs/Aboriginal Cultural Heritage CEMP.pdf",
+        "pdf_sha256": "63abaeda9621d0e8c0bb287df539c2c8164463b1b95d92ece104930fb5696d24",
+        "pdf_bytes": 9961001,
+        "extracted_text_sha256": "05e4ae630a99212ee38258ff49eb803e2ceac6fba7de7b1d34767941348cba97",
+        "chunk_count": 367,
+        "candidate_chunk_index": 84,
+        "candidate_source_id": "SRC-6cc69549d44d5a8d"
+      },
+      {
+        "label": "June 2023 Revision 06",
+        "display_name": "SM-WSA (On-Airport) ACHMP Rev 06.pdf",
+        "official_url": "https://www.sydneymetro.info/sites/default/files/2023-08/SM-WSA%20%28On%20-%20Airport%29%20-%20ACHMP%20Rev%2006.pdf",
+        "pdf_sha256": "0a7d9c13a0c7703524c8b91d5f779bae1b61d5def888fae53a75c5a6adee3860",
+        "pdf_bytes": 4904149,
+        "extracted_text_sha256": "68b1c1d03743b1b8781ec0b1581c21b988efc4af6d5ef019346ae5b8b4a28c28",
+        "chunk_count": 106,
+        "candidate_chunk_index": 97,
+        "candidate_source_id": "SRC-0fd88fbf73ce2121"
+      }
+    ],
+    "procedure_classification": {
+      "first": "discovery -> stop_work -> notify_authorities",
+      "second": "discovery -> stop_work -> notify_authorities",
+      "opposing_procedure_found": false,
+      "authority_review_expected": false
+    },
+    "production_review": {
+      "scanned_chunks": 473,
+      "rgm_query_count": 4,
+      "contextual_vector_candidate_count": 20,
+      "native_vector_candidate_count": 27,
+      "rgm_semantic_candidate_count": 23,
+      "regex_candidate_count": 2,
+      "validated_candidate_count": 2,
+      "semantic_rejected_count": 21,
+      "both_candidates_found_by_semantic_sweep": true,
+      "both_candidates_found_by_contextual_vector_pass": true,
+      "both_candidates_found_by_native_vector_pass": true,
+      "both_candidates_found_by_rrf": true,
+      "both_candidates_found_by_regex": true,
+      "tree_calls": 0,
+      "automatic_learning": false
+    },
+    "storage": {
+      "temporary_database_deleted": true,
+      "downloaded_revision_retained": false,
+      "large_artifact_created": false
+    },
+    "remaining_gate": "Use two genuine versions from one real project that actually state conflicting procedures."
+  },
+  "source_authority_history": {
+    "version": "tom-assist-source-authority-history/1",
+    "status": "COMPLETE",
+    "outcome": "PASS",
+    "surface": "Memory screen",
+    "contents": [
+      "bounded relationship or event-sequence scope",
+      "exact controlling passage and provenance",
+      "every exact replaced passage and provenance",
+      "effective timestamp",
+      "recorded reason",
+      "active or future-dated status"
+    ],
+    "controls": {
+      "stored_record_revalidated": true,
+      "source_identity_and_text_hash_revalidated": true,
+      "cycle_constraints_revalidated": true,
+      "separate_user_actions_remain_separate": true,
+      "multi_source_single_action_grouped": true,
+      "read_only": true,
+      "tree_calls": 0,
+      "authority_inference": false,
+      "editing_or_revocation": false,
+      "dedicated_read_action": true
+    },
+    "verification": {
+      "native_memory_tests": "159 passed",
+      "desktop_tests": "22 passed",
+      "desktop_typecheck": "passed",
+      "desktop_production_build": "passed",
+      "broad_gateway_suite": "605 passed, 1 skipped; 1 pre-existing event-graph dataset-overlap failure; 5 sandbox-only Unix-socket errors",
+      "oauth_unix_socket_module_outside_sandbox": "8 passed"
+    },
+    "claim_boundary": "This makes already-recorded explicit authority decisions inspectable. It does not decide source authority, edit a decision, or close the remaining real same-project conflicting-version gate."
   }
 }

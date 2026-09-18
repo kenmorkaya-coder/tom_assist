@@ -53,6 +53,44 @@ type ReviewDiscovery = {
   semantic_rejected_count: number;
 };
 
+type AuthoritySource = {
+  source_id: string;
+  text: string;
+  text_sha256: string;
+  document_active: boolean;
+  provenance: { display_name: string; chunk_id: string; chunk_index: number; start: number; end: number };
+};
+
+type SourceAuthorityDecision = {
+  decision_id: string;
+  relation_kind: string;
+  authority_scope: { kind: string; relation_kind?: string; temporal_motif?: {
+    source_event: string; intermediate_event: string; target_event: string;
+  } };
+  controlling_source: AuthoritySource;
+  replaced_sources: AuthoritySource[];
+  effective_at: string;
+  reason: string;
+  created_at: string;
+  effective_status: "active" | "future";
+};
+
+type StructuralMemoryStatus = {
+  configured: boolean;
+  learned_situations: number;
+  learned_relationship_memories?: number;
+  learned_structural_memories?: number;
+  capacity: number;
+  source_authority_links?: number;
+};
+
+type SourceAuthorityHistory = {
+  as_of: string;
+  decisions: SourceAuthorityDecision[];
+  read_only: boolean;
+  tree_calls: number;
+};
+
 function discoveryLabel(candidate: StructureCandidate) {
   const channels = candidate.discovery_channels;
   if (!channels) return "";
@@ -69,6 +107,17 @@ function structureLabel(candidate: StructureCandidate) {
   return candidate.temporal_motif.source_event === "human_remains_discovered"
     ? "Save human remains discovered → stop work → notify authorities"
     : "Save failure → substitute action → cost recovery";
+}
+
+function authorityScopeLabel(decision: SourceAuthorityDecision) {
+  const motif = decision.authority_scope.temporal_motif;
+  if (motif) return [motif.source_event, motif.intermediate_event, motif.target_event]
+    .map((value) => value.replaceAll("_", " ")).join(" → ");
+  return (decision.authority_scope.relation_kind ?? decision.relation_kind).replaceAll("_", " ");
+}
+
+function sourceLabel(source: AuthoritySource) {
+  return `${source.provenance.display_name} · ${source.provenance.chunk_id}`;
 }
 
 function count(value: number | undefined) {
@@ -92,7 +141,8 @@ export function Memory({
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [error, setError] = useState("");
   const [canImport, setCanImport] = useState(false);
-  const [structural, setStructural] = useState<{ configured: boolean; learned_situations: number; learned_relationship_memories?: number; learned_structural_memories?: number; capacity: number }>();
+  const [structural, setStructural] = useState<StructuralMemoryStatus>();
+  const [authorityHistory, setAuthorityHistory] = useState<SourceAuthorityHistory>();
   const [sourcePath, setSourcePath] = useState("");
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState("");
@@ -106,10 +156,18 @@ export function Memory({
     let current = true;
     setCanImport(false);
     void backend.chat(projectId, "conversation.native_answer", { action: "status" })
-      .then((state) => { if (current) {
-        const status = state as { engine?: string; structural_memory?: { configured: boolean; learned_situations: number; learned_relationship_memories?: number; capacity: number } };
+      .then(async (state) => { if (current) {
+        const status = state as { engine?: string; structural_memory?: StructuralMemoryStatus };
         setCanImport(Boolean(status.engine?.startsWith("rgm")));
         setStructural(status.structural_memory);
+        if (status.structural_memory?.source_authority_links) {
+          const history = await backend.chat(projectId, "conversation.native_answer", {
+            action: "source_authority_history",
+          }) as SourceAuthorityHistory;
+          if (current) setAuthorityHistory(history);
+        } else {
+          setAuthorityHistory(undefined);
+        }
       } })
       .catch(() => {});
     void Promise.all([backend.diagnostics(projectId), backend.documents(projectId)])
@@ -217,6 +275,33 @@ export function Memory({
           <p>Saved in the small ToM tree only after an explicit source review.</p>
         </article>}
       </div>
+      {!!authorityHistory?.decisions.length &&
+        <section class="authority-history" aria-label="Source authority history">
+          <h3>Source authority history</h3>
+          <p>Read-only decisions made by a user. Every passage below is still retained with its source details.</p>
+          <div>
+            {authorityHistory.decisions.map((decision) => <article key={decision.decision_id}>
+              <header>
+                <h4>{authorityScopeLabel(decision)}</h4>
+                <span class={`authority-status ${decision.effective_status}`}>{decision.effective_status === "active" ? "Active" : "Future"}</span>
+              </header>
+              <p><strong>Effective:</strong> <time dateTime={decision.effective_at}>{decision.effective_at}</time></p>
+              <p><strong>Reason:</strong> {decision.reason}</p>
+              <section aria-label="Controlling source">
+                <h5>Controlling source</h5>
+                <p>{sourceLabel(decision.controlling_source)}</p>
+                <blockquote>{decision.controlling_source.text}</blockquote>
+              </section>
+              <details>
+                <summary>Replaced sources ({decision.replaced_sources.length})</summary>
+                {decision.replaced_sources.map((source) => <section key={source.source_id}>
+                  <h5>{sourceLabel(source)}</h5>
+                  <blockquote>{source.text}</blockquote>
+                </section>)}
+              </details>
+            </article>)}
+          </div>
+        </section>}
       {canImport && documents.length > 0 && <section aria-label="Review detected document structures">
         <h3>Structures to review</h3>
         <p>Run the RGM semantic and vector sweeps, its rank fusion, and the full-source structure check. Nothing is saved in ToM until you review a passage and press Save.</p>

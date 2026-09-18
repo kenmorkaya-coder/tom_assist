@@ -614,6 +614,68 @@ it("imports a local document only after an explicit action", async () => {
   });
 });
 
+it("shows exact active and future source-authority decisions as read-only history", async () => {
+  const { Memory } = await import("../src/Memory");
+  const backend = new FakeDesktopBackend();
+  const project = await backend.seedDemo();
+  vi.spyOn(backend, "diagnostics").mockResolvedValue({ memory: {} });
+  vi.spyOn(backend, "documents").mockResolvedValue([]);
+  vi.spyOn(backend, "chat").mockImplementation(async (_id, _method, payload) => {
+    if (payload.action === "status") return {
+      ready: true, engine: "rgm+tom", structural_memory: {
+      configured: true, learned_situations: 2, learned_structural_memories: 2, capacity: 6,
+      source_authority_links: 2,
+    } };
+    if (payload.action === "source_authority_history") return {
+      as_of: "2026-09-18T00:00:00.000000Z", read_only: true,
+      tree_calls: 0, decisions: [
+          { decision_id: "AUTH-active", relation_kind: "before", effective_status: "active",
+            authority_scope: { kind: "temporal_motif", temporal_motif: {
+              relation_kind: "sequence", source_event: "human_remains_discovered",
+              intermediate_event: "stop_work", target_event: "notify_authorities",
+            } }, effective_at: "2026-09-17T14:00:00.000000Z",
+            created_at: "2026-09-17T10:00:00.000000Z",
+            reason: "The project procedure is controlling",
+            controlling_source: { source_id: "SRC-project", text: "Stop work, then notify Police.",
+              text_sha256: "a".repeat(64), document_active: true,
+              provenance: { display_name: "Project procedure", chunk_id: "chunk_1",
+                chunk_index: 1, start: 0, end: 29 } },
+            replaced_sources: [{ source_id: "SRC-council", text: "Call Police, then stop work.",
+              text_sha256: "b".repeat(64), document_active: true,
+              provenance: { display_name: "Council procedure", chunk_id: "chunk_4",
+                chunk_index: 4, start: 0, end: 28 } }],
+          },
+          { decision_id: "AUTH-future", relation_kind: "reimbursement", effective_status: "future",
+            authority_scope: { kind: "relationship", relation_kind: "reimbursement" },
+            effective_at: "2026-10-01T00:00:00.000000Z", created_at: "2026-09-18T00:00:00.000000Z",
+            reason: "Executed amendment takes effect in October",
+            controlling_source: { source_id: "SRC-amendment", text: "Orchid must not reimburse Rowan.",
+              text_sha256: "c".repeat(64), document_active: true,
+              provenance: { display_name: "Amendment", chunk_id: "chunk_0",
+                chunk_index: 0, start: 0, end: 38 } },
+            replaced_sources: [{ source_id: "SRC-original", text: "Orchid must reimburse Rowan.",
+              text_sha256: "d".repeat(64), document_active: true,
+              provenance: { display_name: "Original agreement", chunk_id: "chunk_2",
+                chunk_index: 2, start: 50, end: 80 } }],
+          },
+        ],
+    };
+    throw new Error("unexpected action");
+  });
+  render(<Memory projectId={project.id} backend={backend} />);
+  await screen.findByRole("heading", { name: "Source authority history" });
+  expect(screen.getByText("human remains discovered → stop work → notify authorities")).toBeTruthy();
+  expect(screen.getByText("The project procedure is controlling")).toBeTruthy();
+  expect(screen.getByText("Project procedure · chunk_1")).toBeTruthy();
+  expect(screen.getByText("Stop work, then notify Police.")).toBeTruthy();
+  expect(screen.getByText("Active")).toBeTruthy();
+  expect(screen.getByText("Future")).toBeTruthy();
+  fireEvent.click(screen.getAllByText("Replaced sources (1)")[0]!);
+  expect(screen.getByText("Council procedure · chunk_4")).toBeTruthy();
+  expect(screen.getByText("Call Police, then stop work.")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /authority/i })).toBeNull();
+});
+
 it("lists source-local structure candidates and teaches only after review", async () => {
   const { Memory } = await import("../src/Memory");
   const backend = new FakeDesktopBackend();
