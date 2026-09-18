@@ -1,5 +1,5 @@
 {
-  "version": "tom-assist-rgm-tom-middleton-live-answer/3",
+  "version": "tom-assist-rgm-tom-middleton-live-answer/4",
   "status": "COMPLETE",
   "outcome": "PASS",
   "claim_boundary": "One explicitly reviewed Middleton procedure, one correct question, one reversed-order control and one absent-state control through the production RGM, ToM and local evidence-reader path.",
@@ -319,5 +319,86 @@
     },
     "temporary_database_deleted": true,
     "temporary_duplicate_tree_deleted": true
+  },
+  "review_discovery_integration": {
+    "version": "tom-assist-rgm-review-discovery/1",
+    "status": "COMPLETE",
+    "outcome": "PASS",
+    "initial_gap": "The desktop review queue scanned retained RGM chunks only with the final source regex; it never called the copied RGM retrieval machinery.",
+    "implemented_path": [
+      "RGM contextual vector candidate pass",
+      "native RGM vector-store candidate pass",
+      "Reciprocal Rank Fusion of the two RGM vector rankings",
+      "independent regex scan over every active source chunk",
+      "strict source-local event-presence and event-order validation",
+      "explicit human Save before any ToM learning or source binding"
+    ],
+    "real_document": {
+      "document_id": "document-031ead1f43434e2a74f649a6e17f2b40",
+      "chunk_count": 42,
+      "strategy": "rgm_two_vector_passes_rrf_plus_source_regex",
+      "semantic_query_count": 4,
+      "contextual_vector_candidate_count": 15,
+      "native_vector_candidate_count": 22,
+      "semantic_return_candidate_count": 13,
+      "regex_candidate_count": 2,
+      "validated_candidate_count": 2,
+      "semantic_source_motif_rejections": 12,
+      "validated_candidates": [
+        {
+          "source_id": "SRC-d17c0595c0793bf9",
+          "chunk_index": 1,
+          "discovery_channels": {
+            "rgm_semantic_sweep": true,
+            "rgm_contextual_vector_pass": true,
+            "rgm_native_vector_pass": true,
+            "rgm_rrf_fusion": true,
+            "source_regex": true
+          },
+          "discovery_ranks": {
+            "contextual_vector": 4,
+            "native_vector": 2,
+            "rrf": 1
+          }
+        },
+        {
+          "source_id": "SRC-dfde6a8b9534fd7b",
+          "chunk_index": 39,
+          "discovery_channels": {
+            "rgm_semantic_sweep": true,
+            "rgm_contextual_vector_pass": false,
+            "rgm_native_vector_pass": true,
+            "rgm_rrf_fusion": true,
+            "source_regex": true
+          },
+          "discovery_ranks": {
+            "contextual_vector": null,
+            "native_vector": 1,
+            "rrf": 4
+          }
+        }
+      ]
+    },
+    "strict_validation_control": {
+      "input": "One retained passage containing related words but no ordered local procedure.",
+      "semantic_candidate_count": 1,
+      "semantic_source_motif_rejections": 2,
+      "regex_candidate_count": 0,
+      "validated_candidate_count": 0,
+      "result": "No review candidate; semantic/vector retrieval cannot authorize structure learning."
+    },
+    "tree_calls": 0,
+    "automatic_learning": false,
+    "tree_or_selector_changed": false,
+    "large_artifact_created": false,
+    "temporary_scan_database_deleted": true,
+    "verification": {
+      "native_memory_tests": "149 passed",
+      "desktop_tests": "20 passed",
+      "typescript": "passed",
+      "desktop_production_build": "passed",
+      "broader_gateway": "595 passed, 1 skipped, 1 pre-existing event-graph fixture-overlap failure, 5 sandbox-only local-socket setup errors",
+      "oauth_socket_rerun_outside_sandbox": "8 passed"
+    }
   }
 }

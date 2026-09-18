@@ -28,7 +28,42 @@ type StructureCandidate = {
   events: { kind: string; start: number; end: number; text: string }[];
   reviewed: boolean;
   reviewed_structure_count: number;
+  discovery_channels?: {
+    rgm_semantic_sweep: boolean;
+    rgm_contextual_vector_pass: boolean;
+    rgm_native_vector_pass: boolean;
+    rgm_rrf_fusion: boolean;
+    source_regex: boolean;
+  };
+  discovery_ranks?: {
+    contextual_vector: number | null;
+    native_vector: number | null;
+    rrf: number | null;
+  };
 };
+
+type ReviewDiscovery = {
+  strategy: string;
+  rgm_query_count: number;
+  contextual_vector_candidate_count: number;
+  native_vector_candidate_count: number;
+  rgm_semantic_candidate_count: number;
+  regex_candidate_count: number;
+  validated_candidate_count: number;
+  semantic_rejected_count: number;
+};
+
+function discoveryLabel(candidate: StructureCandidate) {
+  const channels = candidate.discovery_channels;
+  if (!channels) return "";
+  return [
+    channels.rgm_semantic_sweep && "RGM semantic sweep",
+    channels.rgm_contextual_vector_pass && "contextual vector pass",
+    channels.rgm_native_vector_pass && "native RGM vector pass",
+    channels.rgm_rrf_fusion && "RRF rank fusion",
+    channels.source_regex && "source regex",
+  ].filter(Boolean).join(" · ");
+}
 
 function structureLabel(candidate: StructureCandidate) {
   return candidate.temporal_motif.source_event === "human_remains_discovered"
@@ -62,6 +97,7 @@ export function Memory({
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState("");
   const [candidates, setCandidates] = useState<StructureCandidate[]>();
+  const [candidateDiscovery, setCandidateDiscovery] = useState<ReviewDiscovery>();
   const [candidateScanBusy, setCandidateScanBusy] = useState(false);
   const [savingCandidate, setSavingCandidate] = useState("");
   const [candidateMessage, setCandidateMessage] = useState("");
@@ -105,8 +141,9 @@ export function Memory({
     try {
       const result = await backend.chat(projectId, "conversation.native_answer", {
         action: "review_candidates",
-      }) as { candidates: StructureCandidate[] };
+      }) as { candidates: StructureCandidate[]; discovery: ReviewDiscovery };
       setCandidates(result.candidates);
+      setCandidateDiscovery(result.discovery);
     } catch (reason) { setError(String(reason)); }
     finally { setCandidateScanBusy(false); }
   }
@@ -182,11 +219,12 @@ export function Memory({
       </div>
       {canImport && documents.length > 0 && <section aria-label="Review detected document structures">
         <h3>Structures to review</h3>
-        <p>Find passages that locally state either a failure/action/cost sequence or a human-remains discovery/stop-work/authority-notification sequence. Nothing is saved in ToM until you review a passage and press Save.</p>
+        <p>Run the RGM semantic and vector sweeps, its rank fusion, and the full-source structure check. Nothing is saved in ToM until you review a passage and press Save.</p>
         <button disabled={candidateScanBusy || Boolean(savingCandidate)}
           onClick={() => void findStructureCandidates()}>
           {candidateScanBusy ? "Checking document passages…" : "Find structures to review"}
         </button>
+        {candidateDiscovery && <p role="status">RGM semantic candidates: {count(candidateDiscovery.rgm_semantic_candidate_count)} · contextual vector pass: {count(candidateDiscovery.contextual_vector_candidate_count)} · native RGM vector pass: {count(candidateDiscovery.native_vector_candidate_count)} · source regex: {count(candidateDiscovery.regex_candidate_count)} · rejected by local order check: {count(candidateDiscovery.semantic_rejected_count)} · validated: {count(candidateDiscovery.validated_candidate_count)}</p>}
         {candidates && !candidates.length && <p role="status">No matching procedures were found.</p>}
         {!!candidates?.length && <div class="memory-documents">
           {candidates.map((candidate) => <article key={candidate.candidate_id}>
@@ -194,6 +232,7 @@ export function Memory({
               <h4>{candidate.display_name} · {candidate.chunk_id}</h4>
               <p>Detected: {candidate.events.map((event) =>
                 `${event.kind.replaceAll("_", " ")} “${event.text.replaceAll(/\s+/g, " ")}”`).join(" → ")}</p>
+              {candidate.discovery_channels && <p>Found by: {discoveryLabel(candidate)}</p>}
               {candidate.reviewed_structure_count > 0 && !candidate.reviewed
                 && <p>This passage already has {candidate.reviewed_structure_count} other reviewed structure{candidate.reviewed_structure_count === 1 ? "" : "s"}. This one can be stored separately.</p>}
               <details><summary>Review exact passage</summary>

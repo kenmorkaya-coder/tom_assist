@@ -1406,7 +1406,7 @@ def test_one_rgm_source_can_retain_two_reviewed_structures_and_candidate_status(
     try:
         document = service.ingest("project", library, dict(explicit_user_action=True,
             display_name="Insurance procedure", content=text, media_type="text/plain"))
-        before = service.review_candidates(library)
+        before = service.review_candidates("project", library)
         assert before["scanned_chunks"] == 1 and before["tree_calls"] == 0
         assert len(before["candidates"]) == 1
         assert before["candidates"][0]["reviewed"] is False
@@ -1421,7 +1421,7 @@ def test_one_rgm_source_can_retain_two_reviewed_structures_and_candidate_status(
         assert service.learn_situation("project", library, second_payload)["duplicate"]
         rows = library.records_with_prefix(RGM_TOM_SITUATION_PREFIX)
         assert len(rows) == 2 and len({row["record_id"] for row in rows}) == 2
-        after = service.review_candidates(library)
+        after = service.review_candidates("project", library)
         assert after["candidates"][0]["reviewed"] is True
         assert after["candidates"][0]["reviewed_structure_count"] == 2
         assert len(service._situation_rows(library)) == 2
@@ -1520,10 +1520,19 @@ def test_reviewed_human_remains_chain_uses_tom_for_order_and_rejects_controls(tm
         document = service.ingest("project", library, dict(explicit_user_action=True,
             display_name="Middleton mitigation measures", content=text,
             media_type="text/plain"))
-        review = service.review_candidates(library)
+        review = service.review_candidates("project", library)
         assert review["tree_calls"] == 0 and review["automatic_learning"] is False
+        assert review["discovery"]["strategy"] == "rgm_two_vector_passes_rrf_plus_source_regex"
+        assert review["discovery"]["rgm_query_count"] == 4
         assert len(review["candidates"]) == 1
         candidate = review["candidates"][0]
+        assert candidate["discovery_channels"] == {
+            "rgm_semantic_sweep": True,
+            "rgm_contextual_vector_pass": True,
+            "rgm_native_vector_pass": True,
+            "rgm_rrf_fusion": True,
+            "source_regex": True,
+        }
         assert candidate["temporal_motif"] == HUMAN_REMAINS_STOP_NOTIFY_MOTIF
         assert [event["kind"] for event in candidate["events"]] == [
             "human_remains_discovered", "stop_work", "notify_authorities"]
@@ -1532,7 +1541,7 @@ def test_reviewed_human_remains_chain_uses_tom_for_order_and_rejects_controls(tm
             explicit_user_action=True, document_id=document["document_id"], chunk_index=0,
             temporal_motif=HUMAN_REMAINS_STOP_NOTIFY_MOTIF))
         assert learned["write_count"] == 2
-        reviewed = service.review_candidates(library)["candidates"]
+        reviewed = service.review_candidates("project", library)["candidates"]
         assert len(reviewed) == 1 and reviewed[0]["reviewed"] is True
 
         pair = service.recall_situations("project", library, dict(memories=[]),
@@ -1568,6 +1577,27 @@ def test_reviewed_human_remains_chain_uses_tom_for_order_and_rejects_controls(tm
         library.db.close()
 
 
+def test_review_semantic_sweep_cannot_bypass_source_structure_validation(tmp_path):
+    from gateway.native_memory import RgmDocumentService
+    from gateway.permanent_library import PermanentLibrary
+    library = PermanentLibrary(tmp_path / "semantic-review-control.sqlite3")
+    service = RgmDocumentService(worker=_rgm_app_worker([]), model_identity="fixture-model",
+        tom_worker=_reviewed_tom_worker([]), tom_profile=_reviewed_tom_profile())
+    try:
+        service.ingest("project", library, dict(explicit_user_action=True,
+            display_name="Related words without a procedure",
+            content=("Human remains, work, Police, costs, and reimbursement are discussed here, "
+                "but this passage states no ordered event chain."), media_type="text/plain"))
+        review = service.review_candidates("project", library)
+        assert review["candidates"] == []
+        assert review["discovery"]["rgm_semantic_candidate_count"] == 1
+        assert review["discovery"]["semantic_rejected_count"] == 2
+        assert review["discovery"]["regex_candidate_count"] == 0
+        assert review["tree_calls"] == 0
+    finally:
+        library.db.close()
+
+
 def test_human_remains_cease_wording_binds_existing_memory_without_tree_write(tmp_path):
     from gateway.native_memory import (HUMAN_REMAINS_STOP_NOTIFY_MOTIF,
         RgmDocumentService, bind_recalled_rgm_evidence,
@@ -1594,7 +1624,7 @@ def test_human_remains_cease_wording_binds_existing_memory_without_tree_write(tm
         second_document = service.ingest("project", library, dict(explicit_user_action=True,
             display_name="Cultural Heritage Assessment", content=second_text,
             media_type="text/plain"))
-        candidate = next(row for row in service.review_candidates(library)["candidates"]
+        candidate = next(row for row in service.review_candidates("project", library)["candidates"]
             if row["document_id"] == second_document["document_id"])
         assert [event["kind"] for event in candidate["events"]] == [
             "human_remains_discovered", "stop_work", "notify_authorities"]
