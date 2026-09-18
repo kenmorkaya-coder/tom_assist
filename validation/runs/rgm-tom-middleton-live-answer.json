@@ -1,5 +1,5 @@
 {
-  "version": "tom-assist-rgm-tom-middleton-live-answer/12",
+  "version": "tom-assist-rgm-tom-middleton-live-answer/14",
   "status": "COMPLETE",
   "outcome": "PASS",
   "claim_boundary": "One explicitly reviewed Middleton procedure, one correct question, one reversed-order control and one absent-state control through the production RGM, ToM and local evidence-reader path.",
@@ -43,7 +43,7 @@
       "question": "Which process stops nearby work before the manager notifies Police and Heritage NSW?",
       "status": "supported",
       "engine": "rgm+tom",
-      "answer": "All works within the vicinity of the find must immediately stop. The find must be cordoned  off \nand signage installed to avoid accidental impact. \no The site supervisor or other nominated manager must notify the NSW Police and Heritage \nNSW (Enviroline 131 555).\n[Appendix C - Mitigation Measures.pdf · chunk_2]",
+      "answer": "All works within the vicinity of the find must immediately stop. The find must be cordoned  off \nand signage installed to avoid accidental impact. \no The site supervisor or other nominated manager must notify the NSW Police and Heritage \nNSW (Enviroline 131 555).\n[Appendix C - Mitigation Measures.pdf \u00b7 chunk_2]",
       "source_ids": [
         "rgm-corpus-81271eb0bcabc76c7eea39e951dcb1b22b9674743dd8da244dfdbfd4a783af26/chunk_2"
       ],
@@ -74,7 +74,7 @@
       "question": "Which procedure notifies Police and Heritage NSW before work stops around human remains?",
       "status": "not_supported",
       "engine": "rgm+tom",
-      "answer": "No. The reviewed source records the opposite event order.\n[Appendix C - Mitigation Measures.pdf · chunk_2]",
+      "answer": "No. The reviewed source records the opposite event order.\n[Appendix C - Mitigation Measures.pdf \u00b7 chunk_2]",
       "source_ids": [
         "SRC-aaa43cf06e5c3b18"
       ],
@@ -105,7 +105,7 @@
       "question": "What procedure requires excavation to continue after human remains are found?",
       "status": "not_supported",
       "engine": "rgm+tom",
-      "answer": "No. The reviewed procedure requires nearby work to stop after human remains are discovered; it does not require excavation to continue.\n[Appendix C - Mitigation Measures.pdf · chunk_2]",
+      "answer": "No. The reviewed procedure requires nearby work to stop after human remains are discovered; it does not require excavation to continue.\n[Appendix C - Mitigation Measures.pdf \u00b7 chunk_2]",
       "source_ids": [
         "SRC-aaa43cf06e5c3b18"
       ],
@@ -1247,6 +1247,170 @@
         "oauth_unix_socket_module_outside_sandbox": "8 passed",
         "diff_check": "passed"
       }
+    }
+  },
+  "same_project_watermark_revision": {
+    "version": "tom-assist-same-project-watermark-revision/1",
+    "status": "COMPLETE",
+    "outcome": "PASS_DIRECT_CHANGE_EVIDENCE",
+    "project": "Sydney Metro Western Sydney Airport SCAW",
+    "claim_boundary": "A retained Revision 05 passage explicitly states the earlier watermark state and its removal. This proves retrieval and evidence-grounded answering for that transition; it is not a general document-state extractor or a source-authority conflict.",
+    "collection": {
+      "revision_04_chunks": 887,
+      "revision_05_chunks": 1314,
+      "total_chunks": 2201,
+      "production_extraction": true,
+      "production_rgm_chunking": true,
+      "frozen_minilm": true,
+      "native_vector_pass": true,
+      "contextual_vector_pass": true,
+      "reciprocal_rank_fusion": true
+    },
+    "retrieval": {
+      "explicit_change_source": {
+        "display_name": "SMWSASCA-CPU-OHE-SF153-EW-RPT-232000.05.AA.05.01.pdf",
+        "chunk_id": "chunk_72",
+        "source_id": "SRC-7a6ce59f86a5c620",
+        "statement": "This Rev 05 submission primarily includes removal of the For Review watermark which was on the previous Rev 04 Issued for Review submission."
+      },
+      "questions": [
+        {
+          "question": "Does Revision 05 still carry the For Review watermark from Revision 04?",
+          "change_source_rank": 1
+        },
+        {
+          "question": "What was the main document-status change from Revision 04 to Revision 05?",
+          "change_source_rank": 6
+        },
+        {
+          "question": "Was the previous For Review watermark removed?",
+          "change_source_rank": 1
+        }
+      ],
+      "final_packet_source_limit": 10,
+      "old_state_pair_stable_across_questions": false,
+      "diagnosis": "The later change note is stable evidence. The phrase For Review also appears in unrelated review material, so an arbitrary older chunk must not be treated as the opposing state."
+    },
+    "production_reader": {
+      "question": "Does Revision 05 still carry the For Review watermark from Revision 04?",
+      "status": "supported",
+      "source_display_name": "SMWSASCA-CPU-OHE-SF153-EW-RPT-232000.05.AA.05.01.pdf",
+      "source_chunk_id": "chunk_72",
+      "source_section_id": "section_66",
+      "answer_start": 45328,
+      "answer_end": 45474,
+      "model_peak_bytes": 15138471706,
+      "source_provenance_preserved": true
+    },
+    "architecture_decision": {
+      "result_type": "supported historical change",
+      "authority_record_required": false,
+      "authority_scope_generalised": false,
+      "production_rule_changed": false,
+      "reason": "One authenticated later passage states both the previous state and the change; the sources do not present an unresolved disagreement."
+    },
+    "controls": {
+      "tree_calls": 0,
+      "training_calls": 0,
+      "whole_tree_score": false,
+      "automatic_learning": false,
+      "temporary_database_deleted": true,
+      "large_artifact_created": false
+    },
+    "next_gate": "Test a different real same-project claim family whose sources genuinely disagree; do not send an explicit historical transition through source authority."
+  },
+  "contamination_notification_shared_structure": {
+    "outcome": "PASS",
+    "claim_boundary": "One explicitly reviewed contamination-discovery-before-notification structure across two real contract clauses; not general synthesis.",
+    "corpus": {
+      "documents": 2,
+      "chunks": 563,
+      "validated_motif_candidates": 2,
+      "automatic_learning": false,
+      "review_tree_calls": 0
+    },
+    "learning": [
+      {
+        "source_id": "SRC-bf998163dd6e6901",
+        "write_count": 381,
+        "bound_existing_relationships": 0
+      },
+      {
+        "source_id": "SRC-6b1ed6d090a086b8",
+        "write_count": 0,
+        "bound_existing_relationships": 1
+      }
+    ],
+    "tree": {
+      "branch_count": 507,
+      "terminal_branch_count": 387,
+      "return_field_shape": [
+        387,
+        32,
+        32
+      ],
+      "active_slot_count": 381,
+      "checkpoint_path": "/Volumes/My Passport for Mac/tom_assist_test_results/native_learned_recall/scaw-contam-notice-20260918/tree-1.pkl",
+      "checkpoint_bytes": 224060581,
+      "reference_path": "/Volumes/My Passport for Mac/tom_assist_test_results/native_learned_recall/scaw-contam-notice-20260918/references-1.npz",
+      "reference_bytes": 3024219,
+      "whole_tree_score": false,
+      "all_branch_cell_coordinates_compared": true
+    },
+    "answers": [
+      {
+        "kind": "deed_specific",
+        "status": "supported",
+        "source_count": 1,
+        "sources": [
+          {
+            "display_name": "SCAW D_C Deed - Executed 1 March 2022.pdf",
+            "chunk_id": "chunk_156"
+          }
+        ],
+        "independent_source_reading": true
+      },
+      {
+        "kind": "interface_specific",
+        "status": "supported",
+        "source_count": 1,
+        "sources": [
+          {
+            "display_name": "SMWSA M12 Interface Agreement - Fully Executed 2 February 2022.pdf",
+            "chunk_id": "chunk_66"
+          }
+        ],
+        "independent_source_reading": true
+      },
+      {
+        "kind": "broad",
+        "status": "supported",
+        "source_count": 2,
+        "sources": [
+          {
+            "display_name": "SMWSA M12 Interface Agreement - Fully Executed 2 February 2022.pdf",
+            "chunk_id": "chunk_66"
+          },
+          {
+            "display_name": "SCAW D_C Deed - Executed 1 March 2022.pdf",
+            "chunk_id": "chunk_156"
+          }
+        ],
+        "independent_source_reading": true
+      }
+    ],
+    "diagnosis_and_repairs": [
+      "The native return initially lost the parsed query structure, so independent source reading did not activate.",
+      "The deed reader found the right clause but proposed a non-contiguous quote that skipped an embedded PDF page header; exact-span validation rejected it.",
+      "The deterministic broad span initially stopped at the decimal point in clause 12.20; the final boundary ignores numeric-reference dots."
+    ],
+    "checks": {
+      "specific_questions_keep_only_applicable_source": true,
+      "broad_question_returns_both_exact_sources": true,
+      "second_source_bound_without_tree_write": true,
+      "query_tree_unchanged": true,
+      "no_whole_tree_score": true,
+      "native_memory_tests": 167
     }
   }
 }

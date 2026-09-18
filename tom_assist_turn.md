@@ -2251,10 +2251,11 @@ document detail. The tested division of labour is now:
                     +-------------+-------------+
                                   |
                                   v
-                      exact RGM text and provenance
+                    exact RGM text and provenance
                                   |
                                   v
-                    conflict and evidence checking
+                 independent per-source evidence checks
+                 retain every direct supporting source
                                   |
                                   v
                      supported wording or clear
@@ -3134,3 +3135,84 @@ including TypeScript checking and the production build. The broader gateway
 run reports 608 passes and one skip, with the unchanged unrelated event-graph
 fixture-overlap failure and five sandbox-only Unix-socket setup errors. The
 complete OAuth socket module passes 8/8 with local socket binding available.
+
+### 2026-09-18 — second real source-change family
+
+The second family tested the `For Review` watermark across the same complete
+Revision 04 and Revision 05 SCAW reports. The production RGM path again searched
+all 2,201 chunks. Revision 05 chunk 72 explicitly states that the watermark on
+the previous Revision 04 Issued for Review submission was removed. That exact
+change note ranked 1, 6 and 1 for three differently worded questions.
+
+This diagnostic did not reproduce the remediation-plan conflict. The later
+passage itself records both the historical state and the transition. The older
+document does not yield one stable opposing passage: the words `for review`
+also occur in issue history, review sheets and ordinary review instructions.
+Treating one such old chunk as the controlling opposite would be arbitrary.
+
+The production local reader was then run on the direct question, “Does Revision
+05 still carry the For Review watermark from Revision 04?” It returned
+**Supported** and quoted the removal statement from Revision 05 chunk 72 with
+the exact file and chunk provenance. Peak local model allocation was
+15,138,471,706 bytes. The run made zero ToM calls, no training calls, no
+whole-tree score and no authority record, and deleted its temporary database.
+
+The architectural result is that explicit historical change evidence should
+go straight to evidence reading. Source authority remains for genuine
+unresolved disagreements. No classifier, threshold or tree behaviour was
+changed for this result.
+
+### 2026-09-18 — one learned contamination situation, two exact sources
+
+The next comparison focused on a place where ToM can add something the RGM
+reader did not provide by itself. The production RGM path searched the complete
+executed SCAW D&C Deed and M12 Interface Agreement: 315 plus 248 chunks. It
+found D&C chunk 156 and Interface Agreement chunk 66 as the only passages that
+passed the local contamination-discovery then notification check.
+
+The specific RGM answers were already correct. The broad question, “What
+notifications are required when contamination is discovered?”, also retrieved
+both passages in its final ten candidates, but the evidence reader returned only
+the Interface Agreement clause. The failure was therefore broad-answer
+completeness after retrieval, not a semantic-search miss.
+
+One reviewed structure was added:
+
+```text
+contamination discovered → notification
+```
+
+The first real clause wrote to 381 native locations in the approved small tree.
+The second clause bound its exact source pointer to that same relationship and
+made zero additional tree writes. Three questions then reopened both source
+pointers through the same exact native return. The field shape was 387 terminal
+branches × 32 × 32 cells. Branch identity, native position, sign, magnitude and
+exact memory-slot map were preserved. There was no averaging and no whole-tree
+score.
+
+The first end-to-end attempt exposed an integration defect: the service returned
+the native field but dropped the parsed query structure, so the multi-source
+reader did not know to evaluate each linked source separately. The deed-specific
+question was blocked and the broad question again showed only one source. The
+query structure is now preserved beside the native return, and each linked
+source is evaluated independently for this admitted motif. Both specific
+questions then returned exactly their own applicable clause.
+
+The broad replay exposed a second, narrower failure. The reader correctly found
+the deed obligation, but its proposed quote skipped the PDF page header embedded
+inside that one clause. The exact-span guard rejected the altered span. The
+broad evidence check now returns one contiguous exact source provision from the
+already validated local relationship, including intervening page furniture. A
+follow-up diagnostic caught and repaired a sentence-boundary error that stopped
+at the decimal point in `12.20`; numeric clause-reference dots are now ignored.
+
+The final real run returned **Supported** with both exact provisions and their
+file/chunk provenance. Specific D&C and Interface Agreement questions each
+returned one applicable source. The tree remained unchanged during all queries,
+and training occurred only during the explicit reviewed Save. All 167
+native-memory checks pass.
+
+Large artifacts are stored only on Passport at
+`native_learned_recall/scaw-contam-notice-20260918/`: a 224,060,581-byte tree
+checkpoint and a 3,024,219-byte complete-field reference archive. The owner
+repositories remained read-only.

@@ -1218,3 +1218,30 @@ presentation made zero language-model calls. The resolved reader check used a
 deterministic exact-quote control, so this proves source selection and not
 general answer wording. The complete path made zero ToM calls and did not change
 the tree.
+
+The next genuine revision family produced a different result. Revision 05
+chunk 72 explicitly states that the `For Review` watermark on Revision 04 was
+removed. It ranked 1, 6 and 1 in the final ten-source RGM packets for three
+phrasings. The production local evidence reader answered the direct question
+as `supported`, quoted the removal statement and retained the Revision 05 file
+and chunk provenance. This path made zero ToM calls and no authority decision.
+
+That distinction is deliberate. A later authenticated passage that states the
+earlier state and its change is answer evidence; it is not automatically a
+source conflict. The older PDF does not provide one stable opposing passage,
+and `for review` also appears in unrelated review material. The gateway does
+not infer watermark state from filenames, revision numbers, absence, or phrase
+counts, and does not attach authority to an arbitrary old chunk.
+
+The reviewed bridge also admits one contamination-discovery → notification
+motif. Several exact RGM passages may bind to its one learned ToM relationship;
+only the first reviewed passage writes the tree. Query recall compares the
+complete native terminal-branch × 32 × 32 signed field and exact slot map, then
+reopens every active bound RGM source. No scalar tree score is used.
+
+For this motif, linked passages are read independently. A source-specific
+question keeps only the passage that directly answers it. An unscoped broad
+question keeps every directly supporting passage, so different obligations are
+shown together. If PDF page furniture interrupts one otherwise contiguous
+provision, the broad check returns the exact retained source span including that
+furniture; it never accepts a model quote that skips source characters.

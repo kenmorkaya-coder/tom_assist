@@ -37,8 +37,8 @@ recognises reviewed relationships, direction and event order
 RGM source resolution
 reopens every exact source linked to the returned structure
    ↓
-evidence checking
-decides supported, partly supported, unsupported or ambiguous
+independent source evidence checking
+keeps every exact passage that directly supports the question
    ↓
 language model
 words only what the evidence layer permits
@@ -77,7 +77,8 @@ Counts, plots and branch magnitudes are display telemetry only.
 | Experience-tree learning | Available | A committed turn changes the project's experience tree; draft inspection does not. | The tree does not store the literal transcript. |
 | Local document library | Available | Stores imported source text, chunks, source offsets, checksums and project-local provenance. The tested active collection bound is 4,096 RGM chunks. | Imported text without PDF provenance does not receive invented page numbers. Collections above 4,096 chunks are rejected before model work. |
 | Exact evidence answering | Available in the opt-in document path | Returns source quotations and expandable original passages, with exact-span and source-integrity checks. | Oversized or altered evidence is rejected rather than silently shortened or repaired. |
-| Multiple supporting sources | Available | Keeps and displays every exact source linked to an accepted answer or reviewed structural memory. | The evidence reader may still decline broad questions even when relevant structural sources were found. |
+| Explicit revision-history answers | Available | Answers a historical source-change question directly when a retained revision passage explicitly states the earlier state and the change. A live two-revision check returned the Revision 05 watermark-removal statement with its exact source. | This does not infer document state from filenames, dates, missing watermarks or repeated words. It does not turn a stated historical transition into a source-authority conflict. |
+| Multiple supporting sources | Available | Keeps and displays every exact source linked to an accepted answer or reviewed structural memory. For the admitted contamination-notification structure, every linked source is checked independently so a broad answer can retain both obligations. | Other broad structural families may still be declined when the evidence reader cannot verify a direct answer. |
 | Conflicting sources | Available | Shows both sides with provenance and returns an ambiguous result while authority is unresolved. Bounded checks cover the human-remains event order and the contaminated-soil Remediation Action Plan's draft/revised status. | Neither ToM nor the language model silently chooses a winner. Other claim families are not automatically classified. |
 | Explicit source authority | Available | Lets the user choose either exact conflicting passage as controlling, name the passages it replaces, and provide an effective time and reason. The Memory screen shows a read-only history with exact controlling and replaced passages, provenance, scope, reason and Active/Future status. Party decisions are scoped to one relationship; event and plan-status decisions use exact bounded scopes. Superseded evidence remains retained. | Authority is never inferred from filenames, dates or amendment wording. Other temporal motifs and source-claim types are not admitted yet. The history cannot edit or revoke a decision. |
 | Relationship direction | Bounded | Distinguishes who acted on whom in the reviewed mirrored insurance relationships. | Demonstrated on two clauses and four questions, not arbitrary relations. |
@@ -138,6 +139,33 @@ all three questions: **6/6 expected occurrences**.
 
 The first reviewed source taught the distributed memory. Reviewing the second
 source added its provenance with **zero additional tree writes**.
+
+### One situation, different exact obligations
+
+Two real clauses describe the same reviewed relationship while preserving
+different exact details in RGM:
+
+```text
+contamination discovered → notification
+```
+
+- D&C Deed chunk 156 requires the SCAW Contractor to notify the Principal's
+  Representative and then provide the specified reports.
+- M12 Interface Agreement chunk 66 requires a party to notify the other party
+  as soon as practicable and within five Business Days.
+
+Production RGM extraction created **563** chunks and found exactly these two
+locally valid motif candidates. The first source made **381** native writes in
+the approved small tree. The second source attached to that existing learned
+relationship with **zero** further tree writes.
+
+Three query forms reopened both source pointers through one exact native return.
+The compared return was **387 × 32 × 32**, preserving every terminal-branch
+position, signed cell and exact slot map. No whole-tree score or branch average
+was used. The evidence layer then checked the two passages separately: each
+specific question retained only its applicable clause, while the broad question
+returned both exact source provisions. This is a bounded result for the admitted
+contamination-notification structure, not general multi-document synthesis.
 
 ### Recovery when ordinary RGM retrieval misses
 
@@ -345,7 +373,8 @@ The live reviewed bridge currently supports:
 3. failure before substitute action, followed by substitute action before cost
    recovery; and
 4. human remains discovered before work stops, followed by work stopping before
-   authority notification.
+   authority notification; and
+5. contamination discovered before notification.
 
 The two three-event structures are represented by two independently routed
 learned relationships. Both complete distributed returns and both exact slot
@@ -408,6 +437,29 @@ the same unrelated event-graph fixture-overlap failure and five sandbox-only
 Unix-socket setup errors; the complete OAuth socket module again passed **8/8**
 with local socket binding available.
 
+The shared contamination-notification integration passes all **167**
+native-memory tests. Its real run used the production RGM extractor and chunker,
+the approved 507-branch fixture, one persistent learned relationship and the
+production local evidence reader. The saved 224 MB tree remains on Passport;
+only compact evidence is retained in Git.
+
+### Explicit revision-history answer
+
+A second genuine change family was checked across the same full Revision 04 and
+Revision 05 reports. Revision 05 chunk 72 explicitly says the `For Review`
+watermark on the previous Revision 04 submission was removed. The production
+RGM packet returned that passage at ranks **1, 6 and 1** for three phrasings.
+The production local evidence reader then answered the direct question as
+**Supported**, quoted that exact statement and retained the Revision 05 source
+and chunk provenance.
+
+This is not a conflict requiring source authority. The later passage describes
+the earlier state and the change in one authenticated source. The phrase `for
+review` also occurs in unrelated review material, so the integration must not
+infer watermark state from a phrase count or select an arbitrary old chunk.
+The result made zero ToM calls, performed no learning, used no whole-tree score
+and deleted its temporary database. No production rule was changed.
+
 ## Evidence locations
 
 Compact and reviewable evidence is retained in the repository:
@@ -437,8 +489,8 @@ They are evidence artifacts, not application source.
 
 The next work should extend capability one variable at a time:
 
-1. Test a second real same-project claim family before generalising the bounded
-   plan-status classifier or its authority scope.
+1. Repeat the independent multi-source answer check on a different reviewed
+   relationship before generalising the rule beyond contamination notification.
 2. Keep exact evidence selection and conflict presentation separate from
    structural recall.
 3. Do not introduce branch averaging, a whole-tree score or automatic teaching

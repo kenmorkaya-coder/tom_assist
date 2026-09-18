@@ -77,13 +77,15 @@ def native_memory_worker():
                     actions = dict(notify="notify", meeting="approve", failure="stop",
                         substitute_action="replace", cost_recovery="discharge",
                         human_remains_discovered="inspect", stop_work="stop",
-                        notify_authorities="notify")
+                        notify_authorities="notify", contamination_discovered="inspect",
+                        notification="notify")
                     if pair not in {
                         ("notify", "meeting"),
                         ("failure", "substitute_action"),
                         ("substitute_action", "cost_recovery"),
                         ("human_remains_discovered", "stop_work"),
                         ("stop_work", "notify_authorities"),
+                        ("contamination_discovered", "notification"),
                     }:
                         raise ValueError("unsupported reviewed temporal motif")
                     text = " ".join(pair) if query else item["text"]
@@ -392,7 +394,8 @@ def native_memory_worker():
             result = dict(vectors=encoded, tree_calls=0, truncated_inputs=0)
         elif operation == "rgm_read":
             from gateway.tom_gateway import GemmaInspection
-            from gateway.native_memory import read_rgm_source_evidence
+            from gateway.native_memory import (
+                read_rgm_source_evidence, read_each_rgm_source_evidence)
             # This reader was measured at 15.04 GiB. Cap its allocation at
             # 17 GiB and require another 2 GiB of currently available memory.
             # The older 22 GiB inspection estimate includes different work.
@@ -432,7 +435,9 @@ def native_memory_worker():
                     max_tokens=limit, sampler=make_sampler(temp=0)), tokenizer.eos_token_ids)
                 generated["prompt_sha256"] = hashlib.sha256(prompt.encode()).hexdigest()
                 return generated
-            result = read_rgm_source_evidence(payload["question"], payload["packet"], generate)
+            reader = (read_each_rgm_source_evidence if payload.get("read_each") is True
+                else read_rgm_source_evidence)
+            result = reader(payload["question"], payload["packet"], generate)
             result["model_peak_bytes"] = mx.get_peak_memory()
             result["resource_check"] = dict(available_bytes=resources["estimated_available_bytes"],
                 model_limit_bytes=17*1024**3, reserve_bytes=2*1024**3, verified_concurrent_cpu_pid=cpu_pid)
