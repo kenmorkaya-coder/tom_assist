@@ -613,3 +613,47 @@ it("lists source-local structure candidates and teaches only after review", asyn
   });
   expect(screen.getByRole("button", { name: "Already reviewed in ToM" })).toBeTruthy();
 });
+
+it("offers the reviewed human-remains sequence without teaching during detection", async () => {
+  const { Memory } = await import("../src/Memory");
+  const backend = new FakeDesktopBackend();
+  const project = await backend.seedDemo();
+  vi.spyOn(backend, "diagnostics").mockResolvedValue({ memory: {} });
+  vi.spyOn(backend, "documents").mockResolvedValue([{
+    document_id: "document-middleton", display_name: "Mitigation Measures.pdf",
+    content_sha256: "b".repeat(64), byte_length: 500, media_type: "application/pdf",
+    chunking_version: "rgm", embedding_version: "minilm", ingested_tick: 1,
+    tombstoned_at: null, chunk_count: 1,
+  }]);
+  const motif = { relation_kind: "sequence", source_event: "human_remains_discovered",
+    intermediate_event: "stop_work", target_event: "notify_authorities" } as const;
+  const chat = vi.spyOn(backend, "chat").mockImplementation(async (_id, _method, payload) => {
+    if (payload.action === "status") return { ready: true, engine: "rgm+tom",
+      structural_memory: { configured: true, learned_situations: 0, capacity: 6 } };
+    if (payload.action === "review_candidates") return { candidates: [{
+      candidate_id: "RGMCAND-middleton", source_id: "SRC-middleton",
+      document_id: "document-middleton", display_name: "Mitigation Measures.pdf",
+      chunk_id: "chunk_2", chunk_index: 2,
+      text: "Human remains are uncovered. Work stops. The manager notifies Police.",
+      temporal_motif: motif, events: [
+        { kind: "human_remains_discovered", start: 0, end: 27, text: "Human remains are uncovered" },
+        { kind: "stop_work", start: 29, end: 39, text: "Work stops" },
+        { kind: "notify_authorities", start: 41, end: 69, text: "manager notifies Police" },
+      ], reviewed: false, reviewed_structure_count: 0,
+    }] };
+    if (payload.action === "learn_situation") return { duplicate: false, write_count: 768 };
+    throw new Error("unexpected action");
+  });
+  render(<Memory projectId={project.id} backend={backend} />);
+  fireEvent.click(await screen.findByRole("button", { name: "Find structures to review" }));
+  await screen.findByText(/Detected: human remains discovered/);
+  expect(chat.mock.calls.filter((call) => call[2].action === "learn_situation")).toHaveLength(0);
+  fireEvent.click(screen.getByRole("button", {
+    name: "Save human remains discovered → stop work → notify authorities",
+  }));
+  await screen.findByText("Saved this structure across 768 ToM memory locations.");
+  expect(chat).toHaveBeenCalledWith(project.id, "conversation.native_answer", {
+    action: "learn_situation", explicit_user_action: true,
+    document_id: "document-middleton", chunk_index: 2, temporal_motif: motif,
+  });
+});

@@ -23,11 +23,16 @@ learned structure. The two lanes meet at evidence checking.
                   |                                   |
                   |                          no ------+------ yes
                   |                                   |
-                  |                                   v
-                  |                      DISTRIBUTED ToM RECALL
-                  |                    complete native branch identity
-                  |                    + signed 32x32 fields + slot maps
-                  |                    never one whole-tree score
+                  |                    +--------------+--------------+
+                  |                    |                             |
+                  |                    v                             v
+                  |          REVIEWED OPPOSITE FOUND       LEARNED RELATION FOUND
+                  |          exact reverse/opposed state    distributed ToM recall
+                  |          zero tree or model calls       complete branch identity
+                  |                    |                    + signed 32x32 fields
+                  |                    |                    + exact slot maps
+                  |                    |                    never one whole-tree score
+                  |                    +--------------+--------------+
                   |                                   |
                   |                                   v
                   |                        BOUND RGM SOURCE IDs
@@ -2737,5 +2742,58 @@ diagnostic databases were deleted. The native-memory suite passes 146/146.
 
 This remains a bounded test of one explicitly reviewed procedure. It does not
 show automatic structure discovery, arbitrary event-graph parsing or general
-accuracy across planning documents. The desktop review queue does not yet
-offer this new structure.
+accuracy across planning documents. At that recorded stage, the desktop review
+queue did not yet offer this new structure; the next section records its
+addition and the live-answer check.
+
+### 2026-09-18 — Middleton desktop review and live answer boundary
+
+The desktop **Structures to review** queue now scans the bounded human-remains
+procedure as well as the existing failure/substitute-action/cost procedure. It
+shows the exact passage and the three matched events. Scanning remains
+read-only: it makes zero tree calls and cannot teach automatically. Only the
+existing explicit Save action can review and learn or bind the source.
+
+The first production-path answer run failed. The correct-order question used
+the complete distributed ToM return and produced the exact source. ToM also
+correctly rejected the reversed notification-before-stop relationship and the
+absent continue-excavation relationship. The final evidence reader nevertheless
+treated the topically relevant RGM passage as support for both bad questions.
+This located the fault after structural recall: the answer boundary ignored
+ToM's structural rejection and fell back to semantic evidence.
+
+The repair changes only that boundary. When a question states the exact reverse
+of, or a state explicitly opposed by, one reviewed relationship, Tom Assist
+reopens the exact RGM source for that relationship and gives a sourced No. It
+does not call the language reader or route the tree for that negative result.
+Conflicting sources are unaffected and remain visible together.
+
+The repaired run produced:
+
+- correct order: `supported`, one real distributed ToM recall, exact chunk 2;
+- notification before stopping: `not_supported`, exact chunk 2 shown, zero
+  language-model calls and zero tree calls; and
+- continue excavation after discovery: `not_supported`, exact chunk 2 shown,
+  zero language-model calls and zero tree calls.
+
+The correct answer quoted the procedure requiring all work near the find to
+stop immediately, the area to be cordoned off, and the manager to notify NSW
+Police and Heritage NSW. The reversed answer states that the reviewed source
+records the opposite order. The absent-state answer states that the procedure
+requires work to stop and does not require excavation to continue.
+
+The 513-branch tree and its complete signed branch-local 32x32 return were not
+collapsed or averaged. The checkpoint remained 233,213,726 bytes with SHA-256
+`16417dfebb261f50331e9389e9a105677aaeb4a82354e35d22590bd57d19165e`
+and state hash
+`d8b66790c29315149b90eea188c84aed1d37e0259f57f496b1f74a4aa6b7b750`.
+The 6,091,380-byte full-field reference retained SHA-256
+`b149755816c7ee5e9b42e4b95093b9bd0ced1217083dbd7fdb56457e7a93ecd8`.
+Large artifacts are on Passport under
+`/Volumes/My Passport for Mac/tom_assist_test_results/native_learned_recall/middleton_human_remains_e2e_v1/`.
+The compact result is
+`validation/runs/rgm-tom-middleton-live-answer.json`; its temporary database was
+deleted.
+
+Verification passes all 147 native-memory tests and all 20 desktop tests.
+TypeScript checking and the production desktop interface build also pass.

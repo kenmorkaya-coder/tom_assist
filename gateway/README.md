@@ -1007,9 +1007,10 @@ same structure binds its immutable RGM source pointer without another ToM
 write. These ordered structures can reopen their reviewed sources from an
 explicitly ordered query even when RGM supplies no correct initial candidate.
 Party and repayment relationships remain candidate-gated. The read-only review
-queue currently scans only the failure/substitute/cost structure; the other
-structures still require an explicit bounded review action. This does not
-perform automatic motif extraction or accept arbitrary event graphs.
+queue scans the failure/substitute/cost and human-remains/stop-work/notification
+structures. Notice-before-meeting still requires an explicit bounded review
+action. This does not perform automatic motif extraction or accept arbitrary
+event graphs.
 
 The failure/substitute/cost source guard checks one local procedure rather than
 combining keywords from anywhere in a long RGM chunk. On the two frozen contract
@@ -1019,8 +1020,9 @@ wording. Nearby failure/debt clauses without substitute performance were
 rejected. This remains a bounded admission check for an explicitly reviewed
 motif; it does not automatically teach every detected passage.
 
-Memory now exposes a read-only **Structures to review** scan for that bounded
-motif. It lists the exact RGM passage and the three matched event phrases. The
+Memory now exposes a read-only **Structures to review** scan for those two
+bounded motifs. It lists the exact RGM passage and the three matched event
+phrases. The
 scan makes no tree call. Each candidate requires a separate explicit Save
 action, and the server repeats the source-local validation before teaching or
 binding it. One source passage may retain different reviewed structure types;
@@ -1048,6 +1050,16 @@ exact reviewed ToM return, the response is labelled partly supported. It states
 only that reviewed structural passages were found and displays all of them; it
 does not say the information is absent or convert the structural match into an
 unverified direct answer.
+
+An initial Middleton live-answer run exposed the opposite failure: ToM rejected
+the reversed and absent event relationships, but the final reader treated the
+topically relevant RGM passage as supporting evidence. The answer boundary now
+checks reviewed relationship metadata before that fallback. If the requested
+relationship is the exact reverse of, or explicitly opposed by, one reviewed
+relationship, Tom Assist reopens that relationship's exact RGM sources and
+returns a sourced `not_supported` result. This path makes no tree call and no
+language-model call. It does not choose between conflicting sources; conflicts
+remain visible together and follow the existing authority workflow.
 Document-style party names such as `Transport for NSW` / `TfNSW` and
 `Sydney Metro` / `SM` are matched mechanically. If the question does not state
 one complete relationship, ToM makes no selection claim and the existing RGM

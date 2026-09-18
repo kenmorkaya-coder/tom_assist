@@ -1301,8 +1301,8 @@ def test_reviewed_notice_before_meeting_memory_reopens_every_bound_rgm_source(tm
         calls_before = len(calls)
         reversed_result = service.recall_situations("project", library, packet,
             "Does the meeting happen before the written notice?", "2026-09-17T00:00:00Z")
-        assert reversed_result["status"] == "no_matching_structure"
-        assert reversed_result["recalled_source_ids"] == []
+        assert reversed_result["status"] == "reviewed_structure_contradiction"
+        assert set(reversed_result["recalled_source_ids"]) == expected_ids
         assert len(calls) == calls_before
     finally:
         library.db.close()
@@ -1514,10 +1514,20 @@ def test_reviewed_human_remains_chain_uses_tom_for_order_and_rejects_controls(tm
         document = service.ingest("project", library, dict(explicit_user_action=True,
             display_name="Middleton mitigation measures", content=text,
             media_type="text/plain"))
+        review = service.review_candidates(library)
+        assert review["tree_calls"] == 0 and review["automatic_learning"] is False
+        assert len(review["candidates"]) == 1
+        candidate = review["candidates"][0]
+        assert candidate["temporal_motif"] == HUMAN_REMAINS_STOP_NOTIFY_MOTIF
+        assert [event["kind"] for event in candidate["events"]] == [
+            "human_remains_discovered", "stop_work", "notify_authorities"]
+        assert candidate["reviewed"] is False
         learned = service.learn_situation("project", library, dict(
             explicit_user_action=True, document_id=document["document_id"], chunk_index=0,
             temporal_motif=HUMAN_REMAINS_STOP_NOTIFY_MOTIF))
         assert learned["write_count"] == 2
+        reviewed = service.review_candidates(library)["candidates"]
+        assert len(reviewed) == 1 and reviewed[0]["reviewed"] is True
 
         pair = service.recall_situations("project", library, dict(memories=[]),
             "Which process stops work before the manager notifies Police and Heritage NSW?",
@@ -1540,12 +1550,60 @@ def test_reviewed_human_remains_chain_uses_tom_for_order_and_rejects_controls(tm
         reversed_result = service.recall_situations("project", library, dict(memories=[]),
             "Which procedure notifies Police before work stops around human remains?",
             "2026-09-18T00:00:00Z")
-        assert reversed_result["status"] == "no_matching_structure"
+        assert reversed_result["status"] == "reviewed_structure_contradiction"
+        assert reversed_result["recalled_source_ids"] == [learned["source_id"]]
         absent = service.recall_situations("project", library, dict(memories=[]),
             "What procedure requires excavation to continue after human remains are found?",
             "2026-09-18T00:00:00Z")
-        assert absent["status"] == "no_query_structure"
+        assert absent["status"] == "reviewed_structure_contradiction"
+        assert absent["recalled_source_ids"] == [learned["source_id"]]
         assert len(calls) == calls_before_controls
+    finally:
+        library.db.close()
+
+
+def test_live_answer_returns_sourced_no_for_reviewed_temporal_contradictions(tmp_path):
+    from gateway.native_memory import (HUMAN_REMAINS_STOP_NOTIFY_MOTIF,
+        RgmDocumentService)
+    from gateway.permanent_library import PermanentLibrary
+    library = PermanentLibrary(tmp_path / "human-remains-answer.sqlite3")
+    tom_calls = []
+    document_operations = []
+    def document_worker(operation, payload):
+        document_operations.append(operation)
+        if operation != "rgm_embed":
+            raise AssertionError("a reviewed contradiction must not call the language reader")
+        return dict(vectors={hashlib.sha256(text.encode()).hexdigest():
+            [1.0] + [0.0] * 383 for text in payload["texts"]})
+    service = RgmDocumentService(worker=document_worker, model_identity="fixture-model",
+        tom_worker=_reviewed_tom_worker(tom_calls),
+        tom_profile=_reviewed_tom_profile())
+    text = ("Should clearly identifiable human remains be uncovered, all works within the "
+        "vicinity must immediately stop. The site supervisor must notify the NSW Police and "
+        "Heritage NSW.")
+    try:
+        document = service.ingest("project", library, dict(explicit_user_action=True,
+            display_name="Middleton mitigation measures", content=text,
+            media_type="text/plain"))
+        service.learn_situation("project", library, dict(explicit_user_action=True,
+            document_id=document["document_id"], chunk_index=0,
+            temporal_motif=HUMAN_REMAINS_STOP_NOTIFY_MOTIF))
+        reversed_answer = service.answer("project", library,
+            "Which procedure notifies Police before work stops around human remains?")
+        assert reversed_answer["status"] == "not_supported"
+        assert reversed_answer["engine"] == "rgm+tom"
+        assert "opposite event order" in reversed_answer["answer"]
+        assert reversed_answer["sources"][0]["text"] == text
+        assert reversed_answer["trace"]["reading"]["model_calls"] == 0
+        assert reversed_answer["purity"]["tree_calls"] == 0
+
+        absent_answer = service.answer("project", library,
+            "What procedure requires excavation to continue after human remains are found?")
+        assert absent_answer["status"] == "not_supported"
+        assert "requires nearby work to stop" in absent_answer["answer"]
+        assert absent_answer["sources"][0]["text"] == text
+        assert absent_answer["trace"]["reading"]["model_calls"] == 0
+        assert "rgm_read" not in document_operations
     finally:
         library.db.close()
 
