@@ -191,6 +191,15 @@ structure, the same zero-candidate control returned all three source locations.
 The attachment made zero tree writes and did not change the tree or checkpoint
 hash.
 
+The end-to-end evidence check now reads those three returned passages
+independently. A question asking specifically for a resulting **debt** keeps the
+two D&C clauses that say debt and excludes M12 clause 14.4, which instead says
+the action is at SM's cost. A broader question asking for cost recovery keeps
+all three clauses. ToM returns the same three learned source locations in both
+cases; the evidence wording determines which passages directly answer the
+question. The check exposed and repaired a loader omission for zero-write
+version 5 source bindings. The saved tree and all learned fields were unchanged.
+
 ### Unseen third-document check
 
 The previously unused Noise and Vibration Construction Environmental Management

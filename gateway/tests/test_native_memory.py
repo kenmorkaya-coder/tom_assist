@@ -1164,6 +1164,24 @@ def test_reviewed_tom_v3_multi_source_binding_remains_readable():
         source_ids=["source-a", "source-b"])]
 
 
+def test_reviewed_tom_v5_zero_write_binding_remains_readable():
+    from gateway.native_memory import RgmDocumentService, RGM_TOM_BRIDGE_VERSION_V5
+    memory = dict(memory_id="memory", source_id="source-a", text="Failure, action, debt",
+        relation_kind="before", source_event="failure", target_event="substitute_action",
+        address_index=0, previous_write_keys=[["bank", 1]])
+    def binding(source_id):
+        return dict(memory_id="memory", source_id=source_id, relation_kind="before",
+            source_event="failure", target_event="substitute_action")
+    rows = [
+        dict(encoded=dict(version=RGM_TOM_BRIDGE_VERSION_V5, worker_memories=[memory],
+            worker_bindings=[binding("source-a")]), situation=dict(source_id="source-a")),
+        dict(encoded=dict(version=RGM_TOM_BRIDGE_VERSION_V5, worker_memories=[],
+            worker_bindings=[binding("source-b")]), situation=dict(source_id="source-b")),
+    ]
+    assert RgmDocumentService._memory_catalog(rows) == [dict(memory,
+        source_ids=["source-a", "source-b"])]
+
+
 def test_reviewed_rgm_situation_is_persisted_taught_and_used_during_answer(tmp_path):
     from gateway.native_memory import RgmDocumentService, RGM_TOM_SITUATION_PREFIX
     library, ingested = _reviewable_rgm_library(tmp_path)
@@ -1529,6 +1547,71 @@ def test_contamination_memory_reads_each_linked_source_independently(tmp_path, m
         library.db.close()
 
 
+def test_failure_step_in_cost_memory_reads_each_linked_source_independently(
+        tmp_path, monkeypatch):
+    import gateway.native_memory as native_memory
+    from gateway.native_memory import FAILURE_STEP_IN_COST_MOTIF, RgmDocumentService
+    from gateway.permanent_library import PermanentLibrary
+    library = PermanentLibrary(tmp_path / "chain-multiple-sources.sqlite3")
+    read_calls = []
+    def document_worker(operation, payload):
+        if operation == "rgm_embed":
+            return dict(vectors={hashlib.sha256(text.encode()).hexdigest():
+                [1.0] + [0.0] * 383 for text in payload["texts"]})
+        assert operation == "rgm_read"
+        read_calls.append(payload)
+        answers = []
+        for memory in payload["packet"]["memories"]:
+            proof = memory["evidence_reference"]
+            answers.append(dict(question=payload["question"], text=memory["content"],
+                source_id=proof["corpus_id"] + "/" + memory["id"],
+                start=proof["start"], end=proof["end"]))
+        return dict(status="supported", answers=answers, parts=[],
+            independent_source_reading=True)
+    service = RgmDocumentService(worker=document_worker, model_identity="fixture-model",
+        tom_worker=_reviewed_tom_worker([]), tom_profile=_reviewed_tom_profile())
+    documents = [
+        ("M12 clause 14.4", "If SM fails to promptly comply, TfNSW may, at the cost of SM, "
+            "undertake all actions necessary to manage the emergency."),
+        ("D&C clause 13.6", "If the Contractor does not comply, the Principal may employ "
+            "others to carry out the direction. The resulting Loss is a debt due from the Contractor."),
+        ("D&C clause 16.7", "The Principal may take any action necessary which the Contractor "
+            "must take but does not take. Loss from taking that action or the failure to take it "
+            "will be a debt due from the Contractor."),
+    ]
+    try:
+        for name, text in documents:
+            document = service.ingest("project", library, dict(explicit_user_action=True,
+                display_name=name, content=text, media_type="text/plain"))
+            service.learn_situation("project", library, dict(explicit_user_action=True,
+                document_id=document["document_id"], chunk_index=0,
+                temporal_motif=FAILURE_STEP_IN_COST_MOTIF))
+        rows = service._situation_rows(library)
+        first = rows[0]["situation"]; proof = first["provenance"]
+        first_memory = dict(id=proof["chunk_id"], content=proof["source_text"],
+            evidence_reference=dict(doc_id=proof["document_id"], chunk_id=proof["chunk_id"],
+                corpus_id=proof["corpus_id"], corpus_sha256=proof["corpus_sha256"],
+                section_id=proof["section_id"], start=proof["start"], end=proof["end"],
+                text_sha256=first["source_text_sha256"], provenance={}))
+        titles = {row["situation"]["provenance"]["corpus_id"]:
+            row["situation"]["provenance"]["display_name"] for row in rows}
+        monkeypatch.setattr(native_memory, "retrieve_rgm_project_documents",
+            lambda *_args, **_kwargs: (dict(memories=[first_memory]),
+                dict(native={}, candidates=1, titles=titles, tree_calls=0)))
+        result = service.answer("project", library,
+            "Find procedures where a failure is followed by substitute performance and then a debt.")
+        assert result["status"] == "supported"
+        assert len(result["sources"]) == 3
+        assert read_calls[0]["read_each"] is True
+        trace = result["trace"]["retrieval"]["reviewed_tom_memory"]
+        assert trace["query_structure"]["motif"] == "failure_substitute_action_cost_recovery"
+        assert trace["query_routes"] == 2
+        assert trace["all_branch_cell_coordinates_compared"] is True
+        assert trace["whole_tree_score"] is False
+    finally:
+        library.db.close()
+
+
 @pytest.mark.parametrize("text", [
     ("If SM fails to promptly comply, TfNSW may, at the cost of SM, undertake all actions "
         "necessary to manage the emergency."),
@@ -1673,6 +1756,8 @@ def test_reviewed_failure_step_in_cost_chain_recalls_sources_without_rgm_candida
         assert returned["status"] == "recalled"
         assert set(returned["recalled_source_ids"]) == expected_ids
         assert returned["query_routes"] == 2
+        assert returned["query_structure"]["motif"] == (
+            "failure_substitute_action_cost_recovery")
         assert returned["whole_tree_score"] is False
         assert returned["all_branch_cell_coordinates_compared"] is True
 

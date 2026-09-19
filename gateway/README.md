@@ -1090,6 +1090,16 @@ only that reviewed structural passages were found and displays all of them; it
 does not say the information is absent or convert the structural match into an
 unverified direct answer.
 
+For the bounded failure → substitute action → cost-recovery chain, every exact
+source reopened by the two ToM routes is read independently. The evidence layer
+keeps all passages that directly answer the wording. A debt-specific question
+therefore keeps only sources that state a debt, while a broader cost-recovery
+question may keep sources that allocate the substitute action's cost in another
+form. The multi-route return retains its parsed query structure so this rule is
+limited to the admitted chain. Legacy version 5 zero-write source bindings remain
+readable; they reference existing learned memories and do not represent an empty
+or missing tree state.
+
 An initial Middleton live-answer run exposed the opposite failure: ToM rejected
 the reversed and absent event relationships, but the final reader treated the
 topically relevant RGM passage as supporting evidence. The answer boundary now
