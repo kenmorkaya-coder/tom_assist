@@ -1655,6 +1655,25 @@ def test_failure_step_cost_evidence_is_checked_before_loading_reader(question, e
         "supported", "not_supported"} for source in result["parts"])
 
 
+def test_failure_step_cost_check_uses_named_party_direction():
+    from gateway.native_memory import check_rgm_failure_step_cost_recovery
+    sources = [
+        dict(source_id="sm-fails", text=(
+            "If SM fails to promptly comply, TfNSW may at the cost of SM "
+            "undertake all actions necessary to manage the emergency.")),
+        dict(source_id="tfnsw-fails", text=(
+            "If TfNSW fails to promptly comply, SM may at the cost of TfNSW "
+            "undertake all actions necessary to manage the emergency.")),
+    ]
+    result = check_rgm_failure_step_cost_recovery(
+        "If SM fails to act and TfNSW steps in to perform the emergency work, "
+        "who pays the cost?", sources)
+    assert result["status"] == "supported"
+    assert [row["source_id"] for row in result["matches"]] == ["sm-fails"]
+    assert result["query_roles"] == {
+        "failure_party": "SM", "substitute_actor": "TfNSW"}
+
+
 @pytest.mark.parametrize("text", [
     ("If SM fails to promptly comply, TfNSW may, at the cost of SM, undertake all actions "
         "necessary to manage the emergency."),

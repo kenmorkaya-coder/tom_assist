@@ -127,6 +127,51 @@ describe("explicit Gemma inspection", () => {
 });
 
 describe("desktop project → capture → supersede → audit smoke", () => {
+  it("lets the assistant disclose context, reopen, and hand a proposed form to user review", async () => {
+    const backend = new FakeDesktopBackend();
+    backend.nativeAnswerPreview = true;
+    const capture = vi.spyOn(backend, "capture");
+    const captureChat = vi.spyOn(backend, "captureChatState");
+    render(<App backend={backend} />);
+    await screen.findByRole("heading", { name: "Local Release Console" });
+    fireEvent.click(screen.getByRole("button", { name: "Chat" }));
+
+    const cloudModel = await screen.findByRole("button", { name: "GPT-5.5 · Cloud" });
+    expect(cloudModel.getAttribute("aria-pressed")).toBe("true");
+    expect((screen.getByRole("button", { name: "Gemma · Local" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Draft form fields" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "New conversation" }));
+    fireEvent.input(await screen.findByLabelText("Message"), {
+      target: { value: "Who pays when required emergency work is not done?" },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "Answer from project documents" }));
+    await screen.findByRole("heading", { name: "Supported answer" });
+
+    fireEvent.click(screen.getByRole("button", { name: "What Tom knows about me" }));
+    expect(screen.getByText(/No personal background has been added/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Close assistant" }));
+    expect(screen.queryByRole("heading", { name: "Discuss this result" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Ask Tom" }));
+    expect(screen.getByRole("heading", { name: "Discuss this result" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Draft form fields" }));
+    expect(screen.getByRole("region", { name: "Proposed form field changes" })).toBeTruthy();
+    expect((screen.getByLabelText("Finding") as HTMLInputElement).value)
+      .toContain("allow another party to carry out a required action");
+    expect((screen.getByLabelText("Source basis") as HTMLInputElement).value)
+      .toContain("M12 emergency work clauses 14.4 and 15.4");
+    expect(capture).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Review proposed changes" }));
+    expect(screen.getByRole("heading", { name: "Confirm authoritative decision" })).toBeTruthy();
+    expect((screen.getByLabelText("Decision text") as HTMLTextAreaElement).value)
+      .toContain("allow another party to carry out a required action");
+    expect(capture).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm decision" }));
+    await waitFor(() => expect(capture).toHaveBeenCalledOnce());
+    expect(capture.mock.calls[0]![1]).toContain("allow another party to carry out a required action");
+    expect(captureChat).not.toHaveBeenCalled();
+  });
+
   it("keeps every transition visible and auditable", async () => {
     render(<App backend={new FakeDesktopBackend()} />);
     await screen.findByRole("heading", { name: "Local Release Console" });
@@ -487,7 +532,7 @@ it("opens exact RGM citations and explicitly saves a reviewed ToM relationship",
   expect(citation.closest("details")?.open).toBe(true);
   expect(view.container.querySelector("mark")?.textContent).toBe("Orchid must notify Rowan.");
   expect(screen.getByRole("region", { name: "Evidence linked by learned structure" }).textContent)
-    .toContain("Interface agreement · chunk_1");
+    .not.toContain("Interface agreement · chunk_1");
   expect(screen.getByRole("region", { name: "Evidence linked by learned structure" }).textContent)
     .toContain("D&C deed · chunk_4");
   expect(chat.mock.calls[1]![2]).toMatchObject({ explicit_answer: true, question: "Who must notify Rowan?" });
