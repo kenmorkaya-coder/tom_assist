@@ -1565,6 +1565,50 @@ def check_rgm_broad_contamination_notification(question, sources):
         scope="One exact local contamination-discovery notification provision.")
 
 
+def check_rgm_failure_step_cost_recovery(question, sources):
+    """Verify one explicit failure -> substitute action -> cost-recovery request.
+
+    This is deliberately a local source check.  It does not rank sources or
+    infer a missing link.  A debt-specific question retains only a procedure
+    whose local recovery expression is itself ``debt due``; a broader recovery
+    question admits the other recovery forms already accepted by the reviewed
+    source-motif guard.
+    """
+    import re
+    failure = re.search(
+        r"\b(?:fail(?:s|ed|ure)?|not\s+done|does\s+not\s+comply|"
+        r"required\s+action\s+is\s+not\s+done)\b", question, re.I)
+    substitute = re.search(
+        r"\b(?:substitute\s+(?:action|performance)|step(?:s|ped)?\s+in|"
+        r"someone\s+else\s+performs?|other\s+party\s+(?:acts?|performs?)|"
+        r"employs?\s+others|performs?\s+it)\b", question, re.I)
+    recovery = re.search(
+        r"\b(?:cost(?:s)?(?:\s+is|\s+are)?\s+recover(?:ed|y)?|debt|"
+        r"responsible\s+party\s+pays?|cost\s+consequence|pays?\s+the\s+cost)\b",
+        question, re.I)
+    if (failure is None or substitute is None or recovery is None
+        or not failure.start() < substitute.start() < recovery.start()):
+        return dict(status="not_applicable")
+
+    debt_required = re.search(r"\bdebt\b", question, re.I) is not None
+    matches = []
+    for source in sources:
+        local = _failure_step_in_cost_matches(source["text"])
+        if local is None:
+            continue
+        cost_text = local["cost_recovery"].group()
+        if debt_required and re.search(r"\bdebt\s+due\b", cost_text, re.I) is None:
+            continue
+        matches.append(dict(source_id=source["source_id"], start=0,
+            end=len(source["text"]), text=source["text"], debt_required=debt_required,
+            relation_spans=[dict(field=name, start=match.start(), end=match.end(),
+                text=match.group()) for name, match in local.items()]))
+    status = ("not_supported" if not matches else "supported" if len(matches) == 1
+        else "ambiguous")
+    return dict(status=status, matches=matches, debt_required=debt_required,
+        scope="One local failure, substitute-action and cost-recovery procedure.")
+
+
 def read_rgm_source_evidence(question, packet, generate, *, spacing_resolver=None):
     """Read only the selected full passages; bind every proposed quote to source.
 
@@ -1606,13 +1650,20 @@ def read_rgm_source_evidence(question, packet, generate, *, spacing_resolver=Non
     parts, planning = native_question_parts(question, generate)
     outcomes = []
     for part in parts:
-        generation = generate(RGM_PASSAGE_READER_INSTRUCTION, dict(question=part,
-            sources=[dict(source_id=s["source_id"], text=s["text"]) for s in reader_sources]), 1024)
         chain_check = check_rgm_replacement_chain(part,sources)
         contamination_check = check_rgm_broad_contamination_notification(part, sources)
+        step_cost_check = check_rgm_failure_step_cost_recovery(part, sources)
+        generation = None
         recheck = None
         try:
-            if contamination_check["status"] == "supported":
+            if step_cost_check["status"] == "supported":
+                matched = step_cost_check["matches"][0]
+                selection = validate_evidence_reading(json.dumps(dict(status="supported",
+                    source_id=matched["source_id"], answer_quote=matched["text"])), sources)
+            elif step_cost_check["status"] in ("not_supported", "ambiguous"):
+                selection = dict(status=step_cost_check["status"], source_id=None,
+                    answer_quote=None)
+            elif contamination_check["status"] == "supported":
                 selection = validate_evidence_reading(json.dumps(dict(status="supported",
                     source_id=contamination_check["source_id"],
                     answer_quote=contamination_check["text"])), sources)
@@ -1622,6 +1673,9 @@ def read_rgm_source_evidence(question, packet, generate, *, spacing_resolver=Non
             elif chain_check["status"] in ("not_supported","ambiguous","needs_evidence_reading"):
                 selection=dict(status="not_supported" if chain_check["status"]=="not_supported" else "ambiguous",source_id=None,answer_quote=None)
             else:
+                generation = generate(RGM_PASSAGE_READER_INSTRUCTION, dict(question=part,
+                    sources=[dict(source_id=s["source_id"], text=s["text"])
+                        for s in reader_sources]), 1024)
                 selection = canonicalize_reader_source(validate_evidence_reading(
                     generation["raw"], validation_sources, spacing_resolver=spacing_resolver))
                 if selection["status"] == "not_supported":
@@ -1675,7 +1729,8 @@ def read_rgm_source_evidence(question, packet, generate, *, spacing_resolver=Non
             selection = dict(status="invalid", source_id=None, answer_quote=None,
                 error=f"{type(exc).__name__}: {exc}")
         outcome=dict(question=part, generation=generation, selection=selection,
-            chain_check=chain_check, contamination_check=contamination_check)
+            chain_check=chain_check, contamination_check=contamination_check,
+            step_cost_check=step_cost_check)
         if recheck is not None:outcome["refusal_recheck"]=recheck
         outcomes.append(outcome)
     statuses = [p["selection"]["status"] for p in outcomes]

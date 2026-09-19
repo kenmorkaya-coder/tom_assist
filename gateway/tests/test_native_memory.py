@@ -331,7 +331,9 @@ def test_independent_rgm_source_reading_keeps_every_supported_tom_source():
         dict(memories=memories), generate)
     assert result["status"] == "supported"
     assert result["independent_source_reading"] is True
-    assert len(calls) == 2 and len(result["answers"]) == 2
+    assert calls == [] and len(result["answers"]) == 2
+    assert all(source["parts"][0]["contamination_check"]["status"] == "supported"
+        for source in result["parts"])
     assert {answer["source_id"] for answer in result["answers"]} == {
         "deed/chunk_0", "interface/chunk_1"}
     assert all(answer["text"] in {text for _, text in texts}
@@ -1610,6 +1612,47 @@ def test_failure_step_in_cost_memory_reads_each_linked_source_independently(
         assert trace["whole_tree_score"] is False
     finally:
         library.db.close()
+
+
+@pytest.mark.parametrize("question, expected", [
+    ("Find procedures where a failure is followed by substitute performance and then a debt.", 2),
+    ("What procedures apply when a required action is not done, another party performs it, "
+        "and the resulting cost is recovered?", 3),
+])
+def test_failure_step_cost_evidence_is_checked_before_loading_reader(question, expected):
+    from gateway.native_memory import read_each_rgm_source_evidence
+    texts = [
+        ("m12", "If SM fails to promptly comply, TfNSW may, at the cost of SM, "
+            "undertake all actions necessary to manage the emergency."),
+        ("quality", "If the Contractor does not comply, the Principal may employ "
+            "others to carry out the direction. The resulting Loss is a debt due from the Contractor."),
+        ("action", "The Principal may take any action necessary which the Contractor "
+            "must take but does not take. Loss from taking that action or the failure to take it "
+            "will be a debt due from the Contractor."),
+    ]
+    memories = []
+    for index, (name, text) in enumerate(texts):
+        start = index * 1000
+        memories.append(dict(id=f"chunk_{index}", content=text,
+            evidence_reference=dict(corpus_id=name, chunk_id=f"chunk_{index}",
+                doc_id=f"document-{name}", start=start, end=start + len(text),
+                text_sha256=hashlib.sha256(text.encode()).hexdigest())))
+
+    def reader_must_not_load(*_args, **_kwargs):
+        pytest.fail("deterministic source evidence must run before the large reader")
+
+    result = read_each_rgm_source_evidence(question, dict(memories=memories),
+        reader_must_not_load)
+    assert result["status"] == "supported"
+    assert len(result["answers"]) == expected
+    if expected == 2:
+        assert {answer["source_id"] for answer in result["answers"]} == {
+            "quality/chunk_1", "action/chunk_2"}
+    else:
+        assert {answer["source_id"] for answer in result["answers"]} == {
+            "m12/chunk_0", "quality/chunk_1", "action/chunk_2"}
+    assert all(source["parts"][0]["step_cost_check"]["status"] in {
+        "supported", "not_supported"} for source in result["parts"])
 
 
 @pytest.mark.parametrize("text", [

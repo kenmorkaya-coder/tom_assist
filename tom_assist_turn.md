@@ -2685,6 +2685,31 @@ about cost recovery returns all three clauses. No ranking, tree threshold,
 learned state, branch identity or 32×32 cell was changed. The native-memory test
 file passes 169 tests.
 
+#### Desktop verification and reader-order repair
+
+The first real desktop replay failed before evidence selection. The saved tree
+was created against an older native-tree source schema, while the current owner
+checkout contains later uncommitted schema work. The checkpoint records 118
+source-file hashes; every hash matched commit
+`82349a294da495d62858441485a44db589db55e6`. The desktop replay therefore used
+a temporary read-only export of that exact commit. Neither owner repository was
+changed.
+
+That exposed the next fault: after the small ToM process exited, the evidence
+worker required enough memory for the 17 GiB language reader before it tried the
+already available exact source checks. This was unnecessary for the admitted
+failure → substitute action → cost-recovery relationship. The worker now runs
+the deterministic local checks first. It falls back to the unchanged language
+reader and its memory guard only when those checks cannot decide the question.
+
+The real desktop button then returned **Supported** for both questions. The
+debt-specific wording displayed D&C clauses 13.6 and 16.7 as its two cited
+sources and excluded M12 clause 14.4, whose recovery wording is `at the cost of`
+rather than `debt due`. Changing only the question to the broader cost-recovery
+wording displayed all three clauses. In both views, the separate learned-
+structure panel showed all three source passages reopened by ToM. The reader
+model was not loaded. The complete native-memory file now passes 171 tests.
+
 ### 2026-09-18 — unseen Noise and Vibration plan generalisation
 
 The next check changed only the document source. It used the previously unused

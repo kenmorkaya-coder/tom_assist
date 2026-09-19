@@ -200,6 +200,23 @@ cases; the evidence wording determines which passages directly answer the
 question. The check exposed and repaired a loader omission for zero-write
 version 5 source bindings. The saved tree and all learned fields were unchanged.
 
+The same two questions were then run through the real desktop document-answer
+button. The first run diagnosed two separate deployment faults rather than
+changing the tree: the mutable owner checkout no longer matched the saved
+tree's source schema, and the evidence worker tried to allocate the 17 GiB
+language reader before applying the exact local source checks. The desktop
+verification used a read-only export of the checkpoint's exact source commit
+`82349a294da495d62858441485a44db589db55e6`; all 118 recorded source hashes
+matched. The worker now applies deterministic, exact-source checks first and
+loads the language reader only when those checks cannot decide the request.
+
+The visible desktop result retained exactly **2** cited sources for the
+debt-specific question and **3** for the broader cost-recovery question. Both
+responses also displayed all three passages linked by the learned ToM
+structure. The deterministic checks loaded no language model, did not retrain
+or change the tree, and did not introduce a score over the distributed return.
+All **171** native-memory tests pass.
+
 ### Unseen third-document check
 
 The previously unused Noise and Vibration Construction Environmental Management

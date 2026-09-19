@@ -1100,6 +1100,16 @@ limited to the admitted chain. Legacy version 5 zero-write source bindings remai
 readable; they reference existing learned memories and do not represent an empty
 or missing tree state.
 
+These admitted local source checks run before the large language reader is
+allocated. If a check resolves the question, the worker returns its exact
+source spans directly and records `reader_mode=deterministic_source_check` with
+`model_loaded=false`. If no deterministic check applies, the existing reader,
+17 GiB allocation cap and 2 GiB reserve remain unchanged. In the real desktop
+window, the debt-specific question displayed two cited D&C sources; changing
+only the wording to broad cost recovery displayed the M12 source as well, for
+three citations. The learned-structure panel retained all three ToM-linked
+sources in both cases.
+
 An initial Middleton live-answer run exposed the opposite failure: ToM rejected
 the reversed and absent event relationships, but the final reader treated the
 topically relevant RGM passage as supporting evidence. The answer boundary now
