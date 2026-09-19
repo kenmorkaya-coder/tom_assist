@@ -4,7 +4,7 @@ The current capability reference is maintained separately in
 [tom_assist_capability.md](tom_assist_capability.md). This file remains the
 chronological evidence and decision record.
 
-## Current end-to-end flow — 18 September 2026
+## Current end-to-end flow — 19 September 2026
 
 The current document-answer path has two complementary retrieval lanes. RGM
 (Reflection-Gated Memory) keeps and finds exact text. ToM recognises a reviewed
@@ -71,11 +71,17 @@ learned structure. The two lanes meet at evidence checking.
              supported / partly supported / not supported / ambiguous
                                     |
                                     v
-                            LANGUAGE MODEL
-                  words only the evidence-approved result
+                         VERIFIED EVIDENCE WORKSPACE
+                  result and exact sources remain separate
+                  conflicting sources are shown together
                                     |
-                                    v
-                       ANSWER WITH SOURCE REFERENCES
+                  +-----------------+-----------------+
+                  |                                   |
+                  v                                   v
+        ANSWER WITH SOURCE REFERENCES        OPTIONAL MODEL DISCUSSION
+                                             explain or compare evidence
+                                             prepare reviewable form fields
+                                             cannot alter verified result
 ```
 
 Reviewed structural memory enters the system through a separate, explicit
@@ -120,7 +126,8 @@ source.
                     REVIEWED STRUCTURE + SOURCE LINKS
 ```
 
-The normal conversation path remains governed separately:
+The normal conversation path remains governed separately and now appears in a
+closable discussion drawer beside the evidence workspace:
 
 ```text
 draft held in Tom Assist
@@ -129,9 +136,17 @@ draft held in Tom Assist
   -> user allows send
   -> capture the provider's answer
   -> check it against the exact packet and project constraints
+  -> keep the provider discussion visually separate from the verified result
+  -> show proposed form values for review rather than applying them silently
   -> user accepts, rejects or edits
   -> accepted experience may be committed to the experience tree
 ```
+
+The selected model is visible. GPT-5.5 is the connected cloud discussion path.
+Gemma is labelled local but disabled for ordinary chat because the current Gemma
+integration is an explicit inspection tool, not a conversation provider. The
+`What Tom knows about me` surface currently discloses that no persistent user
+background has been added; governed user-profile storage remains future work.
 
 ## Earlier Gemma inspection integration — 15 September 2026
 
@@ -2684,6 +2699,31 @@ says `at the cost of SM` rather than `debt`. Changing only the wording to ask
 about cost recovery returns all three clauses. No ranking, tree threshold,
 learned state, branch identity or 32×32 cell was changed. The native-memory test
 file passes 169 tests.
+
+#### Desktop verification and reader-order repair
+
+The first real desktop replay failed before evidence selection. The saved tree
+was created against an older native-tree source schema, while the current owner
+checkout contains later uncommitted schema work. The checkpoint records 118
+source-file hashes; every hash matched commit
+`82349a294da495d62858441485a44db589db55e6`. The desktop replay therefore used
+a temporary read-only export of that exact commit. Neither owner repository was
+changed.
+
+That exposed the next fault: after the small ToM process exited, the evidence
+worker required enough memory for the 17 GiB language reader before it tried the
+already available exact source checks. This was unnecessary for the admitted
+failure → substitute action → cost-recovery relationship. The worker now runs
+the deterministic local checks first. It falls back to the unchanged language
+reader and its memory guard only when those checks cannot decide the question.
+
+The real desktop button then returned **Supported** for both questions. The
+debt-specific wording displayed D&C clauses 13.6 and 16.7 as its two cited
+sources and excluded M12 clause 14.4, whose recovery wording is `at the cost of`
+rather than `debt due`. Changing only the question to the broader cost-recovery
+wording displayed all three clauses. In both views, the separate learned-
+structure panel showed all three source passages reopened by ToM. The reader
+model was not loaded. The complete native-memory file now passes 171 tests.
 
 ### 2026-09-18 — unseen Noise and Vibration plan generalisation
 

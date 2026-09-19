@@ -396,51 +396,67 @@ def native_memory_worker():
             from gateway.tom_gateway import GemmaInspection
             from gateway.native_memory import (
                 read_rgm_source_evidence, read_each_rgm_source_evidence)
-            # This reader was measured at 15.04 GiB. Cap its allocation at
-            # 17 GiB and require another 2 GiB of currently available memory.
-            # The older 22 GiB inspection estimate includes different work.
-            exclude = []
-            cpu_pid = p.get("concurrent_cpu_pid")
-            if cpu_pid is not None:
-                import subprocess
-                if type(cpu_pid) is not int or cpu_pid <= 1:
-                    raise ValueError("invalid isolated CPU test process")
-                command = subprocess.check_output(["ps", "-p", str(cpu_pid), "-o", "rss=,command="], text=True)
-                loaded = subprocess.check_output(["lsof", "-a", "-p", str(cpu_pid), "-d", "cwd,txt", "-Fn"], text=True)
-                if ("tools/native_500_strengthened_cue_reasoning.py" not in command
-                    or "n/Users/kenmorkaya/PycharmProjects/tom_matrix_native_stream1\n" not in loaded
-                    or "libmlx" in loaded.lower() or int(command.split()[0])*1024 > 4*1024**3):
-                    raise ValueError("concurrent job does not match the authorized small CPU tree test")
-                exclude = [cpu_pid]
-            resources = GemmaInspection.resources(before_load=False, exclude=exclude)
-            if resources["estimated_available_bytes"] < 19 * 1024**3:
-                resources["blockers"].append("reader requires 17 GiB capped allocation plus 2 GiB reserve")
-            if resources["blockers"]:
-                raise ValueError("local reader unavailable: " + "; ".join(resources["blockers"]))
-            for name, expected in GemmaInspection.MODEL_HASHES.items():
-                if native_file_hash(GemmaInspection.MODEL / name) != expected:
-                    raise ValueError("reader model changed")
-            import mlx.core as mx
-            from mlx_lm import load, stream_generate
-            from mlx_lm.sample_utils import make_sampler
-            mx.set_memory_limit(17 * 1024**3); mx.set_cache_limit(256 * 1024**2)
-            mx.random.seed(7); mx.reset_peak_memory()
-            model, tokenizer = load(str(GemmaInspection.MODEL))
-            def generate(instruction, data, limit):
-                prompt = tokenizer.apply_chat_template([dict(role="user", content=instruction + "\nINPUT_JSON:\n" + json.dumps(data))],
-                    tokenize=False, add_generation_prompt=True, enable_thinking=False)
-                if len(tokenizer.encode(prompt, add_special_tokens=False)) >= 8192:
-                    raise ValueError("complete evidence exceeds the reader context; no source was truncated")
-                generated = GemmaInspection.collect_extraction(stream_generate(model, tokenizer, prompt=prompt,
-                    max_tokens=limit, sampler=make_sampler(temp=0)), tokenizer.eos_token_ids)
-                generated["prompt_sha256"] = hashlib.sha256(prompt.encode()).hexdigest()
-                return generated
             reader = (read_each_rgm_source_evidence if payload.get("read_each") is True
                 else read_rgm_source_evidence)
-            result = reader(payload["question"], payload["packet"], generate)
-            result["model_peak_bytes"] = mx.get_peak_memory()
-            result["resource_check"] = dict(available_bytes=resources["estimated_available_bytes"],
-                model_limit_bytes=17*1024**3, reserve_bytes=2*1024**3, verified_concurrent_cpu_pid=cpu_pid)
+
+            class ReaderModelRequired(RuntimeError):
+                pass
+
+            def require_reader_model(*_args, **_kwargs):
+                raise ReaderModelRequired()
+
+            try:
+                result = reader(payload["question"], payload["packet"],
+                    require_reader_model)
+            except ReaderModelRequired:
+                result = None
+            if result is not None:
+                result["reader_mode"] = "deterministic_source_check"
+                result["resource_check"] = dict(model_loaded=False)
+            else:
+                # This reader was measured at 15.04 GiB. Cap its allocation at
+                # 17 GiB and require another 2 GiB of currently available memory.
+                # The older 22 GiB inspection estimate includes different work.
+                exclude = []
+                cpu_pid = p.get("concurrent_cpu_pid")
+                if cpu_pid is not None:
+                    import subprocess
+                    if type(cpu_pid) is not int or cpu_pid <= 1:
+                        raise ValueError("invalid isolated CPU test process")
+                    command = subprocess.check_output(["ps", "-p", str(cpu_pid), "-o", "rss=,command="], text=True)
+                    loaded = subprocess.check_output(["lsof", "-a", "-p", str(cpu_pid), "-d", "cwd,txt", "-Fn"], text=True)
+                    if ("tools/native_500_strengthened_cue_reasoning.py" not in command
+                        or "n/Users/kenmorkaya/PycharmProjects/tom_matrix_native_stream1\n" not in loaded
+                        or "libmlx" in loaded.lower() or int(command.split()[0])*1024 > 4*1024**3):
+                        raise ValueError("concurrent job does not match the authorized small CPU tree test")
+                    exclude = [cpu_pid]
+                resources = GemmaInspection.resources(before_load=False, exclude=exclude)
+                if resources["estimated_available_bytes"] < 19 * 1024**3:
+                    resources["blockers"].append("reader requires 17 GiB capped allocation plus 2 GiB reserve")
+                if resources["blockers"]:
+                    raise ValueError("local reader unavailable: " + "; ".join(resources["blockers"]))
+                for name, expected in GemmaInspection.MODEL_HASHES.items():
+                    if native_file_hash(GemmaInspection.MODEL / name) != expected:
+                        raise ValueError("reader model changed")
+                import mlx.core as mx
+                from mlx_lm import load, stream_generate
+                from mlx_lm.sample_utils import make_sampler
+                mx.set_memory_limit(17 * 1024**3); mx.set_cache_limit(256 * 1024**2)
+                mx.random.seed(7); mx.reset_peak_memory()
+                model, tokenizer = load(str(GemmaInspection.MODEL))
+                def generate(instruction, data, limit):
+                    prompt = tokenizer.apply_chat_template([dict(role="user", content=instruction + "\nINPUT_JSON:\n" + json.dumps(data))],
+                        tokenize=False, add_generation_prompt=True, enable_thinking=False)
+                    if len(tokenizer.encode(prompt, add_special_tokens=False)) >= 8192:
+                        raise ValueError("complete evidence exceeds the reader context; no source was truncated")
+                    generated = GemmaInspection.collect_extraction(stream_generate(model, tokenizer, prompt=prompt,
+                        max_tokens=limit, sampler=make_sampler(temp=0)), tokenizer.eos_token_ids)
+                    generated["prompt_sha256"] = hashlib.sha256(prompt.encode()).hexdigest()
+                    return generated
+                result = reader(payload["question"], payload["packet"], generate)
+                result["model_peak_bytes"] = mx.get_peak_memory()
+                result["resource_check"] = dict(available_bytes=resources["estimated_available_bytes"],
+                    model_limit_bytes=17*1024**3, reserve_bytes=2*1024**3, verified_concurrent_cpu_pid=cpu_pid)
         elif operation == "access":
             import torch
             from transformers import AutoTokenizer, AutoModel

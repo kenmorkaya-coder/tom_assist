@@ -1,7 +1,7 @@
 # Tom Assist Capability
 
 **Status:** living capability reference  
-**Last updated:** 18 September 2026
+**Last updated:** 19 September 2026
 
 This document states what Tom Assist can do now, what has only been proved in a
 bounded experiment, and what has not yet been established. It is deliberately
@@ -73,6 +73,8 @@ Counts, plots and branch magnitudes are display telemetry only.
 | Project-local state | Available | Keeps objectives, decisions, constraints, rejected paths, completed work, unresolved dependencies and evidence inside the active project. | Nothing carries between projects. |
 | Event-sourced history | Available | Records changes without overwriting the earlier record; supports replay, snapshots, export, import and supersession history. | A recorded rejection is not yet used to suppress the same suggestion later. |
 | Governed message preparation | Available | Holds a draft, prepares bounded project context, and sends only after the user allows it. | Provider behaviour remains external to Tom Assist. |
+| Evidence workspace | Available | Separates the verified system result, exact RGM evidence and optional model discussion. Sources are shown once with readable labels; exact passages remain expandable and conflicting sources remain visible together. | This is an interface/readout capability. It does not change retrieval, evidence authority or the distributed ToM return. |
+| Result discussion | Available for the connected GPT path | A separate assistant drawer can explain a result, compare sources and prepare a reviewable form-field proposal. The verified system result remains visibly separate and all cloud sends retain the existing packet preview and explicit-send gate. | Local Gemma chat is shown as unavailable because only the separate inspection path exists today. Profile context is visible as a governed surface, but stored user-background memory is not yet implemented. |
 | Read-only preview | Available | Reads current state and tree-derived context without advancing the tree or memory clock. | A committed sent turn is required before experience learning occurs. |
 | Experience-tree learning | Available | A committed turn changes the project's experience tree; draft inspection does not. | The tree does not store the literal transcript. |
 | Local document library | Available | Stores imported source text, chunks, source offsets, checksums and project-local provenance. The tested active collection bound is 4,096 RGM chunks. | Imported text without PDF provenance does not receive invented page numbers. Collections above 4,096 chunks are rejected before model work. |
@@ -199,6 +201,23 @@ all three clauses. ToM returns the same three learned source locations in both
 cases; the evidence wording determines which passages directly answer the
 question. The check exposed and repaired a loader omission for zero-write
 version 5 source bindings. The saved tree and all learned fields were unchanged.
+
+The same two questions were then run through the real desktop document-answer
+button. The first run diagnosed two separate deployment faults rather than
+changing the tree: the mutable owner checkout no longer matched the saved
+tree's source schema, and the evidence worker tried to allocate the 17 GiB
+language reader before applying the exact local source checks. The desktop
+verification used a read-only export of the checkpoint's exact source commit
+`82349a294da495d62858441485a44db589db55e6`; all 118 recorded source hashes
+matched. The worker now applies deterministic, exact-source checks first and
+loads the language reader only when those checks cannot decide the request.
+
+The visible desktop result retained exactly **2** cited sources for the
+debt-specific question and **3** for the broader cost-recovery question. Both
+responses also displayed all three passages linked by the learned ToM
+structure. The deterministic checks loaded no language model, did not retrain
+or change the tree, and did not introduce a score over the distributed return.
+All **171** native-memory tests pass.
 
 ### Unseen third-document check
 
@@ -406,6 +425,13 @@ Tom Assist does not currently claim:
 - age-based forgetting or recency weighting;
 - automatic use of previously rejected suggestions; or
 - authority resolution without an explicit user decision.
+
+The Chat interface now makes that boundary visible. A verified result and its
+exact sources occupy the evidence workspace. GPT discussion is a separate,
+closable drawer and cannot replace the verified finding. Form help produces a
+review step; it does not submit an authoritative project change. The interface
+also exposes where governed user background will be reviewed, but Tom Assist
+does not yet claim persistent user-profile memory or working local Gemma chat.
 
 The intended split is that RGM retains exact detail and provenance while ToM
 retains reviewed relational and temporal structure. ToM should help RGM find

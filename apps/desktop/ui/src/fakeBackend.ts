@@ -22,6 +22,7 @@ export class FakeDesktopBackend implements DesktopBackend {
   private projectDocuments = new Map<string, ProjectDocument[]>();
   connected = true; // Test-only transport, never an OAuth client.
   includeMissingSource = true;
+  nativeAnswerPreview = false;
 
   async oauthStatus() {
     return {
@@ -45,7 +46,23 @@ export class FakeDesktopBackend implements DesktopBackend {
     payload: Record<string, unknown>,
   ): Promise<unknown> {
     if (method === "conversation.native_answer") {
-      if (payload.action === "status") return { ready: false };
+      if (payload.action === "status") return this.nativeAnswerPreview
+        ? { ready: true, scope: "RGM exact evidence with reviewed ToM structural recall.", engine: "rgm+tom" }
+        : { ready: false };
+      if (this.nativeAnswerPreview && payload.action === "answer") return {
+        status: "supported",
+        answer: "The available clauses allow another party to carry out a required action when it is not performed and to recover the reasonable resulting cost. The exact procedure, notice requirements and limits remain governed by each cited clause.",
+        engine: "rgm+tom",
+        scope: "RGM exact evidence with reviewed ToM structural recall.",
+        sources: [
+          { source_id: "preview-emergency", text: "If SM fails to promptly comply, TfNSW may undertake the necessary action at the cost of SM.", provenance: { display_name: "M12 emergency work clauses 14.4 and 15.4.txt", doc_id: "preview", chunk_id: "chunk_62", start: 0, end: 96, answer_start: 0, answer_end: 96 } },
+          { source_id: "preview-quality", text: "The Principal may direct the work to be done and recover the reasonable cost if it is not carried out.", provenance: { display_name: "SCAW D&C quality direction clause 13.6.txt", doc_id: "preview", chunk_id: "chunk_171", start: 0, end: 103 } },
+          { source_id: "preview-principal", text: "The Principal may take the action and the resulting loss may become a debt due from the Contractor.", provenance: { display_name: "SCAW D&C clause 16.7 - Principal action.txt", doc_id: "preview", chunk_id: "chunk_205", start: 0, end: 98 } },
+        ],
+        structural_sources: [
+          { source_id: "preview-emergency", text: "Linked relationship", provenance: { display_name: "M12 emergency work clauses 14.4 and 15.4.txt", doc_id: "preview", chunk_id: "chunk_62", start: 0, end: 19 } },
+        ],
+      };
       throw new Error("Learned document answers need the real local gateway.");
     }
     if (method === "inspection.gemma")

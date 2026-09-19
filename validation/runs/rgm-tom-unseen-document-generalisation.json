@@ -209,7 +209,8 @@
     "repair": [
       "accept persisted version 5 zero-write bindings to existing memories",
       "retain the parsed query structure on aggregated multi-route returns",
-      "read each source independently only for the exact reviewed failure/substitute-action/cost-recovery chain"
+      "read each source independently only for the exact reviewed failure/substitute-action/cost-recovery chain",
+      "run deterministic exact-source checks before allocating the large language reader; retain the unchanged reader as fallback"
     ],
     "after": [
       {
@@ -250,7 +251,18 @@
       "tree_retrained": false
     },
     "tests": {
-      "native_memory": "169 passed"
+      "native_memory": "171 passed"
+    },
+    "desktop_verification": {
+      "status": "PASS",
+      "native_tree_source_commit": "82349a294da495d62858441485a44db589db55e6",
+      "checkpoint_source_hashes_matched": 118,
+      "debt_question_cited_sources": 2,
+      "broad_cost_recovery_cited_sources": 3,
+      "learned_structure_sources_displayed": 3,
+      "reader_mode": "deterministic_source_check",
+      "language_model_loaded": false,
+      "tree_unchanged": true
     }
   }
 }

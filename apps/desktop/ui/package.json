@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@tabler/icons-preact": "^3.47.0",
     "@tauri-apps/api": "2.11.1",
     "preact": "10.29.8"
   },
