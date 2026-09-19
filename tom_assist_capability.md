@@ -74,7 +74,7 @@ Counts, plots and branch magnitudes are display telemetry only.
 | Event-sourced history | Available | Records changes without overwriting the earlier record; supports replay, snapshots, export, import and supersession history. | A recorded rejection is not yet used to suppress the same suggestion later. |
 | Governed message preparation | Available | Holds a draft, prepares bounded project context, and sends only after the user allows it. | Provider behaviour remains external to Tom Assist. |
 | Evidence workspace | Available | Separates the verified system result, exact RGM evidence and optional model discussion. Sources are shown once with readable labels; exact passages remain expandable and conflicting sources remain visible together. | This is an interface/readout capability. It does not change retrieval, evidence authority or the distributed ToM return. |
-| Result discussion | Available for the connected GPT path | A separate assistant drawer can explain a result, compare sources and prepare a reviewable form-field proposal. The verified system result remains visibly separate and all cloud sends retain the existing packet preview and explicit-send gate. | Local Gemma chat is shown as unavailable because only the separate inspection path exists today. Profile context is visible as a governed surface, but stored user-background memory is not yet implemented. |
+| Result discussion | Available for the connected GPT path | A separate assistant drawer can explain a result, compare sources and prepare a reviewable form-field proposal. The verified system result remains visibly separate and all cloud sends retain the existing packet preview and explicit-send gate. A proposal can be committed only after explicit user confirmation. | Local Gemma chat is shown as unavailable because only the separate inspection path exists today. Profile context is visible as a governed surface, but stored user-background memory is not yet implemented. |
 | Read-only preview | Available | Reads current state and tree-derived context without advancing the tree or memory clock. | A committed sent turn is required before experience learning occurs. |
 | Experience-tree learning | Available | A committed turn changes the project's experience tree; draft inspection does not. | The tree does not store the literal transcript. |
 | Local document library | Available | Stores imported source text, chunks, source offsets, checksums and project-local provenance. The tested active collection bound is 4,096 RGM chunks. | Imported text without PDF provenance does not receive invented page numbers. Collections above 4,096 chunks are rejected before model work. |
@@ -429,7 +429,8 @@ Tom Assist does not currently claim:
 The Chat interface now makes that boundary visible. A verified result and its
 exact sources occupy the evidence workspace. GPT discussion is a separate,
 closable drawer and cannot replace the verified finding. Form help produces a
-review step; it does not submit an authoritative project change. The interface
+draft from the verified answer and readable source basis; only explicit user
+confirmation records it as a user-owned project decision. The interface
 also exposes where governed user background will be reviewed, but Tom Assist
 does not yet claim persistent user-profile memory or working local Gemma chat.
 
@@ -477,6 +478,17 @@ native-memory tests. Its real run used the production RGM extractor and chunker,
 the approved 507-branch fixture, one persistent learned relationship and the
 production local evidence reader. The saved 224 MB tree remains on Passport;
 only compact evidence is retained in Git.
+
+The 19 September full-document desktop journey used the unchanged 2.4 MB M12
+Interface Agreement and its 248 production RGM passages. A named-direction
+question returned the correct clause 14.4 source, expanded the exact chunk,
+populated a reviewable form from that verified result, saved it after explicit
+confirmation and displayed the resulting active decision in the Ledger. The
+reciprocal-clause direction defect and the incomplete-assistant-capture form
+defect were both reproduced before repair. Verification now passes **172**
+native-memory tests and **23** desktop tests, plus TypeScript checking and the
+production interface build. This particular journey exercised RGM retrieval;
+it is not presented as ToM tree retrieval.
 
 ### Explicit revision-history answer
 

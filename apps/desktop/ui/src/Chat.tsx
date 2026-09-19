@@ -155,11 +155,13 @@ export function Chat({
   const [assistantOpen, setAssistantOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
   const [formProposalOpen, setFormProposalOpen] = useState(false);
+  const [verifiedAnswer, setVerifiedAnswer] = useState<NativeAnswer>();
   const [capture, setCapture] = useState<{
     turn: string;
     text: string;
     old: string;
     reason: string;
+    origin: "assistant" | "form-proposal";
   }>();
   const selected = useRef("");
   const mounted = useRef(true);
@@ -210,6 +212,7 @@ export function Chat({
     };
   }, [project.id]);
   useEffect(() => setPrepared(undefined), [project.state_version]);
+  useEffect(() => setVerifiedAnswer(undefined), [project.id, project.state_version]);
   const waiting = view?.exchanges.some((row) =>
     ["sending", "evaluation_pending"].includes(row.exchange.status),
   );
@@ -380,6 +383,7 @@ export function Chat({
       </div>
       <div
         class={`chat-transcript ${assistantOpen ? "open" : "closed"}`}
+        hidden={!assistantOpen}
         aria-label="Conversation transcript"
         aria-live="polite"
       >
@@ -413,7 +417,9 @@ export function Chat({
             <IconFileDescription size={18} aria-hidden="true" />
             Show differences between sources
           </button>
-          <button onClick={() => setFormProposalOpen((open) => !open)}>
+          <button disabled={!verifiedAnswer?.sources.length}
+            title={!verifiedAnswer?.sources.length ? "Get a verified document answer first" : undefined}
+            onClick={() => setFormProposalOpen((open) => !open)}>
             <IconForms size={18} aria-hidden="true" />
             Draft form fields
           </button>
@@ -421,9 +427,11 @@ export function Chat({
         {formProposalOpen && <section class="chat-form-proposal" aria-label="Proposed form field changes">
           <span>Draft only</span>
           <h4>Proposed form-field patch</h4>
-          <label>Finding<input value="Supported by project evidence" readOnly /></label>
-          <label>Source basis<input value="Use the cited clauses shown in Evidence" readOnly /></label>
-          <button onClick={() => setCapture({ turn: "assistant:form-proposal", text: "Supported by project evidence", old: "", reason: "" })}>
+          <label>Finding<input value={readableResponse(verifiedAnswer?.answer ?? "")} readOnly /></label>
+          <label>Source basis<input value={verifiedAnswer?.sources.map((source, index) =>
+            humanSourceTitle(source.provenance, index)).join("; ") ?? ""} readOnly /></label>
+          <button onClick={() => setCapture({ turn: "", text: readableResponse(verifiedAnswer?.answer ?? ""),
+            old: "", reason: "", origin: "form-proposal" })}>
             Review proposed changes
           </button>
         </section>}
@@ -480,6 +488,7 @@ export function Chat({
                           text: e.response_text!,
                           old: "",
                           reason: "",
+                          origin: "assistant",
                         });
                       }}
                     >
@@ -594,23 +603,23 @@ export function Chat({
               }
             />
           </label>
-          <label>
-            Supersede decision
-            <select
-              aria-label="Supersede decision"
-              value={capture.old}
-              onChange={(e) =>
-                setCapture({ ...capture, old: e.currentTarget.value })
-              }
-            >
-              <option value="">Capture as a new decision</option>
-              {objects
-                .filter((o) => o.status === "active")
-                .map((o) => (
-                  <option value={o.id}>{o.title}</option>
-                ))}
-            </select>
-          </label>
+          {capture.origin === "assistant" && <label>
+              Supersede decision
+              <select
+                aria-label="Supersede decision"
+                value={capture.old}
+                onChange={(e) =>
+                  setCapture({ ...capture, old: e.currentTarget.value })
+                }
+              >
+                <option value="">Capture as a new decision</option>
+                {objects
+                  .filter((o) => o.status === "active")
+                  .map((o) => (
+                    <option value={o.id}>{o.title}</option>
+                  ))}
+              </select>
+            </label>}
           {capture.old && (
             <label>
               Supersession reason
@@ -631,13 +640,17 @@ export function Chat({
             }
             onClick={() =>
               void run(async () => {
-                await backend.captureChatState(
-                  project,
-                  capture.turn,
-                  capture.text,
-                  capture.old || undefined,
-                  capture.reason || undefined,
-                );
+                if (capture.origin === "form-proposal") {
+                  await backend.capture(project, capture.text);
+                } else {
+                  await backend.captureChatState(
+                    project,
+                    capture.turn,
+                    capture.text,
+                    capture.old || undefined,
+                    capture.reason || undefined,
+                  );
+                }
                 setCapture(undefined);
                 setPrepared(undefined);
                 await reload();
@@ -668,10 +681,12 @@ export function Chat({
               onInput={(e) => {
                 setDraft(e.currentTarget.value);
                 setPrepared(undefined);
+                setVerifiedAnswer(undefined);
               }}
             />
           </label>
-          <NativeMemoryAnswer project={project} draft={draft} backend={backend} disabled={busy || waiting} />
+          <NativeMemoryAnswer project={project} draft={draft} backend={backend}
+            disabled={busy || waiting} onAnswer={setVerifiedAnswer} />
           <button
             class="chat-preview-button"
             disabled={busy || waiting || !draft.trim()}
@@ -1053,8 +1068,9 @@ function ReviewedSituation({ project, backend, source }: {
   </details>;
 }
 
-export function NativeMemoryAnswer({ project, draft, backend, disabled = false }: {
+export function NativeMemoryAnswer({ project, draft, backend, disabled = false, onAnswer }: {
   project: Project; draft: string; backend: DesktopBackend; disabled?: boolean;
+  onAnswer?: (answer: NativeAnswer) => void;
 }) {
   const [ready, setReady] = useState(false);
   const [scope, setScope] = useState("");
@@ -1086,6 +1102,7 @@ export function NativeMemoryAnswer({ project, draft, backend, disabled = false }
       }) as NativeAnswer;
       if (revision.current === ticket) {
         setAnswer(result);
+        onAnswer?.(result);
         if (result.scope) setScope(result.scope);
         if (result.engine) setEngine(result.engine);
       }
@@ -1099,7 +1116,11 @@ export function NativeMemoryAnswer({ project, draft, backend, disabled = false }
     not_supported: "Not supported", ambiguous: "Needs clarification",
     blocked: "Answer unavailable" } as const);
   const structuralOnly = answer?.structural_sources?.filter(
-    (source) => !answer.sources.some((item) => item.source_id === source.source_id),
+    (source) => !answer.sources.some((item) =>
+      item.source_id === source.source_id ||
+      (item.provenance.doc_id === source.provenance.doc_id &&
+        item.provenance.chunk_id === source.provenance.chunk_id),
+    ),
   ) ?? [];
   return <section class="native-answer-shell" aria-label={rgmEngine ? "Experimental document answers" : "Learned document answers"}>
     <div class="native-answer-action">

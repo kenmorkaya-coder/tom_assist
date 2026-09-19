@@ -1590,11 +1590,41 @@ def check_rgm_failure_step_cost_recovery(question, sources):
         or not failure.start() < substitute.start() < recovery.start()):
         return dict(status="not_applicable")
 
+    ignored_names = {"If", "When", "Where", "What", "Which", "Who", "How",
+        "Find", "Show", "List", "Identify", "The", "A", "An", "And", "Or",
+        "Does", "Did", "Will", "Must"}
+    def last_named_party(fragment):
+        phrases = re.findall(
+            r"\b[A-Z][A-Za-z0-9&.'-]*(?:\s+[A-Z][A-Za-z0-9&.'-]*)*\b",
+            fragment)
+        if not phrases:
+            return None
+        words = phrases[-1].split()
+        while words and words[0] in ignored_names:
+            words.pop(0)
+        return " ".join(words) or None
+    query_roles = {
+        "failure_party": last_named_party(question[:failure.start()]),
+        "substitute_actor": last_named_party(question[failure.end():substitute.start()]),
+    }
+    def contains_party(text, party):
+        if party is None:
+            return True
+        pattern = r"\b" + r"\s+".join(re.escape(word) for word in party.split()) + r"\b"
+        return re.search(pattern, text, re.I) is not None
+
     debt_required = re.search(r"\bdebt\b", question, re.I) is not None
     matches = []
     for source in sources:
         local = _failure_step_in_cost_matches(source["text"])
         if local is None:
+            continue
+        failure_window = source["text"][max(0, local["failure"].start() - 140):
+            local["failure"].start()]
+        actor_window = source["text"][local["failure"].end():
+            local["substitute_action"].start()]
+        if (not contains_party(failure_window, query_roles["failure_party"])
+            or not contains_party(actor_window, query_roles["substitute_actor"])):
             continue
         cost_text = local["cost_recovery"].group()
         if debt_required and re.search(r"\bdebt\s+due\b", cost_text, re.I) is None:
@@ -1606,6 +1636,7 @@ def check_rgm_failure_step_cost_recovery(question, sources):
     status = ("not_supported" if not matches else "supported" if len(matches) == 1
         else "ambiguous")
     return dict(status=status, matches=matches, debt_required=debt_required,
+        query_roles=query_roles,
         scope="One local failure, substitute-action and cost-recovery procedure.")
 
 
@@ -3550,9 +3581,28 @@ class RgmDocumentService:
             # Rebind every outgoing citation to the current authenticated packet.
             sources = {m["evidence_reference"]["corpus_id"] + "/" + m["id"]: m for m in reader_memories}
             approved, lines = {}, []
+            reading_parts = {part["question"]: part for part in reading.get("parts", [])}
             for part in reading["answers"]:
                 if part.get("text") is None:
-                    lines.append(part["question"] + "\n" + NATIVE_REFUSAL)
+                    diagnostic = reading_parts.get(part["question"], {})
+                    deterministic_matches = diagnostic.get("step_cost_check", {}).get("matches", [])
+                    if part.get("status") == "ambiguous" and deterministic_matches:
+                        labels = []
+                        for match in deterministic_matches:
+                            memory = sources.get(match["source_id"])
+                            if memory is None:
+                                raise ValueError("ambiguous evidence names an unretrieved source")
+                            ref = memory["evidence_reference"]
+                            title = retrieval["titles"][ref["corpus_id"]]
+                            approved[match["source_id"]] = dict(source_id=match["source_id"],
+                                text=memory["content"], provenance={**ref,
+                                    "display_name": title})
+                            labels.append(f"[{title} · {ref['chunk_id']}]")
+                        lines.append(part["question"] +
+                            "\nThe available evidence contains multiple matching procedures.\n" +
+                            "\n".join(labels))
+                    else:
+                        lines.append(part["question"] + "\n" + NATIVE_REFUSAL)
                     continue
                 memory = sources.get(part["source_id"])
                 if memory is None:

@@ -82,6 +82,16 @@ learned structure. The two lanes meet at evidence checking.
                                              explain or compare evidence
                                              prepare reviewable form fields
                                              cannot alter verified result
+                  |
+                  v
+       DRAFT FIELDS FROM VERIFIED RESULT
+       exact answer + readable source basis
+                  |
+                  v
+        EXPLICIT USER CONFIRMATION
+                  |
+                  v
+          PROJECT DECISION LEDGER
 ```
 
 Reviewed structural memory enters the system through a separate, explicit
@@ -147,6 +157,35 @@ Gemma is labelled local but disabled for ordinary chat because the current Gemma
 integration is an explicit inspection tool, not a conversation provider. The
 `What Tom knows about me` surface currently discloses that no persistent user
 background has been added; governed user-profile storage remains future work.
+
+### 2026-09-19 — full-document desktop journey
+
+The isolated packaged desktop imported the unchanged 2.4 MB executed M12
+Interface Agreement through the production RGM reader, chunker and vector path.
+The project library retained 248 passages. For the directional question, “If SM
+fails to act and TfNSW steps in to perform the emergency work, who pays the
+cost?”, the answer path returned clause 14.4 from chunk 62 as Supported and
+displayed its complete expandable source passage.
+
+The first run diagnosed a real direction defect: the evidence checker found both
+reciprocal emergency-work clauses because it checked the event sequence but not
+the named parties. The checker now preserves the failure party and substitute
+actor from the question. A general query with two valid procedures remains
+Ambiguous and carries both exact sources; the named query retains only the
+matching direction.
+
+The live journey then exposed a separate interface defect. A form proposal was
+being saved as though it were a captured provider turn, so the service rejected
+it as an incomplete assistant capture. The form now uses the verified answer and
+its readable source basis, remains a draft until explicit confirmation, and is
+then recorded as a user-owned decision. The final live run opened the exact
+chunk, populated the form with clause 14.4, confirmed it without error and
+showed the new active decision at state version 17 in the Ledger.
+
+This test exercised RGM document retrieval and evidence checking. It made no
+claim that the ToM tree performed this particular retrieval. The final checks
+passed all 172 native-memory tests and all 23 desktop tests; TypeScript checking
+and the production interface build also passed.
 
 ## Earlier Gemma inspection integration — 15 September 2026
 
