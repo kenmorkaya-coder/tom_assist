@@ -10,6 +10,17 @@ import type {
 import { Chat } from "./Chat";
 import { Recovery } from "./Recovery";
 import { Memory } from "./Memory";
+import {
+  IconActivityHeartbeat,
+  IconBook2,
+  IconChartBar,
+  IconDatabase,
+  IconFileDescription,
+  IconMessageCircle,
+  IconPlus,
+  IconSettings,
+  IconShieldCheck,
+} from "@tabler/icons-preact";
 
 type View =
   | "Overview"
@@ -30,6 +41,17 @@ const views: View[] = [
   "Settings",
   "Diagnostics",
 ];
+
+const viewIcons = {
+  Overview: IconChartBar,
+  Chat: IconMessageCircle,
+  Memory: IconDatabase,
+  Ledger: IconBook2,
+  Interventions: IconShieldCheck,
+  Audit: IconFileDescription,
+  Settings: IconSettings,
+  Diagnostics: IconActivityHeartbeat,
+} as const;
 
 export function App({ backend = tauriBackend }: { backend?: DesktopBackend }) {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -93,7 +115,7 @@ export function App({ backend = tauriBackend }: { backend?: DesktopBackend }) {
 
   return (
     <div class="app-shell">
-      <aside>
+      <aside class="app-sidebar">
         <p class="brand">TOM ASSIST</p>
         <h1>Release console</h1>
         <label>
@@ -108,7 +130,7 @@ export function App({ backend = tauriBackend }: { backend?: DesktopBackend }) {
             ))}
           </select>
         </label>
-        <button
+        <button class="new-project-button"
           onClick={() =>
             void (async () => {
               setBusy(true);
@@ -121,7 +143,8 @@ export function App({ backend = tauriBackend }: { backend?: DesktopBackend }) {
             })()
           }
         >
-          ＋ New project
+          <IconPlus size={18} aria-hidden="true" />
+          New project
         </button>
         <nav>
           {views.map((item) => (
@@ -129,20 +152,24 @@ export function App({ backend = tauriBackend }: { backend?: DesktopBackend }) {
               class={view === item ? "active" : ""}
               onClick={() => setView(item)}
             >
+              {(() => {
+                const ViewIcon = viewIcons[item];
+                return <ViewIcon size={19} stroke={1.8} aria-hidden="true" />;
+              })()}
               {item}
             </button>
           ))}
         </nav>
         <p class="local-badge">● Local ledger · explicit provider sends</p>
       </aside>
-      <main>
-        <header>
+      <main class={view === "Chat" ? "app-main app-main-chat" : "app-main"}>
+        {view !== "Chat" && <header class="app-header">
           <div>
             <p class="eyebrow">{view}</p>
             <h2>{active?.name ?? "No project"}</h2>
           </div>
           <span class="version">STATE V{active?.state_version ?? 0}</span>
-        </header>
+        </header>}
         {error && (
           <p role="alert" class="error-banner">
             {error}

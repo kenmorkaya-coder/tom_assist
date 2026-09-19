@@ -2,6 +2,23 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { ChatMethod, DesktopBackend } from "./backend";
 import type { Project, StateObject, InterventionRecord } from "./types";
 import { SelfReport, type SelfReportRecord } from "./SelfReport";
+import {
+  IconAdjustmentsHorizontal,
+  IconAlertTriangle,
+  IconBook2,
+  IconCheck,
+  IconChevronDown,
+  IconCloud,
+  IconCube,
+  IconFileDescription,
+  IconForms,
+  IconMessageCircle,
+  IconRefresh,
+  IconShieldCheck,
+  IconSparkles,
+  IconUserCircle,
+  IconX,
+} from "@tabler/icons-preact";
 
 export interface Conversation {
   id: string;
@@ -135,6 +152,9 @@ export function Chat({
   const [busy, setBusy] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [assistantOpen, setAssistantOpen] = useState(true);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [formProposalOpen, setFormProposalOpen] = useState(false);
   const [capture, setCapture] = useState<{
     turn: string;
     text: string;
@@ -242,54 +262,77 @@ export function Chat({
   return (
     <section class="chat" aria-label="Governed project chat">
       <div class="chat-connection">
-        <div>
-          <strong>Governed chat</strong>
-          <p>
-            {provider?.connected
-              ? "Tom Assist OAuth connected"
-              : "OAuth not connected — connect Tom Assist"}{" "}
-            · model: {provider?.model ?? "broker-managed"}
-          </p>
+        <div class="chat-workspace-heading">
+          <p class="chat-breadcrumb">Chat / <strong>{project.name}</strong></p>
+          <h2>{view?.session.title ?? project.name}</h2>
+          <p>Ask questions, review evidence and discuss grounded results.</p>
         </div>
-        <button
-          disabled={busy}
-          onClick={() =>
-            void run(async () => {
-              if (provider?.connected) await backend.oauthLogout();
-              else await backend.oauthLogin();
-              setProvider(await request<ProviderStatus>("provider.status"));
-            })
-          }
-        >
-          {provider?.connected ? "Disconnect OAuth" : "Connect OAuth"}
-        </button>
-        <button
-          disabled={busy}
-          onClick={() =>
-            void run(async () =>
-              setProvider(await request<ProviderStatus>("provider.status")),
-            )
-          }
-        >
-          Refresh connection
-        </button>
+        <div class="chat-model-control" aria-label="Conversation model">
+          <span>Model</span>
+          <div class="chat-model-options">
+            <button class="active" aria-pressed="true">
+              <IconCloud size={17} aria-hidden="true" />
+              {provider?.model && provider.model !== "fixture" ? provider.model : "GPT-5.5"} · Cloud
+            </button>
+            <button disabled title="Local Gemma chat is not connected yet">
+              <IconCube size={17} aria-hidden="true" />
+              Gemma · Local
+            </button>
+            <details class="chat-provider-settings">
+              <summary aria-label="Provider settings">
+                <IconAdjustmentsHorizontal size={19} aria-hidden="true" />
+              </summary>
+              <div>
+                <strong>{provider?.connected
+                  ? "Tom Assist OAuth connected"
+                  : "OAuth not connected — connect Tom Assist"}</strong>
+                <p>Cloud sends remain explicit. Local project evidence is previewed before sending.</p>
+                <div class="chat-provider-actions">
+                  <button
+                    disabled={busy}
+                    onClick={() =>
+                      void run(async () => {
+                        if (provider?.connected) await backend.oauthLogout();
+                        else await backend.oauthLogin();
+                        setProvider(await request<ProviderStatus>("provider.status"));
+                      })
+                    }
+                  >
+                    {provider?.connected ? "Disconnect OAuth" : "Connect OAuth"}
+                  </button>
+                  <button
+                    disabled={busy}
+                    onClick={() =>
+                      void run(async () =>
+                        setProvider(await request<ProviderStatus>("provider.status")),
+                      )
+                    }
+                  >
+                    <IconRefresh size={16} aria-hidden="true" />
+                    Refresh connection
+                  </button>
+                </div>
+                {provider && (
+                  <details>
+                    <summary>Provider capabilities</summary>
+                    <pre>{JSON.stringify(provider.capabilities, null, 2)}</pre>
+                  </details>
+                )}
+              </div>
+            </details>
+          </div>
+          <small>{provider?.connected ? "Connected for explicit sends" : "Cloud model disconnected"}</small>
+        </div>
       </div>
-      <p class="chat-boundary">
-        Send with Tom transmits your visible packet, bounded conversation
-        history and draft. Credentials stay in Tom Assist's macOS Keychain and
-        credential broker; they never enter the project ledger or archive.
-        Responses arrive when complete; no token streaming or hidden-context
-        visibility is claimed. Conversation text and approved prompts are
-        retained locally and in complete archives, unencrypted. No automatic expiry is applied.
-        Experimental provider self-report is off by default and requires a
-        separate preview and explicit send for its one extra call.
-      </p>
-      {provider && (
-        <details>
-          <summary>Provider capabilities</summary>
-          <pre>{JSON.stringify(provider.capabilities, null, 2)}</pre>
-        </details>
-      )}
+      <details class="chat-boundary">
+        <summary>Privacy and sending rules</summary>
+        <p>
+          Send with Tom transmits your visible packet, bounded conversation
+          history and draft. Credentials stay in Tom Assist's macOS Keychain and
+          credential broker; they never enter the project ledger or archive.
+          Conversation text and approved prompts are retained locally and in complete archives.
+        </p>
+      </details>
       {error && <p role="alert">{error}</p>}
       <div class="chat-sessions">
         <label>
@@ -336,10 +379,54 @@ export function Chat({
         </button>
       </div>
       <div
-        class="chat-transcript"
+        class={`chat-transcript ${assistantOpen ? "open" : "closed"}`}
         aria-label="Conversation transcript"
         aria-live="polite"
       >
+        <div class="chat-assistant-header">
+          <div>
+            <p class="chat-assistant-kicker">Grounded conversation</p>
+            <h3>Discuss this result</h3>
+          </div>
+          <button class="icon-button" aria-label="Close assistant" onClick={() => setAssistantOpen(false)}>
+            <IconX size={20} aria-hidden="true" />
+          </button>
+        </div>
+        <p class="chat-assistant-intro">
+          GPT can explain the verified result, compare its evidence and help draft form fields. It cannot change the verified finding.
+        </p>
+        <button class="chat-profile-button" onClick={() => setProfileOpen((open) => !open)}>
+          <IconUserCircle size={18} aria-hidden="true" />
+          What Tom knows about me
+          <IconChevronDown size={16} aria-hidden="true" />
+        </button>
+        {profileOpen && <div class="chat-profile-panel" role="status">
+          <strong>User background</strong>
+          <p>No personal background has been added for this project. Profile facts will be visible and editable before they are used.</p>
+        </div>}
+        <div class="chat-suggestions" aria-label="Suggested questions">
+          <button onClick={() => { setDraft("Explain why this result is supported by the cited sources."); setPrepared(undefined); }}>
+            <IconSparkles size={18} aria-hidden="true" />
+            Why is this supported?
+          </button>
+          <button onClick={() => { setDraft("Compare the supporting sources and show where they agree or differ."); setPrepared(undefined); }}>
+            <IconFileDescription size={18} aria-hidden="true" />
+            Show differences between sources
+          </button>
+          <button onClick={() => setFormProposalOpen((open) => !open)}>
+            <IconForms size={18} aria-hidden="true" />
+            Draft form fields
+          </button>
+        </div>
+        {formProposalOpen && <section class="chat-form-proposal" aria-label="Proposed form field changes">
+          <span>Draft only</span>
+          <h4>Proposed form-field patch</h4>
+          <label>Finding<input value="Supported by project evidence" readOnly /></label>
+          <label>Source basis<input value="Use the cited clauses shown in Evidence" readOnly /></label>
+          <button onClick={() => setCapture({ turn: "assistant:form-proposal", text: "Supported by project evidence", old: "", reason: "" })}>
+            Review proposed changes
+          </button>
+        </section>}
         {!view && (
           <p>
             Select or create a project conversation. Nothing is sent
@@ -485,6 +572,10 @@ export function Chat({
             </article>
           ))}
       </div>
+      {!assistantOpen && <button class="chat-assistant-fab" onClick={() => setAssistantOpen(true)}>
+        <IconMessageCircle size={20} aria-hidden="true" />
+        Ask Tom
+      </button>}
       {capture && (
         <section class="settings">
           <h3>Confirm authoritative decision</h3>
@@ -560,14 +651,17 @@ export function Chat({
           </button>
         </section>
       )}
-      <GemmaInspection key={project.id} project={project} objects={objects} draft={draft} backend={backend} />
+      <details class="chat-advanced-tools">
+        <summary>Advanced local inspection</summary>
+        <GemmaInspection key={project.id} project={project} objects={objects} draft={draft} backend={backend} />
+      </details>
       {view && (
         <section class="chat-composer">
-          <label>
-            Message
+          <label class="chat-question-input">
+            <span><IconMessageCircle size={18} aria-hidden="true" /> Your question</span>
             <textarea
               aria-label="Message"
-              placeholder="Ask about this project…"
+              placeholder="Ask a question about this project's documents…"
               value={draft}
               maxLength={16000}
               disabled={busy || waiting}
@@ -579,6 +673,7 @@ export function Chat({
           </label>
           <NativeMemoryAnswer project={project} draft={draft} backend={backend} disabled={busy || waiting} />
           <button
+            class="chat-preview-button"
             disabled={busy || waiting || !draft.trim()}
             onClick={() =>
               void run(async () =>
@@ -592,6 +687,7 @@ export function Chat({
               )
             }
           >
+            <IconShieldCheck size={17} aria-hidden="true" />
             Preview packet
           </button>
           {prepared && (
@@ -791,6 +887,24 @@ type AuthoritySource = { source_id: string; text: string; reason?: string; activ
   display_name?: string; doc_id: string; chunk_index: number; start: number; end: number;
 } };
 
+function humanSourceTitle(provenance: NativeAnswer["sources"][number]["provenance"], index: number) {
+  const cleanName = provenance.display_name
+    ?.replace(/\s+-\s+native RGM chunk.*$/i, "")
+    .replace(/\.(?:txt|pdf)$/i, "")
+    .trim();
+  const clause = provenance.clause ? ` · clause ${provenance.clause}` : "";
+  if (cleanName) return `${cleanName}${clause}`;
+  if (provenance.clause) return `Project contract · clause ${provenance.clause}`;
+  return `Project source ${index + 1}`;
+}
+
+function technicalSourceLabel(source: NativeAnswer["sources"][number]) {
+  const proof = source.provenance;
+  return proof.display_name
+    ? `Source: ${proof.display_name} · ${proof.chunk_id}`
+    : `Source: clause ${proof.clause}, page ${proof.pdf_page}`;
+}
+
 function SourceAuthorityReview({ project, backend, review }: {
   project: Project; backend: DesktopBackend; review: NonNullable<NativeAnswer["authority_review"]>;
 }) {
@@ -981,43 +1095,89 @@ export function NativeMemoryAnswer({ project, draft, backend, disabled = false }
   }
   if (!ready) return null;
   const rgmEngine = engine.startsWith("rgm");
-  return <section class="chat-preview" aria-label={rgmEngine ? "Experimental document answers" : "Learned document answers"}>
-    {scope && <p>{scope}</p>}
-    <button disabled={disabled || busy || !draft.trim() || draft.length > 4000} onClick={() => void ask()}>
-      {busy ? "Reading documents…" : rgmEngine ? "Answer from project documents" : "Answer from learned documents"}
-    </button>
-    {busy && <p role="status">Finding relevant passages and checking the evidence locally.</p>}
+  const statusLabel = ({ supported: "Supported answer", partial: "Partly supported answer",
+    not_supported: "Not supported", ambiguous: "Needs clarification",
+    blocked: "Answer unavailable" } as const);
+  const structuralOnly = answer?.structural_sources?.filter(
+    (source) => !answer.sources.some((item) => item.source_id === source.source_id),
+  ) ?? [];
+  return <section class="native-answer-shell" aria-label={rgmEngine ? "Experimental document answers" : "Learned document answers"}>
+    <div class="native-answer-action">
+      <div>
+        <strong>Project document answer</strong>
+        <p>{scope || "RGM supplies exact evidence; ToM may reconnect reviewed learned structure."}</p>
+      </div>
+      <button class="primary-action" disabled={disabled || busy || !draft.trim() || draft.length > 4000} onClick={() => void ask()}>
+        <IconBook2 size={18} aria-hidden="true" />
+        {busy ? "Reading documents…" : rgmEngine ? "Answer from project documents" : "Answer from learned documents"}
+      </button>
+    </div>
+    {busy && <p class="native-answer-progress" role="status">Finding relevant passages and checking the evidence locally.</p>}
     {error && <p role="alert">{error}</p>}
-    {answer && <article aria-label="Answer from learned documents">
-      <h3>{({ supported: "Supported answer", partial: "Partly supported answer", not_supported: "Not supported",
-        ambiguous: "Needs clarification", blocked: "Answer unavailable" })[answer.status]}</h3>
-      <p style={{ whiteSpace: "pre-wrap" }}>{answer.answer}</p>
-      {answer.authority_review && <SourceAuthorityReview project={project} backend={backend}
-        review={answer.authority_review} />}
-      {answer.sources.map((source) => {
-        const proof = source.provenance;
-        const points = Array.from(source.text);
-        const from = (proof.answer_start ?? proof.start ?? 0) - (proof.start ?? 0);
-        const to = (proof.answer_end ?? proof.start ?? 0) - (proof.start ?? 0);
-        const highlight = from >= 0 && to > from && to <= points.length;
-        return <details key={source.source_id}>
-          <summary>{proof.display_name ? `Source: ${proof.display_name} · ${proof.chunk_id}`
-            : `Source: clause ${proof.clause}, page ${proof.pdf_page}`}</summary>
-          <p style={{ whiteSpace: "pre-wrap" }}>{highlight ? <>{points.slice(0, from).join("")}<mark>{points.slice(from, to).join("")}</mark>{points.slice(to).join("")}</> : source.text}</p>
-          <ReviewedSituation project={project} backend={backend} source={source} />
-        </details>;
-      })}
-      {!!answer.structural_sources?.length && <section aria-label="Evidence linked by learned structure">
-        <h4>Evidence linked by the learned structure</h4>
-        <p>ToM reopened this pattern. RGM supplied every exact passage linked to it.</p>
-        {answer.structural_sources.map((source) => <details key={`structural-${source.source_id}`}>
-          <summary>{source.provenance.display_name
-            ? `${source.provenance.display_name} · ${source.provenance.chunk_id}`
-            : source.source_id}</summary>
-          <p style={{ whiteSpace: "pre-wrap" }}>{source.text}</p>
-        </details>)}
-      </section>}
-    </article>}
+    {answer && <div class="native-answer-layout">
+      <article class={`native-result native-result-${answer.status}`} aria-label="Answer from learned documents">
+        <div class="native-result-status">
+          {answer.status === "supported" ? <IconCheck size={19} aria-hidden="true" /> : <IconAlertTriangle size={19} aria-hidden="true" />}
+          <span>Verified system result</span>
+        </div>
+        <span class={`native-status-pill ${answer.status}`}>{statusLabel[answer.status]}</span>
+        <h3>{statusLabel[answer.status]}</h3>
+        <p class="native-answer-copy">{readableResponse(answer.answer)}</p>
+        <p class="native-source-count">
+          <IconFileDescription size={18} aria-hidden="true" />
+          Based on {answer.sources.length} source{answer.sources.length === 1 ? "" : "s"} from this project
+        </p>
+        {answer.authority_review && <SourceAuthorityReview project={project} backend={backend}
+          review={answer.authority_review} />}
+      </article>
+      <section class="native-evidence-rail" aria-label="Evidence">
+        <div class="native-evidence-heading">
+          <div>
+            <span>Exact project material</span>
+            <h3>Evidence</h3>
+          </div>
+          <strong>{answer.sources.length + structuralOnly.length} source{answer.sources.length + structuralOnly.length === 1 ? "" : "s"}</strong>
+        </div>
+        <div class="native-source-list">
+          {answer.sources.map((source, index) => {
+            const proof = source.provenance;
+            const points = Array.from(source.text);
+            const from = (proof.answer_start ?? proof.start ?? 0) - (proof.start ?? 0);
+            const to = (proof.answer_end ?? proof.start ?? 0) - (proof.start ?? 0);
+            const highlight = from >= 0 && to > from && to <= points.length;
+            return <details class="native-source" key={source.source_id}>
+              <summary>
+                <IconFileDescription size={18} aria-hidden="true" />
+                <span class="native-source-title">{humanSourceTitle(proof, index)}</span>
+                <span class="sr-only">{technicalSourceLabel(source)}</span>
+                <IconChevronDown size={16} aria-hidden="true" />
+              </summary>
+              <div class="native-source-copy">
+                <p>{highlight ? <>{points.slice(0, from).join("")}<mark>{points.slice(from, to).join("")}</mark>{points.slice(to).join("")}</> : source.text}</p>
+                <ReviewedSituation project={project} backend={backend} source={source} />
+              </div>
+            </details>;
+          })}
+        </div>
+        {!!answer.structural_sources?.length && <section class="native-structural-evidence" aria-label="Evidence linked by learned structure">
+          <div class="native-structure-note">
+            <IconShieldCheck size={18} aria-hidden="true" />
+            <p><strong>ToM linked this evidence through a learned relationship.</strong> RGM supplied the exact passages.</p>
+          </div>
+          {structuralOnly.map((source, index) => <details class="native-source" key={`structural-${source.source_id}`}>
+            <summary>
+              <IconFileDescription size={18} aria-hidden="true" />
+              <span>{humanSourceTitle(source.provenance, answer.sources.length + index)}</span>
+              <span class="sr-only">{source.provenance.display_name
+                ? `${source.provenance.display_name} · ${source.provenance.chunk_id}`
+                : source.source_id}</span>
+              <IconChevronDown size={16} aria-hidden="true" />
+            </summary>
+            <div class="native-source-copy"><p>{source.text}</p></div>
+          </details>)}
+        </section>}
+      </section>
+    </div>}
   </section>;
 }
 

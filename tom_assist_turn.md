@@ -4,7 +4,7 @@ The current capability reference is maintained separately in
 [tom_assist_capability.md](tom_assist_capability.md). This file remains the
 chronological evidence and decision record.
 
-## Current end-to-end flow — 18 September 2026
+## Current end-to-end flow — 19 September 2026
 
 The current document-answer path has two complementary retrieval lanes. RGM
 (Reflection-Gated Memory) keeps and finds exact text. ToM recognises a reviewed
@@ -71,11 +71,17 @@ learned structure. The two lanes meet at evidence checking.
              supported / partly supported / not supported / ambiguous
                                     |
                                     v
-                            LANGUAGE MODEL
-                  words only the evidence-approved result
+                         VERIFIED EVIDENCE WORKSPACE
+                  result and exact sources remain separate
+                  conflicting sources are shown together
                                     |
-                                    v
-                       ANSWER WITH SOURCE REFERENCES
+                  +-----------------+-----------------+
+                  |                                   |
+                  v                                   v
+        ANSWER WITH SOURCE REFERENCES        OPTIONAL MODEL DISCUSSION
+                                             explain or compare evidence
+                                             prepare reviewable form fields
+                                             cannot alter verified result
 ```
 
 Reviewed structural memory enters the system through a separate, explicit
@@ -120,7 +126,8 @@ source.
                     REVIEWED STRUCTURE + SOURCE LINKS
 ```
 
-The normal conversation path remains governed separately:
+The normal conversation path remains governed separately and now appears in a
+closable discussion drawer beside the evidence workspace:
 
 ```text
 draft held in Tom Assist
@@ -129,9 +136,17 @@ draft held in Tom Assist
   -> user allows send
   -> capture the provider's answer
   -> check it against the exact packet and project constraints
+  -> keep the provider discussion visually separate from the verified result
+  -> show proposed form values for review rather than applying them silently
   -> user accepts, rejects or edits
   -> accepted experience may be committed to the experience tree
 ```
+
+The selected model is visible. GPT-5.5 is the connected cloud discussion path.
+Gemma is labelled local but disabled for ordinary chat because the current Gemma
+integration is an explicit inspection tool, not a conversation provider. The
+`What Tom knows about me` surface currently discloses that no persistent user
+background has been added; governed user-profile storage remains future work.
 
 ## Earlier Gemma inspection integration — 15 September 2026
 
